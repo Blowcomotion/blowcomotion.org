@@ -1,4 +1,4 @@
-{% load static wagtailcore_tags wagtailuserbar %}
+{% load static wagtailcore_tags wagtailuserbar compress %}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -24,7 +24,10 @@
         {% endif %}
 
         {# Global stylesheets #}
-        <link rel="stylesheet" type="text/css" href="{% static 'css/blowcomotion.css' %}">
+        {% compress css %}
+            <link rel="stylesheet" type="text/x-scss" href="{% static 'css/blowcomotion.scss' %}">
+            <link rel="stylesheet" type="text/x-scss" href="{% static 'bootstrap/scss/bootstrap.scss' %}">
+        {% endcompress css %}
 
         {% block extra_css %}
         {# Override this in templates to add extra stylesheets #}
@@ -55,6 +58,7 @@
 
         {# Global javascript #}
         <script type="text/javascript" src="{% static 'js/blowcomotion.js' %}"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
         {% block extra_js %}
         {# Override this in templates to add extra javascript #}
