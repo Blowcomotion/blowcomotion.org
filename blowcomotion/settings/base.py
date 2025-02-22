@@ -186,3 +186,6 @@ WAGTAILDOCS_EXTENSIONS = ['csv', 'docx', 'key', 'odt', 'pdf', 'pptx', 'rtf', 'tx
 COMPRESS_PRECOMPILERS = (
     ('text/x-scss', 'django_libsass.SassCompiler'),
 )
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+WAGTAILIMAGES_IMAGE_MODEL = 'blowcomotion.CustomImage'
