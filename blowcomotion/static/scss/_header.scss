@@ -17,14 +17,15 @@
 
 .header__logo {
     padding: 20px 0 25px;
+    max-width: 100px;
+    height: auto;
 
     a {
         display: inline-block;
     }
 
     @media screen and (max-width: 767px) {
-        max-width: 60px;
-        height: auto;
+        max-width: 80px;
     }
 }
 
