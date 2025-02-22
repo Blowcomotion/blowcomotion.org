@@ -189,3 +189,5 @@ COMPRESS_PRECOMPILERS = (
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 WAGTAILIMAGES_IMAGE_MODEL = 'blowcomotion.CustomImage'
+
+COMPRESS_OFFLINE = True
