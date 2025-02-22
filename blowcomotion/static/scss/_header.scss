@@ -21,6 +21,11 @@
     a {
         display: inline-block;
     }
+
+    @media screen and (max-width: 767px) {
+        max-width: 60px;
+        height: auto;
+    }
 }
 
 .header__nav {
