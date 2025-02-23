@@ -3,6 +3,10 @@
 
 {% block branding_logo %}
     {% with logo=settings.blowcomotion.SiteSettings.logo %}
-        {% image logo width-80 %}
+        {% if logo %}
+            {% image logo width-80 %}
+        {% else %}
+            <a href="{% url 'wagtailsettings:edit' 'blowcomotion' 'SiteSettings' %}">Set your logo</a>
+        {% endif %}
     {% endwith %}
 {% endblock %}
