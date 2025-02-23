@@ -1,7 +1,6 @@
 from .base import *
 
 DEBUG = False
-COMPRESS_OFFLINE = True
 LIBSASS_OUTPUT_STYLE = 'compressed'
 
 
