@@ -66,8 +66,6 @@ class BlankCanvasPage(BasePage):
 
     def get_context(self, request):
         context = super().get_context(request)
-        context["hero_header"] = any(
-            block.block_type == "hero" for block in self.body
-        )
+        context["hero_header"] = self.body[0].block_type == "hero"
         return context
 
