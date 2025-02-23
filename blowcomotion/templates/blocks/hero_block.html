@@ -1,0 +1,19 @@
+{% load wagtailimages_tags %}
+{% image value.image original as background_image %}
+<section class="hero spad set-bg" data-setbg="{{ background_image.url }}">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="hero__text py-5">
+                    <span>Join Us</span>
+                    <h1>Blowcomotion</h1>
+                    <p>Join us on our musical journey and experience the beats that move you.</p>
+                    <a href="https://www.youtube.com/watch?v=jDROMWaRlzY" class="play-btn video-popup"><i class="fa fa-play"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="linear__icon">
+        <i class="fa fa-angle-double-down"></i>
+    </div>
+</section>

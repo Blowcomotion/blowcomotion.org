@@ -1,9 +1,11 @@
 from django.db import models
-from wagtail.admin.panels import FieldPanel
 from wagtail.contrib.settings.models import BaseSiteSetting, register_setting
-from wagtail.fields import RichTextField
+from wagtail import blocks
+from wagtail.fields import StreamField
 from wagtail.images.models import AbstractImage, AbstractRendition, Image
 from wagtail.models import Page
+
+from blowcomotion import blocks as blowcomotion_blocks
 
 
 @register_setting
@@ -51,9 +53,21 @@ class BasePage(Page):
 
 class BlankCanvasPage(BasePage):
     template = 'pages/blank_canvas_page.html'
-    body = RichTextField(blank=True)
+    body = StreamField([
+        ("hero", blowcomotion_blocks.HeroBlock()),
+        ("rich_text", blocks.RichTextBlock()),
+    ], block_counts={
+        "hero": {"max_num": 1},
+    }, blank=True, null=True)
 
     content_panels = Page.content_panels + [
-        FieldPanel("body"),
+        "body",
     ]
+
+    def get_context(self, request):
+        context = super().get_context(request)
+        context["hero_header"] = any(
+            block.block_type == "hero" for block in self.body
+        )
+        return context
 
