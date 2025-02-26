@@ -139,7 +139,13 @@ class Event(ClusterableModel, index.Indexed):
     ]
 
     def __str__(self):
-        return f"{self.title} ({self.date}/{self.location})"
+        attributes = []
+        if self.date:
+            attributes.append(str(self.date))
+        if self.location:
+            attributes.append(self.location)
+        date_location = f" ({', '.join(attributes)})" if attributes else ""
+        return f"{self.title}{date_location}"
     
 
 class Section(ClusterableModel, index.Indexed):

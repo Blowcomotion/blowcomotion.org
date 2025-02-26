@@ -16,13 +16,15 @@
                     <div class="event__item">
                         {% image event.event_scroller_image original as event_image %}
                         <div class="event__item__pic set-bg" data-setbg="{{ event_image.url }}">
-                            <div class="tag-date">
-                                <span>{{ event.date|date:"M d, Y" }}</span>
-                            </div>
+                            {% if event.date %}
+                                <div class="tag-date">
+                                    <span>{{ event.date|date:"M d, Y" }}</span>
+                                </div>
+                            {% endif %}
                         </div>
                         <div class="event__item__text">
                             <h4>{{ event.title }}</h4>
-                            <p><i class="fa fa-map-marker"></i> {{ event.location }}</p>
+                            {% if event.location %}<p><i class="fa fa-map-marker"></i> {{ event.location }}</p>{% endif %}
                         </div>
                     </div>
                 </div>
