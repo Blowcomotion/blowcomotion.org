@@ -125,7 +125,9 @@ class Event(ClusterableModel, index.Indexed):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="+",
+        help_text="Image to be used in the event scroller component",
     )
+    # gigomatic_url = models.URLField(blank=True, null=True, help_text="URL for the event on Gig-O-Matic")
     location = models.CharField(blank=True, null=True, max_length=255, help_text="e.g. 'Mueller Lake Park, Austin, TX'")
     location_url = models.URLField(blank=True, null=True, help_text="URL for a map of the location")
     description = models.TextField(blank=True, null=True)

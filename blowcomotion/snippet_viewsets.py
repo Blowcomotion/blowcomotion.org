@@ -55,19 +55,18 @@ class EventViewSet(SnippetViewSet):
         'title',
         'date',
         'time',
-        'event_scroller_image',
         'location',
-        'location_url',
-        'description',
+        UpdatedAtColumn(),
     ]
     panels = [
         'title',
         'date',
         'time',
+        'description',
         'location',
         'location_url',
-        'description',
         'setlist',
+        'event_scroller_image',
     ]
 
     def __init__(self, *args, **kwargs):
