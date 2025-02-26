@@ -46,15 +46,20 @@ class SongViewSet(SnippetViewSet):
         super().__init__(*args, **kwargs)
 
 
-
-
-
 class EventViewSet(SnippetViewSet):
     model = None
     menu_label = 'Events'
     menu_name = 'events'
     menu_icon = 'date'
-    list_display = ['title', 'date', 'location', UpdatedAtColumn()]
+    list_display = [
+        'title',
+        'date',
+        'time',
+        'event_scroller_image',
+        'location',
+        'location_url',
+        'description',
+    ]
     panels = [
         'title',
         'date',
