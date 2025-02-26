@@ -1,6 +1,8 @@
 from wagtail import blocks
 from wagtail.images.blocks import ImageChooserBlock
 
+from blowcomotion import chooser_blocks
+
 
 class HeroBlock(blocks.StructBlock):
     image = ImageChooserBlock()
@@ -11,10 +13,9 @@ class HeroBlock(blocks.StructBlock):
         template = 'blocks/hero_block.html'
 
 class EventsBlock(blocks.StructBlock):
-    title = blocks.CharBlock()
-    date = blocks.DateBlock()
-    location = blocks.CharBlock()
-    description = blocks.RichTextBlock()
+    events = blocks.ListBlock(
+        chooser_blocks.EventChooserBlock(),
+    )
 
     class Meta:
         icon = 'date'
