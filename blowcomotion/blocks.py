@@ -13,11 +13,12 @@ class HeroBlock(blocks.StructBlock):
         template = 'blocks/hero_block.html'
 
 class EventsBlock(blocks.StructBlock):
+    scroller_title = blocks.CharBlock()
     events = blocks.ListBlock(
         chooser_blocks.EventChooserBlock(),
     )
 
     class Meta:
         icon = 'date'
-        label = 'Event'
+        label = 'Event Scroller'
         template = 'blocks/events_block.html'
