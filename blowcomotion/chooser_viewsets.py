@@ -46,10 +46,7 @@ class EventChooserViewset(ChooserViewSet):
     form_fields = [
         "title",
         "date",
-        "time",
         "location",
-        "location_url",
-        "description",
     ]
 
 
