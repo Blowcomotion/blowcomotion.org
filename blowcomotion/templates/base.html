@@ -1,4 +1,4 @@
-{% load static wagtailcore_tags wagtailimages_tags wagtailuserbar compress blowco_tags %}
+{% load static wagtailcore_tags wagtailimages_tags wagtailuserbar compress blowco_tags livereload_tags %}
 
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
@@ -40,6 +40,7 @@
         {% block extra_css %}
         {# Override this in templates to add extra stylesheets #}
         {% endblock %}
+        {% livereload_script %}
     </head>
 
     {% comment %} <div class="container">
