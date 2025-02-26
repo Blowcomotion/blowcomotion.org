@@ -40,7 +40,9 @@
         {% block extra_css %}
         {# Override this in templates to add extra stylesheets #}
         {% endblock %}
-        {% livereload_script %}
+        {% if 'admin' not in request.path %}
+            {% livereload_script %}
+        {% endif %}
     </head>
 
     {% comment %} <div class="container">
