@@ -35,7 +35,7 @@ class CustomImage(AbstractImage):
 
     admin_form_fields = Image.admin_form_fields + (
         # Then add the field names here to make them appear in the form:
-        'caption',
+        "caption",
     )
 
     @property
@@ -43,15 +43,15 @@ class CustomImage(AbstractImage):
         # Force editors to add specific alt text if description is empty.
         # Do not use image title which is typically derived from file name.
         return getattr(self, "description", None)
-    
+
 
 class CustomRendition(AbstractRendition):
-    image = models.ForeignKey(CustomImage, on_delete=models.CASCADE, related_name='renditions')
+    image = models.ForeignKey(
+        CustomImage, on_delete=models.CASCADE, related_name="renditions"
+    )
 
     class Meta:
-        unique_together = (
-            ('image', 'filter_spec', 'focal_point_key'),
-        )
+        unique_together = (("image", "filter_spec", "focal_point_key"),)
 
 
 class Chart(models.Model):
@@ -63,13 +63,18 @@ class Chart(models.Model):
         on_delete=models.SET_NULL,
         related_name="+",
     )
-    part = models.CharField(max_length=255, blank=True, null=True, help_text=" e.g. '2nd Trombone' If left blank, instrument name will be used.")
+    part = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text=" e.g. '2nd Trombone' If left blank, instrument name will be used.",
+    )
     instrument = models.ForeignKey("blowcomotion.Instrument", on_delete=models.CASCADE)
     is_part_uploaded = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.song.title} - {self.instrument.name} - {self.part}"
-    
+
 
 class SongConductor(Orderable):
     song = ParentalKey("blowcomotion.Song", related_name="conductors")
@@ -96,7 +101,7 @@ class Song(ClusterableModel, index.Indexed):
 
     def __str__(self):
         return self.title
-    
+
 
 class EventSetlistSong(Orderable):
     event = ParentalKey("blowcomotion.Event", related_name="setlist")
@@ -105,17 +110,18 @@ class EventSetlistSong(Orderable):
 
 class Event(ClusterableModel, index.Indexed):
     """
-        Model for events
+    Model for events
 
-        Attributes:
-            title: CharField
-            date: DateField
-            time: TimeField
-            location: CharField
-            location_url: URLField
-            description: TextField
-            setlist: inline panel for songs
+    Attributes:
+        title: CharField
+        date: DateField
+        time: TimeField
+        location: CharField
+        location_url: URLField
+        description: TextField
+        setlist: inline panel for songs
     """
+
     title = models.CharField(max_length=255)
     date = models.DateField(blank=True, null=True)
     time = models.TimeField(blank=True, null=True)
@@ -127,9 +133,15 @@ class Event(ClusterableModel, index.Indexed):
         related_name="+",
         help_text="Image to be used in the event scroller component",
     )
-    # gigomatic_url = models.URLField(blank=True, null=True, help_text="URL for the event on Gig-O-Matic")
-    location = models.CharField(blank=True, null=True, max_length=255, help_text="e.g. 'Mueller Lake Park, Austin, TX'")
-    location_url = models.URLField(blank=True, null=True, help_text="URL for a map of the location")
+    location = models.CharField(
+        blank=True,
+        null=True,
+        max_length=255,
+        help_text="e.g. 'Mueller Lake Park, Austin, TX'",
+    )
+    location_url = models.URLField(
+        blank=True, null=True, help_text="URL for a map of the location"
+    )
     description = models.TextField(blank=True, null=True)
 
     search_fields = [
@@ -146,7 +158,7 @@ class Event(ClusterableModel, index.Indexed):
             attributes.append(self.location)
         date_location = f" ({', '.join(attributes)})" if attributes else ""
         return f"{self.title}{date_location}"
-    
+
 
 class Section(ClusterableModel, index.Indexed):
     name = models.CharField(max_length=255)
@@ -157,7 +169,7 @@ class Section(ClusterableModel, index.Indexed):
 
     def __str__(self):
         return self.name
-        
+
     class Meta:
         verbose_name = "Section"
         verbose_name_plural = "Sections"
@@ -220,23 +232,23 @@ class MemberInstrument(Orderable):
     ]
 
 
-
 class Member(ClusterableModel, index.Indexed):
     """
-        Model for members of the organization
+    Model for members of the organization
 
-        Attributes:
-            first_name: CharField
-            last_name: CharField
-            instruments: ManyToManyField
-            birthday: DateField
-            join_date: DateField
-            is_active: BooleanField
-            bio: TextField
-            image: ForeignKey
-            instructor: BooleanField
-            board_member: BooleanField
+    Attributes:
+        first_name: CharField
+        last_name: CharField
+        instruments: ManyToManyField
+        birthday: DateField
+        join_date: DateField
+        is_active: BooleanField
+        bio: TextField
+        image: ForeignKey
+        instructor: BooleanField
+        board_member: BooleanField
     """
+
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     # instruments = models.ManyToManyField("blowcomotion.Instrument", blank=True)
@@ -262,21 +274,27 @@ class Member(ClusterableModel, index.Indexed):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
-    
+
 
 class BasePage(Page):
     class Meta:
         abstract = True
 
+
 class BlankCanvasPage(BasePage):
-    template = 'pages/blank_canvas_page.html'
-    body = StreamField([
-        ("hero", blowcomotion_blocks.HeroBlock()),
-        ("rich_text", blocks.RichTextBlock()),
-        ("events", blowcomotion_blocks.EventsBlock()),
-    ], block_counts={
-        "hero": {"max_num": 1},
-    }, blank=True, null=True)
+    template = "pages/blank_canvas_page.html"
+    body = StreamField(
+        [
+            ("hero", blowcomotion_blocks.HeroBlock()),
+            ("rich_text", blocks.RichTextBlock()),
+            ("events", blowcomotion_blocks.EventsBlock()),
+        ],
+        block_counts={
+            "hero": {"max_num": 1},
+        },
+        blank=True,
+        null=True,
+    )
 
     content_panels = Page.content_panels + [
         "body",
@@ -289,4 +307,3 @@ class BlankCanvasPage(BasePage):
         else:
             context["hero_header"] = False
         return context
-

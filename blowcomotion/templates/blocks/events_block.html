@@ -1,4 +1,4 @@
-{% load static wagtailimages_tags %}
+{% load static wagtailimages_tags blowco_tags %}
 
 <section class="event spad">
     <div class="container">
@@ -11,14 +11,40 @@
         </div>
         <div class="row">
             <div class="event__slider owl-carousel">
+                {% for gig in value.gigo_gigs %}
+                    <div class="col-lg-4">
+                        <div class="event__item">
+                            {% if gig.event_scroller_image %}
+                                {% image gig.event_scroller_image original as gig_image %}
+                                <div class="event__item__pic set-bg" data-setbg="{{ gig_image.url }}">
+                            {% else %}
+                                <div class="event__item__pic set-bg" data-setbg="https://placehold.co/360?text=Add+an+event+image+in+the+admin+menu">
+                            {% endif %}
+                            {% if gig.details.date %}
+                                    <div class="tag-date">
+                                        <span>{{ gig.details.date|datestring_format }}</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="event__item__text">
+                                <h4>{{ gig.details.title }}</h4>
+                                {% if gig.details.location %}<p><i class="fa fa-map-marker"></i> {{ gig.details.location }}</p>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
                 {% for event in value.events %}
                 <div class="col-lg-4">
                     <div class="event__item">
-                        {% image event.event_scroller_image original as event_image %}
-                        <div class="event__item__pic set-bg" data-setbg="{{ event_image.url }}">
-                            {% if event.date %}
+                        {% if event.event_scroller_image %}
+                            {% image event.event_scroller_image original as event_image %}
+                            <div class="event__item__pic set-bg" data-setbg="{{ event_image.url }}">
+                        {% else %}
+                            <div class="event__item__pic set-bg" data-setbg="https://placehold.co/360?text=Add+an+event+image+in+the+admin+menu">
+                        {% endif %}
+                        {% if event.date %}
                                 <div class="tag-date">
-                                    <span>{{ event.date|date:"M d, Y" }}</span>
+                                    <span>{{ event.date|date:"M j, Y" }}</span>
                                 </div>
                             {% endif %}
                         </div>

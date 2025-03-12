@@ -2,5 +2,6 @@ Django==5.1.6
 django-compressor==4.5.1
 django-libsass==0.9
 django-livereload-server==0.5.1
+queryish==0.2
 wagtail==6.4.1
 wagtailmedia==0.15.2
