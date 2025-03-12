@@ -1,10 +1,19 @@
-from wagtail.admin.ui.tables import TitleColumn
+import datetime
+import re
+
+import requests
+from django.views.generic.base import View
+from queryish.rest import APIModel, APIQuerySet
+from wagtail.admin.ui.tables import Column, TitleColumn
 from wagtail.admin.views.generic.chooser import (BaseChooseView,
                                                  ChooseResultsViewMixin,
                                                  ChooseViewMixin,
+                                                 ChosenResponseMixin,
+                                                 ChosenViewMixin,
                                                  CreationFormMixin)
 from wagtail.admin.viewsets.chooser import ChooserViewSet
-
+from wagtail.admin.widgets import BaseChooser
+from django.conf import settings
 
 class ChartChooserViewset(ChooserViewSet):
     model = "blowcomotion.Chart"
@@ -74,7 +83,6 @@ class InstrumentChooserViewset(ChooserViewSet):
     ]
 
 
-
 class BaseMemberChooseView(BaseChooseView):
     @property
     def columns(self):
@@ -85,8 +93,10 @@ class BaseMemberChooseView(BaseChooseView):
             TitleColumn("board_member", label="Board member"),
         ]
 
-class MemberChooseView(ChooseViewMixin, CreationFormMixin,  BaseMemberChooseView):
+
+class MemberChooseView(ChooseViewMixin, CreationFormMixin, BaseMemberChooseView):
     pass
+
 
 class MemberChooseResultsView(
     ChooseResultsViewMixin, CreationFormMixin, BaseMemberChooseView
@@ -116,6 +126,134 @@ class MemberChooserViewset(ChooserViewSet):
         "image",
     ]
 
+
+class GigoAPIQuerySet(APIQuerySet):
+    base_url = f"{settings.GIGO_API_URL}/gigs"
+    pagination_style = "page"
+    page_size = 10
+    http_headers = {"X-API-KEY": settings.GIGO_API_KEY}
+
+    def get_results_from_response(self, response):
+        return response["gigs"]
+
+
+class GigoGig(APIModel):
+    base_query_class = GigoAPIQuerySet
+
+    class Meta:
+        detail_url = f"{settings.GIGO_API_URL}/gigs/%s"
+        fields = ["id", "title", "date", "address", "gig_status"]
+        verbose_name_plural = "GigoGigs"
+
+    def __str__(self):
+        return self.title
+
+
+class BaseGigoGigChooseView(BaseChooseView):
+    @property
+    def columns(self):
+        return [
+            TitleColumn(
+                "title",
+                label="Title",
+                url_name=self.chosen_url_name,
+                id_accessor="id",
+                link_attrs={"data-chooser-modal-choice": True},
+            ),
+            Column("date", label="Date"),
+            Column("address", label="Address"),
+            Column("gig_status", label="Gig Status"),
+            Column("band", label="Band"),
+        ]
+
+    def get_object_list(self):
+        r = requests.get(
+            f"{settings.GIGO_API_URL}/gigs",
+            headers={"X-API-KEY": settings.GIGO_API_KEY},
+        )
+        r.raise_for_status()
+        results = r.json()
+        if results["gigs"] is None:
+            return []
+        # remove gigs before today
+        results = [
+            gig
+            for gig in results["gigs"]
+            if gig["date"] >= datetime.date.today().isoformat()
+        ]
+
+        results.sort(key=lambda gig: gig["date"])
+        return results
+
+    def apply_object_list_ordering(self, objects):
+        return objects
+
+
+class GigoGigChooseView(ChooseViewMixin, CreationFormMixin, BaseGigoGigChooseView):
+    pass
+
+
+class GigoGigChooseResultsView(
+    ChooseResultsViewMixin, CreationFormMixin, BaseGigoGigChooseView
+):
+    pass
+
+
+class GigoGigChosenViewMixin(ChosenViewMixin):
+    def get_object(self, pk):
+        r = requests.get(
+            f"{settings.GIGO_API_URL}/gigs/{int(pk)}",
+            headers={"X-API-KEY": settings.GIGO_API_KEY},
+        )
+        r.raise_for_status()
+        return r.json()
+
+
+class GigoGigChosenResponseMixin(ChosenResponseMixin):
+    def get_chosen_response_data(self, item):
+        return {
+            "id": item["id"],
+            "title": item["title"],
+        }
+
+
+class GigoGigChosenView(GigoGigChosenViewMixin, GigoGigChosenResponseMixin, View):
+    pass
+
+
+class BaseGigoGigChooserWidget(BaseChooser):
+    def get_instance(self, value):
+        if value is None:
+            return None
+        elif isinstance(value, dict):
+            return value
+        else:
+            r = requests.get(
+                f"{settings.GIGO_API_URL}/gigs/{value.id}",
+                headers={"X-API-KEY": settings.GIGO_API_KEY},
+            )
+            r.raise_for_status()
+            return r.json()
+
+    def get_value_data_from_instance(self, instance):
+        return {
+            "id": instance["id"],
+            "title": instance["title"],
+        }
+
+
+class GigoGigChooserViewSet(ChooserViewSet):
+    model = GigoGig
+
+    choose_one_text = "Choose a GigoGig"
+    choose_another_text = "Choose another GigoGig"
+    choose_view_class = GigoGigChooseView
+    choose_results_view_class = GigoGigChooseResultsView
+    chosen_view_class = GigoGigChosenView
+    base_widget_class = BaseGigoGigChooserWidget
+
+
+gigo_gig_chooser_viewset = GigoGigChooserViewSet("gigo_gig_chooser")
 member_chooser_viewset = MemberChooserViewset("member_chooser")
 instrument_chooser_viewset = InstrumentChooserViewset("instrument_chooser")
 section_chooser_viewset = SectionChooserViewset("section_chooser")
