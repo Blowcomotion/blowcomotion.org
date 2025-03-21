@@ -91,11 +91,15 @@ textarea:focus {
   outline: none;
 }
 
+a {
+  color: purple;
+}
+
 a:hover,
 a:focus {
   text-decoration: none;
   outline: none;
-  color: $white-color;
+  color: rgb(229, 61, 255);
 }
 
 ul,
