@@ -2,10 +2,7 @@
 {% load wagtailcore_tags %}
 
 {% block content %}
-    <div class="container">
-        <h1>{{ page.title }}</h1>
-        <div class="row">
-            {{ page.body|richtext }}
-        </div>
-    </div>
+    {% for block in page.body %}
+        {% include_block block %}
+    {% endfor %}
 {% endblock content %}

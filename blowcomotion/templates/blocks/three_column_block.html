@@ -1,0 +1,28 @@
+{% load wagtailcore_tags %}
+
+<div class="container my-4">
+    <div class="row">
+        {% for block in value.left_column %}
+            <div class="col">
+                {% include_block block %}
+            </div>
+        {% endfor %}
+        {% for block in value.middle_column %}
+            <div class="col">
+                {% include_block block %}
+            </div>
+        {% endfor %}
+        {% block middle_column %}
+            {% for block in value.right_column %}
+                <div class="col">
+                    {% include_block block %}
+                </div>
+            {% endfor %}
+        {% endblock middle_column %}
+        {% for block in value.right_column %}
+            <div class="col">
+                {% include_block block %}
+            </div>
+        {% endfor %}
+    </div>
+</div>

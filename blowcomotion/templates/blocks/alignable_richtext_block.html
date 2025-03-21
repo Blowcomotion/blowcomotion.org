@@ -1,0 +1,5 @@
+{% load wagtailcore_tags %}
+
+<div class="container my-4 text-{{ value.align }}">
+    <div class="rich-text-content">{{ value.rich_text|richtext }}</div>
+</div>

@@ -285,8 +285,9 @@ class BlankCanvasPage(BasePage):
     template = "pages/blank_canvas_page.html"
     body = StreamField(
         [
+            ("column_layout", blowcomotion_blocks.ColumnLayoutBlock()),
             ("hero", blowcomotion_blocks.HeroBlock()),
-            ("rich_text", blocks.RichTextBlock()),
+            ("rich_text", blowcomotion_blocks.AlignableRichtextBlock()),
             ("events", blowcomotion_blocks.EventsBlock()),
         ],
         block_counts={

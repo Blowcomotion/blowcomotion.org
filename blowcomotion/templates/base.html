@@ -68,7 +68,6 @@
     <body class="{% block body_class %}{% endblock %}">
         {% wagtailuserbar %}
 
-        {# {% block content %}{% endblock %}} #}
         <!-- Page Preloder -->
         <div id="preloder">
             <div class="loader"></div>
@@ -118,10 +117,8 @@
         </header>
         <!-- Header Section End -->
 
-        {% for block in page.body %}
-            {% include_block block %}
-        {% endfor %}
-
+        {% block content %}{% endblock %}
+        
         <!-- About Section Begin -->
         <section class="about spad">
             <div class="container">

@@ -31,3 +31,58 @@ class EventsBlock(blocks.StructBlock):
         icon = "date"
         label = "Event Scroller"
         template = "blocks/events_block.html"
+
+
+class AlignableRichtextBlock(blocks.StructBlock):
+    rich_text = blocks.RichTextBlock()
+    align = blocks.ChoiceBlock(
+        choices=[
+            ("left", "Left"),
+            ("center", "Center"),
+            ("right", "Right"),
+        ],
+        default="left",
+    )
+
+    class Meta:
+        template = "blocks/alignable_richtext_block.html"
+
+
+class ColumnContentBlock(blocks.StreamBlock):
+    rich_text = AlignableRichtextBlock()
+    image = ImageChooserBlock(template="blocks/image_block.html")
+
+    class Meta:
+        template = "blocks/column_content_block.html"
+
+
+class ThreeColumnBlock(blocks.StructBlock):
+    left_column = ColumnContentBlock()
+    middle_column = ColumnContentBlock()
+    right_column = ColumnContentBlock()
+
+    class Meta:
+        template = "blocks/three_column_block.html"
+
+
+class TwoColumnBlock(ThreeColumnBlock):
+    middle_column = None
+
+    class Meta:
+        template = "blocks/two_column_block.html"
+
+
+class FourColumnBlock(ThreeColumnBlock):
+    left_column = ColumnContentBlock()
+    middle_left_column = ColumnContentBlock()
+    middle_right_column = ColumnContentBlock()
+    right_column = ColumnContentBlock()
+
+    class Meta:
+        template = "blocks/four_column_block.html"
+
+
+class ColumnLayoutBlock(blocks.StreamBlock):
+    two_column = TwoColumnBlock()
+    three_column = ThreeColumnBlock()
+    four_column = FourColumnBlock()
