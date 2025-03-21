@@ -15,7 +15,7 @@
                         <ul>
                             {% for menu in settings.blowcomotion.SiteSettings.header_menus %}
                                 {% pageurl menu.value.page as menu_page_url %}
-                                <li{% if request.path == menu_page_url %} class="active"{% endif %}><a href="{{ menu_page_url }}">{% if menu.label %}{{ menu.label }}{% else %}{{ menu.value.page.title }}{% endif %}</a>
+                                <li{% if request.path == menu_page_url %} class="active"{% endif %}><a href="{{ menu_page_url }}">{% if menu.value.label %}{{ menu.value.label }}{% else %}{{ menu.value.page.title }}{% endif %}</a>
                                 {% if menu.value.children %}
                                     <ul class="dropdown">
                                         {% for child in menu.value.children %}
