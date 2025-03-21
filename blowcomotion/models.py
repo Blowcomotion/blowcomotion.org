@@ -25,6 +25,13 @@ class SiteSettings(BaseSiteSetting):
         related_name="+",
     )
     facebook = models.URLField(blank=True, null=True)
+    header_menus = StreamField(
+        [
+            ("menu_item", blowcomotion_blocks.MenuItem()),
+        ],
+        blank=True,
+        null=True,
+    )
 
 
 class CustomImage(AbstractImage):

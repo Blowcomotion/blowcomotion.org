@@ -57,9 +57,9 @@ class ColumnContentBlock(blocks.StreamBlock):
 
 
 class ThreeColumnBlock(blocks.StructBlock):
-    left_column = ColumnContentBlock()
-    middle_column = ColumnContentBlock()
-    right_column = ColumnContentBlock()
+    left_column = ColumnContentBlock(required=False)
+    middle_column = ColumnContentBlock(required=False)
+    right_column = ColumnContentBlock(required=False)
 
     class Meta:
         template = "blocks/three_column_block.html"
@@ -73,10 +73,10 @@ class TwoColumnBlock(ThreeColumnBlock):
 
 
 class FourColumnBlock(ThreeColumnBlock):
-    left_column = ColumnContentBlock()
-    middle_left_column = ColumnContentBlock()
-    middle_right_column = ColumnContentBlock()
-    right_column = ColumnContentBlock()
+    left_column = ColumnContentBlock(required=False)
+    middle_left_column = ColumnContentBlock(required=False)
+    middle_right_column = ColumnContentBlock(required=False)
+    right_column = ColumnContentBlock(required=False)
 
     class Meta:
         template = "blocks/four_column_block.html"
@@ -86,3 +86,15 @@ class ColumnLayoutBlock(blocks.StreamBlock):
     two_column = TwoColumnBlock()
     three_column = ThreeColumnBlock()
     four_column = FourColumnBlock()
+
+
+class MenuItemBlock(blocks.StructBlock):
+    page = blocks.PageChooserBlock()
+    label = blocks.CharBlock(required=False)
+    
+
+
+class MenuItem(blocks.StructBlock):
+    page = blocks.PageChooserBlock()
+    label = blocks.CharBlock(required=False)
+    children = blocks.ListBlock(MenuItemBlock, required=False, collapsed=True)
