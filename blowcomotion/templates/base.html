@@ -1,69 +1,8 @@
-{% load static wagtailcore_tags wagtailimages_tags wagtailuserbar compress blowco_tags livereload_tags %}
+{% load static wagtailuserbar %}
 
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
-    <head>
-        <meta charset="utf-8" />
-        <title>
-            {% block title %}
-            {% if page.seo_title %}{{ page.seo_title }}{% else %}{{ page.title }}{% endif %}
-            {% endblock %}
-            {% block title_suffix %}
-            {% wagtail_site as current_site %}
-            {% if current_site and current_site.site_name %}- {{ current_site.site_name }}{% endif %}
-            {% endblock %}
-        </title>
-        {% if page.search_description %}
-        <meta name="description" content="{{ page.search_description }}" />
-        {% endif %}
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-        {# Force all links in the live preview panel to be opened in a new tab #}
-        {% if request.in_preview_panel %}
-        <base target="_blank">
-        {% endif %}
-
-        <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}" type="text/css">
-        <link rel="stylesheet" href="{% static 'css/font-awesome.min.css' %}" type="text/css">
-        <link rel="stylesheet" href="{% static 'css/barfiller.css' %}" type="text/css">
-        <link rel="stylesheet" href="{% static 'css/nowfont.css' %}" type="text/css">
-        <link rel="stylesheet" href="{% static 'css/rockville.css' %}" type="text/css">
-        <link rel="stylesheet" href="{% static 'css/magnific-popup.css' %}" type="text/css">
-        <link rel="stylesheet" href="{% static 'css/owl.carousel.min.css' %}" type="text/css">
-        <link rel="stylesheet" href="{% static 'css/slicknav.min.css' %}" type="text/css">
-
-        {# Global stylesheets #}
-        {% compress css %}
-            <link rel="stylesheet" type="text/x-scss" href="{% static 'scss/style.scss' %}">
-        {% endcompress css %}
-
-        {% block extra_css %}
-        {# Override this in templates to add extra stylesheets #}
-        {% endblock %}
-        {% if 'admin' not in request.path %}
-            {% livereload_script %}
-        {% endif %}
-    </head>
-
-    {% comment %} <div class="container">
-        <header class="d-flex flex-wrap justify-content-center py-3 mb-4 border-bottom">
-        <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none col-1">
-            {% with logo=settings.blowcomotion.SiteSettings.logo %}
-                {% image logo original class="img-fluid" %}
-            {% endwith %}
-            <svg class="bi me-2" width="40" height="32" fill="currentColor"><use xlink:href="{% static 'bootstrap/bootstrap-icons.svg' %}#music-note-beamed"/></svg>
-            <span class="fs-4">Blowcomotion</span>
-        </a>
-
-        <ul class="nav nav-pills">
-            <li class="nav-item"><a href="#" class="nav-link active" aria-current="page">Home</a></li>
-            <li class="nav-item"><a href="#" class="nav-link">Features</a></li>
-            <li class="nav-item"><a href="#" class="nav-link">Pricing</a></li>
-            <li class="nav-item"><a href="#" class="nav-link">FAQs</a></li>
-            <li class="nav-item"><a href="#" class="nav-link">About</a></li>
-        </ul>
-        </header>
-    </div> {% endcomment %}
+    {% include "head.html" %}
 
     <body class="{% block body_class %}{% endblock %}">
         {% wagtailuserbar %}
@@ -72,119 +11,16 @@
         <div id="preloder">
             <div class="loader"></div>
         </div>
-
-        <!-- Header Section Begin -->
-        <header class="header{% if not hero_header %} header--normal{% endif %}">
-            <div class="container">
-                <div class="row">
-                    <div class="col-lg-2 col-md-2">
-                        <div class="header__logo">
-                            {% with logo=settings.blowcomotion.SiteSettings.logo %}
-                                <a href='/'>{% image logo original class="img-fluid" %}</a>
-                            {% endwith %}
-                        </div>
-                    </div>
-                    <div class="col-lg-10 col-md-10 d-flex align-items-center justify-content-center">
-                        <div class="header__nav">
-                            <nav class="header__menu mobile-menu">
-                                <ul>
-                                    <li class="active"><a href="./index.html">Home</a></li>
-                                    <li><a href="./about.html">About</a></li>
-                                    <li><a href="./discography.html">Discography</a></li>
-                                    <li><a href="./tours.html">Tours</a></li>
-                                    <li><a href="./videos.html">Videos</a></li>
-                                    <li><a href="#">Pages</a>
-                                        <ul class="dropdown">
-                                            <li><a href="./about.html">About</a></li>
-                                            <li><a href="./blog.html">Blog</a></li>
-                                            <li><a href="./blog-details.html">Blog Details</a></li>
-                                        </ul>
-                                    </li>
-                                    <li><a href="./contact.html">Contact</a></li>
-                                </ul>
-                            </nav>
-                            <div class="header__right__social">
-                                <a href="#"><i class="fa fa-facebook"></i></a>
-                                <a href="#"><i class="fa fa-twitter"></i></a>
-                                <a href="#"><i class="fa fa-instagram"></i></a>
-                                <a href="#"><i class="fa fa-dribbble"></i></a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div id="mobile-menu-wrap"></div>
-            </div>
-        </header>
-        <!-- Header Section End -->
+        
+        {% include "header.html" with request=request %}
 
         <div class="content-block">
         {% block content %}{% endblock %}
         </div>
 
-        <!-- Footer Section Begin -->
-        <footer class="footer spad set-bg" data-setbg="{% static 'img/footer-bg.png' %}">
-            <div class="container">
-                <div class="row">
-                    <div class="col-lg-3 col-md-6">
-                        <div class="footer__address">
-                            <ul>
-                                <li>
-                                    <i class="fa fa-phone"></i>
-                                    <p>Phone</p>
-                                    <h6>1-677-124-44227</h6>
-                                </li>
-                                <li>
-                                    <i class="fa fa-envelope"></i>
-                                    <p>Email</p>
-                                    <h6>DJ.Music@gmail.com</h6>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="col-lg-4 offset-lg-1 col-md-6">
-                        <div class="footer__social">
-                            <h2>DJoz</h2>
-                            <div class="footer__social__links">
-                                <a href="#"><i class="fa fa-facebook"></i></a>
-                                <a href="#"><i class="fa fa-twitter"></i></a>
-                                <a href="#"><i class="fa fa-instagram"></i></a>
-                                <a href="#"><i class="fa fa-dribbble"></i></a>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 offset-lg-1 col-md-6">
-                        <div class="footer__newslatter">
-                            <h4>Stay With me</h4>
-                            <form action="#">
-                                <input type="text" placeholder="Email">
-                                <button type="submit"><i class="fa fa-send-o"></i></button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                <!-- Link back to Colorlib can't be removed. Template is licensed under CC BY 3.0. -->
-                <div class="footer__copyright__text">
-                    <p>Copyright &copy; <script>document.write(new Date().getFullYear());</script> All rights reserved | This template is made with <i class="fa fa-heart" aria-hidden="true"></i> by <a href="https://colorlib.com" target="_blank">Colorlib</a></p>
-                </div>
-                <!-- Link back to Colorlib can't be removed. Template is licensed under CC BY 3.0. -->
-            </div>
-        </footer>
-        <!-- Footer Section End -->
+        {% include "footer.html" %}
 
-        <!-- Js Plugins -->
-        <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-        <script src="{% static 'js/bootstrap.min.js' %}"></script>
-        <script src="{% static 'js/jquery.magnific-popup.min.js' %}"></script>
-        <script src="{% static 'js/jquery.nicescroll.min.js' %}"></script>
-        <script src="{% static 'js/jquery.barfiller.js' %}"></script>
-        <script src="{% static 'js/jquery.countdown.min.js' %}"></script>
-        <script src="{% static 'js/jquery.slicknav.js' %}"></script>
-        <script src="{% static 'js/owl.carousel.min.js' %}"></script>
-        <script src="{% static 'js/main.js' %}"></script>
-
-        <!-- Music Plugin -->
-        <script src="{% static 'js/jquery.jplayer.min.js' %}"></script>
-        <script src="{% static 'js/jplayerInit.js' %}"></script>
+        {% include "js.html" %}
         {% block extra_js %}
         {# Override this in templates to add extra javascript #}
         {% endblock %}
