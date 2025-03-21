@@ -97,4 +97,4 @@ class MenuItemBlock(blocks.StructBlock):
 class MenuItem(blocks.StructBlock):
     page = blocks.PageChooserBlock()
     label = blocks.CharBlock(required=False)
-    children = blocks.ListBlock(MenuItemBlock, required=False, collapsed=True)
+    submenus = blocks.ListBlock(MenuItemBlock, required=False, collapsed=True)
