@@ -1,7 +1,7 @@
 {% load blowco_tags %}
 <div class="container">
     <div class="row">
-        <div class="col-12 pb-5"><h2>Upcoming Events</h2></div>
+        <div class="col-12 py-5"><h2>Upcoming Events</h2></div>
         <div class="col">
             <ul>
                 {% for gig in gigs %}
@@ -17,6 +17,7 @@
                     </li>
                 {% empty %}
                     <li>No upcoming events.</li>
+                    {% if error %}<p class="text-danger">{{ error }}</p>{% endif %}
                 {% endfor %}
             </ul>
         </div>

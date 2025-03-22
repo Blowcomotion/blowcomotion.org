@@ -117,6 +117,7 @@ class UpcomingPublicGigs(blocks.StaticBlock):
                 gig['date'] = datetime.datetime.strptime(gig['date'], "%Y-%m-%d")
                 gig['set_time'] = datetime.datetime.strptime(gig['set_time'], "%H:%M")
         except Exception as e:
+            context['error'] = e
             context['gigs'] = []
         return context
 
