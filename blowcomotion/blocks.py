@@ -107,14 +107,17 @@ class MenuItem(blocks.StructBlock):
 class UpcomingPublicGigs(blocks.StaticBlock):
     def get_context(self, value, parent_context=None):
         context = super().get_context(value, parent_context)
-        r = requests.get(
-                f"{settings.GIGO_API_URL}/gigs",
-                headers={"X-API-KEY": settings.GIGO_API_KEY},
-            )
-        context['gigs'] = [gig for gig in r.json()['gigs'] if gig['gig_status'].lower() == 'confirmed' and gig['band'].lower() == 'blowcomotion' and gig["date"] >= datetime.date.today().isoformat() and gig['is_private'] == False and gig["hide_from_calendar"] == False and gig["is_archived"] == False]
-        for gig in context['gigs']:
-            gig['date'] = datetime.datetime.strptime(gig['date'], "%Y-%m-%d")
-            gig['set_time'] = datetime.datetime.strptime(gig['set_time'], "%H:%M")
+        try:
+            r = requests.get(
+                    f"{settings.GIGO_API_URL}/gigs",
+                    headers={"X-API-KEY": settings.GIGO_API_KEY},
+                )
+            context['gigs'] = [gig for gig in r.json()['gigs'] if gig['gig_status'].lower() == 'confirmed' and gig['band'].lower() == 'blowcomotion' and gig["date"] >= datetime.date.today().isoformat() and gig['is_private'] == False and gig["hide_from_calendar"] == False and gig["is_archived"] == False]
+            for gig in context['gigs']:
+                gig['date'] = datetime.datetime.strptime(gig['date'], "%Y-%m-%d")
+                gig['set_time'] = datetime.datetime.strptime(gig['set_time'], "%H:%M")
+        except Exception as e:
+            context['gigs'] = []
         return context
 
     class Meta:
