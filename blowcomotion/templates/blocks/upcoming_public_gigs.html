@@ -1,0 +1,24 @@
+{% load blowco_tags %}
+<div class="container">
+    <div class="row">
+        <div class="col-12 pb-5"><h2>Upcoming Events</h2></div>
+        <div class="col">
+            <ul>
+                {% for gig in gigs %}
+                    <li>
+                        <h3 class="pb-1">{{ gig.title }}</h3>
+                        {% is_url gig.address as address_is_url %}
+                        {% if address_is_url %}
+                            <p class="pl-4"><a href="{{ gig.address }}" target="_blank">{{ gig.address }}</a></p>
+                        {% else %}
+                            <p class="pl-4">{{ gig.address }}</p>
+                        {% endif %}
+                        <p class="pl-4">{{ gig.date|date:"l jS" }}, {{ gig.set_time|date:"P" }}</p>
+                    </li>
+                {% empty %}
+                    <li>No upcoming events.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>

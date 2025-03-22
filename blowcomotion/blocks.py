@@ -1,3 +1,7 @@
+import datetime
+
+import requests
+from django.conf import settings
 from wagtail import blocks
 from wagtail.images.blocks import ImageChooserBlock
 
@@ -98,3 +102,24 @@ class MenuItem(blocks.StructBlock):
     page = blocks.PageChooserBlock()
     label = blocks.CharBlock(required=False)
     submenus = blocks.ListBlock(MenuItemBlock, required=False, collapsed=True)
+
+
+class UpcomingPublicGigs(blocks.StaticBlock):
+    def get_context(self, value, parent_context=None):
+        context = super().get_context(value, parent_context)
+        r = requests.get(
+                f"{settings.GIGO_API_URL}/gigs",
+                headers={"X-API-KEY": settings.GIGO_API_KEY},
+            )
+        context['gigs'] = [gig for gig in r.json()['gigs'] if gig['gig_status'].lower() == 'confirmed' and gig['band'].lower() == 'blowcomotion' and gig["date"] >= datetime.date.today().isoformat() and gig['is_private'] == False and gig["hide_from_calendar"] == False and gig["is_archived"] == False]
+        for gig in context['gigs']:
+            gig['date'] = datetime.datetime.strptime(gig['date'], "%Y-%m-%d")
+            gig['set_time'] = datetime.datetime.strptime(gig['set_time'], "%H:%M")
+        return context
+
+    class Meta:
+        icon = "date"
+        label = "Upcoming Public Gigs"
+        admin_text = "This displays a list of confirmed upcoming public Blowco gigs as a list."
+        template = "blocks/upcoming_public_gigs.html"
+        preview_template = "blocks/upcoming_public_gigs.html"

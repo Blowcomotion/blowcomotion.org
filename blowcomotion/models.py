@@ -293,9 +293,10 @@ class BlankCanvasPage(BasePage):
     body = StreamField(
         [
             ("column_layout", blowcomotion_blocks.ColumnLayoutBlock()),
+            ("events", blowcomotion_blocks.EventsBlock()),
             ("hero", blowcomotion_blocks.HeroBlock()),
             ("rich_text", blowcomotion_blocks.AlignableRichtextBlock()),
-            ("events", blowcomotion_blocks.EventsBlock()),
+            ("upcoming_events", blowcomotion_blocks.UpcomingPublicGigs()),
         ],
         block_counts={
             "hero": {"max_num": 1},

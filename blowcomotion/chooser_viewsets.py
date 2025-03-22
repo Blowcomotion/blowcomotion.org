@@ -162,8 +162,6 @@ class BaseGigoGigChooseView(BaseChooseView):
             ),
             Column("date", label="Date"),
             Column("address", label="Address"),
-            Column("gig_status", label="Gig Status"),
-            Column("band", label="Band"),
         ]
 
     def get_object_list(self):
@@ -179,7 +177,7 @@ class BaseGigoGigChooseView(BaseChooseView):
         results = [
             gig
             for gig in results["gigs"]
-            if gig["date"] >= datetime.date.today().isoformat()
+            if gig["date"] >= datetime.date.today().isoformat() and gig["gig_status"].lower() == "confirmed" and gig["band"].lower() == "blowcomotion"
         ]
 
         results.sort(key=lambda gig: gig["date"])
