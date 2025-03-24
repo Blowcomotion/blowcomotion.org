@@ -136,14 +136,4 @@ class UpcomingPublicGigs(blocks.StaticBlock):
         label = "Upcoming Public Gigs"
         admin_text = "This displays a list of confirmed upcoming public Blowco gigs as a list."
         template = "blocks/upcoming_public_gigs.html"
-        preview_template = "blocks/upcoming_public_gigs.html"
-        preview_value = {
-            "gigs": [
-                {
-                    "title": "Test Gig",
-                    "date": "2021-12-31",
-                    "address": "123 Fake",
-                    "set_time": "20:00",
-                }
-            ]
-        }
+        preview_value = {}
