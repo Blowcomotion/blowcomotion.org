@@ -1,4 +1,4 @@
-{% load blowco_tags %}
+{% load blowco_tags tz %}
 <div class="container">
     <div class="row">
         <div class="col-12 py-5"><h2>Upcoming Events</h2></div>
@@ -8,12 +8,13 @@
                     <li>
                         <h3 class="pb-1">{{ gig.title }}</h3>
                         {% is_url gig.address as address_is_url %}
+                        {% get_current_timezone as TIME_ZONE %}
+                        <p class="pl-4">{{ gig.date|date:"l F jS" }}, {{ gig.set_time|timezone:TIME_ZONE|date:"P" }}</p>
                         {% if address_is_url %}
                             <p class="pl-4"><a href="{{ gig.address }}" target="_blank">{{ gig.address }}</a></p>
                         {% else %}
                             <p class="pl-4">{{ gig.address }}</p>
                         {% endif %}
-                        <p class="pl-4">{{ gig.date|date:"l jS" }}, {{ gig.set_time|date:"P" }}</p>
                     </li>
                 {% empty %}
                     <li>No upcoming events.</li>

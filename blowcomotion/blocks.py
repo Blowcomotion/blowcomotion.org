@@ -1,7 +1,10 @@
+import time
 import datetime
+from datetime import tzinfo, timedelta
 
 import requests
 from django.conf import settings
+from django.core.cache import cache
 from wagtail import blocks
 from wagtail.images.blocks import ImageChooserBlock
 
@@ -108,16 +111,23 @@ class UpcomingPublicGigs(blocks.StaticBlock):
     def get_context(self, value, parent_context=None):
         context = super().get_context(value, parent_context)
         try:
-            r = requests.get(
-                    f"{settings.GIGO_API_URL}/gigs",
-                    headers={"X-API-KEY": settings.GIGO_API_KEY},
-                )
-            context['gigs'] = [gig for gig in r.json()['gigs'] if gig['gig_status'].lower() == 'confirmed' and gig['band'].lower() == 'blowcomotion' and gig["date"] >= datetime.date.today().isoformat() and gig['is_private'] == False and gig["hide_from_calendar"] == False and gig["is_archived"] == False]
-            for gig in context['gigs']:
-                gig['date'] = datetime.datetime.strptime(gig['date'], "%Y-%m-%d")
-                gig['set_time'] = datetime.datetime.strptime(gig['set_time'], "%H:%M")
+            context['gigs'] = cache.get('upcoming_public_gigs')
+            if context['gigs'] is None:
+                r = requests.get(
+                        f"{settings.GIGO_API_URL}/gigs",
+                        headers={"X-API-KEY": settings.GIGO_API_KEY},
+                    )
+                context['gigs'] = [gig for gig in r.json()['gigs'] if gig['gig_status'].lower() == 'confirmed' and gig['band'].lower() == 'blowcomotion' and gig["date"] >= datetime.date.today().isoformat() and gig['is_private'] == False and gig["hide_from_calendar"] == False and gig["is_archived"] == False]
+                localtime = time.localtime()
+                for gig in context['gigs']:
+                    gig['date'] = datetime.datetime.strptime(gig['date'], "%Y-%m-%d")
+                    gig['set_time'] = datetime.datetime.strptime(gig['set_time'], "%H:%M").replace(tzinfo=datetime.timezone.utc)
+                    gig['set_time'] = gig['set_time'] + timedelta(hours=localtime.tm_isdst)
+                context['gigs'].sort(key=lambda gig: gig['date'])
+
+                cache.set('upcoming_public_gigs', context['gigs'], 60 * 60) # cache for 1 hour
         except Exception as e:
-            context['error'] = e
+            context['error'] = str(e)
             context['gigs'] = []
         return context
 
@@ -127,3 +137,13 @@ class UpcomingPublicGigs(blocks.StaticBlock):
         admin_text = "This displays a list of confirmed upcoming public Blowco gigs as a list."
         template = "blocks/upcoming_public_gigs.html"
         preview_template = "blocks/upcoming_public_gigs.html"
+        preview_value = {
+            "gigs": [
+                {
+                    "title": "Test Gig",
+                    "date": "2021-12-31",
+                    "address": "123 Fake",
+                    "set_time": "20:00",
+                }
+            ]
+        }
