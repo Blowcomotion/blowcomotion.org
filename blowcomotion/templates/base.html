@@ -14,7 +14,10 @@
         
         {% include "header.html" with request=request %}
 
-        {% block content %}{% endblock %}
+        <main>
+            {% block content %}
+            {% endblock %}
+        </main>
 
         {% include "footer.html" %}
 

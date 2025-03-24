@@ -42,9 +42,9 @@ h4,
 h5,
 h6 {
   margin: 0;
-  color: $blowco-purple;
+  color: #111111;
   font-weight: 400;
-  font-family: "Caprasimo", serif;
+  font-family: 'Rajdhani', sans-serif;
 }
 
 h1 {
@@ -74,7 +74,7 @@ h6 {
 p {
   font-size: 15px;
   font-family: 'Now Regular';
-  color: $blowco-purple;
+  color: #444444;
   font-weight: 400;
   line-height: 26px;
   margin: 0 0 15px 0;
@@ -258,22 +258,4 @@ ol {
     border: 4px solid #f44336;
     border-left-color: transparent;
   }
-}
-
-ul {
-  --icon-size: .8em;
-  --gutter: .5em;
-  padding: 0 0 0 var(--icon-size);
-}
-
-ul li {
-  padding-left: var(--gutter);
-}
-
-ul li::marker {
-  content: "\f001";
-  /* FontAwesome Unicode */
-  font-family: FontAwesome;
-  font-size: var(--icon-size) + 1em;
-  color: $blowco-purple;
 }

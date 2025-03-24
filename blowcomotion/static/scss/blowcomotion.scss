@@ -5,3 +5,41 @@
 .footer {
     margin-top: unset;
 }
+
+main {
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        font-family: "Caprasimo", serif;
+        color: $blowco-purple;
+    }
+
+    p {
+        font-family: "Schoolbell", cursive;
+        color: $blowco-purple;
+        font-size: 1.2em;
+    }
+}
+
+.upcoming-public-gigs {
+    ul {
+        --icon-size: .8em;
+        --gutter: .5em;
+        padding: 0 0 0 var(--icon-size);
+    }
+
+    ul li {
+        padding-left: var(--gutter);
+    }
+
+    ul li::marker {
+        content: "\f001";
+        /* FontAwesome Unicode */
+        font-family: FontAwesome;
+        font-size: 2em;
+        color: $blowco-purple;
+    }
+}
