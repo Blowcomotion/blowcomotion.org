@@ -42,9 +42,9 @@ h4,
 h5,
 h6 {
   margin: 0;
-  color: #111111;
+  color: $blowco-purple;
   font-weight: 400;
-  font-family: 'Rajdhani', sans-serif;
+  font-family: "Caprasimo", serif;
 }
 
 h1 {
@@ -74,7 +74,7 @@ h6 {
 p {
   font-size: 15px;
   font-family: 'Now Regular';
-  color: #444444;
+  color: $blowco-purple;
   font-weight: 400;
   line-height: 26px;
   margin: 0 0 15px 0;
@@ -92,14 +92,14 @@ textarea:focus {
 }
 
 a {
-  color: purple;
+  color: $blowco-purple;
 }
 
 a:hover,
 a:focus {
   text-decoration: none;
   outline: none;
-  color: rgb(229, 61, 255);
+  color: $blowco-highlight;
 }
 
 ul,
