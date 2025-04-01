@@ -6,22 +6,16 @@
     margin-top: unset;
 }
 
-main {
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6 {
-        font-family: "Caprasimo", serif;
-        color: $blowco-purple;
-    }
+.font-caprasimo {
+    font-family: "Caprasimo", serif !important;
+}
 
-    p {
-        font-family: "Schoolbell", cursive;
-        color: $blowco-purple;
-        font-size: 1.2em;
-    }
+.font-schoolbell {
+    font-family: "Schoolbell", cursive !important;
+}
+
+.blowco-purple {
+    color: $blowco-purple !important;
 }
 
 .upcoming-public-gigs {
@@ -40,6 +34,17 @@ main {
         /* FontAwesome Unicode */
         font-family: FontAwesome;
         font-size: 2em;
+        color: $blowco-purple;
+    }
+
+    h2, h3 {
+        font-family: 'Caprasimo', serif;
+        color: $blowco-purple;
+    }
+
+    p {
+        font-family: 'Schoolbell', cursive;
+        font-size: 1.5em;
         color: $blowco-purple;
     }
 }
