@@ -137,3 +137,20 @@ class UpcomingPublicGigs(blocks.StaticBlock):
         admin_text = "This displays a list of confirmed upcoming public Blowco gigs as a list."
         template = "blocks/upcoming_public_gigs.html"
         preview_value = {}
+
+
+class QuotedImageBlock(blocks.StructBlock):
+    image = ImageChooserBlock()
+    header = blocks.CharBlock(required=False)
+    subheader = blocks.CharBlock(required=False)
+    author = blocks.CharBlock(required=False)
+
+    class Meta:
+        icon = "image"
+        label = "Quoted Image"
+        template = "blocks/quoted_image_block.html"
+        preview_value = {
+            "header": "This is a header",
+            "subheader": "This is a subheader",
+            "author": "This is an author",
+        }
