@@ -172,3 +172,12 @@ class MultiImageBannerBlock(blocks.StructBlock):
         icon = "image"
         label = "Multi Image Banner"
         template = "blocks/multi_image_banner_block.html"
+        preview_template = "blocks/previews/multi_image_banner_block.html"
+
+
+class SpacerBlock(blocks.StaticBlock):
+    class Meta:
+        icon = "placeholder"
+        label = "Spacer"
+        template = "blocks/spacer_block.html"
+        admin_text = "This is a spacer block, it adds 50px of vertical space. It does not display anything."

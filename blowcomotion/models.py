@@ -306,6 +306,7 @@ class BlankCanvasPage(BasePage):
             ("multi_image_banner", blowcomotion_blocks.MultiImageBannerBlock()),
             ("quoted_image", blowcomotion_blocks.QuotedImageBlock()),
             ("rich_text", blowcomotion_blocks.AlignableRichtextBlock()),
+            ("spacer", blowcomotion_blocks.SpacerBlock()),
             ("upcoming_events", blowcomotion_blocks.UpcomingPublicGigs()),
         ],
         block_counts={
