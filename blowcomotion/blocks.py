@@ -13,6 +13,10 @@ from blowcomotion.chooser_blocks import EventChooserBlock, GigoGigChooserBlock
 
 class HeroBlock(blocks.StructBlock):
     image = ImageChooserBlock()
+    top_line = blocks.CharBlock(required=False)
+    middle_line = blocks.CharBlock(required=False)
+    bottom_line = blocks.CharBlock(required=False)
+    youtube_url = blocks.URLBlock(required=False)
 
     class Meta:
         icon = "image"

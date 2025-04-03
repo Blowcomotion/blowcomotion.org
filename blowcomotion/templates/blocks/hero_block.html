@@ -1,18 +1,22 @@
 {% load wagtailimages_tags %}
 {% image value.image original as background_image %}
 <section class="hero spad set-bg" data-setbg="{{ background_image.url }}">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-12">
-                <div class="hero__text py-5">
-                    <span>Join Us</span>
-                    <h1>Blowcomotion</h1>
-                    <p>Join us on our musical journey and experience the beats that move you.</p>
-                    <a href="https://www.youtube.com/watch?v=jDROMWaRlzY" class="play-btn video-popup"><i class="fa fa-play"></i></a>
+    {% if value.top_line or value.middle_line or value.bottom_line or value.youtube_url %}
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="hero__text py-5">
+                        {% if value.top_line %}<span>{{ value.top_line }}</span>{% endif %}
+                        {% if value.middle_line %}<h1>{{ value.middle_line }}</h1>{% endif %}
+                        {% if value.bottom_line %}<p>{{ value.bottom_line }}</p>{% endif %}
+                        {% if value.youtube_url %}
+                            <a href="{{ value.youtube_url }}" class="play-btn video-popup"><i class="fa fa-play"></i></a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    {% endif %}
     <div class="linear__icon">
         <i class="fa fa-angle-double-down"></i>
     </div>

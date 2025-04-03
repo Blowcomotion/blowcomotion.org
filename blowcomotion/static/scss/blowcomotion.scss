@@ -26,6 +26,17 @@
     color: $blowco-purple !important;
 }
 
+.hero {
+    min-height: 1200px;
+}
+
+@media screen and (max-width: 768px) {
+    .hero {
+        min-height: 600px;
+    }
+    
+}
+
 .upcoming-public-gigs {
     ul {
         --icon-size: .8em;
