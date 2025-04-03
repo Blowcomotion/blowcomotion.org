@@ -121,7 +121,7 @@ class UpcomingPublicGigs(blocks.StaticBlock):
                         f"{settings.GIGO_API_URL}/gigs",
                         headers={"X-API-KEY": settings.GIGO_API_KEY},
                     )
-                context['gigs'] = [gig for gig in r.json()['gigs'] if gig['gig_status'].lower() == 'confirmed' and gig['band'].lower() == 'blowcomotion' and gig["date"] >= datetime.date.today().isoformat() and gig['is_private'] == False and gig["hide_from_calendar"] == False and gig["is_archived"] == False]
+                context['gigs'] = [gig for gig in r.json()['gigs'] if gig['gig_status'].lower() == 'confirmed' and gig['band'].lower() == 'blowcomotion' and gig["date"] >= datetime.date.today().isoformat() and gig['is_private'] == False and gig["hide_from_calendar"] == False and gig["is_archived"] == False and gig["is_in_trash"] == False]
                 localtime = time.localtime()
                 for gig in context['gigs']:
                     gig['date'] = datetime.datetime.strptime(gig['date'], "%Y-%m-%d")
