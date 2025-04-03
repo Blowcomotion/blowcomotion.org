@@ -27,14 +27,15 @@
 }
 
 .hero {
-    min-height: 1200px;
+    background-size: auto;
+    min-height: 1000px;
 }
 
 @media screen and (max-width: 768px) {
     .hero {
+        background-size: auto;
         min-height: 600px;
     }
-    
 }
 
 .upcoming-public-gigs {
