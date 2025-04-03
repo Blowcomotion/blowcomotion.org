@@ -24,6 +24,14 @@ class SiteSettings(BaseSiteSetting):
         on_delete=models.SET_NULL,
         related_name="+",
     )
+    footer_text = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Text to display in the footer",
+    )
+    email = models.EmailField(blank=True, null=True)
+    instagram = models.URLField(blank=True, null=True)
     facebook = models.URLField(blank=True, null=True)
     header_menus = StreamField(
         [

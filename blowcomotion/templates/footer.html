@@ -2,34 +2,30 @@
 <footer class="footer spad set-bg" data-setbg="{% static 'img/footer-bg.png' %}">
     <div class="container">
         <div class="row">
-            <div class="col-lg-3 col-md-6">
-                <div class="footer__address">
-                    <ul>
-                        <li>
-                            <i class="fa fa-phone"></i>
-                            <p>Phone</p>
-                            <h6>1-677-124-44227</h6>
-                        </li>
-                        <li>
-                            <i class="fa fa-envelope"></i>
-                            <p>Email</p>
-                            <h6>DJ.Music@gmail.com</h6>
-                        </li>
-                    </ul>
+            {% if settings.blowcomotion.SiteSettings.email %}
+                <div class="col-md-6">
+                    <div class="footer__address">
+                        <ul>
+                            <li>
+                                <i class="fa fa-envelope"></i>
+                                <p>Email</p>
+                                <h6>{{ settings.blowcomotion.SiteSettings.email }}</h6>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-            </div>
-            <div class="col-lg-4 offset-lg-1 col-md-6">
+            {% endif %}
+            <div class="col-md-6">
                 <div class="footer__social">
-                    <h2>DJoz</h2>
+                    {% if settings.blowcomotion.SiteSettings.footer_text %}<h2>{{ settings.blowcomotion.SiteSettings.footer_text }}</h2>{% endif %}
                     <div class="footer__social__links">
-                        <a href="#"><i class="fa fa-facebook"></i></a>
-                        <a href="#"><i class="fa fa-twitter"></i></a>
-                        <a href="#"><i class="fa fa-instagram"></i></a>
-                        <a href="#"><i class="fa fa-dribbble"></i></a>
+                        {% if settings.blowcomotion.SiteSettings.facebook %}<a href="{{ settings.blowcomotion.SiteSettings.facebook }}"><i class="fa fa-facebook"></i></a>{% endif %}
+                        {% if settings.blowcomotion.SiteSettings.twitter %}<a href="{{ settings.blowcomotion.SiteSettings.twitter }}"><i class="fa fa-twitter"></i></a>{% endif %}
+                        {% if settings.blowcomotion.SiteSettings.instagram %}<a href="{{ settings.blowcomotion.SiteSettings.instagram }}"><i class="fa fa-instagram"></i></a>{% endif %}
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 offset-lg-1 col-md-6">
+            {% comment %} <div class="col-lg-3 offset-lg-1 col-md-6">
                 <div class="footer__newslatter">
                     <h4>Stay With me</h4>
                     <form action="#">
@@ -37,7 +33,7 @@
                         <button type="submit"><i class="fa fa-send-o"></i></button>
                     </form>
                 </div>
-            </div>
+            </div> {% endcomment %}
         </div>
         <!-- Link back to Colorlib can't be removed. Template is licensed under CC BY 3.0. -->
         <div class="footer__copyright__text">

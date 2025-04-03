@@ -71,16 +71,6 @@
     content: "";
   }
 
-  &::after {
-    position: absolute;
-    right: -50px;
-    top: 3px;
-    width: 1px;
-    height: 130px;
-    background: rgba(255, 255, 255, 0.2);
-    content: "";
-  }
-
   h2 {
     color: $white-color;
     font-weight: 700;
