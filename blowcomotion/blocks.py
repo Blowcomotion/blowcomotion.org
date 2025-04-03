@@ -158,3 +158,17 @@ class QuotedImageBlock(blocks.StructBlock):
             "subheader": "This is a subheader",
             "author": "This is an author",
         }
+
+
+class MultiImageBannerBlock(blocks.StructBlock):
+    images = blocks.ListBlock(
+        ImageChooserBlock(),
+        help_text="Select images to display in the banner.",
+        min_num=7,
+        max_num=7,
+    )
+
+    class Meta:
+        icon = "image"
+        label = "Multi Image Banner"
+        template = "blocks/multi_image_banner_block.html"

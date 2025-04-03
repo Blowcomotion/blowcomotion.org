@@ -303,6 +303,7 @@ class BlankCanvasPage(BasePage):
             ("column_layout", blowcomotion_blocks.ColumnLayoutBlock()),
             ("events", blowcomotion_blocks.EventsBlock()),
             ("hero", blowcomotion_blocks.HeroBlock()),
+            ("multi_image_banner", blowcomotion_blocks.MultiImageBannerBlock()),
             ("quoted_image", blowcomotion_blocks.QuotedImageBlock()),
             ("rich_text", blowcomotion_blocks.AlignableRichtextBlock()),
             ("upcoming_events", blowcomotion_blocks.UpcomingPublicGigs()),
