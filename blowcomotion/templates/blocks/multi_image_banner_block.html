@@ -5,38 +5,34 @@
             <div class="col-lg-6">
                 <div class="row">
                     <div class="col-lg-4 col-md-4 col-sm-4 p-0">
-                        {% image value.images.0 original as image_0 %}
-                        <img src="{{ image_0.url }}" alt="">
-                        {% image value.images.1 original as image_1 %}
-                        <img src="{{ image_1.url }}" alt="">
+                        {% image value.images.0 fill-315x315 as image_0 %}
+                        <img src="{{ image_0.url }}" alt="{{ image_0.alt }}">
+                        {% image value.images.1 fill-315x315 as image_1 %}
+                        <img src="{{ image_1.url }}" alt="{{ image_1.alt }}">
                     </div>
                     <div class="col-lg-8 col-md-8 col-sm-8 p-0">
-                        {% image value.images.2 original as image_2 %}
-                        <img src="{{ image_2.url }}" alt="">
+                        {% image value.images.2 fill-640x640 as image_2 %}
+                        <img src="{{ image_2.url }}" alt="{{ image_2.alt }}">
                     </div>
                 </div>
             </div>
             <div class="col-lg-6">
                 <div class="row">
                     <div class="col-lg-8 col-md-8 col-sm-8 p-0">
-                        {% image value.images.3 original as image_3 %}
-                        <img src="{{ image_3.url }}" alt="">
+                        {% image value.images.3 fill-620x315 as image_3 %}
+                        <img src="{{ image_3.url }}" alt="{{ image_3.alt }}">
                     </div>
                     <div class="col-lg-4 col-md-4 col-sm-4 p-0">
-                        {% image value.images.4 original as image_4 %}
-                        <img src="{{ image_4.url }}" alt="">
+                        {% image value.images.4 fill-315x315 as image_4 %}
+                        <img src="{{ image_4.url }}" alt="{{ image_4.alt }}">
                     </div>
                     <div class="col-lg-4 col-md-4 col-sm-4 p-0">
-                        {% image value.images.5 original as image_5 %}
-                        <img src="{{ image_5.url }}" alt="">
-                    </div>
-                    <div class="col-lg-4 col-md-4 col-sm-4 p-0">
-                        {% image value.images.6 original as image_6 %}
-                        <img src="{{ image_6.url }}" alt="">
+                        {% image value.images.5 fill-350x315 as image_5 %}
+                        <img src="{{ image_5.url }}" alt="{{ image_5.alt }}">
                     </div>
                     <div class="col-lg-8 col-md-8 col-sm-8 p-0">
-                        {% image value.images.7 original as image_7 %}
-                        <img src="{{ image_7.url }}" alt="">
+                        {% image value.images.6 fill-620x315 as image_6 %}
+                        <img src="{{ image_6.url }}" alt="{{ image_6.alt }}">
                     </div>
                 </div>
             </div>
