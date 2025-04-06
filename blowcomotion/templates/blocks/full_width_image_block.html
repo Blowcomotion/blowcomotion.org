@@ -1,0 +1,5 @@
+{% load wagtailimages_tags %}
+<div class="container-fluid px-0">
+    {% image value.image original as the_banner %}
+    <img src="{{ the_banner.url }}" class="img-fluid">
+</div>

@@ -181,3 +181,12 @@ class SpacerBlock(blocks.StaticBlock):
         label = "Spacer"
         template = "blocks/spacer_block.html"
         admin_text = "This is a spacer block, it adds 50px of vertical space. It does not display anything."
+
+
+class FullWidthImageBlock(blocks.StructBlock):
+    image = ImageChooserBlock()
+
+    class Meta:
+        icon = "image"
+        label = "Full Width Image"
+        template = "blocks/full_width_image_block.html"
