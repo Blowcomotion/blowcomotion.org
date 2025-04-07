@@ -21,7 +21,6 @@ class HeroBlock(blocks.StructBlock):
 
     class Meta:
         icon = "image"
-        label = "Hero"
         template = "blocks/hero_block.html"
         label_format = "Hero: {top_line} {middle_line} {bottom_line}"
 
@@ -42,7 +41,6 @@ class EventsBlock(blocks.StructBlock):
 
     class Meta:
         icon = "date"
-        label = "Event Scroller"
         template = "blocks/events_block.html"
         label_format = "Event Scroller: {scroller_title}"
 
@@ -118,7 +116,12 @@ class MenuItem(blocks.StructBlock):
     submenus = blocks.ListBlock(MenuItemBlock, required=False, collapsed=True)
 
 
-class UpcomingPublicGigs(blocks.StaticBlock):
+class UpcomingPublicGigs(blocks.StructBlock):
+    headline = blocks.CharBlock(
+        required=False,
+        help_text="Enter the headline for the upcoming public gigs.",
+    )
+
     def get_context(self, value, parent_context=None):
         context = super().get_context(value, parent_context)
         try:
@@ -177,7 +180,6 @@ class MultiImageBannerBlock(blocks.StructBlock):
 
     class Meta:
         icon = "image"
-        label = "Multi Image Banner"
         template = "blocks/multi_image_banner_block.html"
         preview_template = "blocks/previews/multi_image_banner_block.html"
         label_format = "Multi Image Banner"
@@ -196,7 +198,6 @@ class FullWidthImageBlock(blocks.StructBlock):
 
     class Meta:
         icon = "image"
-        label = "Full Width Image"
         template = "blocks/full_width_image_block.html"
         label_format = "Full Width Image: {image}"
 
@@ -234,6 +235,5 @@ class CountdownBlock(blocks.StructBlock):
     
     class Meta:
         icon = "calendar-alt"
-        label = "Countdown"
         template = "blocks/countdown_block.html"
-        label_format = "Countdown to {head_line}"
+        label_format = "Countdown to {countdown_date}"
