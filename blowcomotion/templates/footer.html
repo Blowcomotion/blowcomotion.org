@@ -1,5 +1,5 @@
 {% load static %}
-<footer class="footer spad set-bg" data-setbg="{% static 'img/footer-bg.png' %}">
+<footer class="footer spad set-bg" data-setbg="{% static 'img/footer-bg.png' %}"{% if bottom_countdown %} style="margin-top:-547px;"{% endif %}>
     <div class="container">
         <div class="row">
             {% if settings.blowcomotion.SiteSettings.email %}

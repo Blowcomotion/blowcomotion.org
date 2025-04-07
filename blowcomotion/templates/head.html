@@ -43,4 +43,8 @@
     {% if 'admin' not in request.path %}
         {% livereload_script %}
     {% endif %}
+
+    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    {% if include_countdown_js %}<script src="{% static 'js/jquery.countdown.min.js' %}"></script>{% endif %}
 </head>

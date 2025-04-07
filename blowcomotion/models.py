@@ -301,6 +301,7 @@ class BlankCanvasPage(BasePage):
     body = StreamField(
         [
             ("column_layout", blowcomotion_blocks.ColumnLayoutBlock()),
+            ("countdown", blowcomotion_blocks.CountdownBlock()),
             ("events", blowcomotion_blocks.EventsBlock()),
             ("full_width_image", blowcomotion_blocks.FullWidthImageBlock()),
             ("hero", blowcomotion_blocks.HeroBlock()),
@@ -325,6 +326,13 @@ class BlankCanvasPage(BasePage):
         context = super().get_context(request)
         if self.body:
             context["hero_header"] = self.body[0].block_type == "hero"
+            context["bottom_countdown"] = self.body[-1].block_type == "countdown"
+            for block in self.body:
+                if block.block_type == "countdown":
+                    context["include_countdown_js"] = True
+                    break
         else:
             context["hero_header"] = False
+            context["bottom_countdown"] = False
+            context["include_countdown_js"] = False
         return context

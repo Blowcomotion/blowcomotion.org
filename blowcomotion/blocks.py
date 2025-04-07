@@ -1,6 +1,7 @@
 import time
 import datetime
 from datetime import tzinfo, timedelta
+from django.utils import timezone
 
 import requests
 from django.conf import settings
@@ -22,6 +23,7 @@ class HeroBlock(blocks.StructBlock):
         icon = "image"
         label = "Hero"
         template = "blocks/hero_block.html"
+        label_format = "Hero: {top_line} {middle_line} {bottom_line}"
 
 
 class EventsBlock(blocks.StructBlock):
@@ -42,6 +44,7 @@ class EventsBlock(blocks.StructBlock):
         icon = "date"
         label = "Event Scroller"
         template = "blocks/events_block.html"
+        label_format = "Event Scroller: {scroller_title}"
 
 
 class AlignableRichtextBlock(blocks.StructBlock):
@@ -57,6 +60,7 @@ class AlignableRichtextBlock(blocks.StructBlock):
 
     class Meta:
         template = "blocks/alignable_richtext_block.html"
+        label_format = "({align}-aligned) {rich_text}"
 
 
 class ColumnContentBlock(blocks.StreamBlock):
@@ -74,6 +78,7 @@ class ThreeColumnBlock(blocks.StructBlock):
 
     class Meta:
         template = "blocks/three_column_block.html"
+        label_format = "Three Columns"
 
 
 class TwoColumnBlock(ThreeColumnBlock):
@@ -81,6 +86,7 @@ class TwoColumnBlock(ThreeColumnBlock):
 
     class Meta:
         template = "blocks/two_column_block.html"
+        label_format = "Two Columns"
 
 
 class FourColumnBlock(ThreeColumnBlock):
@@ -91,6 +97,7 @@ class FourColumnBlock(ThreeColumnBlock):
 
     class Meta:
         template = "blocks/four_column_block.html"
+        label_format = "Four Columns"
 
 
 class ColumnLayoutBlock(blocks.StreamBlock):
@@ -173,6 +180,7 @@ class MultiImageBannerBlock(blocks.StructBlock):
         label = "Multi Image Banner"
         template = "blocks/multi_image_banner_block.html"
         preview_template = "blocks/previews/multi_image_banner_block.html"
+        label_format = "Multi Image Banner"
 
 
 class SpacerBlock(blocks.StaticBlock):
@@ -190,3 +198,42 @@ class FullWidthImageBlock(blocks.StructBlock):
         icon = "image"
         label = "Full Width Image"
         template = "blocks/full_width_image_block.html"
+        label_format = "Full Width Image: {image}"
+
+
+class CountdownBlock(blocks.StructBlock):
+    background_image = ImageChooserBlock(required=False)
+    countdown_date = blocks.DateBlock(
+        help_text="Enter the date for the countdown."
+    )
+    head_line = blocks.CharBlock(
+        required=False,
+        help_text="Enter the top line text for the countdown.",
+    )
+    sub_line = blocks.CharBlock(
+        required=False,
+        help_text="Enter the sub line text for the countdown.",
+    )
+    button_text = blocks.CharBlock(
+        required=False,
+        help_text="Enter the text for the button.",
+    )
+    button_url = blocks.URLBlock(
+        required=False,
+        help_text="Enter the URL for the button.",
+    )
+    button_target = blocks.ChoiceBlock(
+        choices=[
+            ("_self", "Same Tab"),
+            ("_blank", "New Tab"),
+        ],
+        default="_self",
+        help_text="Select the target for the button.",
+    )
+
+    
+    class Meta:
+        icon = "calendar-alt"
+        label = "Countdown"
+        template = "blocks/countdown_block.html"
+        label_format = "Countdown to {head_line}"

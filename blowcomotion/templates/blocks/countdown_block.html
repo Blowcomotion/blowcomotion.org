@@ -1,0 +1,29 @@
+{% load wagtailimages_tags %}
+{% image value.background_image original as background_image %}
+<section class="countdown spad set-bg" data-setbg="{{ background_image.url }}">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                {% if value.head_line or value.sub_line %}
+                    <div class="countdown__text">
+                        <h1>{{ value.head_line }}</h1>
+                        <h4>{{ value.sub_line }}</h4>
+                    </div>
+                {% endif %}
+                <div class="countdown__timer" id="countdown-time"></div>
+                {% if value.button_text %}
+                    <div class="buy__tickets">
+                        <a href="{{ value.button_url }}" class="primary-btn" target="{{ value.button_target }}">{{ value.button_text }}</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+var timerdate = "{{ value.countdown_date|date:"Y/m/d" }}";
+$("#countdown-time").countdown(timerdate, function(event) {
+    $(this).html(event.strftime("<div class='countdown__item'><span>%D</span> <p>Days</p> </div>" + "<div class='countdown__item'><span>%H</span> <p>Hours</p> </div>" + "<div class='countdown__item'><span>%M</span> <p>Minutes</p> </div>" + "<div class='countdown__item'><span>%S</span> <p>Seconds</p> </div>"));
+});
+</script>
