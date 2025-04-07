@@ -14,17 +14,21 @@
                     <nav class="header__menu mobile-menu">
                         <ul>
                             {% for menu in settings.blowcomotion.SiteSettings.header_menus %}
-                                {% pageurl menu.value.page as menu_page_url %}
-                                <li{% if request.path == menu_page_url %} class="active"{% endif %}><a href="{{ menu_page_url }}">{% if menu.value.label %}{{ menu.value.label }}{% else %}{{ menu.value.page.title }}{% endif %}</a>
-                                {% if menu.value.submenus %}
-                                    <ul class="dropdown">
-                                        {% for submenu in menu.value.submenus %}
-                                            {% pageurl submenu.page as submenu_page_url %}
-                                            <li><a href="{{ submenu_page_url }}">{% if submenu.label %}{{ submenu.label }}{% else %}{{ submenu.page.title }}{% endif %}</a></li>
-                                        {% endfor %}
-                                    </ul>
+                                {% if menu.value.page %}
+                                    {% pageurl menu.value.page as menu_page_url %}
+                                    <li{% if request.path == menu_page_url %} class="active"{% endif %}><a href="{{ menu_page_url }}">{% if menu.value.label %}{{ menu.value.label }}{% else %}{{ menu.value.page.title }}{% endif %}</a>
+                                    {% if menu.value.submenus %}
+                                        <ul class="dropdown">
+                                            {% for submenu in menu.value.submenus %}
+                                                {% if submenu.page %}
+                                                    {% pageurl submenu.page as submenu_page_url %}
+                                                    <li><a href="{{ submenu_page_url }}">{% if submenu.label %}{{ submenu.label }}{% else %}{{ submenu.page.title }}{% endif %}</a></li>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </ul>
+                                    {% endif %}
+                                    </li>
                                 {% endif %}
-                                </li>
                             {% endfor %}
                         </ul>
                     </nav>
