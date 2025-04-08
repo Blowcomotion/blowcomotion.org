@@ -11,7 +11,7 @@
                         {% get_current_timezone as TIME_ZONE %}
                         <p class="pl-4">{{ gig.date|date:"l F jS" }}, {{ gig.set_time|timezone:TIME_ZONE|date:"P" }}</p>
                         {% if address_is_url %}
-                            <p class="pl-4"><a href="{{ gig.address }}" target="_blank">{{ gig.address }}</a></p>
+                            <p class="pl-4"><a href="{{ gig.address }}" target="_blank">Map Link</a></p>
                         {% else %}
                             <p class="pl-4">{{ gig.address }}</p>
                         {% endif %}
