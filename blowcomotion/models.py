@@ -336,3 +336,45 @@ class BlankCanvasPage(BasePage):
             context["bottom_countdown"] = False
             context["include_countdown_js"] = False
         return context
+    
+
+class WikiIndexPage(BlankCanvasPage):
+    """
+    Model for wiki index page
+
+    Attributes:
+        title: CharField
+        body: StreamField
+    """
+
+    template = "pages/blank_canvas_page.html"
+    subpage_types = ["blowcomotion.WikiPage"]
+    max_count = 1
+
+    class Meta:
+        verbose_name = "Wiki Index Page"
+        verbose_name_plural = "Wiki Index Pages"
+
+    def __str__(self):
+        return self.title
+
+
+class WikiPage(BlankCanvasPage):
+    """
+    Model for wiki pages
+
+    Attributes:
+        title: CharField
+        body: StreamField
+    """
+
+    template = "pages/blank_canvas_page.html"
+    parent_page_types = ["blowcomotion.WikiIndexPage"]
+    subpage_types = ["blowcomotion.WikiPage"]
+
+    class Meta:
+        verbose_name = "Wiki Page"
+        verbose_name_plural = "Wiki Pages"
+
+    def __str__(self):
+        return self.title
