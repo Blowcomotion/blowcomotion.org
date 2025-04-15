@@ -5,6 +5,7 @@ from modelcluster.fields import ParentalKey, ParentalManyToManyField
 from modelcluster.models import ClusterableModel
 from taggit.models import ItemBase, TagBase
 from wagtail import blocks
+from wagtail.admin.panels import FieldPanel, MultipleChooserPanel
 from wagtail.contrib.settings.models import BaseSiteSetting, register_setting
 from wagtail.documents import get_document_model
 from wagtail.fields import StreamField
@@ -357,6 +358,26 @@ class WikiIndexPage(BlankCanvasPage):
 
     def __str__(self):
         return self.title
+    
+
+class WikiAuthor(Orderable):
+    """
+    Model for authors of wiki pages
+
+    Attributes:
+        page: ParentalKey
+        author: ForeignKey
+    """
+
+    page = ParentalKey("blowcomotion.WikiPage", related_name="authors")
+    author = models.ForeignKey("blowcomotion.Member", on_delete=models.CASCADE)
+
+    panels = [
+        FieldPanel("author"),
+    ]
+
+    def __str__(self):
+        return str(self.author)
 
 
 class WikiPage(BlankCanvasPage):
@@ -371,6 +392,11 @@ class WikiPage(BlankCanvasPage):
     template = "pages/blank_canvas_page.html"
     parent_page_types = ["blowcomotion.WikiIndexPage"]
     subpage_types = ["blowcomotion.WikiPage"]
+
+    content_panels = [
+        MultipleChooserPanel("authors", chooser_field_name="author"),
+    ] + BlankCanvasPage.content_panels
+
 
     class Meta:
         verbose_name = "Wiki Page"
