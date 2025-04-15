@@ -306,6 +306,7 @@ class BlankCanvasPage(BasePage):
             ("events", blowcomotion_blocks.EventsBlock()),
             ("full_width_image", blowcomotion_blocks.FullWidthImageBlock()),
             ("hero", blowcomotion_blocks.HeroBlock()),
+            ("horizontal_rule", blowcomotion_blocks.HorizontalRuleBlock()),
             ("multi_image_banner", blowcomotion_blocks.MultiImageBannerBlock()),
             ("quoted_image", blowcomotion_blocks.QuotedImageBlock()),
             ("rich_text", blowcomotion_blocks.AlignableRichtextBlock()),

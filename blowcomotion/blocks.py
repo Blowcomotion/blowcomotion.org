@@ -61,9 +61,28 @@ class AlignableRichtextBlock(blocks.StructBlock):
         label_format = "({align}-aligned) {rich_text}"
 
 
+class HorizontalRuleBlock(blocks.StaticBlock):
+    class Meta:
+        template = "blocks/horizontal_rule_block.html"
+        icon = "minus"
+        label = "Horizontal Rule"
+        admin_text = "This is a horizontal rule block, it adds a horizontal line."
+        help_text = "This block adds a horizontal rule."
+
+
+class SpacerBlock(blocks.StaticBlock):
+    class Meta:
+        icon = "placeholder"
+        label = "Spacer"
+        template = "blocks/spacer_block.html"
+        admin_text = "This is a spacer block, it adds 50px of vertical space. It does not display anything."
+
+
 class ColumnContentBlock(blocks.StreamBlock):
     rich_text = AlignableRichtextBlock()
     image = ImageChooserBlock(template="blocks/image_block.html")
+    horizontal_rule = HorizontalRuleBlock()
+    spacer = SpacerBlock()
 
     class Meta:
         template = "blocks/column_content_block.html"
@@ -183,14 +202,6 @@ class MultiImageBannerBlock(blocks.StructBlock):
         template = "blocks/multi_image_banner_block.html"
         preview_template = "blocks/previews/multi_image_banner_block.html"
         label_format = "Multi Image Banner"
-
-
-class SpacerBlock(blocks.StaticBlock):
-    class Meta:
-        icon = "placeholder"
-        label = "Spacer"
-        template = "blocks/spacer_block.html"
-        admin_text = "This is a spacer block, it adds 50px of vertical space. It does not display anything."
 
 
 class FullWidthImageBlock(blocks.StructBlock):
