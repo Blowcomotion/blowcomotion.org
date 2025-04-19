@@ -1,6 +1,11 @@
 from wagtail import hooks
 from wagtail.snippets.models import register_snippet
 
+from blowcomotion.views import dump_data
+from django.urls import path, reverse
+from wagtail.admin.menu import Menu, MenuItem, SubmenuMenuItem
+
+
 from .chooser_viewsets import (
     event_chooser_viewset,
     instrument_chooser_viewset,
@@ -12,6 +17,27 @@ from .chooser_viewsets import (
 from .snippet_viewsets import BandViewSetGroup
 
 register_snippet(BandViewSetGroup)
+
+
+@hooks.register("register_admin_urls")
+def register_admin_urls():
+    """
+    Register the admin URLs for the app.
+    """
+    return [
+        path("dump_data/", dump_data, name="dump_data"),
+    ]
+
+
+@hooks.register("register_admin_menu_item")
+def register_admin_menu_item():
+    """
+    Register the admin menu item for the app.
+    """
+    submenu = Menu(items=[
+            MenuItem('Dump Data', reverse('dump_data'), icon_name='download'),
+    ])
+    return SubmenuMenuItem('Management', submenu, icon_name='cogs', order=10000)
 
 
 @hooks.register("register_admin_viewset")
