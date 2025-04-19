@@ -2,6 +2,7 @@ import datetime
 import re
 
 import requests
+from django.conf import settings
 from django.views.generic.base import View
 from queryish.rest import APIModel, APIQuerySet
 from wagtail.admin.ui.tables import Column, TitleColumn
@@ -13,7 +14,7 @@ from wagtail.admin.views.generic.chooser import (BaseChooseView,
                                                  CreationFormMixin)
 from wagtail.admin.viewsets.chooser import ChooserViewSet
 from wagtail.admin.widgets import BaseChooser
-from django.conf import settings
+
 
 class ChartChooserViewset(ChooserViewSet):
     model = "blowcomotion.Chart"

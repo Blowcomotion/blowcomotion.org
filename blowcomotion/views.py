@@ -1,11 +1,11 @@
-from django.shortcuts import render, redirect
-from django.contrib.auth import login, authenticate
+import json
+from io import StringIO
+
+from django.contrib.auth import authenticate, login
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.management import call_command
-from io import StringIO
-import json
-
 from django.http import JsonResponse
+from django.shortcuts import redirect, render
 
 
 def dump_data(request):
