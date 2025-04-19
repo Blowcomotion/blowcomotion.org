@@ -78,7 +78,26 @@ class SpacerBlock(blocks.StaticBlock):
         admin_text = "This is a spacer block, it adds 50px of vertical space. It does not display anything."
 
 
+class AccordionListBlock(blocks.StructBlock):
+    title = blocks.CharBlock(required=False)
+    content = blocks.ListBlock(
+        blocks.StructBlock(
+            [
+                ("title", blocks.CharBlock(required=False)),
+                ("content", blocks.RichTextBlock(required=False)),
+            ]
+        )
+    )
+
+
+    class Meta:
+        icon = "list-ul"
+        template = "blocks/accordion_list_block.html"
+        label_format = "Accordion List: {title}"
+        admin_text = "This is an accordion list block, it displays a list of items that can be expanded or collapsed."
+
 class ColumnContentBlock(blocks.StreamBlock):
+    accordion_list = AccordionListBlock()
     rich_text = AlignableRichtextBlock()
     image = ImageChooserBlock(template="blocks/image_block.html")
     horizontal_rule = HorizontalRuleBlock()

@@ -77,3 +77,11 @@ hr {
     margin: 2px auto;
     width: 90%;
 }
+
+
+.accordion-list {
+    h2, .btn, .btn-link {
+        font-family: "Rammetto One", sans-serif;
+        color: $blowco-purple !important;
+    }
+}

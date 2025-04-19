@@ -301,6 +301,7 @@ class BlankCanvasPage(BasePage):
     template = "pages/blank_canvas_page.html"
     body = StreamField(
         [
+            ("accordion_list", blowcomotion_blocks.AccordionListBlock()),
             ("column_layout", blowcomotion_blocks.ColumnLayoutBlock()),
             ("countdown", blowcomotion_blocks.CountdownBlock()),
             ("events", blowcomotion_blocks.EventsBlock()),
