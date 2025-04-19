@@ -3,24 +3,19 @@
 <div class="container my-4">
     <div class="row">
         {% for block in value.left_column %}
-            <div class="col">
-                {% include_block block %}
-            </div>
-        {% endfor %}
-        {% for block in value.middle_column %}
-            <div class="col">
+            <div class="{% block left_column_class %} col-md-4{% endblock left_column_class %}">
                 {% include_block block %}
             </div>
         {% endfor %}
         {% block middle_column %}
-            {% for block in value.right_column %}
-                <div class="col">
+            {% for block in value.middle_column %}
+                <div class="{% block middle_column_class %} col-md-4{% endblock middle_column_class %}">
                     {% include_block block %}
                 </div>
             {% endfor %}
         {% endblock middle_column %}
         {% for block in value.right_column %}
-            <div class="col">
+            <div class="{% block right_column_class %} col-md-4{% endblock right_column_class %}">
                 {% include_block block %}
             </div>
         {% endfor %}
