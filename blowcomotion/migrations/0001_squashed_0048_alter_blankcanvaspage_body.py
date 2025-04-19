@@ -13,67 +13,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
-    replaces = [
-        ("blowcomotion", "0001_initial"),
-        ("blowcomotion", "0002_customimage_description_sitesettings"),
-        ("blowcomotion", "0003_alter_sitesettings_facebook"),
-        ("blowcomotion", "0004_remove_blankcanvaspage_body"),
-        ("blowcomotion", "0005_blankcanvaspage_body"),
-        ("blowcomotion", "0006_event"),
-        ("blowcomotion", "0007_instrument_member_section_instrument_section"),
-        ("blowcomotion", "0008_section_members"),
-        ("blowcomotion", "0009_alter_instrument_section"),
-        (
-            "blowcomotion",
-            "0010_alter_member_instruments_alter_section_instructors_and_more",
-        ),
-        ("blowcomotion", "0011_instrument_sort_order"),
-        ("blowcomotion", "0012_remove_member_instruments_delete_instrument"),
-        ("blowcomotion", "0013_instrument"),
-        ("blowcomotion", "0014_remove_instrument_member_and_more"),
-        ("blowcomotion", "0015_sectioninstructor_sectionmember"),
-        (
-            "blowcomotion",
-            "0016_remove_section_instructors_remove_section_members_and_more",
-        ),
-        ("blowcomotion", "0017_alter_sectioninstructor_options_and_more"),
-        ("blowcomotion", "0018_rename_member_sectioninstructor_instructor"),
-        ("blowcomotion", "0019_member_instruments_delete_memberinstrument"),
-        ("blowcomotion", "0020_remove_member_instruments_memberinstrument"),
-        ("blowcomotion", "0021_song_chart"),
-        ("blowcomotion", "0022_alter_song_arranger_alter_song_composer_and_more"),
-        ("blowcomotion", "0023_remove_song_conductors_songconductor"),
-        ("blowcomotion", "0024_remove_song_event_eventsetlist"),
-        ("blowcomotion", "0025_chart_part"),
-        ("blowcomotion", "0026_alter_chart_part"),
-        (
-            "blowcomotion",
-            "0027_rename_eventsetlist_eventsetlistsong_event_time_and_more",
-        ),
-        ("blowcomotion", "0028_alter_blankcanvaspage_body"),
-        ("blowcomotion", "0029_event_event_scroller_image_and_more"),
-        ("blowcomotion", "0030_alter_event_event_scroller_image"),
-        ("blowcomotion", "0031_alter_blankcanvaspage_body"),
-        ("blowcomotion", "0032_alter_blankcanvaspage_body"),
-        ("blowcomotion", "0033_sitesettings_header_menus_alter_blankcanvaspage_body"),
-        ("blowcomotion", "0034_alter_sitesettings_header_menus"),
-        ("blowcomotion", "0035_alter_blankcanvaspage_body"),
-        ("blowcomotion", "0036_alter_blankcanvaspage_body"),
-        ("blowcomotion", "0037_alter_blankcanvaspage_body"),
-        ("blowcomotion", "0038_alter_blankcanvaspage_body"),
-        ("blowcomotion", "0039_sitesettings_email_sitesettings_footer_text_and_more"),
-        ("blowcomotion", "0040_alter_blankcanvaspage_body"),
-        ("blowcomotion", "0041_alter_blankcanvaspage_body"),
-        ("blowcomotion", "0042_alter_blankcanvaspage_body"),
-        ("blowcomotion", "0043_alter_blankcanvaspage_body"),
-        ("blowcomotion", "0044_alter_blankcanvaspage_body"),
-        ("blowcomotion", "0045_alter_blankcanvaspage_body"),
-        ("blowcomotion", "0046_wikiindexpage_wikipage"),
-        ("blowcomotion", "0047_wikiauthor"),
-        ("blowcomotion", "0048_alter_blankcanvaspage_body"),
-    ]
-
     initial = True
 
     dependencies = [
