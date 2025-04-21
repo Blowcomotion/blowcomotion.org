@@ -66,7 +66,7 @@ class HorizontalRuleBlock(blocks.StaticBlock):
         template = "blocks/horizontal_rule_block.html"
         icon = "minus"
         label = "Horizontal Rule"
-        admin_text = "This is a horizontal rule block, it adds a horizontal line."
+        help_text = "This is a horizontal rule block, it adds a horizontal line."
         help_text = "This block adds a horizontal rule."
 
 
@@ -75,7 +75,7 @@ class SpacerBlock(blocks.StaticBlock):
         icon = "placeholder"
         label = "Spacer"
         template = "blocks/spacer_block.html"
-        admin_text = "This is a spacer block, it adds 50px of vertical space. It does not display anything."
+        help_text = "This is a spacer block, it adds 50px of vertical space. It does not display anything."
 
 
 class AccordionListBlock(blocks.StructBlock):
@@ -94,10 +94,33 @@ class AccordionListBlock(blocks.StructBlock):
         icon = "list-ul"
         template = "blocks/accordion_list_block.html"
         label_format = "Accordion List: {title}"
-        admin_text = "This is an accordion list block, it displays a list of items that can be expanded or collapsed."
+        help_text = "This is an accordion list block, it displays a list of items that can be expanded or collapsed."
+
+
+class ContactFormBlock(blocks.StructBlock):
+    title = blocks.CharBlock(
+        required=False,
+        help_text="Enter the title for the contact form.",
+    )
+    description = blocks.RichTextBlock(
+        required=False,
+        help_text="Enter the description for the contact form.",
+    )
+    button_text = blocks.CharBlock(
+        required=False,
+        help_text="Enter the text for the button.",
+    )
+
+
+    class Meta:
+        icon = "form"
+        template = "blocks/contact_form_block.html"
+        label_format = "Contact Form: {title}"
+        help_text = "This contact form block displays a form for users to fill out. Submissions are sent to the email address specified in the settings. Submissions are also saved to the admin."
 
 class ColumnContentBlock(blocks.StreamBlock):
     accordion_list = AccordionListBlock()
+    contact_form = ContactFormBlock()
     rich_text = AlignableRichtextBlock()
     image = ImageChooserBlock(template="blocks/image_block.html")
     horizontal_rule = HorizontalRuleBlock()
@@ -186,7 +209,7 @@ class UpcomingPublicGigs(blocks.StructBlock):
     class Meta:
         icon = "date"
         label = "Upcoming Public Gigs"
-        admin_text = "This displays a list of confirmed upcoming public Blowco gigs as a list."
+        help_text = "This displays a list of confirmed upcoming public Blowco gigs as a list."
         template = "blocks/upcoming_public_gigs.html"
         preview_value = {}
 

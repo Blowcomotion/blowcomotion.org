@@ -41,6 +41,12 @@ class SiteSettings(BaseSiteSetting):
         blank=True,
         null=True,
     )
+    contact_form_email_recipients = models.CharField(
+        max_length=1024,
+        blank=True,
+        null=True,
+        help_text="Comma-separated list of email addresses to receive contact form submissions",
+    )
 
 
 class CustomImage(AbstractImage):
@@ -303,6 +309,7 @@ class BlankCanvasPage(BasePage):
         [
             ("accordion_list", blowcomotion_blocks.AccordionListBlock()),
             ("column_layout", blowcomotion_blocks.ColumnLayoutBlock()),
+            ("contact_form", blowcomotion_blocks.ContactFormBlock()),
             ("countdown", blowcomotion_blocks.CountdownBlock()),
             ("events", blowcomotion_blocks.EventsBlock()),
             ("full_width_image", blowcomotion_blocks.FullWidthImageBlock()),
@@ -327,17 +334,23 @@ class BlankCanvasPage(BasePage):
 
     def get_context(self, request):
         context = super().get_context(request)
+        context["include_countdown_js"] = False
+        context["include_form_js"] = False
         if self.body:
             context["hero_header"] = self.body[0].block_type == "hero"
             context["bottom_countdown"] = self.body[-1].block_type == "countdown"
+
             for block in self.body:
                 if block.block_type == "countdown":
                     context["include_countdown_js"] = True
+                if block.block_type == "contact_form":
+                    context["include_form_js"] = True
+                if context["include_form_js"] and context["include_countdown_js"]:
                     break
         else:
             context["hero_header"] = False
             context["bottom_countdown"] = False
-            context["include_countdown_js"] = False
+            
         return context
     
 
@@ -406,3 +419,23 @@ class WikiPage(BlankCanvasPage):
 
     def __str__(self):
         return self.title
+    
+
+class ContactFormSubmission(models.Model):
+    """
+    Model for contact form submissions
+
+    Attributes:
+        name: CharField
+        email: EmailField
+        message: TextField
+        date_submitted: DateTimeField
+    """
+
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    message = models.TextField()
+    date_submitted = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Contact Form Submission from {self.name} on {self.date_submitted}"
