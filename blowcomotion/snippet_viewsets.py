@@ -147,3 +147,29 @@ class BandViewSetGroup(SnippetViewSetGroup):
     menu_icon = 'folder-inverse'
     menu_label = 'Band Stuff'
     menu_name = 'band'
+
+
+class ContactFormSubmissionViewset(SnippetViewSet):
+    model = None
+    menu_label = 'Contact Form'
+    menu_name = 'contact_form'
+    menu_icon = 'clipboard-list'
+    list_display = ["name", "email", "message", "date_submitted"]
+    search_fields = ("name", "email", "message")
+    panels = [
+        "name",
+        "email",
+        "message",
+    ]
+
+    def __init__(self, *args, **kwargs):
+        from .models import ContactFormSubmission
+        self.model = ContactFormSubmission
+        super().__init__(*args, **kwargs)
+
+
+class FormsViewSetGroup(SnippetViewSetGroup):
+    items = (ContactFormSubmissionViewset,)
+    menu_icon = 'clipboard-list'
+    menu_label = 'Form Submissions'
+    menu_name = 'forms'
