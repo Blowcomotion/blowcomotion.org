@@ -17,7 +17,7 @@
                     <div class="form-group col-12">
                         <textarea class="form-control" id="message" name="message" rows="4" placeholder="Your Message" required></textarea>
                     </div>
-                    <button type="submit" class="site-btn" name="form_type" value="contact_form">Submit</button>
+                    <button type="submit" class="site-btn" name="form_type" value="contact_form">{{ value.button_text|default:"Submit" }}</button>
                 </div>
             </form>
         </div>
