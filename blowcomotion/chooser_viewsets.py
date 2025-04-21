@@ -67,8 +67,6 @@ class SectionChooserViewset(ChooserViewSet):
     edit_item_text = "Edit section"
     form_fields = [
         "name",
-        "instructors",
-        "members",
     ]
 
 
