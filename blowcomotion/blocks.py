@@ -131,7 +131,7 @@ class PayPalDonateButton(blocks.StructBlock):
     )
 
     class Meta:
-        icon = "bi-currency-dollar"
+        icon = "bi-paypal"
         template = "blocks/paypal_donate_button.html"
         label = "PayPal Donate Button"
         help_text = "This PayPal donate button is used to make Paypal donations."
