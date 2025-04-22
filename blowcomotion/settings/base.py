@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "wagtail.admin",
     "wagtail",
     "wagtailmedia",
+    "wagtailtwbsicons",
     "modelcluster",
     "taggit",
     "django.contrib.admin",

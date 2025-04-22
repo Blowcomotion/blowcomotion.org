@@ -5,3 +5,4 @@ django-livereload-server==0.5.1
 queryish==0.2
 wagtail==6.4.1
 wagtailmedia==0.15.2
+wagtailtwbsicons==1.0.1

@@ -47,6 +47,11 @@ class SiteSettings(BaseSiteSetting):
         null=True,
         help_text="Comma-separated list of email addresses to receive contact form submissions",
     )
+    venmo_donate_url = models.URLField(
+        blank=True,
+        null=True,
+        help_text="URL to Venmo donation page",
+    )
 
 
 class CustomImage(AbstractImage):
@@ -316,10 +321,12 @@ class BlankCanvasPage(BasePage):
             ("hero", blowcomotion_blocks.HeroBlock()),
             ("horizontal_rule", blowcomotion_blocks.HorizontalRuleBlock()),
             ("multi_image_banner", blowcomotion_blocks.MultiImageBannerBlock()),
+            ("paypal_donate_button", blowcomotion_blocks.PayPalDonateButton()),
             ("quoted_image", blowcomotion_blocks.QuotedImageBlock()),
             ("rich_text", blowcomotion_blocks.AlignableRichtextBlock()),
             ("spacer", blowcomotion_blocks.SpacerBlock()),
             ("upcoming_events", blowcomotion_blocks.UpcomingPublicGigs()),
+            ("venmo_donate_button", blowcomotion_blocks.VenmoDonateButton()),
         ],
         block_counts={
             "hero": {"max_num": 1},

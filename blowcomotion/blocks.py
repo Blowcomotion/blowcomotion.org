@@ -118,13 +118,56 @@ class ContactFormBlock(blocks.StructBlock):
         label_format = "Contact Form: {title}"
         help_text = "This contact form block displays a form for users to fill out. Submissions are sent to the email address specified in the settings. Submissions are also saved to the admin."
 
+
+class PayPalDonateButton(blocks.StructBlock):
+    alignment = blocks.ChoiceBlock(
+        choices=[
+            ("left", "Left"),
+            ("center", "Center"),
+            ("right", "Right"),
+        ],
+        default="center",
+        help_text="Select the alignment for the button.",
+    )
+
+    class Meta:
+        icon = "bi-currency-dollar"
+        template = "blocks/paypal_donate_button.html"
+        label = "PayPal Donate Button"
+        help_text = "This PayPal donate button is used to make Paypal donations."
+
+
+class VenmoDonateButton(blocks.StructBlock):
+    button_text = blocks.CharBlock(
+        required=False,
+        help_text="Enter the text for the button.",
+    )
+    alignment = blocks.ChoiceBlock(
+        choices=[
+            ("left", "Left"),
+            ("center", "Center"),
+            ("right", "Right"),
+        ],
+        default="center",
+        help_text="Select the alignment for the button.",
+    )
+
+    class Meta:
+        icon = "bi-currency-dollar"
+        template = "blocks/venmo_donate_button.html"
+        label = "Venmo Donate Button"
+        help_text = "This is Venmo donate button adds a button for making Venmo donations. The Venmo url is set in the settings if your admin account has permission to change it."
+
+
 class ColumnContentBlock(blocks.StreamBlock):
     accordion_list = AccordionListBlock()
     contact_form = ContactFormBlock()
-    rich_text = AlignableRichtextBlock()
-    image = ImageChooserBlock(template="blocks/image_block.html")
     horizontal_rule = HorizontalRuleBlock()
+    image = ImageChooserBlock(template="blocks/image_block.html")
+    paypal_donate_button = PayPalDonateButton()
+    rich_text = AlignableRichtextBlock()
     spacer = SpacerBlock()
+    venmo_donate_button = VenmoDonateButton()
 
     class Meta:
         template = "blocks/column_content_block.html"
@@ -290,3 +333,4 @@ class CountdownBlock(blocks.StructBlock):
         icon = "calendar-alt"
         template = "blocks/countdown_block.html"
         label_format = "Countdown to {countdown_date}"
+
