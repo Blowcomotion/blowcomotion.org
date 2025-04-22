@@ -159,8 +159,50 @@ class VenmoDonateButton(blocks.StructBlock):
         help_text = "This is Venmo donate button adds a button for making Venmo donations. The Venmo url is set in the settings if your admin account has permission to change it."
 
 
+class ButtonBlock(blocks.StructBlock):
+    button_text = blocks.CharBlock(
+        required=False,
+        help_text="Enter the text for the button.",
+    )
+    button_url = blocks.URLBlock(
+        required=False,
+        help_text="Enter the URL for the button.",
+    )
+    button_target = blocks.ChoiceBlock(
+        choices=[
+            ("_self", "Same Tab"),
+            ("_blank", "New Tab"),
+        ],
+        default="_self",
+        help_text="Select the target for the button.",
+    )
+    button_alignment = blocks.ChoiceBlock(
+        choices=[
+            ("left", "Left"),
+            ("center", "Center"),
+            ("right", "Right"),
+        ],
+        default="center",
+        help_text="Select the alignment for the button.",
+    )
+    button_width = blocks.ChoiceBlock(
+        choices=[
+            ("half", "Half"),
+            ("full", "Full"),
+        ],
+        default="half",
+        help_text="Select the width for the button.",
+    )
+
+    class Meta:
+        icon = "link"
+        template = "blocks/button_block.html"
+        label_format = "Button: {button_text}"
+
+
 class ColumnContentBlock(blocks.StreamBlock):
     accordion_list = AccordionListBlock()
+    button = ButtonBlock()
     contact_form = ContactFormBlock()
     horizontal_rule = HorizontalRuleBlock()
     image = ImageChooserBlock(template="blocks/image_block.html")

@@ -1,0 +1,6 @@
+<div class="{% if value.button_width == 'half' %}col-6{% elif value.button_width == 'full' %}col{% endif %} text-center{% if value.button_alignment == 'center' %} mx-auto{% elif value.button_alignment == 'right' %} ml-auto{% endif %}">
+    <a href="{{ value.button_url }}" target="{{ value.button_target }}" 
+       class="site-btn">
+        {{ value.button_text }}
+    </a>
+</div>
