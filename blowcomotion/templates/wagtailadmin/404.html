@@ -7,7 +7,7 @@
         {% if logo %}
             {% image logo original as logo_image %}
             {% wagtail_site as current_site %}
-            <img src="{{ logo_image.url }}" alt="{{ current_site.site_name }}"/>
+            <img src="{{ logo_image.url }}" alt="{{ current_site.site_name }}" style="width: 200px;"/>
         {% else %}
             {{ block.super }}
         {% endif %}
