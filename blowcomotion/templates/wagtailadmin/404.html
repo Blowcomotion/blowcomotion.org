@@ -1,0 +1,15 @@
+{% extends "wagtailadmin/404.html" %}
+{% load static wagtailimages_tags wagtailcore_tags wagtailsettings_tags %}
+
+{% block branding_logo %}
+    {% get_settings %}
+    {% with logo=settings.blowcomotion.SiteSettings.logo %}
+        {% if logo %}
+            {% image logo original as logo_image %}
+            {% wagtail_site as current_site %}
+            <img src="{{ logo_image.url }}" alt="{{ current_site.site_name }}"/>
+        {% else %}
+            {{ block.super }}
+        {% endif %}
+    {% endwith %}
+{% endblock %}

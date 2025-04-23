@@ -1,0 +1,21 @@
+{% extends "wagtailadmin/login.html" %}
+{% load wagtailcore_tags wagtailimages_tags wagtailsettings_tags %}
+
+
+{% block branding_login %}
+{% wagtail_site as current_site %}
+Sign in to {{ current_site.site_name|default:"the"|default_if_none:"the" }} Admin
+{% endblock %}
+
+{% block branding_logo %}
+    {% get_settings %}
+    {% with logo=settings.blowcomotion.SiteSettings.logo %}
+        {% if logo %}
+            {% image logo original as logo_image %}
+            {% wagtail_site as current_site %}
+            <img src="{{ logo_image.url }}" alt="{{ current_site.site_name }}" style="margin-top: 20px;"/>
+        {% else %}
+            {{ block.super }}
+        {% endif %}
+    {% endwith %}
+{% endblock %}

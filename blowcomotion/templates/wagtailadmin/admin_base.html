@@ -1,0 +1,7 @@
+{% extends "wagtailadmin/admin_base.html" %}
+{% load wagtailcore_tags %}
+
+{% block branding_title %}
+{% wagtail_site as current_site %}
+{{ current_site.site_name }}
+{% endblock %}
