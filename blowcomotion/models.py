@@ -343,7 +343,7 @@ class BlankCanvasPage(BasePage):
     def get_context(self, request):
         context = super().get_context(request)
         context["include_countdown_js"] = False
-        context["include_form_js"] = False
+        context["include_form_js"] = True # set to True for the feedback form
         if self.body:
             context["hero_header"] = self.body[0].block_type == "hero"
             context["bottom_countdown"] = self.body[-1].block_type == "countdown"
@@ -351,8 +351,8 @@ class BlankCanvasPage(BasePage):
             for block in self.body:
                 if block.block_type == "countdown":
                     context["include_countdown_js"] = True
-                if block.block_type == "contact_form":
-                    context["include_form_js"] = True
+                # if block.block_type == "contact_form":
+                #     context["include_form_js"] = True
                 if context["include_form_js"] and context["include_countdown_js"]:
                     break
         else:
@@ -429,15 +429,16 @@ class WikiPage(BlankCanvasPage):
         return self.title
     
 
-class ContactFormSubmission(models.Model):
+class BaseFormSubmission(models.Model):
     """
-    Model for contact form submissions
+    Base model for form submissions
 
     Attributes:
         name: CharField
         email: EmailField
         message: TextField
         date_submitted: DateTimeField
+    This is an abstract model that can be inherited by other form submission models.
     """
 
     name = models.CharField(max_length=255)
@@ -445,5 +446,21 @@ class ContactFormSubmission(models.Model):
     message = models.TextField()
     date_submitted = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        abstract = True
+    
+
+class ContactFormSubmission(BaseFormSubmission):
+    """
+        Model for contact form submissions
+    """
     def __str__(self):
         return f"Contact Form Submission from {self.name} on {self.date_submitted}"
+    
+
+class FeedbackFormSubmission(BaseFormSubmission):
+    """
+        Model for feedback form submissions
+    """
+    def __str__(self):
+        return f"Feedback Form Submission from {self.name} on {self.date_submitted}"

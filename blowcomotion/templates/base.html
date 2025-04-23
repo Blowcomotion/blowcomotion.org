@@ -25,5 +25,17 @@
         {% block extra_js %}
         {# Override this in templates to add extra javascript #}
         {% endblock %}
+
+        {% block feedback_form_modal %}
+            {% include "forms/feedback_form_modal.html" %}
+        {% endblock feedback_form_modal %}
+
+        {% block feedback_form_modal_button %}
+            <div class="feedback-form-modal-button">
+                <button type="button" class="site-btn" data-toggle="modal" data-target="#feedbackFormModal">
+                    Feedback
+                </button>
+            </div>
+        {% endblock feedback_form_modal_button %}
     </body>
 </html>

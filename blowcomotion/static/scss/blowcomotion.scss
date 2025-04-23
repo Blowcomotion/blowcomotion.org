@@ -86,3 +86,46 @@ hr {
         text-align: left;
     }
 }
+
+.feedback-form-modal-button {
+    position: fixed;
+    bottom: 40px;
+    right: 20px;
+
+    .site-btn {
+        background-color: $blowco-translucent;
+        color: white;
+        padding: 7px 14px;
+        cursor: pointer;
+    }
+
+    .site-btn:hover {
+        background-color: $blowco-purple;
+        color: white;
+    }
+
+    .site-btn:active {
+        background-color: $blowco-darker-purple;
+        color: white;
+    }
+}
+
+#feedbackFormModal {
+    .site-btn {
+        width: 50%;
+        background-color: $blowco-translucent;
+        color: white;
+        padding: 7px 14px;
+        cursor: pointer;
+    }
+
+    .site-btn:hover {
+        background-color: $blowco-purple;
+        color: white;
+    }
+
+    .site-btn:active {
+        background-color: $blowco-darker-purple;
+        color: white;
+    }
+}

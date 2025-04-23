@@ -8,7 +8,7 @@ from django.core.management import call_command
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 
-from blowcomotion.models import SiteSettings, ContactFormSubmission
+from blowcomotion.models import SiteSettings, ContactFormSubmission, FeedbackFormSubmission
 
 
 logger = logging.getLogger(__name__)
@@ -57,7 +57,6 @@ def process_form(request):
     honeypot_message = 'Honeypot triggered. Form submission failed. Is your javascript enabled?'
     recipients = SiteSettings.for_request(request=request).contact_form_email_recipients
     if request.method == 'POST':
-        logger.info(f"Processing form submission from user {request.user.username}")
         # Handle honeypot field
         honeypot = request.POST.get('best_color')
         if honeypot != 'purple':
@@ -65,13 +64,13 @@ def process_form(request):
             # Honeypot triggered, do not process the form
             context['error'] = honeypot_message
             return render(request, 'forms/error.html', context)
-        if not recipients:
-            logger.error(f"No recipients specified for the contact form. Submission by user {request.user.username} failed.")
-            # No recipients specified, do not process the form
-            context['error'] = 'No recipients specified for the contact form. Add them in the admin settings.'
-            return render(request, 'forms/error.html', context)
         form_type = request.POST.get('form_type')
         if form_type == 'contact_form':
+            if not recipients:
+                logger.error(f"No recipients specified for the contact form. Submission by user {request.user.username} failed.")
+                # No recipients specified, do not process the form
+                context['error'] = 'No recipients specified for the contact form. Add them in the admin settings.'
+                return render(request, 'forms/error.html', context)
             logger.info(f"Processing contact form submission by user {request.user.username}")
             # Process the contact form
             name = request.POST.get('name')
@@ -104,6 +103,31 @@ def process_form(request):
             except Exception as e:
                 logger.error(f"Error sending email for contact form submission by user {request.user.username}: {str(e)}")
                 context['error'] = f'Error sending email: {str(e)}'
+                return render(request, 'forms/error.html', context)
+        elif form_type == 'feedback_form':
+            logger.info(f"Processing feedback form submission by user {request.user.username}")
+            # Process the feedback form
+            name = request.POST.get('name')
+            email = request.POST.get('email')
+            message = request.POST.get('message')
+            # Validate the form data
+            if not name or not email or not message:
+                logger.warning(f"Validation failed for feedback form submission by user {request.user.username}. Missing fields.")
+                context['error'] = 'All fields are required.'
+                return render(request, 'forms/error.html', context)
+            try:
+
+                feedback_form_submission = FeedbackFormSubmission(
+                    name=name,
+                    email=email,
+                    message=message,
+                )
+                feedback_form_submission.save()
+                logger.info(f"Feedback form submission saved successfully for user {request.user.username}")
+                context['message'] = "Feedback form submitted successfully! Thank you for your feedback."
+            except Exception as e:
+                logger.error(f"Error saving feedback form submission by user {request.user.username}: {str(e)}")
+                context['error'] = f'Error saving feedback: {str(e)}'
                 return render(request, 'forms/error.html', context)
         else:
             logger.info(f"Processing other form type submission by user {request.user.username}")

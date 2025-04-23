@@ -168,8 +168,27 @@ class ContactFormSubmissionViewset(SnippetViewSet):
         super().__init__(*args, **kwargs)
 
 
+class FeedbackFormSubmissionViewset(SnippetViewSet):
+    model = None
+    menu_label = 'Feedback Form'
+    menu_name = 'feedback_form'
+    menu_icon = 'clipboard-list'
+    list_display = ["name", "email", "message", "date_submitted"]
+    search_fields = ("name", "email", "message")
+    panels = [
+        "name",
+        "email",
+        "message",
+    ]
+
+    def __init__(self, *args, **kwargs):
+        from .models import FeedbackFormSubmission
+        self.model = FeedbackFormSubmission
+        super().__init__(*args, **kwargs)
+
+
 class FormsViewSetGroup(SnippetViewSetGroup):
-    items = (ContactFormSubmissionViewset,)
+    items = (ContactFormSubmissionViewset, FeedbackFormSubmissionViewset, )
     menu_icon = 'clipboard-list'
     menu_label = 'Form Submissions'
     menu_name = 'forms'
