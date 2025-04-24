@@ -9,16 +9,17 @@
                 </button>
             </div>
             <div class="modal-body">
-                <p>Did you find a bug? Do you have an idea about the website? We value your feedback. Please let us know your thoughts.</p>
+                <p>Did you find a bug? Do you have an idea for the website? We value your feedback. Please let us know your thoughts. Email is not required unless you need a response.</p>
                 <form hx-post="{% url 'process-form' %}" name="feedback-form">
                     <div class="input__list row">
                         {% csrf_token %}
                         <input type="text" class="best-color" name="best_color" value="" style="display:none;">
+                        <input type="text" name="page_url" value="{{ request.path }}" style="display:none;">
                         <div class="form-group col-sm-6">
                             <input type="text" class="form-control" id="name" name="name" placeholder="Your Name" required>
                         </div>
                         <div class="form-group col-sm-6">
-                            <input type="email" class="form-control" id="email" name="email" placeholder="Your Email" required>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="Your Email">
                         </div>
                         <div class="form-group col-12">
                             <textarea class="form-control" id="message" name="message" rows="4" placeholder="Your Message" required></textarea>
@@ -26,7 +27,7 @@
                     </div>
                     <div class="modal-footer flex-nowrap">
                         <button type="button" class="site-btn" data-dismiss="modal">Close</button>
-                        <button type="submit" class="site-btn" name="form_type" value="feedback_form">{{ value.button_text|default:"Submit" }}</button>
+                        <button type="submit" class="site-btn" name="form_type" value="feedback_form">Submit Feedback</button>
                     </div>
                 </form>
             </div>

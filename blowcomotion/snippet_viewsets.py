@@ -173,12 +173,13 @@ class FeedbackFormSubmissionViewset(SnippetViewSet):
     menu_label = 'Feedback Form'
     menu_name = 'feedback_form'
     menu_icon = 'clipboard-list'
-    list_display = ["name", "email", "message", "date_submitted"]
-    search_fields = ("name", "email", "message")
+    list_display = ["name", "email", "message", "submitted_from_page", "date_submitted"]
+    search_fields = ("name", "email", "message", "submitted_from_page")
     panels = [
         "name",
         "email",
         "message",
+        "submitted_from_page",
     ]
 
     def __init__(self, *args, **kwargs):

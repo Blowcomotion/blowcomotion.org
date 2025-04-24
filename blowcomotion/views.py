@@ -110,17 +110,18 @@ def process_form(request):
             name = request.POST.get('name')
             email = request.POST.get('email')
             message = request.POST.get('message')
+            page_url = request.POST.get('page_url')
             # Validate the form data
-            if not name or not email or not message:
+            if not message or not name:
                 logger.warning(f"Validation failed for feedback form submission by user {request.user.username}. Missing fields.")
-                context['error'] = 'All fields are required.'
+                context['error'] = 'Message and name are required.'
                 return render(request, 'forms/error.html', context)
             try:
-
                 feedback_form_submission = FeedbackFormSubmission(
                     name=name,
                     email=email,
                     message=message,
+                    submitted_from_page=page_url,
                 )
                 feedback_form_submission.save()
                 logger.info(f"Feedback form submission saved successfully for user {request.user.username}")

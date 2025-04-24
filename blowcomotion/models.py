@@ -441,9 +441,9 @@ class BaseFormSubmission(models.Model):
     This is an abstract model that can be inherited by other form submission models.
     """
 
-    name = models.CharField(max_length=255)
-    email = models.EmailField()
-    message = models.TextField()
+    name = models.CharField(blank=True, null=True, max_length=255)
+    email = models.EmailField(blank=True, null=True, )
+    message = models.TextField(blank=True, null=True, )
     date_submitted = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -462,5 +462,12 @@ class FeedbackFormSubmission(BaseFormSubmission):
     """
         Model for feedback form submissions
     """
+    submitted_from_page = models.CharField(
+        blank=True,
+        null=True,
+        max_length=255,
+        help_text="The URL of the page from which the feedback was submitted",
+    )
+
     def __str__(self):
         return f"Feedback Form Submission from {self.name} on {self.date_submitted}"
