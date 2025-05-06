@@ -1,4 +1,4 @@
-from wagtail.admin.panels import MultipleChooserPanel
+from wagtail.admin.panels import FieldRowPanel, MultipleChooserPanel
 from wagtail.admin.ui.tables import UpdatedAtColumn
 from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup
 
@@ -31,13 +31,25 @@ class SongViewSet(SnippetViewSet):
     panels = [
         'title',
         'time_signature',
-        'key_signature',
+        FieldRowPanel(
+            [
+                'key_signature',
+                'tonality',
+            ],
+            heading="Key Signature and Tonality",
+            help_text="Select the key signature and tonality of the song.",
+        ),
+        'tempo',
         'style',
         'composer',
         'arranger',
+        'form',
         'description',
-        MultipleChooserPanel("conductors", chooser_field_name="member"),
+        MultipleChooserPanel("conductors", chooser_field_name="member", help_text="Select the members that usually conduct this song."),
+        MultipleChooserPanel("soloists", chooser_field_name="member", help_text="If this song has soloists, select the members that usually solo on this song."),
         'music_video_url',
+        'source_band',
+        'active',
     ]
 
     def __init__(self, *args, **kwargs):

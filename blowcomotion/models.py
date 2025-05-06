@@ -108,22 +108,89 @@ class SongConductor(Orderable):
     member = models.ForeignKey("blowcomotion.Member", on_delete=models.CASCADE)
 
 
+class SongSoloist(Orderable):
+    song = ParentalKey("blowcomotion.Song", related_name="soloists")
+    member = models.ForeignKey("blowcomotion.Member", on_delete=models.CASCADE)
+
+
+time_signature_choices = [
+    ("4/4", "4/4"),
+    ("3/4", "3/4"),
+    ("2/4", "2/4"),
+    ("2/2", "2/2"),
+    ("6/8", "6/8"),
+    ("12/8", "12/8"),
+    ("5/4", "5/4"),
+    ("7/8", "7/8"),
+    ("9/8", "9/8"),
+]
+
+key_signature_choices = [
+    ("C", "C"),
+    ("F", "F"),
+    ("Bb", "Bb"),
+    ("Eb", "Eb"),
+    ("Ab", "Ab"),
+    ("Db", "Db"),
+    ("Gb", "Gb"),
+    ("G", "G"),
+    ("D", "D"),
+    ("A", "A"),
+    ("E", "E"),
+    ("B", "B"),
+    ("F#", "F#"),
+    ("C#", "C#"),
+]
+
+
+tonality_choices = [
+    ("major", "Major"),
+    ("minor", "Minor"),
+    ("blues", "Blues"),
+]
+
 class Song(ClusterableModel, index.Indexed):
     title = models.CharField(max_length=255)
-    time_signature = models.CharField(max_length=255, blank=True, null=True)
-    key_signature = models.CharField(max_length=255, blank=True, null=True)
+    time_signature = models.CharField(max_length=255, blank=True, null=True, choices=time_signature_choices)
+    key_signature = models.CharField(max_length=255, blank=True, null=True, choices=key_signature_choices)
+    tonality = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        choices=tonality_choices,
+    )
+    tempo = models.IntegerField(
+        blank=True,
+        null=True,
+        help_text="Tempo in BPM (Beats Per Minute)",
+    )
     style = models.CharField(max_length=255, blank=True, null=True)
     composer = models.CharField(max_length=255, blank=True, null=True)
     arranger = models.CharField(max_length=255, blank=True, null=True)
+    form = models.TextField(blank=True, null=True, help_text="e.g. 'Intro, Verse, Chorus, Bridge, Outro or AABA'")
     description = models.TextField(blank=True, null=True)
     music_video_url = models.URLField(blank=True, null=True)
+    source_band = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="e.g. 'Rebirth Brass Band', 'The Beatles', 'The Rolling Stones', etc.",
+    )
+    active = models.BooleanField(default=True)
 
     search_fields = [
         index.SearchField("title"),
+        index.SearchField("time_signature"),
+        index.SearchField("key_signature"),
+        index.SearchField("tonality"),
         index.SearchField("arranger"),
         index.SearchField("composer"),
         index.SearchField("description"),
         index.SearchField("style"),
+        index.SearchField("music_video_url"),
+        index.SearchField("tempo"),
+        index.SearchField("source_band"),
+        index.SearchField("active"),
     ]
 
     def __str__(self):
