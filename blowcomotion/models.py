@@ -343,7 +343,7 @@ class Member(ClusterableModel, index.Indexed):
         board_member: BooleanField
         renting: BooleanField
         last_seen: DateField
-        end_date: DateField
+        separation_date: DateField
         email: EmailField
         phone: IntegerField
         address: CharField
