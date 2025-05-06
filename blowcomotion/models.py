@@ -345,7 +345,7 @@ class Member(ClusterableModel, index.Indexed):
         last_seen: DateField
         separation_date: DateField
         email: EmailField
-        phone: IntegerField
+        phone: CharField
         address: CharField
         city: CharField
         state: CharField
@@ -373,7 +373,7 @@ class Member(ClusterableModel, index.Indexed):
     last_seen = models.DateField(blank=True, null=True, help_text="This field auto-populates whenever attendance is taken.")
     separation_date = models.DateField(blank=True, null=True, help_text="Date of separation from the organization.")
     email = models.EmailField(blank=True, null=True)
-    phone = models.IntegerField(blank=True, null=True)
+    phone = models.CharField(max_length=255, blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
     city = models.CharField(max_length=255, blank=True, null=True)
     state = models.CharField(max_length=255, blank=True, null=True)
