@@ -341,11 +341,22 @@ class Member(ClusterableModel, index.Indexed):
         image: ForeignKey
         instructor: BooleanField
         board_member: BooleanField
+        renting: BooleanField
+        last_seen: DateField
+        separation_date: DateField
+        email: EmailField
+        phone: CharField
+        address: CharField
+        city: CharField
+        state: CharField
+        zip_code: CharField
+        country: CharField
+        notes: TextField
+        emergency_contact: TextField
     """
 
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
-    # instruments = models.ManyToManyField("blowcomotion.Instrument", blank=True)
     birthday = models.DateField(blank=True, null=True)
     join_date = models.DateField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
@@ -359,11 +370,35 @@ class Member(ClusterableModel, index.Indexed):
     )
     instructor = models.BooleanField(default=False)
     board_member = models.BooleanField(default=False)
+    renting = models.BooleanField(default=False, help_text="Is the member renting an instrument?")
+    last_seen = models.DateField(blank=True, null=True, help_text="This field auto-populates whenever attendance is taken.")
+    separation_date = models.DateField(blank=True, null=True, help_text="Date of separation from the organization.")
+    email = models.EmailField(blank=True, null=True)
+    phone = models.CharField(max_length=255, blank=True, null=True)
+    address = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=255, blank=True, null=True)
+    state = models.CharField(max_length=255, blank=True, null=True)
+    zip_code = models.CharField(max_length=255, blank=True, null=True)
+    country = models.CharField(max_length=255, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+    emergency_contact = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Name and phone number of emergency contact",
+    )
 
     search_fields = [
         index.SearchField("first_name"),
         index.SearchField("last_name"),
         index.SearchField("bio"),
+        index.SearchField("email"),
+        index.SearchField("phone"),
+        index.SearchField("address"),
+        index.SearchField("city"),
+        index.SearchField("state"),
+        index.SearchField("zip_code"),
+        index.SearchField("country"),
+        index.SearchField("notes"),
     ]
 
     def __str__(self):

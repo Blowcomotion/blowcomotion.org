@@ -146,6 +146,18 @@ class MemberViewSet(SnippetViewSet):
         "instructor",
         "board_member",
         "image",
+        "renting",
+        "last_seen",
+        "separation_date",
+        "email",
+        "phone",
+        "address",
+        "city",
+        "state",
+        "zip_code",
+        "country",
+        "notes",
+        "emergency_contact",
     ]
 
     def __init__(self, *args, **kwargs):
