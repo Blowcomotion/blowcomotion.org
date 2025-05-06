@@ -352,6 +352,7 @@ class Member(ClusterableModel, index.Indexed):
         zip_code: CharField
         country: CharField
         notes: TextField
+        emergency_contact: TextField
     """
 
     first_name = models.CharField(max_length=255)
