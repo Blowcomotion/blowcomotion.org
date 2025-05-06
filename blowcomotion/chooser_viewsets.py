@@ -40,11 +40,16 @@ class SongChooserViewset(ChooserViewSet):
         "title",
         "time_signature",
         "key_signature",
+        "tonality",
+        "tempo",
         "style",
         "composer",
         "arranger",
+        "form",
         "description",
         "music_video_url",
+        "source_band",
+        "active",
     ]
 
 
