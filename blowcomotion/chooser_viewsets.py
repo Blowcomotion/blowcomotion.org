@@ -127,7 +127,6 @@ class MemberChooserViewset(ChooserViewSet):
         "bio",
         "instructor",
         "board_member",
-        "image",
     ]
 
 
