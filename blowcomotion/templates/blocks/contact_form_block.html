@@ -17,6 +17,11 @@
                     <div class="form-group col-12">
                         <textarea class="form-control" id="message" name="message" rows="4" placeholder="Your Message" required></textarea>
                     </div>
+                    {% if value.newsletter_opt_in %}
+                        <div class="form-group col-12">
+                            <input type="checkbox" id="newsletter" name="newsletter" value="yes"> Opt-in to receive our newsletter
+                        </div>
+                    {% endif %}
                     <button type="submit" class="site-btn" name="form_type" value="contact_form">{{ value.button_text|default:"Submit" }}</button>
                 </div>
             </form>

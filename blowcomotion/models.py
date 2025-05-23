@@ -556,6 +556,11 @@ class ContactFormSubmission(BaseFormSubmission):
     """
         Model for contact form submissions
     """
+    newsletter_opt_in = models.BooleanField(
+        default=False,
+        help_text="Whether the user signed up for the newsletter",
+    )
+
     def __str__(self):
         return f"Contact Form Submission from {self.name} on {self.date_submitted}"
     

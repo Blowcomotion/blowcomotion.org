@@ -76,6 +76,7 @@ def process_form(request):
             name = request.POST.get('name')
             email = request.POST.get('email')
             message = request.POST.get('message')
+            newsletter_opt_in = request.POST.get('newsletter', False) == 'yes'
             # Validate the form data
             if not name or not email or not message:
                 logger.warning(f"Validation failed for contact form submission by user {request.user.username}. Missing fields.")
@@ -87,6 +88,7 @@ def process_form(request):
                     name=name,
                     email=email,
                     message=message,
+                    newsletter_opt_in=newsletter_opt_in,
                 )
                 contact_form_submission.save()
                 logger.info(f"Contact form submission saved successfully for user {request.user.username}")
