@@ -184,6 +184,7 @@ class ContactFormSubmissionViewset(SnippetViewSet):
         "name",
         "email",
         "message",
+        "newsletter_opt_in",
     ]
 
     def __init__(self, *args, **kwargs):

@@ -110,6 +110,10 @@ class ContactFormBlock(blocks.StructBlock):
         required=False,
         help_text="Enter the text for the button.",
     )
+    newsletter_opt_in = blocks.BooleanBlock(
+        required=False,
+        help_text="Include an opt-in checkbox for the newsletter.",
+    )
 
 
     class Meta:
