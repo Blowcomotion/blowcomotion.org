@@ -2,6 +2,8 @@ from wagtail.admin.panels import FieldRowPanel, MultipleChooserPanel
 from wagtail.admin.ui.tables import UpdatedAtColumn
 from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup
 
+from wagtailmedia.edit_handlers import MediaChooserPanel
+
 
 class ChartViewSet(SnippetViewSet):
     model = None
@@ -30,6 +32,14 @@ class SongViewSet(SnippetViewSet):
     list_display = ['title', 'composer', 'style', UpdatedAtColumn()]
     panels = [
         'title',
+        FieldRowPanel(
+            [
+                'music_video_url',
+                MediaChooserPanel('recording', help_text="Select the media file for this song.", media_type='audio'),
+            ],
+            heading="Media",
+            help_text="Select the music video and recording for this song.",
+        ),
         'time_signature',
         FieldRowPanel(
             [
@@ -47,7 +57,6 @@ class SongViewSet(SnippetViewSet):
         'description',
         MultipleChooserPanel("conductors", chooser_field_name="member", help_text="Select the members that usually conduct this song."),
         MultipleChooserPanel("soloists", chooser_field_name="member", help_text="If this song has soloists, select the members that usually solo on this song."),
-        'music_video_url',
         'source_band',
         'active',
     ]

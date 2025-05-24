@@ -170,6 +170,13 @@ class Song(ClusterableModel, index.Indexed):
     form = models.TextField(blank=True, null=True, help_text="e.g. 'Intro, Verse, Chorus, Bridge, Outro or AABA'")
     description = models.TextField(blank=True, null=True)
     music_video_url = models.URLField(blank=True, null=True)
+    recording = models.ForeignKey(
+        "wagtailmedia.Media",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
     source_band = models.CharField(
         max_length=255,
         blank=True,
@@ -188,6 +195,8 @@ class Song(ClusterableModel, index.Indexed):
         index.SearchField("description"),
         index.SearchField("style"),
         index.SearchField("music_video_url"),
+        index.SearchField("recording"),
+        index.SearchField("form"),
         index.SearchField("tempo"),
         index.SearchField("source_band"),
         index.SearchField("active"),
@@ -423,6 +432,7 @@ class BlankCanvasPage(BasePage):
             ("full_width_image", blowcomotion_blocks.FullWidthImageBlock()),
             ("hero", blowcomotion_blocks.HeroBlock()),
             ("horizontal_rule", blowcomotion_blocks.HorizontalRuleBlock()),
+            ("jukebox", blowcomotion_blocks.JukeBoxBlock()),
             ("multi_image_banner", blowcomotion_blocks.MultiImageBannerBlock()),
             ("paypal_donate_button", blowcomotion_blocks.PayPalDonateButton()),
             ("quoted_image", blowcomotion_blocks.QuotedImageBlock()),

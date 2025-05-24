@@ -9,7 +9,8 @@ from django.utils import timezone
 from wagtail import blocks
 from wagtail.images.blocks import ImageChooserBlock
 
-from blowcomotion.chooser_blocks import EventChooserBlock, GigoGigChooserBlock
+from blowcomotion.chooser_blocks import EventChooserBlock, GigoGigChooserBlock, SongChooserBlock
+from wagtailmedia.blocks import AudioChooserBlock
 
 
 class HeroBlock(blocks.StructBlock):
@@ -57,6 +58,7 @@ class AlignableRichtextBlock(blocks.StructBlock):
     )
 
     class Meta:
+        icon = "edit"
         template = "blocks/alignable_richtext_block.html"
         label_format = "({align}-aligned) {rich_text}"
 
@@ -72,7 +74,7 @@ class HorizontalRuleBlock(blocks.StaticBlock):
 
 class SpacerBlock(blocks.StaticBlock):
     class Meta:
-        icon = "placeholder"
+        icon = "bi-arrows-expand"
         label = "Spacer"
         template = "blocks/spacer_block.html"
         help_text = "This is a spacer block, it adds 50px of vertical space. It does not display anything."
@@ -202,6 +204,32 @@ class ButtonBlock(blocks.StructBlock):
         icon = "link"
         template = "blocks/button_block.html"
         label_format = "Button: {button_text}"
+
+
+class JukeBoxBlock(blocks.StructBlock):
+    foreground_text = blocks.CharBlock(
+        required=False,
+        help_text="Enter the foreground title text for the jukebox.",
+    )
+    background_text = blocks.CharBlock(
+        required=False,
+        help_text="Enter the background title text for the jukebox.",
+    )
+    jukebox_image = ImageChooserBlock(
+        required=False,
+        help_text="Select the image for the jukebox.",
+    )
+
+    tracks = blocks.ListBlock(
+        SongChooserBlock(),
+        help_text="Select the songs for the jukebox. A song must have a recording for it to show up in the jukebox.",
+        min_num=1,
+    )
+
+    class Meta:
+        icon = "bi-music-note-beamed"
+        template = "blocks/jukebox_block.html"
+        
 
 
 class ColumnContentBlock(blocks.StreamBlock):
