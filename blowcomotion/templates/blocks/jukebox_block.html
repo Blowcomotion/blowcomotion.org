@@ -18,7 +18,7 @@
             <div class="col-lg-7 p-0">
                 <div class="track__content nice-scroll">
                     {% for track in value.tracks %}
-                        {% if track.recording.file.url %}
+                        {% if track.recording and track.recording.file.url %}
                             <div class="single_player_container">
                                 <h4>{{ track.title }}</h4>
                                 <div class="jp-jplayer jplayer" data-ancestor=".jp_container_{{ forloop.counter }}"
@@ -66,7 +66,7 @@
             <div class="col-lg-5 p-0">
                 <div class="track__pic">
                     {% image value.jukebox_image height-502 as jukebox_image %}
-                    <img src="{{ jukebox_image.url }}" alt="">
+                    <img src="{{ jukebox_image.url }}" alt="{{ value.jukebox_image.title }}">
                 </div>
             </div>
         </div>

@@ -10,9 +10,6 @@ from wagtail import blocks
 from wagtail.images.blocks import ImageChooserBlock
 
 from blowcomotion.chooser_blocks import EventChooserBlock, GigoGigChooserBlock, SongChooserBlock
-from wagtailmedia.blocks import AudioChooserBlock
-
-
 class HeroBlock(blocks.StructBlock):
     image = ImageChooserBlock()
     top_line = blocks.CharBlock(required=False)
