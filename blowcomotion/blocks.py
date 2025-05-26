@@ -77,6 +77,20 @@ class SpacerBlock(blocks.StaticBlock):
         help_text = "This is a spacer block, it adds 50px of vertical space. It does not display anything."
 
 
+class AdjustableSpacerBlock(blocks.StructBlock):
+    height = blocks.IntegerBlock(
+        default=20,
+        min_value=1,
+        help_text="Enter the height of the spacer in pixels.",
+    )
+
+    class Meta:
+        icon = "bi-arrows-expand"
+        label = "Adjustable Spacer"
+        template = "blocks/spacer_block.html"
+        help_text = "This is a spacer block, it adds a vertical space between blocks. You can set the height of the spacer in pixels."
+
+
 class AccordionListBlock(blocks.StructBlock):
     title = blocks.CharBlock(required=False)
     content = blocks.ListBlock(
@@ -237,6 +251,7 @@ class ColumnContentBlock(blocks.StreamBlock):
     image = ImageChooserBlock(template="blocks/image_block.html")
     paypal_donate_button = PayPalDonateButton()
     rich_text = AlignableRichtextBlock()
+    adjustable_spacer = AdjustableSpacerBlock()
     spacer = SpacerBlock()
     venmo_donate_button = VenmoDonateButton()
 
@@ -274,6 +289,8 @@ class FourColumnBlock(ThreeColumnBlock):
 
 
 class ColumnLayoutBlock(blocks.StreamBlock):
+    spacer = AdjustableSpacerBlock()
+    horizontal_rule = HorizontalRuleBlock()
     two_column = TwoColumnBlock()
     three_column = ThreeColumnBlock()
     four_column = FourColumnBlock()

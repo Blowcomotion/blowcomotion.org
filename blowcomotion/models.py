@@ -437,6 +437,7 @@ class BlankCanvasPage(BasePage):
             ("paypal_donate_button", blowcomotion_blocks.PayPalDonateButton()),
             ("quoted_image", blowcomotion_blocks.QuotedImageBlock()),
             ("rich_text", blowcomotion_blocks.AlignableRichtextBlock()),
+            ("adjustable_spacer", blowcomotion_blocks.AdjustableSpacerBlock()),
             ("spacer", blowcomotion_blocks.SpacerBlock()),
             ("upcoming_events", blowcomotion_blocks.UpcomingPublicGigs()),
             ("venmo_donate_button", blowcomotion_blocks.VenmoDonateButton()),
