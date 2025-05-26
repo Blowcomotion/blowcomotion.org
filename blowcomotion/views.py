@@ -96,7 +96,7 @@ def process_form(request):
                 send_mail(
                     subject='Contact Form Submission',
                     message=f'Name: {name}\nEmail: {email}\nMessage: {message}',
-                    from_email='your_email@example.com',
+                    from_email='info@blowcomotion.org',
                     recipient_list=recipients.split(','),
                     fail_silently=False,
                 )
@@ -127,6 +127,15 @@ def process_form(request):
                 )
                 feedback_form_submission.save()
                 logger.info(f"Feedback form submission saved successfully for user {request.user.username}")
+
+                # Send the email
+                send_mail(
+                    subject='Feedback Form Submission',
+                    message=f'Name: {name}\nEmail: {email}\nMessage: {message}\nPage URL: {page_url}',
+                    from_email='info@blowcomotion.org',
+                    recipient_list=recipients.split(','),
+                    fail_silently=False,
+                )
                 context['message'] = "Feedback form submitted successfully! Thank you for your feedback."
             except Exception as e:
                 logger.error(f"Error saving feedback form submission by user {request.user.username}: {str(e)}")
