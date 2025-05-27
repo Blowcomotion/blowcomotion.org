@@ -277,7 +277,7 @@ class TwoColumnBlock(ThreeColumnBlock):
         label_format = "Two Columns"
 
 
-class FourColumnBlock(ThreeColumnBlock):
+class FourColumnBlock(blocks.StructBlock):
     left_column = ColumnContentBlock(required=False)
     middle_left_column = ColumnContentBlock(required=False)
     middle_right_column = ColumnContentBlock(required=False)
