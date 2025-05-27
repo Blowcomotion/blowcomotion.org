@@ -1,6 +1,12 @@
 {% load wagtailimages_tags %}
 
 <div class="container my-4">
-    {% image value original as the_image %}
-    <img src="{{ the_image.url }}" alt="{{ the_image.alt }}" class="img-fluid" />
+    {% image value.image original as the_image %}
+    {% if value.url %}
+        <a href="{{ value.url }}" target="_blank">
+            <img src="{{ the_image.url }}" alt="{{ the_image.alt }}" class="img-fluid" />
+        </a>
+    {% else %}
+        <img src="{{ the_image.url }}" alt="{{ the_image.alt }}" class="img-fluid" />
+    {% endif %}
 </div>
