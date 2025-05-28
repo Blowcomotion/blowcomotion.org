@@ -282,7 +282,7 @@ class TwoColumnBlock(ThreeColumnBlock):
         left_column_width = value["left_column_width"]
 
         if left_column_width == "one-half":
-            context["left_column_width"] = "5"
+            context["left_column_width"] = "6"
             context["right_column_width"] = "6"
         elif left_column_width == "one-third":
             context["left_column_width"] = "4"
