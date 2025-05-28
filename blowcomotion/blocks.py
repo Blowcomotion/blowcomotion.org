@@ -271,6 +271,27 @@ class ThreeColumnBlock(blocks.StructBlock):
 
 class TwoColumnBlock(ThreeColumnBlock):
     middle_column = None
+    left_column_width = blocks.ChoiceBlock(choices=[
+            ("one-half", "One Half"),
+            ("one-third", "One Third"),
+            ("two-thirds", "Two Thirds"),
+    ], default="one-half")
+
+    def get_context(self, value, parent_context=None):
+        context = super().get_context(value, parent_context)
+        left_column_width = value["left_column_width"]
+
+        if left_column_width == "one-half":
+            context["left_column_width"] = "5"
+            context["right_column_width"] = "6"
+        elif left_column_width == "one-third":
+            context["left_column_width"] = "4"
+            context["right_column_width"] = "8"
+        elif left_column_width == "two-thirds":
+            context["left_column_width"] = "8"
+            context["right_column_width"] = "4"
+            
+        return context
 
     class Meta:
         template = "blocks/two_column_block.html"
