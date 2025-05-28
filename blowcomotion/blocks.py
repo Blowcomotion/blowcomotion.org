@@ -281,15 +281,14 @@ class TwoColumnBlock(ThreeColumnBlock):
         context = super().get_context(value, parent_context)
         left_column_width = value["left_column_width"]
 
-        if left_column_width == "one-half":
-            context["left_column_width"] = "6"
-            context["right_column_width"] = "6"
-        elif left_column_width == "one-third":
-            context["left_column_width"] = "4"
-            context["right_column_width"] = "8"
-        elif left_column_width == "two-thirds":
-            context["left_column_width"] = "8"
-            context["right_column_width"] = "4"
+        width_map = {
+            "one-half": ("6", "6"),
+            "one-third": ("4", "8"),
+            "two-thirds": ("8", "4"),
+        }
+
+        if left_column_width in width_map:
+            context["left_column_width"], context["right_column_width"] = width_map[left_column_width]
             
         return context
 
