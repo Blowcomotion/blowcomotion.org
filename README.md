@@ -44,5 +44,5 @@ The templates for this codebase are derived from [here](https://themewagon.com/t
 - Run the following command to import the data into the local database
     `python manage.py loaddata <path_to_json_file>`
 - Log in to the admin panel at [http://localhost:8000/admin](http://localhost:8000/admin) to verify that the data has been imported successfully
-- Delete the default "Welcome to your new Wagtail site!" page if it exists
-- Navigate to the [sites settings](https://blowcomotion.pythonanywhere.com/admin/sites/) and change the localhost root page to the homepage of the imported data
+- Navigate to [page explorer](http://localhost:8000/admin/pages/) Delete the default "Welcome to your new Wagtail site!" page if it exists in the admin panel
+- Navigate to the [sites settings](http://localhost:8000/admin/sites/) and change the localhost root page to the homepage of the imported data
