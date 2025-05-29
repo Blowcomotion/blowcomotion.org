@@ -39,8 +39,8 @@ The templates for this codebase are derived from [here](https://themewagon.com/t
 - Save the json file to your local machine
 - Navigate to the project directory
     `cd blowcomotion.org`
-- Find and replace all instances of `"live_revision": [id or null]` with `"live_revision": null` in the json file
-- Find and replace all instances of `"latest_revision": [id or null]` with `"latest_revision": null` in the json file
+- Find and replace all instances of `"live_revision": [id or null]` with `"live_revision": null,` in the json file
+- Find and replace all instances of `"latest_revision": [id or null]` with `"latest_revision": null,` in the json file
 - Run the following command to import the data into the local database
     `python manage.py loaddata <path_to_json_file>`
 - Log in to the admin panel at [http://localhost:8000/admin](http://localhost:8000/admin) to verify that the data has been imported successfully
