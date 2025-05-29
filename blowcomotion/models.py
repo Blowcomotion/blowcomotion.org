@@ -187,6 +187,7 @@ class Song(ClusterableModel, index.Indexed):
 
     search_fields = [
         index.SearchField("title"),
+        index.AutocompleteField("title"),
         index.SearchField("time_signature"),
         index.SearchField("key_signature"),
         index.SearchField("tonality"),
