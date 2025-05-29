@@ -27,4 +27,10 @@ The templates for this codebase are derived from [here](https://themewagon.com/t
 
 ## Run the web app
 
-- 
+- Start the development server
+    `python manage.py runserver`
+- Open your web browser and go to the [homepage](http://localhost:8000)
+- You can access the admin panel at [http://localhost:8000/admin](http://localhost:8000/admin)
+- To stop the server, press `Ctrl+C` in the terminal
+
+## Import data from the website to the local database
