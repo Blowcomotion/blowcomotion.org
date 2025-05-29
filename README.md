@@ -20,3 +20,11 @@ The templates for this codebase are derived from [here](https://themewagon.com/t
         `source venv/bin/activate`
 - Install the required packages
     `pip install -r requirements.txt`
+- Run database migrations
+    `python manage.py migrate`
+- Create a superuser account
+    `python manage.py createsuperuser`
+
+## Run the web app
+
+- 
