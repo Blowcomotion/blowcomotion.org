@@ -1,9 +1,8 @@
-{% load tz %}
-{% load wagtailimages_tags %}
+{% load wagtailimages_tags tz %}
 {% image value.background_image original as background_image %}
-{% now "Y/m/d" as today %}
+{% now "Y-m-d" as today %}
+{% if value.countdown_date|date:"Y-m-d" > today %}
 <section class="countdown spad set-bg" data-setbg="{{ background_image.url }}">
-    {% if value.countdown_date|date:"Y/m/d" > today %}
     <div class="container">
         <div class="row">
             <div class="col-lg-12 countdown-wrapper pt-4 pb-0">
@@ -22,8 +21,8 @@
             </div>
         </div>
     </div>
-    {% endif %}
 </section>
+{% endif %}
 
 <script>
 var timerdate = "{{ value.countdown_date|date:'Y/m/d' }}";
