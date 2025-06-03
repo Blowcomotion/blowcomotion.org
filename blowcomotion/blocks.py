@@ -368,7 +368,7 @@ class UpcomingPublicGigs(blocks.StructBlock):
 class QuotedImageBlock(blocks.StructBlock):
     image = ImageChooserBlock()
     header = blocks.CharBlock(required=False)
-    subheader = blocks.TextBlock(required=False)
+    subheader = blocks.RichTextBlock(required=False)
     author = blocks.CharBlock(required=False)
 
     class Meta:
