@@ -17,13 +17,16 @@ from wagtail.search import index
 from blowcomotion import blocks as blowcomotion_blocks
 
 
+def get_default_expiration_date():
+    return datetime.date.today() + datetime.timedelta(days=1)
+
 @register_setting
 class NotificationBanner(BaseSiteSetting):
     message = RichTextField(blank=True, null=True)
     expiration_date = models.DateField(
         blank=True,
         null=True,
-        default=datetime.date.today() + datetime.timedelta(days=1),
+        default=get_default_expiration_date,
         help_text="Date when the banner will no longer be displayed. Leave blank for no expiration.",
     )
 
