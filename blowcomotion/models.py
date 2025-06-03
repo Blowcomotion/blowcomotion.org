@@ -52,6 +52,16 @@ class SiteSettings(BaseSiteSetting):
         null=True,
         help_text="URL to Venmo donation page",
     )
+    square_donate_url = models.URLField(
+        blank=True,
+        null=True,
+        help_text="URL to Square donation page",
+    )
+    patreon_url = models.URLField(
+        blank=True,
+        null=True,
+        help_text="URL to Patreon page",
+    )
 
 
 class CustomImage(AbstractImage):
@@ -435,11 +445,13 @@ class BlankCanvasPage(BasePage):
             ("horizontal_rule", blowcomotion_blocks.HorizontalRuleBlock()),
             ("jukebox", blowcomotion_blocks.JukeBoxBlock()),
             ("multi_image_banner", blowcomotion_blocks.MultiImageBannerBlock()),
+            ("patreon_button", blowcomotion_blocks.PatreonButton()),
             ("paypal_donate_button", blowcomotion_blocks.PayPalDonateButton()),
             ("quoted_image", blowcomotion_blocks.QuotedImageBlock()),
             ("rich_text", blowcomotion_blocks.AlignableRichtextBlock()),
             ("adjustable_spacer", blowcomotion_blocks.AdjustableSpacerBlock()),
             ("spacer", blowcomotion_blocks.SpacerBlock()),
+            ("square_donate_button", blowcomotion_blocks.SquareDonateButton()),
             ("upcoming_events", blowcomotion_blocks.UpcomingPublicGigs()),
             ("venmo_donate_button", blowcomotion_blocks.VenmoDonateButton()),
         ],
