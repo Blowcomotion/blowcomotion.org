@@ -1,3 +1,4 @@
+import datetime
 from django.core.exceptions import ValidationError
 from django.db import models
 from modelcluster.contrib.taggit import ClusterTaggableManager
@@ -8,12 +9,23 @@ from wagtail import blocks
 from wagtail.admin.panels import FieldPanel, MultipleChooserPanel
 from wagtail.contrib.settings.models import BaseSiteSetting, register_setting
 from wagtail.documents import get_document_model
-from wagtail.fields import StreamField
+from wagtail.fields import RichTextField, StreamField
 from wagtail.images.models import AbstractImage, AbstractRendition, Image
 from wagtail.models import Orderable, Page
 from wagtail.search import index
 
 from blowcomotion import blocks as blowcomotion_blocks
+
+
+@register_setting
+class NotificationBanner(BaseSiteSetting):
+    message = RichTextField(blank=True, null=True)
+    expiration_date = models.DateField(
+        blank=True,
+        null=True,
+        default=datetime.date.today() + datetime.timedelta(days=1),
+        help_text="Date when the banner will no longer be displayed. Leave blank for no expiration.",
+    )
 
 
 @register_setting

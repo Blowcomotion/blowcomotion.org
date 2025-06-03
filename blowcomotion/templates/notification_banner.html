@@ -1,0 +1,28 @@
+{% load wagtailcore_tags tz %}
+{% now "Y-m-d" as today %}
+
+{% if settings.blowcomotion.NotificationBanner.expiration_date %}
+    {% with settings.blowcomotion.NotificationBanner.expiration_date|date:"Y-m-d" as expiration_date %}
+        {% if today < expiration_date %}
+            <div class="container notification-banner">
+                <div class="row">
+                    <div class="col-12 my-2">
+                        <div class="d-flex align-items-center justify-content-between mt-3" role="alert">
+                            <span>{{ message|richtext }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    {% endwith %}
+{% else %}
+<div class="container notification-banner">
+    <div class="row">
+        <div class="col-12 my-2">
+            <div class="d-flex align-items-center justify-content-between mt-3" role="alert">
+                <span>{{ message|richtext }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
