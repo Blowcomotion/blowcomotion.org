@@ -11,7 +11,11 @@
         <div id="preloder">
             <div class="loader"></div>
         </div>
-        
+
+        {% if settings.blowcomotion.NotificationBanner.message %}
+            {% include "notification_banner.html" with message=settings.blowcomotion.NotificationBanner.message expiration_date=settings.blowcomotion.NotificationBanner.expiration_date %}
+        {% endif %}
+
         {% include "header.html" with request=request %}
 
         <main>
