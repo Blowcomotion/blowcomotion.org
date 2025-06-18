@@ -324,12 +324,23 @@ class JukeBoxBlock(blocks.StructBlock):
         
 
 
+class ImageBlock(blocks.StructBlock):
+    image = ImageChooserBlock()
+    url = blocks.URLBlock(required=False, help_text="Optional: Link the image to a URL (e.g. merch page)")
+
+    class Meta:
+        icon = "image"
+        template = "blocks/image_block.html"
+        label_format = "Image: {image}"
+
+
 class ColumnContentBlock(blocks.StreamBlock):
     accordion_list = AccordionListBlock()
     button = ButtonBlock()
     contact_form = ContactFormBlock()
     horizontal_rule = HorizontalRuleBlock()
-    image = ImageChooserBlock(template="blocks/image_block.html")
+    image_deprecated = ImageChooserBlock(template="blocks/image_block.html", help_text="Deprecated: Use new Image block instead.")
+    image = ImageBlock()
     rich_text = AlignableRichtextBlock()
     adjustable_spacer = AdjustableSpacerBlock()
     spacer = SpacerBlock()
@@ -482,6 +493,7 @@ class MultiImageBannerBlock(blocks.StructBlock):
 
 class FullWidthImageBlock(blocks.StructBlock):
     image = ImageChooserBlock()
+    url = blocks.URLBlock(required=False, help_text="Optional: Link the image to a URL (e.g. merch page)")
 
     class Meta:
         icon = "image"

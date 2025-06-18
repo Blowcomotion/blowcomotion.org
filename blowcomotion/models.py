@@ -458,6 +458,7 @@ class BlankCanvasPage(BasePage):
             ("full_width_image", blowcomotion_blocks.FullWidthImageBlock()),
             ("hero", blowcomotion_blocks.HeroBlock()),
             ("horizontal_rule", blowcomotion_blocks.HorizontalRuleBlock()),
+            ("image", blowcomotion_blocks.ImageBlock()),
             ("jukebox", blowcomotion_blocks.JukeBoxBlock()),
             ("multi_image_banner", blowcomotion_blocks.MultiImageBannerBlock()),
             ("patreon_button", blowcomotion_blocks.PatreonButton()),
