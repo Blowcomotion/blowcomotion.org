@@ -1,3 +1,4 @@
+from datetime import date
 from django.core.exceptions import ValidationError
 from django.db import models
 from modelcluster.contrib.taggit import ClusterTaggableManager
@@ -460,7 +461,7 @@ class BlankCanvasPage(BasePage):
         context["include_form_js"] = True # set to True for the feedback form
         if self.body:
             context["hero_header"] = self.body[0].block_type == "hero"
-            context["bottom_countdown"] = self.body[-1].block_type == "countdown"
+            context["bottom_countdown"] = self.body[-1].block_type == "countdown" and self.body[-1].value.get('countdown_date') and self.body[-1].value.get('countdown_date') > date.today()
 
             for block in self.body:
                 if block.block_type == "countdown":
