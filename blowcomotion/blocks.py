@@ -339,7 +339,6 @@ class ColumnContentBlock(blocks.StreamBlock):
     button = ButtonBlock()
     contact_form = ContactFormBlock()
     horizontal_rule = HorizontalRuleBlock()
-    image_deprecated = ImageChooserBlock(template="blocks/image_block.html", help_text="Deprecated: Use new Image block instead.")
     image = ImageBlock()
     rich_text = AlignableRichtextBlock()
     adjustable_spacer = AdjustableSpacerBlock()
