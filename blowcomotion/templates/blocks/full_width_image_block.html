@@ -3,9 +3,9 @@
     {% image value.image original as the_banner %}
     {% if value.url %}
         <a href="{{ value.url }}" target="_blank">
-            <img src="{{ the_banner.url }}" class="img-fluid">
+            <img src="{{ the_banner.url }}" alt="{{ the_banner.alt }}" class="img-fluid">
         </a>
     {% else %}
-        <img src="{{ the_banner.url }}" class="img-fluid">
+        <img src="{{ the_banner.url }}" alt="{{ the_banner.alt }}" class="img-fluid">
     {% endif %}
 </div>
