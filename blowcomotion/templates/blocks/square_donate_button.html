@@ -1,10 +1,10 @@
 <div class="container">
     <div class="row">
         <div class="{% if value.button_width == 'half' %}col-6{% elif value.button_width == 'full' %}col{% endif %} text-center{% if value.button_alignment == 'center' %} mx-auto{% elif value.button_alignment == 'right' %} ml-auto{% endif %}">
-            {% if settings.blowcomotion.SiteSettings.venmo_donate_url %}
-                <a class="site-btn" href="{{ settings.blowcomotion.SiteSettings.venmo_donate_url }}">{{ value.button_text|default:"Donate with Venmo" }}</a>
+            {% if settings.blowcomotion.SiteSettings.square_donate_url %}
+                <a class="site-btn" href="{{ settings.blowcomotion.SiteSettings.square_donate_url }}">{{ value.button_text|default:"Donate with Square" }}</a>
             {% else %}
-                <p>No Venmo URL configured. Add one in the admin settings.</p>
+                <p>No Square URL configured. Add one in the admin settings.</p>
             {% endif %}
         </div>
     </div>

@@ -137,6 +137,13 @@ ol {
     width: 100%;
     z-index: -1;
   }
+
+  h4 {
+    font-size: 18px;
+    color: $heading-color;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
 }
 
 .set-bg {

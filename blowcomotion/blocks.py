@@ -137,7 +137,7 @@ class ContactFormBlock(blocks.StructBlock):
 
 
 class PayPalDonateButton(blocks.StructBlock):
-    alignment = blocks.ChoiceBlock(
+    button_alignment = blocks.ChoiceBlock(
         choices=[
             ("left", "Left"),
             ("center", "Center"),
@@ -146,12 +146,25 @@ class PayPalDonateButton(blocks.StructBlock):
         default="center",
         help_text="Select the alignment for the button.",
     )
+    button_width = blocks.ChoiceBlock(
+        choices=[
+            ("half", "Half"),
+            ("full", "Full"),
+        ],
+        default="half",
+        help_text="Select the width for the button.",
+    )
+    button_text = blocks.CharBlock(
+        required=False,
+        default="Donate with PayPal",
+        help_text="Enter the text for the button.",
+    )
 
     class Meta:
         icon = "bi-paypal"
         template = "blocks/paypal_donate_button.html"
         label = "PayPal Donate Button"
-        help_text = "This PayPal donate button is used to make Paypal donations."
+        help_text = "This PayPal donate button is used to make Paypal donations. The PayPal url is set in the settings if your admin account has permission to change it. The button will be aligned according to the selected alignment."
 
 
 class VenmoDonateButton(blocks.StructBlock):
@@ -159,7 +172,7 @@ class VenmoDonateButton(blocks.StructBlock):
         required=False,
         help_text="Enter the text for the button.",
     )
-    alignment = blocks.ChoiceBlock(
+    button_alignment = blocks.ChoiceBlock(
         choices=[
             ("left", "Left"),
             ("center", "Center"),
@@ -168,12 +181,80 @@ class VenmoDonateButton(blocks.StructBlock):
         default="center",
         help_text="Select the alignment for the button.",
     )
+    button_width = blocks.ChoiceBlock(
+        choices=[
+            ("half", "Half"),
+            ("full", "Full"),
+        ],
+        default="half",
+        help_text="Select the width for the button.",
+    )
 
     class Meta:
         icon = "bi-currency-dollar"
         template = "blocks/venmo_donate_button.html"
         label = "Venmo Donate Button"
-        help_text = "This is Venmo donate button adds a button for making Venmo donations. The Venmo url is set in the settings if your admin account has permission to change it."
+        help_text = "This is Venmo donate button adds a button for making Venmo donations. The Venmo url is set in the settings if your admin account has permission to change it. The button will be aligned according to the selected alignment."
+
+
+class PatreonButton(blocks.StructBlock):
+    button_text = blocks.CharBlock(
+        required=False,
+        help_text="Enter the text for the button.",
+    )
+    button_alignment = blocks.ChoiceBlock(
+        choices=[
+            ("left", "Left"),
+            ("center", "Center"),
+            ("right", "Right"),
+        ],
+        default="center",
+        help_text="Select the alignment for the button.",
+    )
+    button_width = blocks.ChoiceBlock(
+        choices=[
+            ("half", "Half"),
+            ("full", "Full"),
+        ],
+        default="half",
+        help_text="Select the width for the button.",
+    )
+
+    class Meta:
+        icon = "bi-currency-dollar"
+        template = "blocks/patreon_button.html"
+        label = "Patreon Button"
+        help_text = "This is Patreon button adds a button for making Patreon donations. The Patreon url is set in the settings if your admin account has permission to change it. The button will be aligned according to the selected alignment."
+
+
+class SquareDonateButton(blocks.StructBlock):
+    button_text = blocks.CharBlock(
+        required=False,
+        help_text="Enter the text for the button.",
+    )
+    button_alignment = blocks.ChoiceBlock(
+        choices=[
+            ("left", "Left"),
+            ("center", "Center"),
+            ("right", "Right"),
+        ],
+        default="center",
+        help_text="Select the alignment for the button.",
+    )
+    button_width = blocks.ChoiceBlock(
+        choices=[
+            ("half", "Half"),
+            ("full", "Full"),
+        ],
+        default="half",
+        help_text="Select the width for the button.",
+    )
+
+    class Meta:
+        icon = "bi-currency-dollar"
+        template = "blocks/square_donate_button.html"
+        label = "Square Donate Button"
+        help_text = "This is Square donate button adds a button for making Square donations. The Square url is set in the settings if your admin account has permission to change it. The button will be aligned according to the selected alignment."
 
 
 class ButtonBlock(blocks.StructBlock):
@@ -249,11 +330,13 @@ class ColumnContentBlock(blocks.StreamBlock):
     contact_form = ContactFormBlock()
     horizontal_rule = HorizontalRuleBlock()
     image = ImageChooserBlock(template="blocks/image_block.html")
-    paypal_donate_button = PayPalDonateButton()
     rich_text = AlignableRichtextBlock()
     adjustable_spacer = AdjustableSpacerBlock()
     spacer = SpacerBlock()
+    paypal_donate_button = PayPalDonateButton()
     venmo_donate_button = VenmoDonateButton()
+    square_donate_button = SquareDonateButton()
+    patreon_button = PatreonButton()
 
     class Meta:
         template = "blocks/column_content_block.html"
@@ -368,7 +451,7 @@ class UpcomingPublicGigs(blocks.StructBlock):
 class QuotedImageBlock(blocks.StructBlock):
     image = ImageChooserBlock()
     header = blocks.CharBlock(required=False)
-    subheader = blocks.TextBlock(required=False)
+    subheader = blocks.RichTextBlock(required=False)
     author = blocks.CharBlock(required=False)
 
     class Meta:
