@@ -1,7 +1,7 @@
 {% extends "blocks/three_column_block.html" %}
 
-{% block left_column_class %} col-md-6{% endblock left_column_class %}
+{% block left_column_class %} col-lg-{{ left_column_width }}{% endblock left_column_class %}
 
 {% block middle_column %}{% endblock middle_column %}
 
-{% block right_column_class %} col-md-6{% endblock right_column_class %}
+{% block right_column_class %} col-lg-{{ right_column_width }}{% endblock right_column_class %}

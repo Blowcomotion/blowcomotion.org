@@ -1,3 +1,4 @@
+import datetime
 from django.core.exceptions import ValidationError
 from django.db import models
 from modelcluster.contrib.taggit import ClusterTaggableManager
@@ -8,12 +9,26 @@ from wagtail import blocks
 from wagtail.admin.panels import FieldPanel, MultipleChooserPanel
 from wagtail.contrib.settings.models import BaseSiteSetting, register_setting
 from wagtail.documents import get_document_model
-from wagtail.fields import StreamField
+from wagtail.fields import RichTextField, StreamField
 from wagtail.images.models import AbstractImage, AbstractRendition, Image
 from wagtail.models import Orderable, Page
 from wagtail.search import index
 
 from blowcomotion import blocks as blowcomotion_blocks
+
+
+def get_default_expiration_date():
+    return datetime.date.today() + datetime.timedelta(days=1)
+
+@register_setting
+class NotificationBanner(BaseSiteSetting):
+    message = RichTextField(blank=True, null=True)
+    expiration_date = models.DateField(
+        blank=True,
+        null=True,
+        default=get_default_expiration_date,
+        help_text="Date when the banner will no longer be displayed. Leave blank for no expiration.",
+    )
 
 
 @register_setting
@@ -51,6 +66,16 @@ class SiteSettings(BaseSiteSetting):
         blank=True,
         null=True,
         help_text="URL to Venmo donation page",
+    )
+    square_donate_url = models.URLField(
+        blank=True,
+        null=True,
+        help_text="URL to Square donation page",
+    )
+    patreon_url = models.URLField(
+        blank=True,
+        null=True,
+        help_text="URL to Patreon page",
     )
 
 
@@ -187,6 +212,7 @@ class Song(ClusterableModel, index.Indexed):
 
     search_fields = [
         index.SearchField("title"),
+        index.AutocompleteField("title"),
         index.SearchField("time_signature"),
         index.SearchField("key_signature"),
         index.SearchField("tonality"),
@@ -434,11 +460,13 @@ class BlankCanvasPage(BasePage):
             ("horizontal_rule", blowcomotion_blocks.HorizontalRuleBlock()),
             ("jukebox", blowcomotion_blocks.JukeBoxBlock()),
             ("multi_image_banner", blowcomotion_blocks.MultiImageBannerBlock()),
+            ("patreon_button", blowcomotion_blocks.PatreonButton()),
             ("paypal_donate_button", blowcomotion_blocks.PayPalDonateButton()),
             ("quoted_image", blowcomotion_blocks.QuotedImageBlock()),
             ("rich_text", blowcomotion_blocks.AlignableRichtextBlock()),
             ("adjustable_spacer", blowcomotion_blocks.AdjustableSpacerBlock()),
             ("spacer", blowcomotion_blocks.SpacerBlock()),
+            ("square_donate_button", blowcomotion_blocks.SquareDonateButton()),
             ("upcoming_events", blowcomotion_blocks.UpcomingPublicGigs()),
             ("venmo_donate_button", blowcomotion_blocks.VenmoDonateButton()),
         ],
@@ -458,8 +486,9 @@ class BlankCanvasPage(BasePage):
         context["include_countdown_js"] = False
         context["include_form_js"] = True # set to True for the feedback form
         if self.body:
-            context["hero_header"] = self.body[0].block_type == "hero"
-            context["bottom_countdown"] = self.body[-1].block_type == "countdown"
+            has_notification_banner = NotificationBanner.for_request(request).message and (not NotificationBanner.for_request(request).expiration_date or NotificationBanner.for_request(request).expiration_date > datetime.date.today())
+            context["hero_header"] = self.body[0].block_type == "hero" and not has_notification_banner
+            context["bottom_countdown"] = self.body[-1].block_type == "countdown" and self.body[-1].value.get('countdown_date') and self.body[-1].value.get('countdown_date') > datetime.date.today()
 
             for block in self.body:
                 if block.block_type == "countdown":

@@ -1,4 +1,4 @@
-<div class="text-{{ value.alignment}}">
+<div class="{% if value.button_width == 'half' %}col-6{% elif value.button_width == 'full' %}col{% endif %} text-center{% if value.button_alignment == 'center' %} mx-auto{% elif value.button_alignment == 'right' %} ml-auto{% endif %}">
     <form class="aligncenter" action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
         <input class="aligncenter" name="cmd" type="hidden" value="_s-xclick" /> 
         <input name="hosted_button_id" type="hidden" value="BTZZZZKX6A7XW" /> 

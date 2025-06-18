@@ -3,16 +3,46 @@ Stores the codebase for the blowcomotion.org website
 
 The templates for this codebase are derived from [here](https://themewagon.com/themes/free-bootstrap-responsive-personal-portfolio-template-djoz/)
 
-- Install the dependencies
 
+## Installation
+- Clone the repository
+
+    `git clone <repository-url>`
+
+- Navigate to the project directory
+    `cd blowcomotion.org`
+- Create a virtual environment
+    `python -m venv venv`
+- Activate the virtual environment
+    - On Windows:
+        `venv\Scripts\activate`
+    - On macOS/Linux:
+        `source venv/bin/activate`
+- Install the required packages
     `pip install -r requirements.txt`
+- Run database migrations
+    `python manage.py migrate`
+- Create a superuser account
+    `python manage.py createsuperuser`
 
-- Run the LiveReload server to automatically reload the browser when changes are made to the codebase
+## Run the web app
 
-    * first run the Django server
+- Start the development server
+    `python manage.py runserver`
+- Open your web browser and go to the [homepage](http://localhost:8000)
+- You can access the admin panel at [http://localhost:8000/admin](http://localhost:8000/admin)
+- To stop the server, press `Ctrl+C` in the terminal
 
-        `python manage.py runserver`
-    
-    * then run the LiveReload server
+## Import data from the website to the local database
 
-        `python manage.py livereload`
+- Navigate to the website admin [data dump page](http://localhost:8000//admin/dump_data/)
+- Save the json file to your local machine
+- Navigate to the project directory
+    `cd blowcomotion.org`
+- Find and replace all instances of `"live_revision": [id or null]` with `"live_revision": null,` in the json file
+- Find and replace all instances of `"latest_revision": [id or null]` with `"latest_revision": null,` in the json file
+- Run the following command to import the data into the local database
+    `python manage.py loaddata <path_to_json_file>`
+- Log in to the admin panel at [http://localhost:8000/admin](http://localhost:8000/admin) to verify that the data has been imported successfully
+- Navigate to [page explorer](http://localhost:8000/admin/pages/) Delete the default "Welcome to your new Wagtail site!" page if it exists in the admin panel
+- Navigate to the [sites settings](http://localhost:8000/admin/sites/) and change the localhost root page to the homepage of the imported data
