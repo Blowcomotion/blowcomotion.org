@@ -174,3 +174,6 @@ cython_debug/
 blowcomotion/settings/local.py
 .DS_Store
 .vscode/launch.json
+
+# Local migration files
+blowco.json

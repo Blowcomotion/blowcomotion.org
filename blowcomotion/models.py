@@ -488,7 +488,7 @@ class BlankCanvasPage(BasePage):
         if self.body:
             has_notification_banner = NotificationBanner.for_request(request).message and (not NotificationBanner.for_request(request).expiration_date or NotificationBanner.for_request(request).expiration_date > datetime.date.today())
             context["hero_header"] = self.body[0].block_type == "hero" and not has_notification_banner
-            context["bottom_countdown"] = self.body[-1].block_type == "countdown"
+            context["bottom_countdown"] = self.body[-1].block_type == "countdown" and self.body[-1].value.get('countdown_date') and self.body[-1].value.get('countdown_date') > datetime.date.today()
 
             for block in self.body:
                 if block.block_type == "countdown":
