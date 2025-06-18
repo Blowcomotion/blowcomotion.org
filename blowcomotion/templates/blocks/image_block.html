@@ -3,7 +3,7 @@
 <div class="container my-4">
     {% image value.image original as the_image %}
     {% if value.url %}
-        <a href="{{ value.url }}" target="_blank">
+        <a href="{{ value.url }}" target="_blank" rel="noopener noreferrer">
             <img src="{{ the_image.url }}" alt="{{ the_image.alt }}" class="img-fluid" />
         </a>
     {% else %}
