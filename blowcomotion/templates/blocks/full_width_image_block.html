@@ -2,7 +2,7 @@
 <div class="container-fluid px-0">
     {% image value.image original as the_banner %}
     {% if value.url %}
-        <a href="{{ value.url }}" target="_blank">
+        <a href="{{ value.url }}" target="_blank" rel="noopener noreferrer">
             <img src="{{ the_banner.url }}" alt="{{ the_banner.alt }}" class="img-fluid">
         </a>
     {% else %}
