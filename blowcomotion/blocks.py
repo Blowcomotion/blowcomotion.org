@@ -439,9 +439,21 @@ class UpcomingPublicGigs(blocks.StructBlock):
                 context['gigs'] = [gig for gig in r.json()['gigs'] if gig['gig_status'].lower() == 'confirmed' and gig['band'].lower() == 'blowcomotion' and gig["date"] >= datetime.date.today().isoformat() and gig['is_private'] == False and gig["hide_from_calendar"] == False and gig["is_archived"] == False and gig["is_in_trash"] == False]
                 localtime = time.localtime()
                 for gig in context['gigs']:
-                    gig['date'] = datetime.datetime.strptime(gig['date'], "%Y-%m-%d")
-                    gig['set_time'] = datetime.datetime.strptime(gig['set_time'], "%H:%M").replace(tzinfo=datetime.timezone.utc)
-                    gig['set_time'] = gig['set_time'] + timedelta(hours=localtime.tm_isdst)
+                    try:
+                        gig['date'] = datetime.datetime.strptime(gig['date'], "%Y-%m-%d")
+                    except ValueError:
+                        # remove gigs with invalid date format
+                        continue
+                    try:
+                        gig['set_time'] = datetime.datetime.strptime(gig['set_time'], "%H:%M").replace(tzinfo=datetime.timezone.utc)
+                    except ValueError:
+                        # remove gigs with invalid set_time format
+                        continue
+                    try:
+                        gig['set_time'] = gig['set_time'] + timedelta(hours=localtime.tm_isdst)
+                    except TypeError:
+                        # if set_time is None, skip the gig
+                        continue
                 context['gigs'].sort(key=lambda gig: gig['date'])
 
                 cache.set('upcoming_public_gigs', context['gigs'], 60 * 60) # cache for 1 hour
