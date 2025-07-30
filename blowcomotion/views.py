@@ -75,10 +75,10 @@ def _create_email_message(form_type, name, email, **kwargs):
             'closing': 'We will get back to you soon with information about donation options and how your support helps our band.\n\n',
         },
         'feedback_form': {
-            'greeting': f'Hello {name},\n\n' if email else f'Feedback received from {name}:\n\n',
-            'intro': 'Thank you for your feedback! We have received your message:\n\n' if email else '',
+            'greeting': f'Hello {name},\n\n',
+            'intro': 'Thank you for your feedback! We have received your message:\n\n',
             'fields': f'Name: {name}\n' + (f'Email: {email}\n' if email else '') + f'Message: {kwargs.get("message", "")}\n' + (f'Page URL: {kwargs.get("page_url", "")}\n' if kwargs.get("page_url") else ''),
-            'closing': '\nThank you for your feedback!\n\n' if email else '',
+            'closing': 'We will get back to you soon.\n\n',
         }
     }
     
