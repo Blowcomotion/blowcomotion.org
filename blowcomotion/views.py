@@ -32,7 +32,7 @@ def _validate_honeypot(request):
     return honeypot == 'purple'
 
 
-def _send_form_email(subject, message, recipients, submitter_email=None):
+def _send_form_email(subject, message, recipient_list):
     """Send email for form submission."""
     if not recipients:
         recipient_list = []
@@ -134,14 +134,15 @@ def _process_form_submission(request, form_type, form_data, submission_model):
             email_message = _create_email_message(form_type, **form_data)
             subject = f'{form_type.replace("_", " ").title()} Submission'
             
+            # Build complete recipient list
             recipient_list = []
             if recipients:
-                recipient_list = recipients.split(',')
+                recipient_list.extend([email.strip() for email in recipients.split(',')])
             if form_data.get('email'):
                 recipient_list.append(form_data['email'])
             
             if recipient_list:
-                _send_form_email(subject, email_message, ','.join(recipient_list[:-1]) if len(recipient_list) > 1 else '', recipient_list[-1] if form_data.get('email') else None)
+                _send_form_email(subject, email_message, recipient_list)
                 logger.info(f"Email sent successfully for {form_type} submission by user {request.user.username}")
         
         return {
