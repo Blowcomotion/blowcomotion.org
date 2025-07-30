@@ -34,13 +34,6 @@ def _validate_honeypot(request):
 
 def _send_form_email(subject, message, recipient_list):
     """Send email for form submission."""
-    if not recipients:
-        recipient_list = []
-    else:
-        recipient_list = recipients.split(',')
-    if submitter_email:
-        recipient_list.append(submitter_email)
-    
     send_mail(
         subject=subject,
         message=message,
