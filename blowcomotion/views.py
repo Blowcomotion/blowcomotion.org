@@ -86,7 +86,7 @@ def _create_email_message(form_type, name, email, **kwargs):
     }
     
     msg_parts = messages.get(form_type, {})
-    email_message = f'{form_type.replace("_", " ").title()} {"Received" if form_type == "feedback_form" else "Received"}\n\n'
+    email_message = f'{form_type.replace("_", " ").title()} Received\n\n'
     email_message += msg_parts.get('greeting', '')
     email_message += msg_parts.get('intro', '')
     email_message += msg_parts.get('fields', '')
