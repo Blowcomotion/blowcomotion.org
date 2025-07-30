@@ -62,6 +62,30 @@ class SiteSettings(BaseSiteSetting):
         null=True,
         help_text="Comma-separated list of email addresses to receive contact form submissions",
     )
+    join_band_form_email_recipients = models.CharField(
+        max_length=1024,
+        blank=True,
+        null=True,
+        help_text="Comma-separated list of email addresses to receive join band form submissions",
+    )
+    booking_form_email_recipients = models.CharField(
+        max_length=1024,
+        blank=True,
+        null=True,
+        help_text="Comma-separated list of email addresses to receive booking form submissions",
+    )
+    feedback_form_email_recipients = models.CharField(
+        max_length=1024,
+        blank=True,
+        null=True,
+        help_text="Comma-separated list of email addresses to receive feedback form submissions",
+    )
+    donate_form_email_recipients = models.CharField(
+        max_length=1024,
+        blank=True,
+        null=True,
+        help_text="Comma-separated list of email addresses to receive donate form submissions",
+    )
     venmo_donate_url = models.URLField(
         blank=True,
         null=True,
@@ -450,15 +474,18 @@ class BlankCanvasPage(BasePage):
     body = StreamField(
         [
             ("accordion_list", blowcomotion_blocks.AccordionListBlock()),
+            ("booking_form", blowcomotion_blocks.BookingFormBlock(group="Forms")),
             ("button", blowcomotion_blocks.ButtonBlock()),
             ("column_layout", blowcomotion_blocks.ColumnLayoutBlock()),
-            ("contact_form", blowcomotion_blocks.ContactFormBlock()),
+            ("contact_form", blowcomotion_blocks.ContactFormBlock(group="Forms")),
             ("countdown", blowcomotion_blocks.CountdownBlock()),
+            ("donate_form", blowcomotion_blocks.DonateFormBlock(group="Forms")),
             ("events", blowcomotion_blocks.EventsBlock()),
             ("full_width_image", blowcomotion_blocks.FullWidthImageBlock()),
             ("hero", blowcomotion_blocks.HeroBlock()),
             ("horizontal_rule", blowcomotion_blocks.HorizontalRuleBlock()),
             ("image", blowcomotion_blocks.ImageBlock()),
+            ("join_band_form", blowcomotion_blocks.JoinBandFormBlock(group="Forms")),
             ("jukebox", blowcomotion_blocks.JukeBoxBlock()),
             ("multi_image_banner", blowcomotion_blocks.MultiImageBannerBlock()),
             ("patreon_button", blowcomotion_blocks.PatreonButton()),
@@ -619,3 +646,59 @@ class FeedbackFormSubmission(BaseFormSubmission):
 
     def __str__(self):
         return f"Feedback Form Submission from {self.name} on {self.date_submitted}"
+
+
+class JoinBandFormSubmission(BaseFormSubmission):
+    """
+    Model for join band form submissions
+    """
+    instrument = models.CharField(
+        blank=True,
+        null=True,
+        max_length=255,
+        help_text="The instrument the person plays",
+    )
+    instrument_rental = models.CharField(
+        blank=True,
+        null=True,
+        max_length=10,
+        choices=[
+            ('yes', 'Yes, I would like to rent an instrument'),
+            ('no', 'No, I have my own instrument'),
+            ('maybe', 'I\'m not sure yet'),
+        ],
+        help_text="Whether the person wants to rent an instrument",
+    )
+    newsletter_opt_in = models.BooleanField(
+        default=False,
+        help_text="Whether the user signed up for the newsletter",
+    )
+
+    def __str__(self):
+        return f"Join Band Form Submission from {self.name} on {self.date_submitted}"
+
+
+class BookingFormSubmission(BaseFormSubmission):
+    """
+    Model for booking form submissions
+    """
+    newsletter_opt_in = models.BooleanField(
+        default=False,
+        help_text="Whether the user signed up for the newsletter",
+    )
+
+    def __str__(self):
+        return f"Booking Form Submission from {self.name} on {self.date_submitted}"
+
+
+class DonateFormSubmission(BaseFormSubmission):
+    """
+    Model for donate form submissions
+    """
+    newsletter_opt_in = models.BooleanField(
+        default=False,
+        help_text="Whether the user signed up for the newsletter",
+    )
+
+    def __str__(self):
+        return f"Donate Form Submission from {self.name} on {self.date_submitted}"
