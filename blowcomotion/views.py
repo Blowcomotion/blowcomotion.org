@@ -88,9 +88,7 @@ def _create_email_message(form_type, name, email, **kwargs):
     email_message += msg_parts.get('intro', '')
     email_message += msg_parts.get('fields', '')
     email_message += msg_parts.get('closing', '')
-    email_message += 'Start Wearing Purple,\nBlowcomotion' if form_type != 'feedback_form' else (
-        'Best regards,\nBlowcomotion Team' if email else ''
-    )
+    email_message += 'Start Wearing Purple,\nBlowcomotion'
     
     return email_message
 
