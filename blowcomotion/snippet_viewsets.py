@@ -222,8 +222,70 @@ class FeedbackFormSubmissionViewset(SnippetViewSet):
         super().__init__(*args, **kwargs)
 
 
+class JoinBandFormSubmissionViewset(SnippetViewSet):
+    model = None
+    menu_label = 'Join Band Form'
+    menu_name = 'join_band_form'
+    menu_icon = 'group'
+    list_display = ["name", "email", "instrument", "instrument_rental", "date_submitted"]
+    search_fields = ("name", "email", "instrument", "message")
+    panels = [
+        "name",
+        "email",
+        "instrument",
+        "instrument_rental",
+        "message",
+        "newsletter_opt_in",
+    ]
+
+    def __init__(self, *args, **kwargs):
+        from .models import JoinBandFormSubmission
+        self.model = JoinBandFormSubmission
+        super().__init__(*args, **kwargs)
+
+
+class BookingFormSubmissionViewset(SnippetViewSet):
+    model = None
+    menu_label = 'Booking Form'
+    menu_name = 'booking_form'
+    menu_icon = 'calendar-alt'
+    list_display = ["name", "email", "message", "date_submitted"]
+    search_fields = ("name", "email", "message")
+    panels = [
+        "name",
+        "email",
+        "message",
+        "newsletter_opt_in",
+    ]
+
+    def __init__(self, *args, **kwargs):
+        from .models import BookingFormSubmission
+        self.model = BookingFormSubmission
+        super().__init__(*args, **kwargs)
+
+
+class DonateFormSubmissionViewset(SnippetViewSet):
+    model = None
+    menu_label = 'Donate Form'
+    menu_name = 'donate_form'
+    menu_icon = 'bi-currency-dollar'
+    list_display = ["name", "email", "message", "date_submitted"]
+    search_fields = ("name", "email", "message")
+    panels = [
+        "name",
+        "email",
+        "message",
+        "newsletter_opt_in",
+    ]
+
+    def __init__(self, *args, **kwargs):
+        from .models import DonateFormSubmission
+        self.model = DonateFormSubmission
+        super().__init__(*args, **kwargs)
+
+
 class FormsViewSetGroup(SnippetViewSetGroup):
-    items = (ContactFormSubmissionViewset, FeedbackFormSubmissionViewset, )
+    items = (ContactFormSubmissionViewset, FeedbackFormSubmissionViewset, JoinBandFormSubmissionViewset, BookingFormSubmissionViewset, DonateFormSubmissionViewset, )
     menu_icon = 'clipboard-list'
     menu_label = 'Form Submissions'
     menu_name = 'forms'

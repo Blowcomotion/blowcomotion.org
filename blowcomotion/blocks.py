@@ -136,6 +136,129 @@ class ContactFormBlock(blocks.StructBlock):
         help_text = "This contact form block displays a form for users to fill out. Submissions are sent to the email address specified in the settings. Submissions are also saved to the admin."
 
 
+class JoinBandFormBlock(blocks.StructBlock):
+    title = blocks.CharBlock(
+        required=False,
+        help_text="Enter the title for the join band form.",
+    )
+    description = blocks.RichTextBlock(
+        required=False,
+        help_text="Enter the description for the join band form.",
+    )
+    button_text = blocks.CharBlock(
+        required=False,
+        help_text="Enter the text for the button.",
+    )
+    instrument_field_label = blocks.CharBlock(
+        required=False,
+        default="What instrument do you play?",
+        help_text="Enter the label for the instrument field.",
+    )
+    instrument_rental_field_label = blocks.CharBlock(
+        required=False,
+        default="Would you like to rent an instrument?",
+        help_text="Enter the label for the instrument rental field.",
+    )
+    message_field_label = blocks.CharBlock(
+        required=False,
+        default="Additional message/notes:",
+        help_text="Enter the label for the message field.",
+    )
+    newsletter_opt_in = blocks.BooleanBlock(
+        required=False,
+        help_text="Include an opt-in checkbox for the newsletter.",
+    )
+
+
+    class Meta:
+        icon = "group"
+        template = "blocks/join_band_form_block.html"
+        label_format = "Join Band Form: {title}"
+        help_text = "This join band form block displays a form for people interested in joining the band. Submissions are sent to the email address specified in the settings. Submissions are also saved to the admin."
+
+
+class BookingFormBlock(blocks.StructBlock):
+    title = blocks.CharBlock(
+        required=False,
+        help_text="Enter the title for the booking form.",
+    )
+    description = blocks.RichTextBlock(
+        required=False,
+        help_text="Enter the description for the booking form.",
+    )
+    button_text = blocks.CharBlock(
+        required=False,
+        help_text="Enter the text for the button.",
+    )
+    name_field_label = blocks.CharBlock(
+        required=False,
+        default="Your Name:",
+        help_text="Enter the label for the name field.",
+    )
+    email_field_label = blocks.CharBlock(
+        required=False,
+        default="Your Email:",
+        help_text="Enter the label for the email field.",
+    )
+    message_field_label = blocks.CharBlock(
+        required=False,
+        default="Tell us about your event:",
+        help_text="Enter the label for the message field.",
+    )
+    newsletter_opt_in = blocks.BooleanBlock(
+        required=False,
+        help_text="Include an opt-in checkbox for the newsletter.",
+    )
+
+
+    class Meta:
+        icon = "calendar-alt"
+        template = "blocks/booking_form_block.html"
+        label_format = "Booking Form: {title}"
+        help_text = "This booking form block displays a form for people interested in booking the band for events. Submissions are sent to the email address specified in the settings. Submissions are also saved to the admin."
+
+
+class DonateFormBlock(blocks.StructBlock):
+    title = blocks.CharBlock(
+        required=False,
+        help_text="Enter the title for the donate form.",
+    )
+    description = blocks.RichTextBlock(
+        required=False,
+        help_text="Enter the description for the donate form.",
+    )
+    button_text = blocks.CharBlock(
+        required=False,
+        help_text="Enter the text for the button.",
+    )
+    name_field_label = blocks.CharBlock(
+        required=False,
+        default="Your Name:",
+        help_text="Enter the label for the name field.",
+    )
+    email_field_label = blocks.CharBlock(
+        required=False,
+        default="Your Email:",
+        help_text="Enter the label for the email field.",
+    )
+    message_field_label = blocks.CharBlock(
+        required=False,
+        default="Message:",
+        help_text="Enter the label for the message field.",
+    )
+    newsletter_opt_in = blocks.BooleanBlock(
+        required=False,
+        help_text="Include an opt-in checkbox for the newsletter.",
+    )
+
+
+    class Meta:
+        icon = "bi-currency-dollar"
+        template = "blocks/donate_form_block.html"
+        label_format = "Donate Form: {title}"
+        help_text = "This donate form block displays a form for people interested in making donations. Submissions are sent to the email address specified in the settings. Submissions are also saved to the admin."
+
+
 class PayPalDonateButton(blocks.StructBlock):
     button_alignment = blocks.ChoiceBlock(
         choices=[
@@ -336,8 +459,11 @@ class ImageBlock(blocks.StructBlock):
 
 class ColumnContentBlock(blocks.StreamBlock):
     accordion_list = AccordionListBlock()
+    booking_form = BookingFormBlock(group="Forms")
     button = ButtonBlock()
-    contact_form = ContactFormBlock()
+    contact_form = ContactFormBlock(group="Forms")
+    donate_form = DonateFormBlock(group="Forms")
+    join_band_form = JoinBandFormBlock(group="Forms")
     horizontal_rule = HorizontalRuleBlock()
     image = ImageBlock()
     rich_text = AlignableRichtextBlock()
