@@ -92,4 +92,6 @@
 {% if value.lazy_loading %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/jukebox-lazy.css' %}">
     <script src="{% static 'js/jplayerInitLazy.js' %}"></script>
+{% else %}
+    <script src="{% static 'js/jplayerInit.js' %}"></script>
 {% endif %}
