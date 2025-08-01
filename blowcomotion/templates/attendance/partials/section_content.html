@@ -65,7 +65,6 @@
                         <a href="{% url 'attendance-section-report' section.name|lower|slugify %}" 
                            hx-get="{% url 'attendance-section-report' section.name|lower|slugify %}"
                            hx-target="#attendance-container"
-                           hx-push-url="true"
                            class="btn btn-outline-secondary btn-lg ms-2">
                             <span class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
                             <i class="fa fa-line-chart"></i> View Reports
@@ -73,7 +72,6 @@
                         <a href="{% url 'attendance-reports' %}" 
                            hx-get="{% url 'attendance-reports' %}"
                            hx-target="#attendance-container"
-                           hx-push-url="true"
                            class="btn btn-outline-info btn-lg ms-2">
                             <span class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
                             <i class="fa fa-bar-chart"></i> All Reports

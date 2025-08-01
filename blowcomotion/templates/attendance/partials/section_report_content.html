@@ -14,7 +14,6 @@
             <a href="{% url 'attendance-capture' section.name|lower|slugify %}" 
                hx-get="{% url 'attendance-capture' section.name|lower|slugify %}"
                hx-target="#attendance-container"
-               hx-push-url="true"
                class="btn btn-primary">
                 <span class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
                 <i class="fa fa-check"></i> Record Attendance
@@ -22,7 +21,6 @@
             <a href="{% url 'attendance-reports' %}" 
                hx-get="{% url 'attendance-reports' %}"
                hx-target="#attendance-container"
-               hx-push-url="true"
                class="btn btn-outline-secondary">
                 <span class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
                 <i class="fa fa-bar-chart"></i> All Reports
@@ -41,8 +39,7 @@
             <div class="card-body">
                 <form method="get" class="row g-3"
                       hx-get="{% url 'attendance-section-report' section.name|lower|slugify %}"
-                      hx-target="#attendance-container"
-                      hx-push-url="true">
+                      hx-target="#attendance-container">
                     <div class="col-md-4">
                         <label for="start_date" class="form-label">Start Date</label>
                         <input type="date" class="form-control" id="start_date" name="start_date" 

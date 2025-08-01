@@ -20,7 +20,6 @@
                         <a href="{% url 'attendance-capture' section.name|lower|slugify %}" 
                            hx-get="{% url 'attendance-capture' section.name|lower|slugify %}"
                            hx-target="#attendance-container"
-                           hx-push-url="true"
                            class="btn btn-success mx-1 my-2">
                             <span class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
                             <i class="fa fa-check"></i> Record {{ section.name }}
@@ -46,7 +45,6 @@
                         <a href="{% url 'attendance-section-report' section.name|lower|slugify %}" 
                            hx-get="{% url 'attendance-section-report' section.name|lower|slugify %}"
                            hx-target="#attendance-container"
-                           hx-push-url="true"
                            class="btn btn-outline-primary mx-1 my-2">
                             <span class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
                             <i class="fa fa-line-chart"></i> {{ section.name }} Reports
@@ -69,8 +67,7 @@
                 <form method="get" class="row g-3"
                       hx-get="{% url 'attendance-reports' %}"
                       hx-target="#reports-content"
-                      hx-trigger="submit, change delay:500ms"
-                      hx-push-url="true">
+                      hx-trigger="submit, change delay:500ms">
                     <div class="col-md-3">
                         <label for="{{ filter_form.start_date.id_for_label }}" class="form-label">Start Date</label>
                         {{ filter_form.start_date }}
@@ -95,7 +92,6 @@
                         <a href="{% url 'attendance-reports' %}" 
                            hx-get="{% url 'attendance-reports' %}"
                            hx-target="#attendance-container"
-                           hx-push-url="true"
                            class="btn btn-outline-secondary">Clear</a>
                     </div>
                 </form>
