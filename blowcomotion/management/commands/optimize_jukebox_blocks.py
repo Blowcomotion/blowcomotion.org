@@ -29,20 +29,16 @@ class Command(BaseCommand):
         for model in page_models:
             pages = model.objects.all()
             all_pages.extend(pages)
-            self.stdout.write(f"Found {pages.count()} {model.__name__} pages")
         
         updated_pages = 0
         updated_blocks = 0
         
         for page in all_pages:
-            if hasattr(page, 'body') and page.body:  # Check if body exists and has content
+            if hasattr(page, 'body') and page.body:
                 page_updated = False
-                self.stdout.write(f"Checking page: {page.title} (ID: {page.id})")
                 
-                for i, block in enumerate(page.body):
-                    self.stdout.write(f"  Block {i}: {block.block_type}")
+                for block in page.body:
                     if block.block_type == 'jukebox':
-                        self.stdout.write(f"    Found jukebox block with value keys: {list(block.value.keys())}")
                         # Check if lazy_loading field exists
                         if 'lazy_loading' not in block.value:
                             if not dry_run:
@@ -51,14 +47,11 @@ class Command(BaseCommand):
                                 block.value['preload_first_track'] = True
                                 page_updated = True
                                 updated_blocks += 1
-                                self.stdout.write(f"    Updated jukebox block on page: {page.title}")
                             else:
                                 self.stdout.write(
-                                    f"    Would update JukeBoxBlock on page: {page.title}"
+                                    f"Would update JukeBoxBlock on page: {page.title}"
                                 )
                                 updated_blocks += 1
-                        else:
-                            self.stdout.write(f"    Jukebox block already has lazy_loading field")
                 
                 if page_updated and not dry_run:
                     page.save()
