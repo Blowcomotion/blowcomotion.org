@@ -46,3 +46,11 @@ The templates for this codebase are derived from [here](https://themewagon.com/t
 - Log in to the admin panel at [http://localhost:8000/admin](http://localhost:8000/admin) to verify that the data has been imported successfully
 - Navigate to [page explorer](http://localhost:8000/admin/pages/) Delete the default "Welcome to your new Wagtail site!" page if it exists in the admin panel
 - Navigate to the [sites settings](http://localhost:8000/admin/sites/) and change the localhost root page to the homepage of the imported data
+
+## Production Deployment
+
+When deploying to production, always run:
+- `python manage.py collectstatic` - Collects all static files (CSS, JS, images) for production
+- `python manage.py migrate` - Applies any new database migrations
+
+**Important**: Run `collectstatic` after any changes to static files (CSS, JavaScript, images) to ensure they're available in production.
