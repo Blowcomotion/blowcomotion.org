@@ -1,4 +1,5 @@
 {% load wagtailimages_tags %}
+{% load static %}
 <section class="track spad">
     <div class="container">
         <div class="row">
@@ -19,15 +20,30 @@
                 <div class="track__content nice-scroll">
                     {% for track in value.tracks %}
                         {% if track.recording and track.recording.file.url %}
-                            <div class="single_player_container">
+                            <div class="single_player_container" data-track-id="{{ forloop.counter }}">
                                 <h4>{{ track.title }}</h4>
-                                <div class="jp-jplayer jplayer" data-ancestor=".jp_container_{{ forloop.counter }}"
-                                    data-url="{{ track.recording.file.url }}"></div>
+                                {% if value.lazy_loading %}
+                                    <div class="jp-jplayer jplayer lazy-player" 
+                                         data-ancestor=".jp_container_{{ forloop.counter }}"
+                                         data-url="{{ track.recording.file.url }}"
+                                         data-track-id="{{ forloop.counter }}"
+                                         data-preload-first="{{ value.preload_first_track|yesno:'true,false' }}"
+                                         data-initialized="false"></div>
+                                {% else %}
+                                    <div class="jp-jplayer jplayer" data-ancestor=".jp_container_{{ forloop.counter }}"
+                                        data-url="{{ track.recording.file.url }}"></div>
+                                {% endif %}
                                 <div class="jp-audio jp_container_{{ forloop.counter }}" role="application" aria-label="media player">
                                     <div class="jp-gui jp-interface">
                                         <!-- Player Controls -->
                                         <div class="player_controls_box">
-                                            <button class="jp-play player_button" tabindex="0"></button>
+                                            {% if value.lazy_loading %}
+                                                <button class="jp-play player_button lazy-play-btn" tabindex="0" data-track-id="{{ forloop.counter }}">
+                                                    <span class="loading-spinner" style="display: none;">⟳</span>
+                                                </button>
+                                            {% else %}
+                                                <button class="jp-play player_button" tabindex="0"></button>
+                                            {% endif %}
                                         </div>
                                         <!-- Progress Bar -->
                                         <div class="player_bars">
@@ -72,3 +88,8 @@
         </div>
     </div>
 </section>
+
+{% if value.lazy_loading %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/jukebox-lazy.css' %}">
+    <script src="{% static 'js/jplayerInitLazy.js' %}"></script>
+{% endif %}

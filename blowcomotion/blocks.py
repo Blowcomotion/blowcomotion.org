@@ -434,6 +434,16 @@ class JukeBoxBlock(blocks.StructBlock):
         required=False,
         help_text="Select the image for the jukebox.",
     )
+    lazy_loading = blocks.BooleanBlock(
+        default=True,
+        required=False,
+        help_text="Enable lazy loading for better performance. Audio files will only load when the user clicks play.",
+    )
+    preload_first_track = blocks.BooleanBlock(
+        default=True,
+        required=False,
+        help_text="Preload the first track's metadata for immediate playback. Only applies when lazy loading is enabled.",
+    )
 
     tracks = blocks.ListBlock(
         SongChooserBlock(),
