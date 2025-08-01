@@ -1,14 +1,15 @@
-import json, logging
+import json, logging, base64
 from io import StringIO
 from datetime import date, timedelta
 from collections import defaultdict
+from functools import wraps
 
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.mail import send_mail
 from django.core.management import call_command
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import redirect, render, get_object_or_404
 from django.views.decorators.http import require_http_methods
 
@@ -21,6 +22,55 @@ from blowcomotion.forms import SectionAttendanceForm, AttendanceReportFilterForm
 
 
 logger = logging.getLogger(__name__)
+
+
+def http_basic_auth(username=None, password='purplepassword'):
+    """
+    Decorator for HTTP Basic Authentication
+    If username is None, any username will be accepted (only password is checked)
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(request, *args, **kwargs):
+            # Check if Authorization header exists
+            if 'HTTP_AUTHORIZATION' not in request.META:
+                response = HttpResponse('Unauthorized', status=401)
+                response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
+                return response
+            
+            # Parse the Authorization header
+            auth_header = request.META['HTTP_AUTHORIZATION']
+            if not auth_header.startswith('Basic '):
+                response = HttpResponse('Unauthorized', status=401)
+                response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
+                return response
+            
+            # Decode credentials
+            try:
+                encoded_credentials = auth_header[6:]  # Remove 'Basic '
+                decoded_credentials = base64.b64decode(encoded_credentials).decode('utf-8')
+                provided_username, provided_password = decoded_credentials.split(':', 1)
+            except (ValueError, UnicodeDecodeError):
+                response = HttpResponse('Unauthorized', status=401)
+                response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
+                return response
+            
+            # Check credentials
+            if username is None:
+                # Only check password if username is None
+                if provided_password == password:
+                    return func(request, *args, **kwargs)
+            else:
+                # Check both username and password
+                if provided_username == username and provided_password == password:
+                    return func(request, *args, **kwargs)
+            
+            response = HttpResponse('Unauthorized', status=401)
+            response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
+            return response
+        
+        return wrapper
+    return decorator
 
 
 def _get_form_recipients(site_settings, form_type):
@@ -302,7 +352,7 @@ def process_form(request):
 # Attendance Views
 
 
-
+@http_basic_auth()
 def attendance_capture(request, section_slug=None):
     """View for capturing attendance for a specific section"""
     sections = Section.objects.all().order_by('name')
@@ -411,6 +461,7 @@ def attendance_capture(request, section_slug=None):
     return render(request, 'attendance/capture.html', context)
 
 
+@http_basic_auth()
 def attendance_reports(request):
     """View for attendance reports - overall summary"""
     filter_form = AttendanceReportFilterForm(request.GET or None)
@@ -475,7 +526,7 @@ def attendance_reports(request):
     
     return render(request, 'attendance/reports.html', context)
 
-
+@http_basic_auth()
 def attendance_section_report_new(request, section_slug):
     """View for attendance reports for a specific section"""
     section = get_object_or_404(Section, name__iexact=section_slug.replace('-', ' '))
