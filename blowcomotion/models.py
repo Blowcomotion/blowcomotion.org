@@ -393,7 +393,9 @@ class Member(ClusterableModel, index.Indexed):
         first_name: CharField
         last_name: CharField
         instruments: ManyToManyField
-        birthday: DateField
+        birth_month: IntegerField
+        birth_day: IntegerField
+        birth_year: IntegerField
         join_date: DateField
         is_active: BooleanField
         bio: TextField
@@ -416,7 +418,26 @@ class Member(ClusterableModel, index.Indexed):
 
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
-    birthday = models.DateField(blank=True, null=True)
+    birth_month = models.IntegerField(
+        blank=True, 
+        null=True,
+        choices=[
+            (1, 'January'), (2, 'February'), (3, 'March'), (4, 'April'),
+            (5, 'May'), (6, 'June'), (7, 'July'), (8, 'August'),
+            (9, 'September'), (10, 'October'), (11, 'November'), (12, 'December')
+        ],
+        help_text="Birth month (1-12)"
+    )
+    birth_day = models.IntegerField(
+        blank=True, 
+        null=True,
+        help_text="Birth day (1-31)"
+    )
+    birth_year = models.IntegerField(
+        blank=True, 
+        null=True,
+        help_text="Birth year (YYYY)"
+    )
     join_date = models.DateField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
     bio = models.TextField(blank=True, null=True)
@@ -459,6 +480,45 @@ class Member(ClusterableModel, index.Indexed):
         index.SearchField("country"),
         index.SearchField("notes"),
     ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.birth_day is not None:
+            if self.birth_day < 1 or self.birth_day > 31:
+                raise ValidationError("Birth day must be between 1 and 31")
+            
+            # Check if day is valid for the given month
+            if self.birth_month is not None:
+                days_in_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+                max_day = days_in_month[self.birth_month - 1]
+                if self.birth_day > max_day:
+                    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
+                                 'July', 'August', 'September', 'October', 'November', 'December']
+                    raise ValidationError(f"Day {self.birth_day} is not valid for {month_names[self.birth_month - 1]}")
+
+    @property
+    def birthday(self):
+        """Return birthday as a date object if year is available, otherwise None"""
+        if self.birth_year and self.birth_month and self.birth_day:
+            import datetime
+            try:
+                return datetime.date(self.birth_year, self.birth_month, self.birth_day)
+            except ValueError:
+                return None
+        return None
+
+    @property
+    def birthday_display(self):
+        """Return a formatted birthday string for display"""
+        if self.birth_month and self.birth_day:
+            month_names = ['January', 'February', 'March', 'April', 'May', 'June',
+                         'July', 'August', 'September', 'October', 'November', 'December']
+            month_name = month_names[self.birth_month - 1]
+            if self.birth_year:
+                return f"{month_name} {self.birth_day}, {self.birth_year}"
+            else:
+                return f"{month_name} {self.birth_day}"
+        return None
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"

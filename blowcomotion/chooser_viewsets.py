@@ -121,7 +121,9 @@ class MemberChooserViewset(ChooserViewSet):
     form_fields = [
         "first_name",
         "last_name",
-        "birthday",
+        "birth_month",
+        "birth_day", 
+        "birth_year",
         "join_date",
         "is_active",
         "bio",
