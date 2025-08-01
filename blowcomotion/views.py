@@ -1,14 +1,23 @@
 import json, logging
 from io import StringIO
+from datetime import date, timedelta
+from collections import defaultdict
 
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.mail import send_mail
 from django.core.management import call_command
+from django.db.models import Count, Q
 from django.http import JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
+from django.views.decorators.http import require_http_methods
 
-from blowcomotion.models import SiteSettings, ContactFormSubmission, FeedbackFormSubmission, JoinBandFormSubmission, BookingFormSubmission, DonateFormSubmission
+from blowcomotion.models import (
+    SiteSettings, ContactFormSubmission, FeedbackFormSubmission, 
+    JoinBandFormSubmission, BookingFormSubmission, DonateFormSubmission,
+    Member, Section, AttendanceRecord, MemberInstrument, Instrument
+)
+from blowcomotion.forms import SectionAttendanceForm, AttendanceReportFilterForm
 
 
 logger = logging.getLogger(__name__)
@@ -288,3 +297,214 @@ def process_form(request):
         logger.info(f"Form submission accessed with GET method by user {request.user.username}")
 
     return render(request, 'forms/post_process.html', context)
+
+
+# Attendance Views
+
+
+
+def attendance_capture(request, section_slug=None):
+    """View for capturing attendance for a specific section"""
+    sections = Section.objects.all().order_by('name')
+    section = get_object_or_404(Section, name__iexact=section_slug.replace('-', ' ')) if section_slug else None
+    
+    # Get section members for display
+    section_members = []
+    if section:
+        # Get instruments that belong to this section
+        section_instruments = Instrument.objects.filter(section=section)
+        # Get member IDs who have instruments in this section
+        member_ids = MemberInstrument.objects.filter(
+            instrument__in=section_instruments
+        ).values_list('member_id', flat=True).distinct()
+        
+        section_members = Member.objects.filter(
+            id__in=member_ids,
+            is_active=True
+        ).distinct().order_by('last_name', 'first_name')
+    
+    if request.method == 'POST':
+        attendance_date = request.POST.get('attendance_date', date.today())
+        success_count = 0
+        errors = []
+        
+        # Process member attendance
+        for member in section_members:
+            checkbox_name = f'member_{member.id}'
+            if checkbox_name in request.POST:
+                try:
+                    # Create or update attendance record
+                    attendance_record, created = AttendanceRecord.objects.get_or_create(
+                        date=attendance_date,
+                        member=member,
+                        defaults={'notes': ''}
+                    )
+                    if created:
+                        success_count += 1
+                    
+                    # Update member's last_seen field
+                    member.last_seen = attendance_date
+                    member.save(update_fields=['last_seen'])
+                except Exception as e:
+                    errors.append(f"Error recording attendance for {member}: {str(e)}")
+        
+        # Process guest attendance
+        if section:
+            guest_field = f'guest_{section.id}'
+            if guest_field in request.POST and request.POST[guest_field].strip():
+                guest_names = [name.strip() for name in request.POST[guest_field].split('\n') if name.strip()]
+                for guest_name in guest_names:
+                    try:
+                        AttendanceRecord.objects.get_or_create(
+                            date=attendance_date,
+                            guest_name=guest_name,
+                            defaults={'notes': 'Guest attendance'}
+                        )
+                        success_count += 1
+                    except Exception as e:
+                        errors.append(f"Error recording guest attendance for {guest_name}: {str(e)}")
+        
+        # Return to success page
+        context = {
+            'success_count': success_count,
+            'errors': errors,
+            'attendance_date': attendance_date,
+            'section': section
+        }
+        return render(request, 'attendance/capture_success.html', context)
+    
+    context = {
+        'section': section,
+        'section_members': section_members,
+        'sections': sections,
+        'today': date.today()
+    }
+    
+    return render(request, 'attendance/capture.html', context)
+
+
+def attendance_reports(request):
+    """View for attendance reports - overall summary"""
+    filter_form = AttendanceReportFilterForm(request.GET or None)
+    
+    # Get filter parameters
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    section_id = request.GET.get('section')
+    member_id = request.GET.get('member')
+    
+    # Build query
+    attendance_records = AttendanceRecord.objects.all()
+    
+    if start_date:
+        attendance_records = attendance_records.filter(date__gte=start_date)
+    if end_date:
+        attendance_records = attendance_records.filter(date__lte=end_date)
+    
+    if member_id:
+        attendance_records = attendance_records.filter(member_id=member_id)
+    
+    if section_id:
+        section = Section.objects.get(id=section_id)
+        member_instruments = Instrument.objects.filter(section=section)
+        section_member_ids = list(set(member_instruments))
+        attendance_records = attendance_records.filter(
+            Q(member_id__in=section_member_ids) | Q(member__isnull=True)
+        )
+    
+    # Get summary statistics
+    total_records = attendance_records.count()
+    member_records = attendance_records.filter(member__isnull=False).count()
+    guest_records = attendance_records.filter(guest_name__isnull=False).count()
+    
+    # Group by date
+    attendance_by_date = attendance_records.values('date').annotate(
+        member_count=Count('member', filter=Q(member__isnull=False)),
+        guest_count=Count('guest_name', filter=Q(guest_name__isnull=False)),
+        total_count=Count('id')
+    ).order_by('-date')
+    
+    # Get sections for navigation
+    sections = Section.objects.all().order_by('name')
+    
+    context = {
+        'filter_form': filter_form,
+        'attendance_records': attendance_records.order_by('-date', 'member__last_name')[:100],  # Limit for performance
+        'attendance_by_date': attendance_by_date,
+        'total_records': total_records,
+        'member_records': member_records,
+        'guest_records': guest_records,
+        'sections': sections
+    }
+    
+    return render(request, 'attendance/reports.html', context)
+
+
+def attendance_section_report_new(request, section_slug):
+    """View for attendance reports for a specific section"""
+    section = get_object_or_404(Section, name__iexact=section_slug.replace('-', ' '))
+    
+    # Get date range (default to last 12 weeks)
+    end_date = date.today()
+    start_date = end_date - timedelta(weeks=12)
+    
+    if request.GET.get('start_date'):
+        start_date = date.fromisoformat(request.GET.get('start_date'))
+    if request.GET.get('end_date'):
+        end_date = date.fromisoformat(request.GET.get('end_date'))
+    
+    # Get members in this section
+    # Get instruments that belong to this section
+    section_instruments = Instrument.objects.filter(section=section)
+    # Get member IDs who have instruments in this section
+    section_member_ids = list(MemberInstrument.objects.filter(
+        instrument__in=section_instruments
+    ).values_list('member_id', flat=True).distinct())
+    section_members = Member.objects.filter(id__in=section_member_ids, is_active=True)
+    
+    # Get attendance records for this section (filter by members in this section)
+    attendance_records = AttendanceRecord.objects.filter(
+        date__gte=start_date,
+        date__lte=end_date
+    ).filter(
+        Q(member_id__in=section_member_ids) | Q(member__isnull=True)
+    ).order_by('-date')
+    
+    # Calculate member attendance percentages
+    member_attendance = {}
+    for member in section_members:
+        member_records = attendance_records.filter(member=member)
+        
+        # Calculate Tuesdays in the period for this member
+        member_tuesdays = 0
+        current_date = max(start_date, member.join_date) if member.join_date else start_date
+        while current_date <= end_date:
+            if current_date.weekday() == 1:  # Tuesday
+                member_tuesdays += 1
+            current_date += timedelta(days=1)
+        
+        attendance_percentage = (member_records.count() / member_tuesdays * 100) if member_tuesdays > 0 else 0
+        member_attendance[member] = {
+            'count': member_records.count(),
+            'total_tuesdays': member_tuesdays,
+            'percentage': round(attendance_percentage, 1)
+        }
+    
+    # Group attendance by date
+    attendance_by_date = attendance_records.values('date').annotate(
+        member_count=Count('member', filter=Q(member__isnull=False)),
+        guest_count=Count('guest_name', filter=Q(guest_name__isnull=False)),
+        total_count=Count('id')
+    ).order_by('-date')
+    
+    context = {
+        'section': section,
+        'section_members': section_members,
+        'attendance_records': attendance_records,
+        'member_attendance': member_attendance,
+        'attendance_by_date': attendance_by_date,
+        'start_date': start_date,
+        'end_date': end_date
+    }
+    
+    return render(request, 'attendance/section_report.html', context)

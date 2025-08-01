@@ -14,6 +14,12 @@ urlpatterns = [
     path("documents/", include(wagtaildocs_urls)),
     path("search/", search_views.search, name="search"),
     path("process-form/", blowcomotion_views.process_form, name="process-form"),
+    
+    # Attendance URLs
+    path("attendance/", blowcomotion_views.attendance_reports, name="attendance-reports"),
+    path("attendance/reports/", blowcomotion_views.attendance_reports, name="attendance-reports-detail"),
+    path("attendance/reports/<str:section_slug>/", blowcomotion_views.attendance_section_report_new, name="attendance-section-report"),
+    path("attendance/<str:section_slug>/", blowcomotion_views.attendance_capture, name="attendance-capture"),
 ]
 
 

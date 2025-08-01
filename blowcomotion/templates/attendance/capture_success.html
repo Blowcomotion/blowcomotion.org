@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Attendance Recorded{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body text-center">
+                    {% if success_count > 0 %}
+                        <div class="alert alert-success">
+                            <h4><i class="fas fa-check-circle"></i> Success!</h4>
+                            <p>Successfully recorded attendance for {{ success_count }} person{{ success_count|pluralize }} on {{ attendance_date }}{% if section %} in {{ section.name }} section{% endif %}.</p>
+                        </div>
+                    {% endif %}
+                    
+                    {% if errors %}
+                        <div class="alert alert-warning">
+                            <h5>Some issues occurred:</h5>
+                            <ul class="mb-0">
+                                {% for error in errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mt-4">
+                        {% if section %}
+                            <a href="{% url 'attendance-capture' section.name|lower|slugify %}" class="btn btn-primary">Record More for {{ section.name }}</a>
+                            <a href="{% url 'attendance-section-report' section.name|lower|slugify %}" class="btn btn-outline-info">View {{ section.name }} Reports</a>
+                        {% else %}
+                            <a href="{% url 'attendance-reports' %}" class="btn btn-primary">Record More Attendance</a>
+                        {% endif %}
+                        <a href="{% url 'attendance-reports' %}" class="btn btn-outline-secondary">View All Reports</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
