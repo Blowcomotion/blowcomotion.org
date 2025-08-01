@@ -392,6 +392,7 @@ class Member(ClusterableModel, index.Indexed):
     Attributes:
         first_name: CharField
         last_name: CharField
+        preferred_name: CharField
         instruments: ManyToManyField
         birth_month: IntegerField
         birth_day: IntegerField
@@ -418,6 +419,12 @@ class Member(ClusterableModel, index.Indexed):
 
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
+    preferred_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Name the member prefers to be called (optional)"
+    )
     birth_month = models.IntegerField(
         blank=True, 
         null=True,

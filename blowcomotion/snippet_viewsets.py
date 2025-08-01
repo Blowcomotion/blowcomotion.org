@@ -147,6 +147,7 @@ class MemberViewSet(SnippetViewSet):
     panels = [
         "first_name",
         "last_name",
+        "preferred_name",
         MultipleChooserPanel("instruments", chooser_field_name="instrument"),
         "birth_month",
         "birth_day",
