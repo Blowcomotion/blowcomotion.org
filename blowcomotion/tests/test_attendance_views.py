@@ -2,6 +2,7 @@
 Unit tests for attendance tracking views.
 """
 
+import base64
 from datetime import date, timedelta
 from django.test import TestCase, Client
 from django.urls import reverse
@@ -24,6 +25,10 @@ class AttendanceCaptureViewTests(TestCase):
     def setUp(self):
         """Set up test data"""
         self.client = Client()
+        
+        # Set up HTTP Basic Auth credentials
+        credentials = base64.b64encode(b'testuser:purplepassword').decode('ascii')
+        self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
         
         # Create test sections
         self.high_brass = Section.objects.create(name="High Brass")
@@ -240,6 +245,10 @@ class AttendanceReportsViewTests(TestCase):
         """Set up test data"""
         self.client = Client()
         
+        # Set up HTTP Basic Auth credentials
+        credentials = base64.b64encode(b'testuser:purplepassword').decode('ascii')
+        self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
+        
         # Create test section
         self.section = Section.objects.create(name="Test Section")
         
@@ -332,6 +341,10 @@ class AttendanceSectionReportViewTests(TestCase):
     def setUp(self):
         """Set up test data"""
         self.client = Client()
+        
+        # Set up HTTP Basic Auth credentials
+        credentials = base64.b64encode(b'testuser:purplepassword').decode('ascii')
+        self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
         
         # Create test section
         self.section = Section.objects.create(name="Test Section")
@@ -515,6 +528,10 @@ class AttendanceViewsIntegrationTests(TestCase):
     def setUp(self):
         """Set up test data"""
         self.client = Client()
+        
+        # Set up HTTP Basic Auth credentials
+        credentials = base64.b64encode(b'testuser:purplepassword').decode('ascii')
+        self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
         
         # Create comprehensive test data
         self.section1 = Section.objects.create(name="Brass")
