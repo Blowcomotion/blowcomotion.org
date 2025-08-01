@@ -24,15 +24,6 @@
                         </a>
                     {% endfor %}
                 </div>
-                <div class="mt-3">
-                    <a href="{% url 'attendance-reports' %}" 
-                       hx-get="{% url 'attendance-reports' %}"
-                       hx-target="#attendance-container"
-                       class="btn btn-outline-secondary">
-                        <span class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
-                        <i class="fa fa-bar-chart"></i> View All Reports
-                    </a>
-                </div>
             </div>
         </div>
     </div>
