@@ -20,13 +20,13 @@
     });
     
     function initLazyPlayers() {
-        // Initialize all players with metadata preloading only
+        // Initialize all players with metadata-only preloading for duration info
         $('.lazy-player').each(function() {
             var player = $(this);
             var trackId = player.data('track-id');
             
-            // Initialize with metadata preloading for duration info
-            initializePlayer(player, trackId, null, true);
+            // Initialize with metadata preloading ONLY for duration info
+            initializePlayerForMetadata(player, trackId);
         });
         
         // Set up click handlers for actual playback
@@ -38,13 +38,147 @@
             // Show loading spinner
             $(this).find('.loading-spinner').show();
             
-            // If player is not initialized, initialize it first
-            if (!initializedPlayers.has(trackId)) {
-                initializePlayer(player, trackId, $(this), false);
-            } else {
-                // Player already initialized, just play/pause
-                handlePlayPause(player, $(this));
-            }
+            // Upgrade player for full playback
+            upgradePlayerForPlayback(player, trackId, $(this));
+        });
+    }
+    
+    function initializePlayerForMetadata(player, trackId) {
+        var ancestor = player.data('ancestor');
+        var songUrl = player.data('url');
+        
+        player.jPlayer({
+            ready: function () {
+                $(this).jPlayer("setMedia", {
+                    mp3: songUrl
+                });
+                
+                // Mark as metadata initialized
+                player.data('metadata-ready', 'true');
+            },
+            loadedmetadata: function() {
+                // Duration is now available in the UI
+                console.log('Metadata loaded for track ' + trackId);
+            },
+            play: function() {
+                // Prevent accidental playback during metadata loading
+                $(this).jPlayer("pause");
+            },
+            error: function(event) {
+                console.error('jPlayer metadata error for track ' + trackId + ':', event.jPlayer.error);
+            },
+            swfPath: "jPlayer",
+            supplied: "mp3",
+            cssSelectorAncestor: ancestor,
+            wmode: "window",
+            globalVolume: false,
+            useStateClassSkin: true,
+            autoBlur: false,
+            smoothPlayBar: true,
+            keyEnabled: false, // Disable keyboard controls for metadata-only
+            solution: 'html',
+            preload: 'metadata', // Only load metadata for duration
+            volume: 0.8,
+            muted: false,
+            backgroundColor: '#000000',
+            errorAlerts: false,
+            warningAlerts: false
+        });
+    }
+    
+    function upgradePlayerForPlayback(player, trackId, clickedBtn) {
+        var ancestor = player.data('ancestor');
+        var songUrl = player.data('url');
+        
+        // Check if already upgraded for playback
+        if (player.data('playback-ready') === 'true') {
+            handlePlayPause(player, clickedBtn);
+            return;
+        }
+        
+        // Destroy the metadata-only player and create a full player
+        player.jPlayer("destroy");
+        
+        player.jPlayer({
+            ready: function () {
+                $(this).jPlayer("setMedia", {
+                    mp3: songUrl
+                });
+                
+                // Mark as initialized and ready for playback
+                initializedPlayers.add(trackId);
+                player.data('playback-ready', 'true');
+                
+                // Auto-play after upgrade
+                $(this).jPlayer("play");
+                currentlyPlaying = trackId;
+                
+                // Hide loading spinner
+                if (clickedBtn) {
+                    clickedBtn.find('.loading-spinner').hide();
+                }
+            },
+            play: function() {
+                // Pause other players
+                $(this).jPlayer("pauseOthers");
+                currentlyPlaying = trackId;
+                
+                // Update UI
+                $('.jp-play').removeClass('jp-pause');
+                $(ancestor + ' .jp-play').addClass('jp-pause');
+                
+                try {
+                    if (typeof wavesurfer !== 'undefined') {
+                        wavesurfer.pause();
+                    }
+                } catch(err) {
+                    // Ignore wavesurfer errors
+                }
+            },
+            pause: function() {
+                $(ancestor + ' .jp-play').removeClass('jp-pause');
+                if (currentlyPlaying === trackId) {
+                    currentlyPlaying = null;
+                }
+            },
+            ended: function() {
+                $(ancestor + ' .jp-play').removeClass('jp-pause');
+                currentlyPlaying = null;
+            },
+            loadstart: function() {
+                // Show loading state
+                if (clickedBtn) {
+                    clickedBtn.find('.loading-spinner').show();
+                }
+            },
+            canplay: function() {
+                // Hide loading state
+                if (clickedBtn) {
+                    clickedBtn.find('.loading-spinner').hide();
+                }
+            },
+            error: function(event) {
+                console.error('jPlayer playback error for track ' + trackId + ':', event.jPlayer.error);
+                if (clickedBtn) {
+                    clickedBtn.find('.loading-spinner').hide();
+                }
+            },
+            swfPath: "jPlayer",
+            supplied: "mp3",
+            cssSelectorAncestor: ancestor,
+            wmode: "window",
+            globalVolume: false,
+            useStateClassSkin: true,
+            autoBlur: false,
+            smoothPlayBar: true,
+            keyEnabled: true,
+            solution: 'html',
+            preload: 'auto', // Full preload for playback
+            volume: 0.8,
+            muted: false,
+            backgroundColor: '#000000',
+            errorAlerts: false,
+            warningAlerts: false
         });
     }
     
@@ -127,7 +261,7 @@
             smoothPlayBar: true,
             keyEnabled: true,
             solution: 'html',
-            preload: 'metadata', // Always load metadata for duration
+            preload: 'none', // No preloading until play is clicked
             volume: 0.8,
             muted: false,
             backgroundColor: '#000000',
@@ -173,7 +307,7 @@
         thisItem.find('.jp-next').click(function (e) { 
             var trackId = thisItem.data('track-id');
             var player = thisItem.find('.jplayer');
-            if (initializedPlayers.has(trackId)) {
+            if (player.data('playback-ready') === 'true') {
                 FastforwardTrack(player, thisItem);
             }
         });
@@ -181,7 +315,7 @@
         thisItem.find('.jp-prev').click(function (e) { 
             var trackId = thisItem.data('track-id');
             var player = thisItem.find('.jplayer');
-            if (initializedPlayers.has(trackId)) {
+            if (player.data('playback-ready') === 'true') {
                 RewindTrack(player, thisItem);
             }
         });
