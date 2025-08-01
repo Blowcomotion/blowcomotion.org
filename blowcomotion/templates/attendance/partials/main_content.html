@@ -1,0 +1,41 @@
+{% load static %}
+
+<!-- Section Navigation -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Select Section</h5>
+            </div>
+            <div class="card-body">
+                <div class="btn-group flex-wrap" role="group">
+                    {% for sect in sections %}
+                        <a href="{% url 'attendance-capture' sect.name|lower|slugify %}" 
+                           hx-get="{% url 'attendance-capture' sect.name|lower|slugify %}"
+                           hx-target="#main-content"
+                           hx-push-url="true"
+                           class="btn {% if sect == section %}btn-primary{% else %}btn-outline-primary{% endif %} mb-2">
+                            {{ sect.name }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dynamic Content Area -->
+<div id="dynamic-content">
+    {% if section %}
+        {% include 'attendance/partials/section_content.html' %}
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <h5><i class="fa fa-info-circle"></i> Select a Section</h5>
+                <p class="mb-0">Please select a section above to record attendance for that group.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>

@@ -324,7 +324,14 @@ def attendance_capture(request, section_slug=None):
         ).distinct().order_by('last_name', 'first_name')
     
     if request.method == 'POST':
-        attendance_date = request.POST.get('attendance_date', date.today())
+        attendance_date_str = request.POST.get('attendance_date', date.today().strftime('%Y-%m-%d'))
+        # Convert string to date object for consistent handling
+        if isinstance(attendance_date_str, str):
+            from datetime import datetime
+            attendance_date = datetime.strptime(attendance_date_str, '%Y-%m-%d').date()
+        else:
+            attendance_date = attendance_date_str
+        
         success_count = 0
         errors = []
         
@@ -364,14 +371,31 @@ def attendance_capture(request, section_slug=None):
                     except Exception as e:
                         errors.append(f"Error recording guest attendance for {guest_name}: {str(e)}")
         
-        # Return to success page
+        # Return success message for HTMX requests
+        # Get all records for this date to show in success message
+        if section:
+            # Get all records for this date and section
+            todays_records = AttendanceRecord.objects.filter(
+                date=attendance_date
+            ).filter(
+                Q(member__in=section_members) | Q(member__isnull=True)
+            ).order_by('member__last_name', 'member__first_name', 'guest_name')
+        else:
+            todays_records = AttendanceRecord.objects.filter(date=attendance_date)
+        
         context = {
             'success_count': success_count,
             'errors': errors,
             'attendance_date': attendance_date,
-            'section': section
+            'section': section,
+            'today': date.today(),
+            'todays_records': todays_records
         }
-        return render(request, 'attendance/capture_success.html', context)
+        
+        if request.headers.get('HX-Request'):
+            return render(request, 'attendance/partials/capture_success.html', context)
+        else:
+            return render(request, 'attendance/capture_success.html', context)
     
     context = {
         'section': section,
@@ -379,6 +403,10 @@ def attendance_capture(request, section_slug=None):
         'sections': sections,
         'today': date.today()
     }
+    
+    # For HTMX section switching, return the main content including navigation
+    if request.headers.get('HX-Request'):
+        return render(request, 'attendance/partials/capture_content.html', context)
     
     return render(request, 'attendance/capture.html', context)
 
@@ -436,6 +464,14 @@ def attendance_reports(request):
         'guest_records': guest_records,
         'sections': sections
     }
+    
+    # For HTMX filter requests, return just the filtered content
+    if request.headers.get('HX-Request'):
+        # Check if this is a filter request vs navigation request
+        if any(param in request.GET for param in ['start_date', 'end_date', 'section', 'member']):
+            return render(request, 'attendance/partials/reports_content.html', context)
+        else:
+            return render(request, 'attendance/partials/all_reports_content.html', context)
     
     return render(request, 'attendance/reports.html', context)
 
@@ -506,5 +542,9 @@ def attendance_section_report_new(request, section_slug):
         'start_date': start_date,
         'end_date': end_date
     }
+    
+    # For HTMX requests, return just the content
+    if request.headers.get('HX-Request'):
+        return render(request, 'attendance/partials/section_report_content.html', context)
     
     return render(request, 'attendance/section_report.html', context)

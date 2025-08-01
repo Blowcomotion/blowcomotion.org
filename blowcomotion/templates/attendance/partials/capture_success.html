@@ -1,0 +1,75 @@
+{% load static %}
+
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <h5 class="alert-heading">
+        <i class="fa fa-check-circle"></i> Attendance Recorded Successfully!
+    </h5>
+    
+    <p class="mb-2">
+        <strong>{{ success_count }}</strong> attendance record{{ success_count|pluralize }} saved for {{ attendance_date|date:"F j, Y" }}.
+    </p>
+    
+    {% if section %}
+        <p class="mb-2">Section: <strong>{{ section.name }}</strong></p>
+    {% endif %}
+    
+    {% if todays_records %}
+        <hr>
+        <h6>Attendance recorded for {{ attendance_date|date:"F j, Y" }}:</h6>
+        <div class="row">
+            <div class="col-12">
+                <ul class="list-unstyled mb-2">
+                    {% for record in todays_records %}
+                        <li class="mb-1">
+                            {% if record.member %}
+                                <span class="badge bg-success me-2">Member</span>
+                                <strong>{{ record.member }}</strong>
+                            {% else %}
+                                <span class="badge bg-info me-2">Guest</span>
+                                <strong>{{ record.guest_name }}</strong>
+                            {% endif %}
+                            {% if record.notes %}
+                                <small class="text-muted ms-2">({{ record.notes }})</small>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    {% endif %}
+    
+    {% if errors %}
+        <hr>
+        <h6>Errors encountered:</h6>
+        <ul class="mb-2">
+            {% for error in errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+
+<script>
+    // Reset the form but preserve the date field
+    const form = document.getElementById('attendanceForm');
+    const dateField = document.getElementById('attendance_date');
+    const currentDate = dateField ? dateField.value : null; // Save current date value
+    
+    if (form) {
+        // Reset all checkboxes and text areas
+        const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = false);
+        
+        const textareas = form.querySelectorAll('textarea');
+        textareas.forEach(ta => ta.value = '');
+        
+        // Restore the date field - keep the originally selected date or default to today
+        if (dateField) {
+            dateField.value = currentDate || '{{ today|date:"Y-m-d" }}';
+        }
+    }
+</script>

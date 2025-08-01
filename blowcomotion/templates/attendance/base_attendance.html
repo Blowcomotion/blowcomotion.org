@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Attendance System{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-center mb-4">Attendance System</h1>
+        </div>
+    </div>
+
+    <!-- Main Content Container -->
+    <div id="attendance-container">
+        {% block attendance_content %}{% endblock %}
+    </div>
+</div>
+
+{% block extra_css %}
+<style>
+.htmx-request .htmx-indicator {
+    display: inline-block !important;
+}
+
+.htmx-request button[type="submit"] {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+#attendance-container.htmx-swapping {
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+}
+
+.btn .htmx-indicator {
+    display: none;
+}
+
+.htmx-request .btn .htmx-indicator {
+    display: inline-block !important;
+}
+</style>
+{% endblock %}
+{% endblock %}
