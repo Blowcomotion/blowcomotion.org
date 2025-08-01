@@ -4,29 +4,20 @@
     var initializedPlayers = new Set();
     var currentlyPlaying = null;
 
-    // Wait for DOM ready and jPlayer to be available
-    $(document).ready(function() {
-        // Check if jPlayer is available
-        if (typeof $.fn.jPlayer === 'undefined') {
-            console.error('jPlayer not loaded yet, retrying...');
-            setTimeout(function() {
-                if (typeof $.fn.jPlayer !== 'undefined') {
-                    initLazyPlayers();
-                }
-            }, 100);
-        } else {
-            initLazyPlayers();
-        }
-    });
+    // Initialize lazy loading on page load
+    initLazyPlayers();
     
     function initLazyPlayers() {
         // Initialize all players with metadata preloading only
         $('.lazy-player').each(function() {
             var player = $(this);
             var trackId = player.data('track-id');
+            var ancestor = player.data('ancestor');
+            var songUrl = player.data('url');
+            var shouldPreloadFirst = player.data('preload-first') === 'true';
             
             // Initialize with metadata preloading for duration info
-            initializePlayer(player, trackId, null, true);
+            initializePlayerMetadata(player, trackId, ancestor, songUrl, shouldPreloadFirst);
         });
         
         // Set up click handlers for actual playback
@@ -38,19 +29,68 @@
             // Show loading spinner
             $(this).find('.loading-spinner').show();
             
-            // If player is not initialized, initialize it first
-            if (!initializedPlayers.has(trackId)) {
-                initializePlayer(player, trackId, $(this), false);
+            // If player is not fully initialized for playback, upgrade it
+            if (player.data('playback-ready') !== 'true') {
+                upgradePlayerForPlayback(player, trackId, $(this));
             } else {
-                // Player already initialized, just play/pause
+                // Player already ready for playback, just play/pause
                 handlePlayPause(player, $(this));
             }
         });
     }
     
-    function initializePlayer(player, trackId, clickedBtn, isMetadataOnly) {
+    function initializePlayerMetadata(player, trackId, ancestor, songUrl, isFirst) {
+        // Initialize with metadata preloading only to get duration
+        player.jPlayer({
+            ready: function () {
+                $(this).jPlayer("setMedia", {
+                    mp3: songUrl
+                });
+                
+                // Mark as metadata initialized
+                player.data('metadata-ready', 'true');
+                initializedPlayers.add(trackId);
+            },
+            loadedmetadata: function() {
+                // Duration is now available, UI will update automatically
+            },
+            play: function() {
+                // This shouldn't trigger for metadata-only players
+                // But if it does, pause immediately and upgrade for playback
+                var clickedBtn = $('.lazy-play-btn[data-track-id="' + trackId + '"]');
+                if (player.data('playback-ready') !== 'true') {
+                    $(this).jPlayer("pause");
+                    upgradePlayerForPlayback(player, trackId, clickedBtn);
+                }
+            },
+            error: function(event) {
+                console.error('jPlayer metadata error for track ' + trackId + ':', event.jPlayer.error);
+            },
+            swfPath: "jPlayer",
+            supplied: "mp3",
+            cssSelectorAncestor: ancestor,
+            wmode: "window",
+            globalVolume: false,
+            useStateClassSkin: true,
+            autoBlur: false,
+            smoothPlayBar: true,
+            keyEnabled: true,
+            solution: 'html',
+            preload: 'metadata', // Only load metadata for duration
+            volume: 0.8,
+            muted: false,
+            backgroundColor: '#000000',
+            errorAlerts: false,
+            warningAlerts: false
+        });
+    }
+    
+    function upgradePlayerForPlayback(player, trackId, clickedBtn) {
         var ancestor = player.data('ancestor');
         var songUrl = player.data('url');
+        
+        // Destroy the metadata-only player and create a full player
+        player.jPlayer("destroy");
         
         player.jPlayer({
             ready: function () {
@@ -58,19 +98,12 @@
                     mp3: songUrl
                 });
                 
-                // Mark as initialized
-                initializedPlayers.add(trackId);
-                player.data('initialized', 'true');
+                // Mark as ready for playback
+                player.data('playback-ready', 'true');
                 
-                // Hide loading spinner if this was triggered by a click
-                if (clickedBtn) {
-                    clickedBtn.find('.loading-spinner').hide();
-                    // Auto-play after initialization if not metadata-only
-                    if (!isMetadataOnly) {
-                        $(this).jPlayer("play");
-                        currentlyPlaying = trackId;
-                    }
-                }
+                // Auto-play after upgrade
+                $(this).jPlayer("play");
+                currentlyPlaying = trackId;
             },
             play: function() {
                 // Pause other players
@@ -100,8 +133,8 @@
                 currentlyPlaying = null;
             },
             loadstart: function() {
-                // Show loading state for actual playback, not metadata
-                if (clickedBtn && !isMetadataOnly) {
+                // Show loading state
+                if (clickedBtn) {
                     clickedBtn.find('.loading-spinner').show();
                 }
             },
@@ -112,7 +145,7 @@
                 }
             },
             error: function(event) {
-                console.error('jPlayer error for track ' + trackId + ':', event.jPlayer.error);
+                console.error('jPlayer playback error for track ' + trackId + ':', event.jPlayer.error);
                 if (clickedBtn) {
                     clickedBtn.find('.loading-spinner').hide();
                 }
@@ -127,7 +160,7 @@
             smoothPlayBar: true,
             keyEnabled: true,
             solution: 'html',
-            preload: 'metadata', // Always load metadata for duration
+            preload: 'auto', // Full preload for playback
             volume: 0.8,
             muted: false,
             backgroundColor: '#000000',
@@ -173,7 +206,7 @@
         thisItem.find('.jp-next').click(function (e) { 
             var trackId = thisItem.data('track-id');
             var player = thisItem.find('.jplayer');
-            if (initializedPlayers.has(trackId)) {
+            if (player.data('playback-ready') === 'true') {
                 FastforwardTrack(player, thisItem);
             }
         });
@@ -181,7 +214,7 @@
         thisItem.find('.jp-prev').click(function (e) { 
             var trackId = thisItem.data('track-id');
             var player = thisItem.find('.jplayer');
-            if (initializedPlayers.has(trackId)) {
+            if (player.data('playback-ready') === 'true') {
                 RewindTrack(player, thisItem);
             }
         });
