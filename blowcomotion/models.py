@@ -528,7 +528,7 @@ class Member(ClusterableModel, index.Indexed):
         return None
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name}"
+        return f"\"{self.preferred_name}\" {self.first_name} {self.last_name}" if self.preferred_name else f"{self.first_name} {self.last_name}"
 
 
 class AttendanceRecord(models.Model):
