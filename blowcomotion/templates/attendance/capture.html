@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Attendance - {{ section.name|default:"All Sections" }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-center mb-4">Attendance Tracking</h1>
+            {% if section %}
+                <h2 class="text-center mb-4">{{ section.name }} Section</h2>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Section Navigation -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Select Section</h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group flex-wrap" role="group">
+                        {% for sect in sections %}
+                            <a href="{% url 'attendance-capture' sect.name|lower|slugify %}" 
+                               class="btn {% if sect == section %}btn-primary{% else %}btn-outline-primary{% endif %} mb-2">
+                                {{ sect.name }}
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if section %}
+    <!-- Attendance Form -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Record Attendance for {{ section.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <form id="attendanceForm" method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Date Field -->
+                        <div class="mb-3">
+                            <label for="attendance_date" class="form-label">Practice Date</label>
+                            <input type="date" class="form-control" id="attendance_date" name="attendance_date" 
+                                   value="{{ today|date:'Y-m-d' }}" required>
+                        </div>
+
+                        <!-- Members Section -->
+                        <h6 class="mt-4 mb-3">Section Members</h6>
+                        {% if section_members %}
+                            <div class="row">
+                                {% for member in section_members %}
+                                    <div class="col-md-6 col-lg-4 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   id="member_{{ member.id }}" name="member_{{ member.id }}">
+                                            <label class="form-check-label" for="member_{{ member.id }}">
+                                                {{ member }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No members found for this section.</p>
+                        {% endif %}
+
+                        <!-- Guests Section -->
+                        <h6 class="mt-4 mb-3">Guests/Visitors</h6>
+                        <div class="mb-3">
+                            <label for="guest_{{ section.id }}" class="form-label">Guest Names (one per line)</label>
+                            <textarea class="form-control" id="guest_{{ section.id }}" name="guest_{{ section.id }}" 
+                                      rows="3" placeholder="Enter guest names, one per line"></textarea>
+                            <div class="form-text">Enter each guest's name on a separate line</div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">Record Attendance</button>
+                            <a href="{% url 'attendance-section-report' section.name|lower|slugify %}" class="btn btn-outline-secondary btn-lg ms-2">
+                                View Reports
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <h4>Please select a section to record attendance</h4>
+                <p>Choose a section from the buttons above to start recording attendance.</p>
+                <a href="{% url 'attendance-reports' %}" class="btn btn-outline-primary mt-2">View All Reports</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('attendanceForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            
+            fetch('', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    // For non-AJAX form submission, redirect to success page
+                    window.location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while recording attendance.');
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

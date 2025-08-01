@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Attendance Reports{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-center mb-4">Attendance Reports</h1>
+        </div>
+    </div>
+
+    <!-- Quick Access to Section Attendance Capture -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-plus-circle"></i> Record Attendance by Section</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Quick access to record attendance for each section:</p>
+                    <div class="btn-group flex-wrap" role="group">
+                        {% for section in sections %}
+                            <a href="{% url 'attendance-capture' section.name|lower|slugify %}" 
+                               class="btn btn-success mb-2 me-2">
+                                <i class="fas fa-check"></i> Record {{ section.name }}
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Reports Navigation -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-bar"></i> View Section Reports</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">View detailed attendance reports for each section:</p>
+                    <div class="btn-group flex-wrap" role="group">
+                        {% for section in sections %}
+                            <a href="{% url 'attendance-section-report' section.name|lower|slugify %}" 
+                               class="btn btn-outline-primary mb-2 me-2">
+                                <i class="fas fa-chart-line"></i> {{ section.name }} Reports
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Filter Reports</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="{{ filter_form.start_date.id_for_label }}" class="form-label">Start Date</label>
+                            {{ filter_form.start_date }}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ filter_form.end_date.id_for_label }}" class="form-label">End Date</label>
+                            {{ filter_form.end_date }}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ filter_form.section.id_for_label }}" class="form-label">Section</label>
+                            {{ filter_form.section }}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ filter_form.member.id_for_label }}" class="form-label">Member</label>
+                            {{ filter_form.member }}
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">Filter</button>
+                            <a href="{% url 'attendance-reports' %}" class="btn btn-outline-secondary">Clear</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Records</h5>
+                    <h2 class="text-primary">{{ total_records }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Member Attendance</h5>
+                    <h2 class="text-success">{{ member_records }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Guest Attendance</h5>
+                    <h2 class="text-info">{{ guest_records }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attendance by Date -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Attendance by Date</h5>
+                </div>
+                <div class="card-body">
+                    {% if attendance_by_date %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Members</th>
+                                        <th>Guests</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in attendance_by_date %}
+                                        <tr>
+                                            <td>{{ record.date }}</td>
+                                            <td>{{ record.member_count }}</td>
+                                            <td>{{ record.guest_count }}</td>
+                                            <td><strong>{{ record.total_count }}</strong></td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No attendance records found for the selected criteria.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Individual Records -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Recent Attendance Records</h5>
+                </div>
+                <div class="card-body">
+                    {% if attendance_records %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in attendance_records %}
+                                        <tr>
+                                            <td>{{ record.date }}</td>
+                                            <td>
+                                                {% if record.member %}
+                                                    {{ record.member }}
+                                                {% else %}
+                                                    {{ record.guest_name }}
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if record.member %}
+                                                    <span class="badge bg-success">Member</span>
+                                                {% else %}
+                                                    <span class="badge bg-info">Guest</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ record.notes|default:"-" }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if attendance_records.count == 100 %}
+                            <p class="text-muted mt-2"><em>Showing most recent 100 records. Use filters to narrow results.</em></p>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted">No attendance records found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
