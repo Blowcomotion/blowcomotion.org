@@ -490,6 +490,25 @@ class Member(ClusterableModel, index.Indexed):
 
     def clean(self):
         from django.core.exceptions import ValidationError
+        
+        # Check for duplicate members based on first and last name
+        if self.first_name and self.last_name:
+            existing_members = Member.objects.filter(
+                first_name__iexact=self.first_name,
+                last_name__iexact=self.last_name
+            )
+            
+            # If this is an update (not a new member), exclude the current instance
+            if self.pk:
+                existing_members = existing_members.exclude(pk=self.pk)
+            
+            if existing_members.exists():
+                raise ValidationError(
+                    f"A member with the name '{self.first_name} {self.last_name}' already exists. "
+                    "Please check if this person is already in the system or use a different name."
+                )
+        
+        # Existing birthday validation
         if self.birth_day is not None:
             if self.birth_day < 1 or self.birth_day > 31:
                 raise ValidationError("Birth day must be between 1 and 31")
