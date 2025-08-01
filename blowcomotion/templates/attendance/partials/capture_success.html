@@ -24,6 +24,11 @@
                             {% if record.member %}
                                 <span class="badge bg-success me-2">Member</span>
                                 <strong>{{ record.member }}</strong>
+                                {% if record.member.instruments.exists %}
+                                    <small class="text-muted ms-2">
+                                        ({% for instrument in record.member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
+                                    </small>
+                                {% endif %}
                             {% else %}
                                 <span class="badge bg-info me-2">Guest</span>
                                 <strong>{{ record.guest_name }}</strong>

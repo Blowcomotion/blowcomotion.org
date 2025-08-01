@@ -86,7 +86,14 @@
                             <tbody>
                                 {% for member, stats in member_attendance.items %}
                                     <tr>
-                                        <td>{{ member }}</td>
+                                        <td>
+                                            {{ member }}
+                                            {% if member.instruments.exists %}
+                                                <br><small class="text-muted">
+                                                    ({% for instrument in member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
+                                                </small>
+                                            {% endif %}
+                                        </td>
                                         <td>{{ stats.count }}</td>
                                         <td>{{ stats.total_tuesdays }}</td>
                                         <td>{{ stats.percentage }}%</td>
@@ -186,6 +193,11 @@
                                         <td>
                                             {% if record.member %}
                                                 {{ record.member }}
+                                                {% if record.member.instruments.exists %}
+                                                    <br><small class="text-muted">
+                                                        ({% for instrument in record.member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
+                                                    </small>
+                                                {% endif %}
                                             {% else %}
                                                 {{ record.guest_name }}
                                             {% endif %}

@@ -358,12 +358,24 @@ def attendance_capture(request, section_slug=None):
     sections = Section.objects.all().order_by('name')
     section = get_object_or_404(Section, name__iexact=section_slug.replace('-', ' ')) if section_slug else None
     
-    # Get section members for display
+    # Get section members for display grouped by instrument
     section_members = []
+    members_by_instrument = {}
     if section:
         # Get instruments that belong to this section
-        section_instruments = Instrument.objects.filter(section=section)
-        # Get member IDs who have instruments in this section
+        section_instruments = Instrument.objects.filter(section=section).order_by('name')
+        
+        # Group members by instrument
+        for instrument in section_instruments:
+            members_for_instrument = Member.objects.filter(
+                instruments__instrument=instrument,
+                is_active=True
+            ).distinct().order_by('last_name', 'first_name')
+            
+            if members_for_instrument.exists():
+                members_by_instrument[instrument] = members_for_instrument
+        
+        # Also get all section members for backward compatibility
         member_ids = MemberInstrument.objects.filter(
             instrument__in=section_instruments
         ).values_list('member_id', flat=True).distinct()
@@ -429,9 +441,9 @@ def attendance_capture(request, section_slug=None):
                 date=attendance_date
             ).filter(
                 Q(member__in=section_members) | Q(member__isnull=True)
-            ).order_by('member__last_name', 'member__first_name', 'guest_name')
+            ).select_related('member').prefetch_related('member__instruments__instrument').order_by('member__last_name', 'member__first_name', 'guest_name')
         else:
-            todays_records = AttendanceRecord.objects.filter(date=attendance_date)
+            todays_records = AttendanceRecord.objects.filter(date=attendance_date).select_related('member').prefetch_related('member__instruments__instrument')
         
         context = {
             'success_count': success_count,
@@ -450,6 +462,7 @@ def attendance_capture(request, section_slug=None):
     context = {
         'section': section,
         'section_members': section_members,
+        'members_by_instrument': members_by_instrument,
         'sections': sections,
         'today': date.today()
     }
@@ -508,7 +521,7 @@ def attendance_reports(request):
     
     context = {
         'filter_form': filter_form,
-        'attendance_records': attendance_records.order_by('-date', 'member__last_name')[:100],  # Limit for performance
+        'attendance_records': attendance_records.select_related('member').prefetch_related('member__instruments__instrument').order_by('-date', 'member__last_name')[:100],  # Limit for performance
         'attendance_by_date': attendance_by_date,
         'total_records': total_records,
         'member_records': member_records,
@@ -547,7 +560,10 @@ def attendance_section_report_new(request, section_slug):
     section_member_ids = list(MemberInstrument.objects.filter(
         instrument__in=section_instruments
     ).values_list('member_id', flat=True).distinct())
-    section_members = Member.objects.filter(id__in=section_member_ids, is_active=True)
+    section_members = Member.objects.filter(
+        id__in=section_member_ids, 
+        is_active=True
+    ).prefetch_related('instruments__instrument')
     
     # Get attendance records for this section (filter by members in this section)
     attendance_records = AttendanceRecord.objects.filter(
@@ -587,7 +603,7 @@ def attendance_section_report_new(request, section_slug):
     context = {
         'section': section,
         'section_members': section_members,
-        'attendance_records': attendance_records,
+        'attendance_records': attendance_records.select_related('member').prefetch_related('member__instruments__instrument'),
         'member_attendance': member_attendance,
         'attendance_by_date': attendance_by_date,
         'start_date': start_date,

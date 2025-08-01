@@ -30,7 +30,27 @@
 
                     <!-- Members Section -->
                     <h6 class="mt-4 mb-3">Section Members</h6>
-                    {% if section_members %}
+                    {% if members_by_instrument %}
+                        {% for instrument, members in members_by_instrument.items %}
+                            <div class="instrument-group mb-4">
+                                <h6 class="text-primary mb-2">{{ instrument.name }}</h6>
+                                <div class="row">
+                                    {% for member in members %}
+                                        <div class="col-md-6 col-lg-4 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       id="member_{{ member.id }}" name="member_{{ member.id }}">
+                                                <label class="form-check-label" for="member_{{ member.id }}">
+                                                    {{ member }}
+                                                    <small class="text-muted">({{ instrument.name }})</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% elif section_members %}
                         <div class="row">
                             {% for member in section_members %}
                                 <div class="col-md-6 col-lg-4 mb-2">
@@ -39,6 +59,11 @@
                                                id="member_{{ member.id }}" name="member_{{ member.id }}">
                                         <label class="form-check-label" for="member_{{ member.id }}">
                                             {{ member }}
+                                            {% if member.instruments.exists %}
+                                                <small class="text-muted">
+                                                    ({% for instrument in member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
+                                                </small>
+                                            {% endif %}
                                         </label>
                                     </div>
                                 </div>
@@ -94,5 +119,17 @@
 .htmx-request button[type="submit"] {
     opacity: 0.6;
     pointer-events: none;
+}
+
+.instrument-group {
+    background-color: #f8f9fa;
+    border-radius: 0.375rem;
+    padding: 15px;
+    border-left: 4px solid #007bff;
+}
+
+.instrument-group h6 {
+    margin-bottom: 10px;
+    font-weight: 600;
 }
 </style>

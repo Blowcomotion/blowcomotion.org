@@ -93,6 +93,11 @@
                                         <td>
                                             {% if record.member %}
                                                 {{ record.member }}
+                                                {% if record.member.instruments.exists %}
+                                                    <small class="text-muted">
+                                                        ({% for instrument in record.member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
+                                                    </small>
+                                                {% endif %}
                                             {% else %}
                                                 {{ record.guest_name }}
                                             {% endif %}
