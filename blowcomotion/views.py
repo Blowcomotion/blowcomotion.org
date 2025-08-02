@@ -50,20 +50,25 @@ def get_birthday(year, month, day):
             return None  # Skip invalid dates
 
 
-def http_basic_auth_generic(password_setting, realm_name, username=None):
+def http_basic_auth_generic(password_setting_or_value, realm_name, username=None, direct_password=None):
     """
     Generic decorator for HTTP Basic Authentication
     
     Args:
-        password_setting: The settings key to get the password from
+        password_setting_or_value: The settings key to get the password from, or the password value if direct_password is True
         realm_name: The authentication realm name
         username: If provided, both username and password must match. If None, only password is checked.
+        direct_password: If True, password_setting_or_value is used as the password directly
     """
     def decorator(func):
         @wraps(func)
         def wrapper(request, *args, **kwargs):
-            # Get password from settings each time (allows for test overrides)
-            password = getattr(settings, password_setting, None)
+            # Get password
+            if direct_password:
+                password = password_setting_or_value
+            else:
+                # Get password from settings each time (allows for test overrides)
+                password = getattr(settings, password_setting_or_value, None)
             
             # If password is None, skip authentication
             if password is None:
@@ -114,44 +119,16 @@ def http_basic_auth(username=None, password=None):
     """
     Decorator for HTTP Basic Authentication
     If username is None, any username will be accepted (only password is checked)
-    If password is provided directly, uses HTTP_BASIC_AUTH_PASSWORD to match original behavior.
+    If password is provided directly, uses that password for authentication.
     If password is None, uses HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD from settings.
     If HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD is None, authentication is skipped.
     """
     if password is not None:
-        # Use the provided password directly for authentication
-        def decorator(func):
-            @wraps(func)
-            def wrapped(request, *args, **kwargs):
-                auth_header = request.META.get('HTTP_AUTHORIZATION')
-                if not auth_header or not auth_header.startswith('Basic '):
-                    response = HttpResponse('Unauthorized', status=401)
-                    response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
-                    return response
-                try:
-                    auth_decoded = base64.b64decode(auth_header.split(' ', 1)[1]).decode('utf-8')
-                    if ':' in auth_decoded:
-                        provided_username, provided_password = auth_decoded.split(':', 1)
-                    else:
-                        provided_username, provided_password = '', auth_decoded
-                except Exception:
-                    response = HttpResponse('Unauthorized', status=401)
-                    response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
-                    return response
-                if username is not None and provided_username != username:
-                    response = HttpResponse('Unauthorized', status=401)
-                    response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
-                    return response
-                if provided_password != password:
-                    response = HttpResponse('Unauthorized', status=401)
-                    response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
-                    return response
-                return func(request, *args, **kwargs)
-            return wrapped
-        return decorator
+        # Use the provided password directly
+        return http_basic_auth_generic(password, 'Attendance Area', username, direct_password=True)
     else:
-        # Standard usage - return the generic decorator configured for attendance
-        return http_basic_auth_generic('HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD', 'Attendance Area', username)
+        # Standard usage - get password from settings
+        return http_basic_auth_generic('HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD', 'Attendance Area', username, direct_password=False)
 
 
 def http_basic_auth_birthdays():
@@ -160,7 +137,7 @@ def http_basic_auth_birthdays():
     Uses HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD from settings
     If HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD is None, authentication is skipped
     """
-    return http_basic_auth_generic('HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD', 'Birthdays Area')
+    return http_basic_auth_generic('HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD', 'Birthdays Area', direct_password=False)
 
 
 def _get_form_recipients(site_settings, form_type):
