@@ -19,7 +19,7 @@ from blowcomotion.models import (
 )
 
 
-@override_settings(HTTP_BASIC_AUTH_PASSWORD='testpassword')
+@override_settings(HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD='testpassword')
 class AttendanceCaptureViewTests(TestCase):
     """Test cases for the attendance_capture view"""
 
@@ -585,7 +585,7 @@ class AttendanceCaptureViewTests(TestCase):
         self.assertEqual(guest_record.notes, 'Guest - Rehearsal')
 
 
-@override_settings(HTTP_BASIC_AUTH_PASSWORD='testpassword')
+@override_settings(HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD='testpassword')
 class AttendanceReportsViewTests(TestCase):
     """Test cases for the attendance_reports view"""
 
@@ -683,7 +683,7 @@ class AttendanceReportsViewTests(TestCase):
         # Should return all reports content for navigation
 
 
-@override_settings(HTTP_BASIC_AUTH_PASSWORD='testpassword')
+@override_settings(HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD='testpassword')
 class AttendanceSectionReportViewTests(TestCase):
     """Test cases for the attendance_section_report_new view"""
 
@@ -871,7 +871,7 @@ class AttendanceSectionReportViewTests(TestCase):
             self.assertLessEqual(stats['percentage'], 100)
 
 
-@override_settings(HTTP_BASIC_AUTH_PASSWORD='testpassword')
+@override_settings(HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD='testpassword')
 class AttendanceViewsIntegrationTests(TestCase):
     """Integration tests for attendance views working together"""
 

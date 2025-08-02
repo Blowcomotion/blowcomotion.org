@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Member Birthdays{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-center mb-4">
+                <i class="fa fa-birthday-cake"></i> Member Birthdays
+            </h1>
+            <p class="text-center text-muted mb-5">
+                Celebrating our members - past 10 days and upcoming 10 days
+            </p>
+        </div>
+    </div>
+
+    <!-- Today's Birthdays -->
+    {% if today_birthdays %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="fa fa-gift"></i> Celebrating Today! 🎉
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for birthday in today_birthdays %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card bg-light border-success">
+                                <div class="card-body text-center">
+                                    {% if birthday.member.image %}
+                                        <img src="{{ birthday.member.image.file.url }}" 
+                                             alt="{{ birthday.display_name }}" 
+                                             class="rounded-circle mb-2"
+                                             style="width: 80px; height: 80px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center mb-2" 
+                                             style="width: 80px; height: 80px;">
+                                            <i class="fa fa-user fa-2x text-white"></i>
+                                        </div>
+                                    {% endif %}
+                                    <h5 class="card-title">{{ birthday.display_name }} {{ birthday.member.last_name }}</h5>
+                                    <p class="card-text">
+                                        <strong>{{ birthday.birthday|date:"F j" }}</strong>
+                                        {% if birthday.age %}
+                                            <br><small class="text-muted">Turning {{ birthday.age }}</small>
+                                        {% endif %}
+                                    </p>
+                                    <span class="badge bg-success">Today!</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Upcoming Birthdays -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fa fa-calendar"></i> Upcoming Birthdays
+                        <small class="d-block">Next 10 days</small>
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_birthdays %}
+                        {% for birthday in upcoming_birthdays %}
+                        <div class="d-flex align-items-center mb-3 p-3 border rounded">
+                            {% if birthday.member.image %}
+                                <img src="{{ birthday.member.image.file.url }}" 
+                                     alt="{{ birthday.display_name }}" 
+                                     class="rounded-circle me-3"
+                                     style="width: 50px; height: 50px; object-fit: cover;">
+                            {% else %}
+                                <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center me-3" 
+                                     style="width: 50px; height: 50px;">
+                                    <i class="fa fa-user text-white"></i>
+                                </div>
+                            {% endif %}
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ birthday.display_name }} {{ birthday.member.last_name }}</h6>
+                                <p class="mb-1">
+                                    <strong>{{ birthday.birthday|date:"F j" }}</strong>
+                                    {% if birthday.age %}
+                                        <small class="text-muted">(turning {{ birthday.age }})</small>
+                                    {% endif %}
+                                </p>
+                                <small class="text-muted">
+                                    {% if birthday.days_until == 1 %}
+                                        Tomorrow
+                                    {% else %}
+                                        In {{ birthday.days_until }} days
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-primary">
+                                    {% if birthday.days_until == 1 %}
+                                        Tomorrow
+                                    {% else %}
+                                        {{ birthday.days_until }}d
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fa fa-calendar-o fa-3x mb-3"></i>
+                            <p>No upcoming birthdays in the next 10 days.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Birthdays -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">
+                        <i class="fa fa-history"></i> Recent Birthdays
+                        <small class="d-block">Past 10 days</small>
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if recent_birthdays %}
+                        {% for birthday in recent_birthdays %}
+                        <div class="d-flex align-items-center mb-3 p-3 border rounded">
+                            {% if birthday.member.image %}
+                                <img src="{{ birthday.member.image.file.url }}" 
+                                     alt="{{ birthday.display_name }}" 
+                                     class="rounded-circle me-3"
+                                     style="width: 50px; height: 50px; object-fit: cover;">
+                            {% else %}
+                                <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center me-3" 
+                                     style="width: 50px; height: 50px;">
+                                    <i class="fa fa-user text-white"></i>
+                                </div>
+                            {% endif %}
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ birthday.display_name }} {{ birthday.member.last_name }}</h6>
+                                <p class="mb-1">
+                                    <strong>{{ birthday.birthday|date:"F j" }}</strong>
+                                    {% if birthday.age %}
+                                        <small class="text-muted">(turned {{ birthday.age }})</small>
+                                    {% endif %}
+                                </p>
+                                <small class="text-muted">
+                                    {% if birthday.days_ago == 1 %}
+                                        Yesterday
+                                    {% else %}
+                                        {{ birthday.days_ago }} days ago
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-info">
+                                    {% if birthday.days_ago == 1 %}
+                                        Yesterday
+                                    {% else %}
+                                        {{ birthday.days_ago }}d ago
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fa fa-history fa-3x mb-3"></i>
+                            <p>No recent birthdays in the past 10 days.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <h4 class="text-success">{{ today_birthdays|length }}</h4>
+                            <p class="mb-0">Today</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h4 class="text-primary">{{ upcoming_birthdays|length }}</h4>
+                            <p class="mb-0">Upcoming</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h4 class="text-info">{{ recent_birthdays|length }}</h4>
+                            <p class="mb-0">Recent</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: box-shadow 0.15s ease-in-out;
+}
+
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.border-success {
+    border-color: #198754 !important;
+}
+
+.bg-success {
+    background-color: #198754 !important;
+}
+
+.badge {
+    font-size: 0.875em;
+}
+
+.rounded-circle {
+    border: 2px solid #dee2e6;
+}
+
+@media (max-width: 768px) {
+    .d-flex.align-items-center {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .d-flex.align-items-center .me-3 {
+        margin-right: 0 !important;
+        margin-bottom: 1rem;
+    }
+}
+</style>
+{% endblock %}
