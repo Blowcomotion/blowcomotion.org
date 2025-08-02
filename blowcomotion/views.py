@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from collections import defaultdict
 from functools import wraps
 
+from django.conf import settings
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.mail import send_mail
@@ -24,14 +25,23 @@ from blowcomotion.forms import SectionAttendanceForm, AttendanceReportFilterForm
 logger = logging.getLogger(__name__)
 
 
-def http_basic_auth(username=None, password='purplepassword'):
+def http_basic_auth(username=None, password=None):
     """
     Decorator for HTTP Basic Authentication
     If username is None, any username will be accepted (only password is checked)
+    If password is None, uses HTTP_BASIC_AUTH_PASSWORD from settings
+    If HTTP_BASIC_AUTH_PASSWORD is None, authentication is skipped
     """
+    if password is None:
+        password = getattr(settings, 'HTTP_BASIC_AUTH_PASSWORD', None)
+    
     def decorator(func):
         @wraps(func)
         def wrapper(request, *args, **kwargs):
+            # If password is None, skip authentication
+            if password is None:
+                return func(request, *args, **kwargs)
+            
             # Check if Authorization header exists
             if 'HTTP_AUTHORIZATION' not in request.META:
                 response = HttpResponse('Unauthorized', status=401)

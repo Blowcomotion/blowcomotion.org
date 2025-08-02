@@ -4,7 +4,7 @@ Unit tests for attendance tracking views.
 
 import base64
 from datetime import date, timedelta
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
 from django.http import Http404
@@ -19,6 +19,7 @@ from blowcomotion.models import (
 )
 
 
+@override_settings(HTTP_BASIC_AUTH_PASSWORD='testpassword')
 class AttendanceCaptureViewTests(TestCase):
     """Test cases for the attendance_capture view"""
 
@@ -27,7 +28,7 @@ class AttendanceCaptureViewTests(TestCase):
         self.client = Client()
         
         # Set up HTTP Basic Auth credentials
-        credentials = base64.b64encode(b'testuser:purplepassword').decode('ascii')
+        credentials = base64.b64encode(b'testuser:testpassword').decode('ascii')
         self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
         
         # Create test sections
@@ -584,6 +585,7 @@ class AttendanceCaptureViewTests(TestCase):
         self.assertEqual(guest_record.notes, 'Guest - Rehearsal')
 
 
+@override_settings(HTTP_BASIC_AUTH_PASSWORD='testpassword')
 class AttendanceReportsViewTests(TestCase):
     """Test cases for the attendance_reports view"""
 
@@ -592,7 +594,7 @@ class AttendanceReportsViewTests(TestCase):
         self.client = Client()
         
         # Set up HTTP Basic Auth credentials
-        credentials = base64.b64encode(b'testuser:purplepassword').decode('ascii')
+        credentials = base64.b64encode(b'testuser:testpassword').decode('ascii')
         self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
         
         # Create test section
@@ -681,6 +683,7 @@ class AttendanceReportsViewTests(TestCase):
         # Should return all reports content for navigation
 
 
+@override_settings(HTTP_BASIC_AUTH_PASSWORD='testpassword')
 class AttendanceSectionReportViewTests(TestCase):
     """Test cases for the attendance_section_report_new view"""
 
@@ -689,7 +692,7 @@ class AttendanceSectionReportViewTests(TestCase):
         self.client = Client()
         
         # Set up HTTP Basic Auth credentials
-        credentials = base64.b64encode(b'testuser:purplepassword').decode('ascii')
+        credentials = base64.b64encode(b'testuser:testpassword').decode('ascii')
         self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
         
         # Create test section
@@ -868,6 +871,7 @@ class AttendanceSectionReportViewTests(TestCase):
             self.assertLessEqual(stats['percentage'], 100)
 
 
+@override_settings(HTTP_BASIC_AUTH_PASSWORD='testpassword')
 class AttendanceViewsIntegrationTests(TestCase):
     """Integration tests for attendance views working together"""
 
@@ -876,7 +880,7 @@ class AttendanceViewsIntegrationTests(TestCase):
         self.client = Client()
         
         # Set up HTTP Basic Auth credentials
-        credentials = base64.b64encode(b'testuser:purplepassword').decode('ascii')
+        credentials = base64.b64encode(b'testuser:testpassword').decode('ascii')
         self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
         
         # Create comprehensive test data
