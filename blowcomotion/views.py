@@ -785,8 +785,8 @@ def birthdays(request):
         # Check if birthday already passed this year; only then consider next year's birthday if it's within range
         elif birthday_this_year < today:
             next_year = today.year + 1
-            # Only create next year's birthday date if it could be within the upcoming range
-            # Calculate the date for next year's birthday only if it falls within the upcoming range
+            # If the member's birthday has already passed this year, check if next year's birthday falls within the upcoming range.
+            # If so, update member info to reflect next year's birthday and age.
             future_birthday_next_year = None
             try:
                 candidate = date(next_year, member.birth_month, member.birth_day)
