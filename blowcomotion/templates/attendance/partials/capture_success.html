@@ -22,7 +22,7 @@
                     {% for record in todays_records %}
                         <li class="mb-1">
                             {% if record.member %}
-                                <span class="badge bg-success me-2">Member</span>
+                                <span class="badge bg-success text-white me-2">Member</span>
                                 <strong>{{ record.member }}</strong>
                                 {% if record.member.instruments.exists %}
                                     <small class="text-muted ms-2">
@@ -30,7 +30,7 @@
                                     </small>
                                 {% endif %}
                             {% else %}
-                                <span class="badge bg-info me-2">Guest</span>
+                                <span class="badge bg-info text-white me-2">Guest</span>
                                 <strong>{{ record.guest_name }}</strong>
                             {% endif %}
                             {% if record.notes %}
