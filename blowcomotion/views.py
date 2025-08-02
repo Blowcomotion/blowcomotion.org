@@ -774,12 +774,33 @@ def birthdays(request):
     past_date = today - timedelta(days=BIRTHDAY_RANGE_DAYS)
     future_date = today + timedelta(days=BIRTHDAY_RANGE_DAYS)
     
-    # Get all active members with birthday information
+    # Calculate relevant birth months to reduce database queries
+    # We need to consider months that could have birthdays in our date range
+    relevant_months = set()
+    
+    # Add months for the date range
+    current_check = past_date
+    while current_check <= future_date:
+        relevant_months.add(current_check.month)
+        # Move to next month
+        if current_check.month == 12:
+            current_check = current_check.replace(year=current_check.year + 1, month=1)
+        else:
+            current_check = current_check.replace(month=current_check.month + 1)
+    
+    # Also add next year's months for future_date if we're near year end
+    if future_date.month <= 2:  # If future date is in Jan/Feb, include Dec from previous year
+        relevant_months.add(12)
+    if past_date.month >= 11:  # If past date is in Nov/Dec, include Jan from next year  
+        relevant_months.add(1)
+    
+    # Get all active members with birthday information, filtered by relevant months
     members_with_birthdays = Member.objects.filter(
         is_active=True,
         birth_month__isnull=False,
-        birth_day__isnull=False
-    ).order_by('last_name', 'first_name')
+        birth_day__isnull=False,
+        birth_month__in=relevant_months
+    ).order_by('first_name', 'last_name')
     
     recent_birthdays = []
     upcoming_birthdays = []
@@ -822,9 +843,12 @@ def birthdays(request):
             if next_year_info:
                 member_info.update(next_year_info)
                 upcoming_birthdays.append(member_info)
-    recent_birthdays.sort(key=lambda x: x['birthday'], reverse=True)  # Most recent first
-    upcoming_birthdays.sort(key=lambda x: x['birthday'])  # Soonest first
-    today_birthdays.sort(key=lambda x: x['display_name'])  # Alphabetical
+    
+    # Sort lists efficiently - recent birthdays by date (most recent first)
+    recent_birthdays.sort(key=lambda x: x['birthday'], reverse=True)
+    # Upcoming birthdays by date (soonest first) 
+    upcoming_birthdays.sort(key=lambda x: x['birthday'])
+    # Today's birthdays are already ordered by name due to database ordering
     
     context = {
         'today_birthdays': today_birthdays,
