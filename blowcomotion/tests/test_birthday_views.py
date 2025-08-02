@@ -10,7 +10,7 @@ from django.urls import reverse
 from blowcomotion.models import Member
 
 
-@override_settings(HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD_BIRTHDAYS=None)
+@override_settings(HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD=None)
 class BirthdayViewTests(TestCase):
     """Test cases for the birthdays view"""
 
@@ -199,7 +199,7 @@ class BirthdayViewTests(TestCase):
         self.assertContains(response, "Recent")
 
 
-@override_settings(HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD_BIRTHDAYS='testpassword')
+@override_settings(HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD='testpassword')
 class BirthdayViewHTTPAuthTests(TestCase):
     """Test cases for HTTP Basic Auth on birthdays view"""
 

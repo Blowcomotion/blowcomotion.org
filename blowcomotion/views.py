@@ -111,14 +111,14 @@ def http_basic_auth(username=None, password=None):
 def http_basic_auth_birthdays():
     """
     Decorator for HTTP Basic Authentication for birthdays view
-    Uses HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD_BIRTHDAYS from settings
-    If HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD_BIRTHDAYS is None, authentication is skipped
+    Uses HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD from settings
+    If HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD is None, authentication is skipped
     """
     def decorator(func):
         @wraps(func)
         def wrapper(request, *args, **kwargs):
             # Get password from settings each time (allows for test overrides)
-            password = getattr(settings, 'HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD_BIRTHDAYS', None)
+            password = getattr(settings, 'HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD', None)
             
             # If password is None, skip authentication
             if password is None:
