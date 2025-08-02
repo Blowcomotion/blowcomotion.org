@@ -374,7 +374,7 @@ def attendance_capture(request, section_slug=None):
         members_with_instruments = MemberInstrument.objects.values_list('member_id', flat=True).distinct()
         section_members = Member.objects.filter(
             is_active=True
-        ).exclude(id__in=members_with_instruments).order_by('last_name', 'first_name')
+        ).exclude(id__in=members_with_instruments).order_by('first_name', 'last_name')
     elif section:
         # Get instruments that belong to this section
         section_instruments = Instrument.objects.filter(section=section).order_by('name')
@@ -384,7 +384,7 @@ def attendance_capture(request, section_slug=None):
             members_for_instrument = Member.objects.filter(
                 instruments__instrument=instrument,
                 is_active=True
-            ).distinct().order_by('last_name', 'first_name')
+            ).distinct().order_by('first_name', 'last_name')
             
             if members_for_instrument.exists():
                 members_by_instrument[instrument] = members_for_instrument
@@ -397,7 +397,7 @@ def attendance_capture(request, section_slug=None):
         section_members = Member.objects.filter(
             id__in=member_ids,
             is_active=True
-        ).distinct().order_by('last_name', 'first_name')
+        ).distinct().order_by('first_name', 'last_name')
     
     if request.method == 'POST':
         attendance_date_str = request.POST.get('attendance_date', date.today().strftime('%Y-%m-%d'))
@@ -456,14 +456,14 @@ def attendance_capture(request, section_slug=None):
                 date=attendance_date
             ).filter(
                 Q(member__in=section_members) | Q(member__isnull=True)
-            ).select_related('member').prefetch_related('member__instruments__instrument').order_by('member__last_name', 'member__first_name', 'guest_name')
+            ).select_related('member').prefetch_related('member__instruments__instrument').order_by('member__first_name', 'member__last_name', 'guest_name')
         elif is_no_section:
             # Get all records for this date and no-section members
             todays_records = AttendanceRecord.objects.filter(
                 date=attendance_date
             ).filter(
                 Q(member__in=section_members) | Q(member__isnull=True)
-            ).select_related('member').prefetch_related('member__instruments__instrument').order_by('member__last_name', 'member__first_name', 'guest_name')
+            ).select_related('member').prefetch_related('member__instruments__instrument').order_by('member__first_name', 'member__last_name', 'guest_name')
         else:
             todays_records = AttendanceRecord.objects.filter(date=attendance_date).select_related('member').prefetch_related('member__instruments__instrument')
         
@@ -545,7 +545,7 @@ def attendance_reports(request):
     
     context = {
         'filter_form': filter_form,
-        'attendance_records': attendance_records.select_related('member').prefetch_related('member__instruments__instrument').order_by('-date', 'member__last_name')[:100],  # Limit for performance
+        'attendance_records': attendance_records.select_related('member').prefetch_related('member__instruments__instrument').order_by('-date', 'member__first_name', 'member__last_name')[:100],  # Limit for performance
         'attendance_by_date': attendance_by_date,
         'total_records': total_records,
         'member_records': member_records,
@@ -587,7 +587,7 @@ def attendance_section_report_new(request, section_slug):
     section_members = Member.objects.filter(
         id__in=section_member_ids, 
         is_active=True
-    ).prefetch_related('instruments__instrument')
+    ).order_by('first_name', 'last_name').prefetch_related('instruments__instrument')
     
     # Get attendance records for this section (filter by members in this section)
     attendance_records = AttendanceRecord.objects.filter(
