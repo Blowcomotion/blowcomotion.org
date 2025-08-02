@@ -119,9 +119,35 @@ def http_basic_auth(username=None, password=None):
     If HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD is None, authentication is skipped.
     """
     if password is not None:
-        # For backward compatibility when password is provided directly
+        # Use the provided password directly for authentication
         def decorator(func):
-            return http_basic_auth_generic('HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD', 'Attendance Area', username)(func)
+            @wraps(func)
+            def wrapped(request, *args, **kwargs):
+                auth_header = request.META.get('HTTP_AUTHORIZATION')
+                if not auth_header or not auth_header.startswith('Basic '):
+                    response = HttpResponse('Unauthorized', status=401)
+                    response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
+                    return response
+                try:
+                    auth_decoded = base64.b64decode(auth_header.split(' ', 1)[1]).decode('utf-8')
+                    if ':' in auth_decoded:
+                        provided_username, provided_password = auth_decoded.split(':', 1)
+                    else:
+                        provided_username, provided_password = '', auth_decoded
+                except Exception:
+                    response = HttpResponse('Unauthorized', status=401)
+                    response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
+                    return response
+                if username is not None and provided_username != username:
+                    response = HttpResponse('Unauthorized', status=401)
+                    response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
+                    return response
+                if provided_password != password:
+                    response = HttpResponse('Unauthorized', status=401)
+                    response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
+                    return response
+                return func(request, *args, **kwargs)
+            return wrapped
         return decorator
     else:
         # Standard usage - return the generic decorator configured for attendance
