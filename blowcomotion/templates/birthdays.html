@@ -22,8 +22,8 @@
         <div class="col-12">
             <div class="card border-success">
                 <div class="card-header bg-success text-white">
-                    <h4 class="mb-0">
-                        <i class="fa fa-gift"></i> Celebrating Today! 🎉
+                    <h4 class="mb-0 text-white">
+                        <i class="fa fa-gift text-white"></i> Celebrating Today! 🎉
                     </h4>
                 </div>
                 <div class="card-body">
@@ -50,7 +50,7 @@
                                             <br><small class="text-muted">Turning {{ birthday.age }}</small>
                                         {% endif %}
                                     </p>
-                                    <span class="badge bg-success">Today!</span>
+                                    <span class="badge bg-success text-white">Today!</span>
                                 </div>
                             </div>
                         </div>
@@ -67,9 +67,9 @@
         <div class="col-lg-6 mb-4">
             <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">
-                        <i class="fa fa-calendar"></i> Upcoming Birthdays
-                        <small class="d-block">Next 10 days</small>
+                    <h4 class="mb-0 text-white">
+                        <i class="fa fa-calendar text-white"></i> Upcoming Birthdays
+                        <small class="d-block text-white">Next 10 days</small>
                     </h4>
                 </div>
                 <div class="card-body">
@@ -79,10 +79,10 @@
                             {% if birthday.member.image %}
                                 <img src="{{ birthday.member.image.file.url }}" 
                                      alt="{{ birthday.display_name }}" 
-                                     class="rounded-circle me-3"
+                                     class="rounded-circle mr-3"
                                      style="width: 50px; height: 50px; object-fit: cover;">
                             {% else %}
-                                <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center me-3" 
+                                <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center mr-3" 
                                      style="width: 50px; height: 50px;">
                                     <i class="fa fa-user text-white"></i>
                                 </div>
@@ -104,7 +104,7 @@
                                 </small>
                             </div>
                             <div class="text-end">
-                                <span class="badge bg-primary">
+                                <span class="badge bg-primary text-white">
                                     {% if birthday.days_until == 1 %}
                                         Tomorrow
                                     {% else %}
@@ -128,9 +128,9 @@
         <div class="col-lg-6 mb-4">
             <div class="card">
                 <div class="card-header bg-info text-white">
-                    <h4 class="mb-0">
-                        <i class="fa fa-history"></i> Recent Birthdays
-                        <small class="d-block">Past 10 days</small>
+                    <h4 class="mb-0 text-white">
+                        <i class="fa fa-history text-white"></i> Recent Birthdays
+                        <small class="d-block text-white">Past 10 days</small>
                     </h4>
                 </div>
                 <div class="card-body">
@@ -140,10 +140,10 @@
                             {% if birthday.member.image %}
                                 <img src="{{ birthday.member.image.file.url }}" 
                                      alt="{{ birthday.display_name }}" 
-                                     class="rounded-circle me-3"
+                                     class="rounded-circle mr-3"
                                      style="width: 50px; height: 50px; object-fit: cover;">
                             {% else %}
-                                <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center me-3" 
+                                <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center mr-3" 
                                      style="width: 50px; height: 50px;">
                                     <i class="fa fa-user text-white"></i>
                                 </div>
@@ -165,7 +165,7 @@
                                 </small>
                             </div>
                             <div class="text-end">
-                                <span class="badge bg-info">
+                                <span class="badge bg-info text-white">
                                     {% if birthday.days_ago == 1 %}
                                         Yesterday
                                     {% else %}

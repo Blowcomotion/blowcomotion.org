@@ -778,15 +778,11 @@ def birthdays(request):
     # We need to consider months that could have birthdays in our date range
     relevant_months = set()
     
-    # Add months for the date range
-    current_check = past_date
-    while current_check <= future_date:
-        relevant_months.add(current_check.month)
-        # Move to next month
-        if current_check.month == 12:
-            current_check = current_check.replace(year=current_check.year + 1, month=1)
-        else:
-            current_check = current_check.replace(month=current_check.month + 1)
+    # Add months for the date range - iterate through each day and collect months
+    current_date = past_date
+    while current_date <= future_date:
+        relevant_months.add(current_date.month)
+        current_date += timedelta(days=1)
     
     # Also add next year's months for future_date if we're near year end
     if future_date.month <= 2:  # If future date is in Jan/Feb, include Dec from previous year
