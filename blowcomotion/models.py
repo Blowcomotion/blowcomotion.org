@@ -477,6 +477,10 @@ class Member(ClusterableModel, index.Indexed):
     search_fields = [
         index.SearchField("first_name"),
         index.SearchField("last_name"),
+        index.SearchField("preferred_name"),
+        index.AutocompleteField("first_name"),
+        index.AutocompleteField("last_name"),
+        index.AutocompleteField("preferred_name"),
         index.SearchField("bio"),
         index.SearchField("email"),
         index.SearchField("phone"),
