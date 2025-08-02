@@ -31,11 +31,19 @@
 
                     <!-- Event Type Field -->
                     <div class="mb-3">
-                        <label for="event_type" class="form-label">Event Type</label>
-                        <select class="form-control" id="event_type" name="event_type" required onchange="toggleEventNameField()">
-                            <option value="rehearsal" selected>Rehearsal</option>
-                            <option value="performance">Performance</option>
-                        </select>
+                        <label class="form-label">Event Type</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="event_type" id="event_type_rehearsal" value="rehearsal" checked required onchange="toggleEventNameField()">
+                            <label class="form-check-label" for="event_type_rehearsal">
+                                Rehearsal
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="event_type" id="event_type_performance" value="performance" required onchange="toggleEventNameField()">
+                            <label class="form-check-label" for="event_type_performance">
+                                Performance
+                            </label>
+                        </div>
                     </div>
 
                     <!-- Event Name Field -->

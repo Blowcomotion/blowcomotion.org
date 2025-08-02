@@ -1,10 +1,11 @@
 function toggleEventNameField() {
-    const eventTypeSelect = document.getElementById('event_type');
+    const eventTypeRadios = document.querySelectorAll('input[name="event_type"]');
     const eventNameField = document.getElementById('event_name_field');
     const eventNameInput = document.getElementById('event_name');
     
-    if (eventTypeSelect && eventNameField && eventNameInput) {
-        if (eventTypeSelect.value === 'performance') {
+    if (eventTypeRadios.length > 0 && eventNameField && eventNameInput) {
+        const selectedEventType = document.querySelector('input[name="event_type"]:checked');
+        if (selectedEventType && selectedEventType.value === 'performance') {
             eventNameField.style.display = 'block';
         } else {
             eventNameField.style.display = 'none';

@@ -60,7 +60,7 @@ class SectionAttendanceForm(forms.Form):
     event_type = forms.ChoiceField(
         choices=EVENT_TYPE_CHOICES,
         initial='rehearsal',
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
         help_text="Type of event"
     )
     
