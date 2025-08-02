@@ -671,3 +671,91 @@ def attendance_section_report_new(request, section_slug):
         return render(request, 'attendance/partials/section_report_content.html', context)
     
     return render(request, 'attendance/section_report.html', context)
+
+
+def birthdays(request):
+    """
+    View to display recent and upcoming member birthdays.
+    Shows birthdays from the past 10 days and the upcoming 10 days.
+    """
+    today = date.today()
+    past_date = today - timedelta(days=10)
+    future_date = today + timedelta(days=10)
+    
+    # Get all active members with birthday information
+    members_with_birthdays = Member.objects.filter(
+        is_active=True,
+        birth_month__isnull=False,
+        birth_day__isnull=False
+    ).order_by('last_name', 'first_name')
+    
+    recent_birthdays = []
+    upcoming_birthdays = []
+    today_birthdays = []
+    
+    for member in members_with_birthdays:
+        # Create a date object for this year's birthday
+        try:
+            birthday_this_year = date(today.year, member.birth_month, member.birth_day)
+        except ValueError:
+            # Handle leap year edge case (Feb 29)
+            if member.birth_month == 2 and member.birth_day == 29:
+                birthday_this_year = date(today.year, 2, 28)
+            else:
+                continue  # Skip invalid dates
+        
+        # Also check next year's birthday for dates that already passed this year
+        try:
+            birthday_next_year = date(today.year + 1, member.birth_month, member.birth_day)
+        except ValueError:
+            if member.birth_month == 2 and member.birth_day == 29:
+                birthday_next_year = date(today.year + 1, 2, 28)
+            else:
+                birthday_next_year = None
+        
+        # Calculate age (if birth year is available)
+        age = None
+        if member.birth_year:
+            age = today.year - member.birth_year
+            if today < birthday_this_year:
+                age -= 1
+        
+        member_info = {
+            'member': member,
+            'birthday': birthday_this_year,
+            'age': age,
+            'display_name': member.preferred_name or member.first_name
+        }
+        
+        # Check if birthday is today
+        if birthday_this_year == today:
+            today_birthdays.append(member_info)
+        # Check if birthday was in the past 10 days
+        elif past_date <= birthday_this_year < today:
+            member_info['days_ago'] = (today - birthday_this_year).days
+            recent_birthdays.append(member_info)
+        # Check if birthday is in the upcoming 10 days
+        elif today < birthday_this_year <= future_date:
+            member_info['days_until'] = (birthday_this_year - today).days
+            upcoming_birthdays.append(member_info)
+        # Check if birthday already passed this year but falls within range when considering next year
+        elif birthday_next_year and today < birthday_next_year <= future_date:
+            member_info['birthday'] = birthday_next_year
+            member_info['days_until'] = (birthday_next_year - today).days
+            if member.birth_year:
+                member_info['age'] = today.year + 1 - member.birth_year
+            upcoming_birthdays.append(member_info)
+    
+    # Sort the lists
+    recent_birthdays.sort(key=lambda x: x['birthday'], reverse=True)  # Most recent first
+    upcoming_birthdays.sort(key=lambda x: x['birthday'])  # Soonest first
+    today_birthdays.sort(key=lambda x: x['display_name'])  # Alphabetical
+    
+    context = {
+        'today_birthdays': today_birthdays,
+        'recent_birthdays': recent_birthdays,
+        'upcoming_birthdays': upcoming_birthdays,
+        'today': today,
+    }
+    
+    return render(request, 'birthdays.html', context)
