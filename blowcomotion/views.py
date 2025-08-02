@@ -50,6 +50,40 @@ def get_birthday(year, month, day):
             return None  # Skip invalid dates
 
 
+def get_next_year_birthday_info(member, today, future_date):
+    """
+    Helper function to check if a member's next year birthday falls within the upcoming range.
+    
+    Args:
+        member: Member object with birth_month, birth_day, and birth_year
+        today: Current date
+        future_date: End date for the upcoming range
+        
+    Returns:
+        dict with next year birthday info if within range, None otherwise
+    """
+    next_year = today.year + 1
+    
+    try:
+        next_year_birthday = date(next_year, member.birth_month, member.birth_day)
+        if today < next_year_birthday <= future_date:
+            birthday_info = {
+                'birthday': next_year_birthday,
+                'days_until': (next_year_birthday - today).days
+            }
+            
+            # Calculate age for next year if birth year is available
+            if member.birth_year:
+                birthday_info['age'] = next_year - member.birth_year
+                
+            return birthday_info
+    except ValueError:
+        # Handle invalid dates (e.g., Feb 29 in non-leap years)
+        pass
+    
+    return None
+
+
 def http_basic_auth_generic(password_setting_or_value, realm_name, username=None, direct_password=None):
     """
     Generic decorator for HTTP Basic Authentication
@@ -782,23 +816,11 @@ def birthdays(request):
         elif today < birthday_this_year <= future_date:
             member_info['days_until'] = (birthday_this_year - today).days
             upcoming_birthdays.append(member_info)
-        # Check if birthday already passed this year; only then consider next year's birthday if it's within range
+        # Check if birthday already passed this year; consider next year's birthday if it's within range
         elif birthday_this_year < today:
-            next_year = today.year + 1
-            # If the member's birthday has already passed this year, check if next year's birthday falls within the upcoming range.
-            # If so, update member info to reflect next year's birthday and age.
-            future_birthday_next_year = None
-            try:
-                candidate = date(next_year, member.birth_month, member.birth_day)
-                if today < candidate <= future_date:
-                    future_birthday_next_year = candidate
-            except ValueError:
-                pass
-            if future_birthday_next_year:
-                member_info['birthday'] = future_birthday_next_year
-                member_info['days_until'] = (future_birthday_next_year - today).days
-                if member.birth_year:
-                    member_info['age'] = next_year - member.birth_year
+            next_year_info = get_next_year_birthday_info(member, today, future_date)
+            if next_year_info:
+                member_info.update(next_year_info)
                 upcoming_birthdays.append(member_info)
     recent_birthdays.sort(key=lambda x: x['birthday'], reverse=True)  # Most recent first
     upcoming_birthdays.sort(key=lambda x: x['birthday'])  # Soonest first
