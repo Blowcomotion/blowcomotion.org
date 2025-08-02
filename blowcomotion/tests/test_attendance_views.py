@@ -95,6 +95,14 @@ class AttendanceCaptureViewTests(TestCase):
         section_members = list(response.context['section_members'])
         self.assertIn(self.member1, section_members)
         self.assertNotIn(self.inactive_member, section_members)
+        
+        # Check that event type and event name fields are present in the template
+        self.assertContains(response, 'name="event_type"')
+        self.assertContains(response, 'name="event_name"')
+        self.assertContains(response, 'value="rehearsal"')
+        self.assertContains(response, 'value="performance"')
+        self.assertContains(response, 'Event Type')
+        self.assertContains(response, 'Event Name')
 
     def test_attendance_capture_get_with_invalid_section(self):
         """Test GET request with non-existent section should return 404"""
@@ -139,6 +147,222 @@ class AttendanceCaptureViewTests(TestCase):
         
         # Check response contains success message
         self.assertContains(response, "Successfully recorded attendance")
+
+    def test_attendance_capture_post_member_attendance_rehearsal(self):
+        """Test POST request to record member attendance for rehearsal (default event type)"""
+        attendance_date = date.today()
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['high-brass']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                'event_type': 'rehearsal',
+                f'member_{self.member1.id}': 'on',
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check attendance record was created with correct notes
+        attendance_record = AttendanceRecord.objects.get(
+            date=attendance_date,
+            member=self.member1
+        )
+        self.assertEqual(attendance_record.notes, 'Rehearsal')
+
+    def test_attendance_capture_post_member_attendance_performance_no_name(self):
+        """Test POST request to record member attendance for performance without event name"""
+        attendance_date = date.today()
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['high-brass']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                'event_type': 'performance',
+                f'member_{self.member1.id}': 'on',
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check attendance record was created with correct notes
+        attendance_record = AttendanceRecord.objects.get(
+            date=attendance_date,
+            member=self.member1
+        )
+        self.assertEqual(attendance_record.notes, 'Performance')
+
+    def test_attendance_capture_post_member_attendance_performance_with_name(self):
+        """Test POST request to record member attendance for performance with event name"""
+        attendance_date = date.today()
+        event_name = "Summer Concert"
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['high-brass']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                'event_type': 'performance',
+                'event_name': event_name,
+                f'member_{self.member1.id}': 'on',
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check attendance record was created with correct notes
+        attendance_record = AttendanceRecord.objects.get(
+            date=attendance_date,
+            member=self.member1
+        )
+        self.assertEqual(attendance_record.notes, f'Performance: {event_name}')
+
+    def test_attendance_capture_post_guest_attendance_rehearsal(self):
+        """Test POST request to record guest attendance for rehearsal"""
+        attendance_date = date.today()
+        guest_names = "Guest One\nGuest Two"
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['high-brass']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                'event_type': 'rehearsal',
+                f'guest_{self.high_brass.id}': guest_names,
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check guest attendance records were created with correct notes
+        guest_records = AttendanceRecord.objects.filter(
+            date=attendance_date,
+            guest_name__isnull=False
+        )
+        self.assertEqual(guest_records.count(), 2)
+        
+        for record in guest_records:
+            self.assertEqual(record.notes, 'Guest - Rehearsal')
+
+    def test_attendance_capture_post_guest_attendance_performance_with_name(self):
+        """Test POST request to record guest attendance for performance with event name"""
+        attendance_date = date.today()
+        guest_names = "Guest Musician"
+        event_name = "Holiday Show"
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['high-brass']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                'event_type': 'performance',
+                'event_name': event_name,
+                f'guest_{self.high_brass.id}': guest_names,
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check guest attendance record was created with correct notes
+        guest_record = AttendanceRecord.objects.get(
+            date=attendance_date,
+            guest_name="Guest Musician"
+        )
+        self.assertEqual(guest_record.notes, f'Guest - Performance: {event_name}')
+
+    def test_attendance_capture_post_mixed_attendance_with_event_info(self):
+        """Test POST request with both member and guest attendance for a named performance"""
+        attendance_date = date.today()
+        event_name = "Spring Festival"
+        guest_names = "Special Guest"
+        
+        # Create a second member in the same section for this test
+        member2_high_brass = Member.objects.create(
+            first_name="Second",
+            last_name="Member",
+            email="second@example.com",
+            is_active=True,
+            join_date=date.today() - timedelta(days=30)
+        )
+        MemberInstrument.objects.create(member=member2_high_brass, instrument=self.trumpet)
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['high-brass']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                'event_type': 'performance',
+                'event_name': event_name,
+                f'member_{self.member1.id}': 'on',
+                f'member_{member2_high_brass.id}': 'on',
+                f'guest_{self.high_brass.id}': guest_names,
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check member attendance records
+        member_records = AttendanceRecord.objects.filter(
+            date=attendance_date,
+            member__isnull=False
+        )
+        self.assertEqual(member_records.count(), 2)
+        for record in member_records:
+            self.assertEqual(record.notes, f'Performance: {event_name}')
+        
+        # Check guest attendance record
+        guest_record = AttendanceRecord.objects.get(
+            date=attendance_date,
+            guest_name="Special Guest"
+        )
+        self.assertEqual(guest_record.notes, f'Guest - Performance: {event_name}')
+
+    def test_attendance_capture_post_existing_notes_preservation(self):
+        """Test that existing notes are preserved when updating attendance records"""
+        attendance_date = date.today()
+        existing_notes = "Already has some notes"
+        
+        # Create an existing attendance record with notes
+        existing_record = AttendanceRecord.objects.create(
+            date=attendance_date,
+            member=self.member1,
+            notes=existing_notes
+        )
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['high-brass']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                'event_type': 'performance',
+                'event_name': 'New Performance',
+                f'member_{self.member1.id}': 'on',
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check that existing notes are preserved and event info is appended
+        existing_record.refresh_from_db()
+        expected_notes = f"{existing_notes}; Performance: New Performance"
+        self.assertEqual(existing_record.notes, expected_notes)
+
+    def test_attendance_capture_post_default_event_type(self):
+        """Test that attendance capture works without explicit event_type (defaults to rehearsal)"""
+        attendance_date = date.today()
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['high-brass']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                f'member_{self.member1.id}': 'on',
+                # No event_type provided - should default to 'rehearsal'
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check attendance record was created with default rehearsal notes
+        attendance_record = AttendanceRecord.objects.get(
+            date=attendance_date,
+            member=self.member1
+        )
+        self.assertEqual(attendance_record.notes, 'Rehearsal')
 
     def test_attendance_capture_post_guest_attendance(self):
         """Test POST request to record guest attendance"""
@@ -311,6 +535,53 @@ class AttendanceCaptureViewTests(TestCase):
         guest_names_recorded = [record.guest_name for record in guest_records]
         self.assertIn("No Section Guest", guest_names_recorded)
         self.assertIn("Another Guest", guest_names_recorded)
+
+    def test_attendance_capture_post_no_section_member_with_event_type(self):
+        """Test POST request to record no-section member attendance with event type"""
+        attendance_date = date.today()
+        event_name = "Community Concert"
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['no-section']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                'event_type': 'performance',
+                'event_name': event_name,
+                f'member_{self.no_section_member.id}': 'on',
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check attendance record was created with correct notes
+        attendance_record = AttendanceRecord.objects.get(
+            date=attendance_date,
+            member=self.no_section_member
+        )
+        self.assertEqual(attendance_record.notes, f'Performance: {event_name}')
+
+    def test_attendance_capture_post_no_section_guest_with_event_type(self):
+        """Test POST request to record no-section guest attendance with event type"""
+        attendance_date = date.today()
+        guest_names = "Community Guest"
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['no-section']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                'event_type': 'rehearsal',
+                'guest_no_section': guest_names,
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check guest attendance record was created with correct notes
+        guest_record = AttendanceRecord.objects.get(
+            date=attendance_date,
+            guest_name="Community Guest"
+        )
+        self.assertEqual(guest_record.notes, 'Guest - Rehearsal')
 
 
 class AttendanceReportsViewTests(TestCase):

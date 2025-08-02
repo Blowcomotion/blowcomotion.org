@@ -401,12 +401,21 @@ def attendance_capture(request, section_slug=None):
     
     if request.method == 'POST':
         attendance_date_str = request.POST.get('attendance_date', date.today().strftime('%Y-%m-%d'))
+        event_type = request.POST.get('event_type', 'rehearsal')
+        event_name = request.POST.get('event_name', '').strip()
+        
         # Convert string to date object for consistent handling
         if isinstance(attendance_date_str, str):
             from datetime import datetime
             attendance_date = datetime.strptime(attendance_date_str, '%Y-%m-%d').date()
         else:
             attendance_date = attendance_date_str
+        
+        # Create notes based on event type and name
+        if event_type == 'performance' and event_name:
+            event_notes = f"Performance: {event_name}"
+        else:
+            event_notes = event_type.capitalize()
         
         success_count = 0
         errors = []
@@ -420,10 +429,22 @@ def attendance_capture(request, section_slug=None):
                     attendance_record, created = AttendanceRecord.objects.get_or_create(
                         date=attendance_date,
                         member=member,
-                        defaults={'notes': ''}
+                        defaults={'notes': event_notes}
                     )
                     if created:
                         success_count += 1
+                    else:
+                        # Update existing record to append event type in notes if not already present
+                        if not attendance_record.notes:
+                            attendance_record.notes = event_notes
+                            attendance_record.save()
+                        else:
+                            # Only append event_notes if it's not already present as a full entry
+                            notes_entries = [entry.strip() for entry in attendance_record.notes.split(';') if entry.strip()]
+                            if event_notes not in notes_entries:
+                                notes_entries.append(event_notes)
+                                attendance_record.notes = '; '.join(notes_entries)
+                                attendance_record.save()
                     
                     # Update member's last_seen field
                     member.last_seen = attendance_date
@@ -439,10 +460,11 @@ def attendance_capture(request, section_slug=None):
                 guest_names = [name.strip() for name in request.POST[guest_field].split('\n') if name.strip()]
                 for guest_name in guest_names:
                     try:
+                        guest_notes = f"Guest - {event_notes}"
                         AttendanceRecord.objects.get_or_create(
                             date=attendance_date,
                             guest_name=guest_name,
-                            defaults={'notes': 'Guest attendance'}
+                            defaults={'notes': guest_notes}
                         )
                         success_count += 1
                     except Exception as e:
