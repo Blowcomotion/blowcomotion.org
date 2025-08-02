@@ -800,7 +800,6 @@ def birthdays(request):
                 if member.birth_year:
                     member_info['age'] = next_year - member.birth_year
                 upcoming_birthdays.append(member_info)
-    # Sort the lists
     recent_birthdays.sort(key=lambda x: x['birthday'], reverse=True)  # Most recent first
     upcoming_birthdays.sort(key=lambda x: x['birthday'])  # Soonest first
     today_birthdays.sort(key=lambda x: x['display_name'])  # Alphabetical
