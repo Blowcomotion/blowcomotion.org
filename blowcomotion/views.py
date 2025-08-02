@@ -434,10 +434,17 @@ def attendance_capture(request, section_slug=None):
                     if created:
                         success_count += 1
                     else:
-                        # Update existing record to include event type in notes if not already there
-                        if not attendance_record.notes or event_notes not in attendance_record.notes:
+                        # Update existing record to append event type in notes if not already present
+                        if not attendance_record.notes:
                             attendance_record.notes = event_notes
                             attendance_record.save()
+                        else:
+                            # Only append event_notes if it's not already present as a full entry
+                            notes_entries = [entry.strip() for entry in attendance_record.notes.split(';') if entry.strip()]
+                            if event_notes not in notes_entries:
+                                notes_entries.append(event_notes)
+                                attendance_record.notes = '; '.join(notes_entries)
+                                attendance_record.save()
                     
                     # Update member's last_seen field
                     member.last_seen = attendance_date
