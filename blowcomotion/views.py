@@ -157,61 +157,6 @@ def http_basic_auth_birthdays():
         
         return wrapper
     return decorator
-    """
-    Decorator for HTTP Basic Authentication
-    If username is None, any username will be accepted (only password is checked)
-    If password is None, uses HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD from settings
-    If HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD is None, authentication is skipped
-    """
-    if password is None:
-        password = getattr(settings, 'HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD', None)
-    
-    def decorator(func):
-        @wraps(func)
-        def wrapper(request, *args, **kwargs):
-            # If password is None, skip authentication
-            if password is None:
-                return func(request, *args, **kwargs)
-            
-            # Check if Authorization header exists
-            if 'HTTP_AUTHORIZATION' not in request.META:
-                response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
-                return response
-            
-            # Parse the Authorization header
-            auth_header = request.META['HTTP_AUTHORIZATION']
-            if not auth_header.startswith('Basic '):
-                response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
-                return response
-            
-            # Decode credentials
-            try:
-                encoded_credentials = auth_header[6:]  # Remove 'Basic '
-                decoded_credentials = base64.b64decode(encoded_credentials).decode('utf-8')
-                provided_username, provided_password = decoded_credentials.split(':', 1)
-            except (ValueError, UnicodeDecodeError):
-                response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
-                return response
-            
-            # Check credentials
-            if username is None:
-                # Only check password if username is None
-                if provided_password == password:
-                    return func(request, *args, **kwargs)
-            else:
-                # Check both username and password
-                if provided_username == username and provided_password == password:
-                    return func(request, *args, **kwargs)
-            
-            response = HttpResponse('Unauthorized', status=401)
-            response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
-            return response
-        
-        return wrapper
-    return decorator
 
 
 def _get_form_recipients(site_settings, form_type):
@@ -808,7 +753,7 @@ def attendance_section_report_new(request, section_slug):
 def birthdays(request):
     """
     View to display recent and upcoming member birthdays.
-    Shows birthdays from the past 10 days and the upcoming 10 days.
+    Shows birthdays from the past BIRTHDAY_RANGE_DAYS and the upcoming BIRTHDAY_RANGE_DAYS.
     """
     today = date.today()
     past_date = today - timedelta(days=BIRTHDAY_RANGE_DAYS)
