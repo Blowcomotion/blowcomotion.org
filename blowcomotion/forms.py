@@ -62,7 +62,7 @@ class SectionAttendanceForm(forms.Form):
             section_members = Member.objects.filter(
                 id__in=member_instruments,
                 is_active=True
-            ).distinct().order_by('last_name', 'first_name')
+            ).distinct().order_by('first_name', 'last_name')
             
             # Create checkbox field for each member
             for member in section_members:
@@ -119,7 +119,7 @@ class AttendanceReportFilterForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
     member = forms.ModelChoiceField(
-        queryset=Member.objects.filter(is_active=True).order_by('last_name', 'first_name'),
+        queryset=Member.objects.filter(is_active=True).order_by('first_name', 'last_name'),
         required=False,
         empty_label="All Members",
         widget=forms.Select(attrs={'class': 'form-control'})
