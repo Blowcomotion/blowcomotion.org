@@ -50,19 +50,21 @@ def get_birthday(year, month, day):
             return None  # Skip invalid dates
 
 
-def http_basic_auth(username=None, password=None):
+def http_basic_auth_generic(password_setting, realm_name, username=None):
     """
-    Decorator for HTTP Basic Authentication
-    If username is None, any username will be accepted (only password is checked)
-    If password is None, uses HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD from settings
-    If HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD is None, authentication is skipped
-    """
-    if password is None:
-        password = getattr(settings, 'HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD', None)
+    Generic decorator for HTTP Basic Authentication
     
+    Args:
+        password_setting: The settings key to get the password from
+        realm_name: The authentication realm name
+        username: If provided, both username and password must match. If None, only password is checked.
+    """
     def decorator(func):
         @wraps(func)
         def wrapper(request, *args, **kwargs):
+            # Get password from settings each time (allows for test overrides)
+            password = getattr(settings, password_setting, None)
+            
             # If password is None, skip authentication
             if password is None:
                 return func(request, *args, **kwargs)
@@ -70,14 +72,14 @@ def http_basic_auth(username=None, password=None):
             # Check if Authorization header exists
             if 'HTTP_AUTHORIZATION' not in request.META:
                 response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
+                response['WWW-Authenticate'] = f'Basic realm="{realm_name}"'
                 return response
             
             # Parse the Authorization header
             auth_header = request.META['HTTP_AUTHORIZATION']
             if not auth_header.startswith('Basic '):
                 response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
+                response['WWW-Authenticate'] = f'Basic realm="{realm_name}"'
                 return response
             
             # Decode credentials
@@ -87,7 +89,7 @@ def http_basic_auth(username=None, password=None):
                 provided_username, provided_password = decoded_credentials.split(':', 1)
             except (ValueError, UnicodeDecodeError):
                 response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
+                response['WWW-Authenticate'] = f'Basic realm="{realm_name}"'
                 return response
             
             # Check credentials
@@ -101,11 +103,28 @@ def http_basic_auth(username=None, password=None):
                     return func(request, *args, **kwargs)
             
             response = HttpResponse('Unauthorized', status=401)
-            response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
+            response['WWW-Authenticate'] = f'Basic realm="{realm_name}"'
             return response
         
         return wrapper
     return decorator
+
+
+def http_basic_auth(username=None, password=None):
+    """
+    Decorator for HTTP Basic Authentication
+    If username is None, any username will be accepted (only password is checked)
+    If password is None, uses HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD from settings
+    If HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD is None, authentication is skipped
+    """
+    if password is not None:
+        # For backward compatibility when password is provided directly
+        def decorator(func):
+            return http_basic_auth_generic('HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD', 'Attendance Area', username)(func)
+        return decorator
+    else:
+        # Standard usage - return the generic decorator configured for attendance
+        return http_basic_auth_generic('HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD', 'Attendance Area', username)
 
 
 def http_basic_auth_birthdays():
@@ -114,49 +133,7 @@ def http_basic_auth_birthdays():
     Uses HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD from settings
     If HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD is None, authentication is skipped
     """
-    def decorator(func):
-        @wraps(func)
-        def wrapper(request, *args, **kwargs):
-            # Get password from settings each time (allows for test overrides)
-            password = getattr(settings, 'HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD', None)
-            
-            # If password is None, skip authentication
-            if password is None:
-                return func(request, *args, **kwargs)
-            
-            # Check if Authorization header exists
-            if 'HTTP_AUTHORIZATION' not in request.META:
-                response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = 'Basic realm="Birthdays Area"'
-                return response
-            
-            # Parse the Authorization header
-            auth_header = request.META['HTTP_AUTHORIZATION']
-            if not auth_header.startswith('Basic '):
-                response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = 'Basic realm="Birthdays Area"'
-                return response
-            
-            # Decode credentials
-            try:
-                encoded_credentials = auth_header[6:]  # Remove 'Basic '
-                decoded_credentials = base64.b64decode(encoded_credentials).decode('utf-8')
-                provided_username, provided_password = decoded_credentials.split(':', 1)
-            except (ValueError, UnicodeDecodeError):
-                response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = 'Basic realm="Birthdays Area"'
-                return response
-            
-            # Check password (any username is accepted)
-            if provided_password == password:
-                return func(request, *args, **kwargs)
-            
-            response = HttpResponse('Unauthorized', status=401)
-            response['WWW-Authenticate'] = 'Basic realm="Birthdays Area"'
-            return response
-        
-        return wrapper
-    return decorator
+    return http_basic_auth_generic('HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD', 'Birthdays Area')
 
 
 def _get_form_recipients(site_settings, form_type):
@@ -776,9 +753,6 @@ def birthdays(request):
         if birthday_this_year is None:
             continue  # Skip invalid dates
         
-        # Also check next year's birthday for dates that already passed this year
-        birthday_next_year = get_birthday(today.year + 1, member.birth_month, member.birth_day)
-        
         # Calculate age (if birth year is available)
         age = None
         if member.birth_year:
@@ -805,12 +779,15 @@ def birthdays(request):
             member_info['days_until'] = (birthday_this_year - today).days
             upcoming_birthdays.append(member_info)
         # Check if birthday already passed this year but falls within range when considering next year
-        elif birthday_next_year and today < birthday_next_year <= future_date:
-            member_info['birthday'] = birthday_next_year
-            member_info['days_until'] = (birthday_next_year - today).days
-            if member.birth_year:
-                member_info['age'] = today.year + 1 - member.birth_year
-            upcoming_birthdays.append(member_info)
+        # Only consider next year if birthday has already passed this year and next year's birthday is within range
+        elif birthday_this_year < today:
+            birthday_next_year = get_birthday(today.year + 1, member.birth_month, member.birth_day)
+            if birthday_next_year and today < birthday_next_year <= future_date:
+                member_info['birthday'] = birthday_next_year
+                member_info['days_until'] = (birthday_next_year - today).days
+                if member.birth_year:
+                    member_info['age'] = today.year + 1 - member.birth_year
+                upcoming_birthdays.append(member_info)
     
     # Sort the lists
     recent_birthdays.sort(key=lambda x: x['birthday'], reverse=True)  # Most recent first
