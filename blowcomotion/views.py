@@ -782,25 +782,24 @@ def birthdays(request):
         elif today < birthday_this_year <= future_date:
             member_info['days_until'] = (birthday_this_year - today).days
             upcoming_birthdays.append(member_info)
-        # Check if birthday already passed this year but falls within range when considering next year
-        # Only consider next year if birthday has already passed this year and next year's birthday is within range
+        # Check if birthday already passed this year; only then consider next year's birthday if it's within range
         elif birthday_this_year < today:
-            # Calculate the date for next year's birthday without calling get_birthday unless it's possibly within range
             next_year = today.year + 1
+            # Only create next year's birthday date if it could be within the upcoming range
+            # Calculate the date for next year's birthday only if it falls within the upcoming range
+            future_birthday_next_year = None
             try:
-                birthday_next_year_candidate = date(next_year, member.birth_month, member.birth_day)
+                candidate = date(next_year, member.birth_month, member.birth_day)
+                if today < candidate <= future_date:
+                    future_birthday_next_year = candidate
             except ValueError:
-                birthday_next_year_candidate = None
-            if (
-                birthday_next_year_candidate
-                and today < birthday_next_year_candidate <= future_date
-            ):
-                member_info['birthday'] = birthday_next_year_candidate
-                member_info['days_until'] = (birthday_next_year_candidate - today).days
+                pass
+            if future_birthday_next_year:
+                member_info['birthday'] = future_birthday_next_year
+                member_info['days_until'] = (future_birthday_next_year - today).days
                 if member.birth_year:
                     member_info['age'] = next_year - member.birth_year
                 upcoming_birthdays.append(member_info)
-    
     # Sort the lists
     recent_birthdays.sort(key=lambda x: x['birthday'], reverse=True)  # Most recent first
     upcoming_birthdays.sort(key=lambda x: x['birthday'])  # Soonest first
