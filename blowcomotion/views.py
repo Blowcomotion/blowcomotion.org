@@ -114,8 +114,9 @@ def http_basic_auth(username=None, password=None):
     """
     Decorator for HTTP Basic Authentication
     If username is None, any username will be accepted (only password is checked)
-    If password is None, uses HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD from settings
-    If HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD is None, authentication is skipped
+    If password is provided directly, uses HTTP_BASIC_AUTH_PASSWORD to match original behavior.
+    If password is None, uses HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD from settings.
+    If HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD is None, authentication is skipped.
     """
     if password is not None:
         # For backward compatibility when password is provided directly
