@@ -44,12 +44,34 @@ class AttendanceForm(forms.Form):
 
 class SectionAttendanceForm(forms.Form):
     """Form for capturing attendance for an entire section"""
+    EVENT_TYPE_CHOICES = [
+        ('rehearsal', 'Rehearsal'),
+        ('performance', 'Performance'),
+    ]
+    
     date = forms.DateField(
         widget=forms.DateInput(attrs={
             'type': 'date',
             'class': 'form-control'
         }),
-        help_text="Date of practice session"
+        help_text="Date of event"
+    )
+    
+    event_type = forms.ChoiceField(
+        choices=EVENT_TYPE_CHOICES,
+        initial='rehearsal',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text="Type of event"
+    )
+    
+    event_name = forms.CharField(
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Event name (optional for performances)',
+            'class': 'form-control'
+        }),
+        help_text="Optional name for the performance (e.g., 'Summer Concert', 'Holiday Show')"
     )
     
     def __init__(self, section=None, *args, **kwargs):

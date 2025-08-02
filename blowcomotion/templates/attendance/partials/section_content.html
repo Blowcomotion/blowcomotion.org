@@ -35,9 +35,26 @@
                     
                     <!-- Date Field -->
                     <div class="mb-3">
-                        <label for="attendance_date" class="form-label">Practice Date</label>
+                        <label for="attendance_date" class="form-label">Date</label>
                         <input type="date" class="form-control" id="attendance_date" name="attendance_date" 
                                value="{{ today|date:'Y-m-d' }}" required>
+                    </div>
+
+                    <!-- Event Type Field -->
+                    <div class="mb-3">
+                        <label for="event_type" class="form-label">Event Type</label>
+                        <select class="form-control" id="event_type" name="event_type" required onchange="toggleEventNameField()">
+                            <option value="rehearsal" selected>Rehearsal</option>
+                            <option value="performance">Performance</option>
+                        </select>
+                    </div>
+
+                    <!-- Event Name Field -->
+                    <div class="mb-3" id="event_name_field" style="display: none;">
+                        <label for="event_name" class="form-label">Event Name</label>
+                        <input type="text" class="form-control" id="event_name" name="event_name" 
+                               placeholder="Enter the name of the performance (optional)">
+                        <div class="form-text">Optional name for the performance (e.g., 'Summer Concert', 'Holiday Show')</div>
                     </div>
 
                     <!-- Members Section -->
@@ -160,3 +177,30 @@
     font-weight: 600;
 }
 </style>
+
+<script>
+function toggleEventNameField() {
+    const eventTypeSelect = document.getElementById('event_type');
+    const eventNameField = document.getElementById('event_name_field');
+    const eventNameInput = document.getElementById('event_name');
+    
+    if (eventTypeSelect && eventNameField && eventNameInput) {
+        if (eventTypeSelect.value === 'performance') {
+            eventNameField.style.display = 'block';
+        } else {
+            eventNameField.style.display = 'none';
+            eventNameInput.value = ''; // Clear the field when hidden
+        }
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleEventNameField();
+});
+
+// Also initialize after HTMX requests
+document.body.addEventListener('htmx:afterSettle', function() {
+    toggleEventNameField();
+});
+</script>
