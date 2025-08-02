@@ -5,11 +5,19 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5>Record Attendance for {{ section.name }}</h5>
+                {% if is_no_section %}
+                    <h5>Record Attendance for Members Without Assigned Instruments</h5>
+                {% else %}
+                    <h5>Record Attendance for {{ section.name }}</h5>
+                {% endif %}
             </div>
             <div class="card-body">
                 <form id="attendanceForm" 
-                      hx-post="{% url 'attendance-capture' section.name|lower|slugify %}"
+                      {% if is_no_section %}
+                          hx-post="{% url 'attendance-capture' 'no-section' %}"
+                      {% else %}
+                          hx-post="{% url 'attendance-capture' section.name|lower|slugify %}"
+                      {% endif %}
                       hx-target="#attendance-result"
                       hx-swap="innerHTML">
                     {% csrf_token %}
@@ -69,9 +77,15 @@
                     <!-- Guests Section -->
                     <h6 class="mt-4 mb-3">Guests/Visitors</h6>
                     <div class="mb-3">
-                        <label for="guest_{{ section.id }}" class="form-label">Guest Names (one per line)</label>
-                        <textarea class="form-control" id="guest_{{ section.id }}" name="guest_{{ section.id }}" 
-                                  rows="3" placeholder="Enter guest names, one per line"></textarea>
+                        {% if is_no_section %}
+                            <label for="guest_no_section" class="form-label">Guest Names (one per line)</label>
+                            <textarea class="form-control" id="guest_no_section" name="guest_no_section" 
+                                      rows="3" placeholder="Enter guest names, one per line"></textarea>
+                        {% else %}
+                            <label for="guest_{{ section.id }}" class="form-label">Guest Names (one per line)</label>
+                            <textarea class="form-control" id="guest_{{ section.id }}" name="guest_{{ section.id }}" 
+                                      rows="3" placeholder="Enter guest names, one per line"></textarea>
+                        {% endif %}
                         <div class="form-text">Enter each guest's name on a separate line</div>
                     </div>
 
@@ -80,10 +94,12 @@
                             <span class="htmx-indicator spinner-border spinner-border-sm me-2" role="status" style="display: none;"></span>
                             Record Attendance
                         </button>
-                        <a href="{% url 'attendance-section-report' section.name|lower|slugify %}" 
-                           class="btn btn-outline-secondary btn-lg ms-2 my-2">
-                            View Reports
-                        </a>
+                        {% if not is_no_section %}
+                            <a href="{% url 'attendance-section-report' section.name|lower|slugify %}" 
+                               class="btn btn-outline-secondary btn-lg ms-2 my-2">
+                                View Reports
+                            </a>
+                        {% endif %}
                     </div>
                 </form>
                 

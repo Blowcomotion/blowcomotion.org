@@ -64,6 +64,14 @@ class AttendanceCaptureViewTests(TestCase):
         MemberInstrument.objects.create(member=self.member1, instrument=self.trumpet)
         MemberInstrument.objects.create(member=self.member2, instrument=self.trombone)
         MemberInstrument.objects.create(member=self.inactive_member, instrument=self.trumpet)
+        
+        # Create a member without any instrument assignment for no-section testing
+        self.no_section_member = Member.objects.create(
+            first_name="No",
+            last_name="Section",
+            email="no.section@example.com",
+            is_active=True
+        )
 
     def test_attendance_capture_get_no_section(self):
         """Test GET request to main attendance page without section"""
@@ -236,6 +244,73 @@ class AttendanceCaptureViewTests(TestCase):
         # Check record was created with correct date
         attendance_record = AttendanceRecord.objects.get(member=self.member1)
         self.assertEqual(attendance_record.date, date(2024, 1, 10))
+
+    def test_attendance_capture_get_no_section(self):
+        """Test GET request to no-section attendance page"""
+        response = self.client.get(reverse('attendance-capture', args=['no-section']))
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['is_no_section'])
+        self.assertIsNone(response.context['section'])
+        self.assertContains(response, "Members Without Instruments")
+        
+        # Should include member without instrument assignment
+        section_members = list(response.context['section_members'])
+        self.assertIn(self.no_section_member, section_members)
+        # Should not include members with instrument assignments
+        self.assertNotIn(self.member1, section_members)
+        self.assertNotIn(self.member2, section_members)
+
+    def test_attendance_capture_post_no_section_member(self):
+        """Test POST request to record attendance for no-section member"""
+        attendance_date = date.today()
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['no-section']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                f'member_{self.no_section_member.id}': 'on',
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check attendance record was created
+        attendance_record = AttendanceRecord.objects.get(
+            date=attendance_date,
+            member=self.no_section_member
+        )
+        self.assertIsNotNone(attendance_record)
+        
+        # Check member's last_seen was updated
+        self.no_section_member.refresh_from_db()
+        self.assertEqual(self.no_section_member.last_seen, attendance_date)
+
+    def test_attendance_capture_post_no_section_guest(self):
+        """Test POST request to record guest attendance for no-section"""
+        attendance_date = date.today()
+        guest_names = "No Section Guest\nAnother Guest"
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['no-section']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                'guest_no_section': guest_names,
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check guest attendance records were created
+        guest_records = AttendanceRecord.objects.filter(
+            date=attendance_date,
+            guest_name__isnull=False
+        )
+        self.assertEqual(guest_records.count(), 2)
+        
+        guest_names_recorded = [record.guest_name for record in guest_records]
+        self.assertIn("No Section Guest", guest_names_recorded)
+        self.assertIn("Another Guest", guest_names_recorded)
 
 
 class AttendanceReportsViewTests(TestCase):

@@ -356,12 +356,26 @@ def process_form(request):
 def attendance_capture(request, section_slug=None):
     """View for capturing attendance for a specific section"""
     sections = Section.objects.all().order_by('name')
-    section = get_object_or_404(Section, name__iexact=section_slug.replace('-', ' ')) if section_slug else None
+    section = None
+    is_no_section = False
+    
+    if section_slug:
+        if section_slug == 'no-section':
+            is_no_section = True
+        else:
+            section = get_object_or_404(Section, name__iexact=section_slug.replace('-', ' '))
     
     # Get section members for display grouped by instrument
     section_members = []
     members_by_instrument = {}
-    if section:
+    
+    if is_no_section:
+        # Get members who don't have any instrument assignments
+        members_with_instruments = MemberInstrument.objects.values_list('member_id', flat=True).distinct()
+        section_members = Member.objects.filter(
+            is_active=True
+        ).exclude(id__in=members_with_instruments).order_by('last_name', 'first_name')
+    elif section:
         # Get instruments that belong to this section
         section_instruments = Instrument.objects.filter(section=section).order_by('name')
         
@@ -418,8 +432,9 @@ def attendance_capture(request, section_slug=None):
                     errors.append(f"Error recording attendance for {member}: {str(e)}")
         
         # Process guest attendance
-        if section:
-            guest_field = f'guest_{section.id}'
+        if section or is_no_section:
+            # For no-section, use a special guest field name
+            guest_field = f'guest_{section.id}' if section else 'guest_no_section'
             if guest_field in request.POST and request.POST[guest_field].strip():
                 guest_names = [name.strip() for name in request.POST[guest_field].split('\n') if name.strip()]
                 for guest_name in guest_names:
@@ -442,6 +457,13 @@ def attendance_capture(request, section_slug=None):
             ).filter(
                 Q(member__in=section_members) | Q(member__isnull=True)
             ).select_related('member').prefetch_related('member__instruments__instrument').order_by('member__last_name', 'member__first_name', 'guest_name')
+        elif is_no_section:
+            # Get all records for this date and no-section members
+            todays_records = AttendanceRecord.objects.filter(
+                date=attendance_date
+            ).filter(
+                Q(member__in=section_members) | Q(member__isnull=True)
+            ).select_related('member').prefetch_related('member__instruments__instrument').order_by('member__last_name', 'member__first_name', 'guest_name')
         else:
             todays_records = AttendanceRecord.objects.filter(date=attendance_date).select_related('member').prefetch_related('member__instruments__instrument')
         
@@ -450,6 +472,7 @@ def attendance_capture(request, section_slug=None):
             'errors': errors,
             'attendance_date': attendance_date,
             'section': section,
+            'is_no_section': is_no_section,
             'today': date.today(),
             'todays_records': todays_records
         }
@@ -464,6 +487,7 @@ def attendance_capture(request, section_slug=None):
         'section_members': section_members,
         'members_by_instrument': members_by_instrument,
         'sections': sections,
+        'is_no_section': is_no_section,
         'today': date.today()
     }
     

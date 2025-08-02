@@ -23,6 +23,12 @@
                             {{ sect.name }}
                         </a>
                     {% endfor %}
+                    <a href="{% url 'attendance-capture' 'no-section' %}" 
+                       hx-get="{% url 'attendance-capture' 'no-section' %}"
+                       hx-target="#attendance-container"
+                       class="btn {% if is_no_section %}btn-primary{% else %}btn-outline-secondary{% endif %} mb-2">
+                        <i class="fa fa-question-circle"></i> No Section
+                    </a>
                 </div>
             </div>
         </div>
@@ -31,7 +37,7 @@
 
 <!-- Dynamic Content Area -->
 <div id="dynamic-content">
-    {% if section %}
+    {% if section or is_no_section %}
         {% include 'attendance/partials/section_content.html' %}
     {% else %}
     <div class="row">
