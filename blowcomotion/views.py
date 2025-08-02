@@ -587,7 +587,7 @@ def attendance_section_report_new(request, section_slug):
     section_members = Member.objects.filter(
         id__in=section_member_ids, 
         is_active=True
-    ).prefetch_related('instruments__instrument').order_by('first_name', 'last_name')
+    ).order_by('first_name', 'last_name').prefetch_related('instruments__instrument')
     
     # Get attendance records for this section (filter by members in this section)
     attendance_records = AttendanceRecord.objects.filter(
