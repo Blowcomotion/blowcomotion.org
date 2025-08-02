@@ -781,12 +781,20 @@ def birthdays(request):
         # Check if birthday already passed this year but falls within range when considering next year
         # Only consider next year if birthday has already passed this year and next year's birthday is within range
         elif birthday_this_year < today:
-            birthday_next_year = get_birthday(today.year + 1, member.birth_month, member.birth_day)
-            if birthday_next_year and today < birthday_next_year <= future_date:
-                member_info['birthday'] = birthday_next_year
-                member_info['days_until'] = (birthday_next_year - today).days
+            # Calculate the date for next year's birthday without calling get_birthday unless it's possibly within range
+            next_year = today.year + 1
+            try:
+                birthday_next_year_candidate = date(next_year, member.birth_month, member.birth_day)
+            except ValueError:
+                birthday_next_year_candidate = None
+            if (
+                birthday_next_year_candidate
+                and today < birthday_next_year_candidate <= future_date
+            ):
+                member_info['birthday'] = birthday_next_year_candidate
+                member_info['days_until'] = (birthday_next_year_candidate - today).days
                 if member.birth_year:
-                    member_info['age'] = today.year + 1 - member.birth_year
+                    member_info['age'] = next_year - member.birth_year
                 upcoming_birthdays.append(member_info)
     
     # Sort the lists
