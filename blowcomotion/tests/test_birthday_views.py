@@ -2,13 +2,15 @@
 Unit tests for birthday views.
 """
 
+import base64
 from datetime import date, timedelta
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 
 from blowcomotion.models import Member
 
 
+@override_settings(HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD_BIRTHDAYS=None)
 class BirthdayViewTests(TestCase):
     """Test cases for the birthdays view"""
 
@@ -195,3 +197,50 @@ class BirthdayViewTests(TestCase):
         self.assertContains(response, "Today")
         self.assertContains(response, "Upcoming")
         self.assertContains(response, "Recent")
+
+
+@override_settings(HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD_BIRTHDAYS='testpassword')
+class BirthdayViewHTTPAuthTests(TestCase):
+    """Test cases for HTTP Basic Auth on birthdays view"""
+
+    def setUp(self):
+        """Set up test data"""
+        self.client = Client()
+        
+        # Create a test member for basic testing
+        today = date.today()
+        self.member = Member.objects.create(
+            first_name="Test",
+            last_name="Member",
+            birth_month=today.month,
+            birth_day=today.day,
+            birth_year=1990,
+            is_active=True
+        )
+
+    def test_no_auth_returns_401(self):
+        """Test that accessing without auth returns 401"""
+        response = self.client.get(reverse('birthdays'))
+        self.assertEqual(response.status_code, 401)
+        self.assertIn('WWW-Authenticate', response)
+
+    def test_correct_auth_allows_access(self):
+        """Test that correct HTTP Basic Auth allows access"""
+        # Create Basic Auth header
+        credentials = base64.b64encode(b'user:testpassword').decode('ascii')
+        response = self.client.get(
+            reverse('birthdays'),
+            HTTP_AUTHORIZATION=f'Basic {credentials}'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Member Birthdays")
+
+    def test_incorrect_auth_returns_401(self):
+        """Test that incorrect HTTP Basic Auth returns 401"""
+        # Create Basic Auth header with wrong password
+        credentials = base64.b64encode(b'user:wrongpassword').decode('ascii')
+        response = self.client.get(
+            reverse('birthdays'),
+            HTTP_AUTHORIZATION=f'Basic {credentials}'
+        )
+        self.assertEqual(response.status_code, 401)
