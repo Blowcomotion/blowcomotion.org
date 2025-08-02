@@ -796,7 +796,7 @@ def birthdays(request):
         birth_month__isnull=False,
         birth_day__isnull=False,
         birth_month__in=relevant_months
-    ).order_by('first_name', 'last_name')
+    ).prefetch_related('instruments__instrument').order_by('first_name', 'last_name')
     
     recent_birthdays = []
     upcoming_birthdays = []
