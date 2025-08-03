@@ -505,6 +505,13 @@ def attendance_capture(request, section_slug=None):
         event_type = request.POST.get('event_type', 'rehearsal')
         event_name = request.POST.get('event_name', '').strip()
         
+        # Store form data in session for persistence
+        request.session['attendance_form_data'] = {
+            'attendance_date': attendance_date_str,
+            'event_type': event_type,
+            'event_name': event_name
+        }
+        
         # Convert string to date object for consistent handling
         if isinstance(attendance_date_str, str):
             from datetime import datetime
@@ -605,18 +612,60 @@ def attendance_capture(request, section_slug=None):
         else:
             return render(request, 'attendance/capture_success.html', context)
     
+    # Get persisted form values from session or query parameters
+    form_data = request.session.get('attendance_form_data', {})
+    
+    # Check if date is being passed as a query parameter (for dynamic updates)
+    query_date = request.GET.get('attendance_date')
+    if query_date:
+        attendance_date = query_date
+        # Update session with the new date
+        form_data['attendance_date'] = attendance_date
+        request.session['attendance_form_data'] = form_data
+    else:
+        attendance_date = form_data.get('attendance_date', date.today().strftime('%Y-%m-%d'))
+    
+    event_type = form_data.get('event_type', 'rehearsal')
+    event_name = form_data.get('event_name', '')
+    
+    # Get attendance records for the selected date to show checkmarks
+    if isinstance(attendance_date, str):
+        from datetime import datetime
+        attendance_date_obj = datetime.strptime(attendance_date, '%Y-%m-%d').date()
+    else:
+        attendance_date_obj = attendance_date
+    
+    recorded_member_ids = set()
+    if section_members:
+        recorded_member_ids = set(
+            AttendanceRecord.objects.filter(
+                date=attendance_date_obj,
+                member__in=section_members
+            ).values_list('member_id', flat=True)
+        )
+
     context = {
         'section': section,
         'section_members': section_members,
         'members_by_instrument': members_by_instrument,
         'sections': sections,
         'is_no_section': is_no_section,
-        'today': date.today()
+        'today': date.today(),
+        'attendance_date': attendance_date,
+        'event_type': event_type,
+        'event_name': event_name,
+        'recorded_member_ids': recorded_member_ids
     }
     
     # For HTMX section switching, return the main content including navigation
     if request.headers.get('HX-Request'):
-        return render(request, 'attendance/partials/capture_content.html', context)
+        # Check if this is a date change request (has attendance_date parameter)
+        if query_date and (section or is_no_section):
+            # For date changes when a section is selected, return just the members section to update checkmarks
+            return render(request, 'attendance/partials/members_section.html', context)
+        else:
+            # For section navigation or when no section is selected, return the full capture content
+            return render(request, 'attendance/partials/capture_content.html', context)
     
     return render(request, 'attendance/capture.html', context)
 

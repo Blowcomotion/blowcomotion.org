@@ -59,10 +59,19 @@
 </div>
 
 <script>
-    // Reset the form but preserve the date field
+(function() {
+    // Reset the form but preserve the date field, event type, and event name
     const form = document.getElementById('attendanceForm');
     const dateField = document.getElementById('attendance_date');
-    const currentDate = dateField ? dateField.value : null; // Save current date value
+    const eventTypeRehearsalField = document.getElementById('event_type_rehearsal');
+    const eventTypePerformanceField = document.getElementById('event_type_performance');
+    const eventNameField = document.getElementById('event_name');
+    
+    // Save current values
+    const currentDate = dateField ? dateField.value : null;
+    const currentEventType = eventTypeRehearsalField && eventTypeRehearsalField.checked ? 'rehearsal' :
+                            eventTypePerformanceField && eventTypePerformanceField.checked ? 'performance' : 'rehearsal';
+    const currentEventName = eventNameField ? eventNameField.value : '';
     
     if (form) {
         // Reset all checkboxes and text areas
@@ -72,9 +81,45 @@
         const textareas = form.querySelectorAll('textarea');
         textareas.forEach(ta => ta.value = '');
         
-        // Restore the date field - keep the originally selected date or default to today
+        // Restore preserved fields
         if (dateField) {
             dateField.value = currentDate || '{{ today|date:"Y-m-d" }}';
         }
+        
+        // Restore event type
+        if (currentEventType === 'performance' && eventTypePerformanceField) {
+            eventTypePerformanceField.checked = true;
+            // Show event name field
+            const eventNameFieldDiv = document.getElementById('event_name_field');
+            if (eventNameFieldDiv) {
+                eventNameFieldDiv.style.display = 'block';
+            }
+        } else if (eventTypeRehearsalField) {
+            eventTypeRehearsalField.checked = true;
+            // Hide event name field
+            const eventNameFieldDiv = document.getElementById('event_name_field');
+            if (eventNameFieldDiv) {
+                eventNameFieldDiv.style.display = 'none';
+            }
+        }
+        
+        // Restore event name
+        if (eventNameField) {
+            eventNameField.value = currentEventName;
+        }
     }
+    
+    // Trigger toggle function to ensure proper field visibility
+    if (typeof toggleEventNameField === 'function') {
+        toggleEventNameField();
+    }
+    
+    // Update checkmarks to reflect the newly submitted attendance records
+    if (typeof updateAttendanceCheckmarks === 'function') {
+        // Use a small delay to ensure the form reset is complete
+        setTimeout(function() {
+            updateAttendanceCheckmarks();
+        }, 100);
+    }
+})();
 </script>

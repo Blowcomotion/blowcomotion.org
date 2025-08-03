@@ -37,20 +37,20 @@
                     <div class="mb-3">
                         <label for="attendance_date" class="form-label">Date</label>
                         <input type="date" class="form-control" id="attendance_date" name="attendance_date" 
-                               value="{{ today|date:'Y-m-d' }}" required>
+                               value="{{ attendance_date }}" required>
                     </div>
 
                     <!-- Event Type Field -->
                     <div class="mb-3">
                         <label class="form-label">Event Type</label>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="event_type" id="event_type_rehearsal" value="rehearsal" checked required onchange="toggleEventNameField()">
+                            <input class="form-check-input" type="radio" name="event_type" id="event_type_rehearsal" value="rehearsal" {% if event_type == 'rehearsal' %}checked{% endif %} required onchange="toggleEventNameField()">
                             <label class="form-check-label" for="event_type_rehearsal">
                                 Rehearsal
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="event_type" id="event_type_performance" value="performance" required onchange="toggleEventNameField()">
+                            <input class="form-check-input" type="radio" name="event_type" id="event_type_performance" value="performance" {% if event_type == 'performance' %}checked{% endif %} required onchange="toggleEventNameField()">
                             <label class="form-check-label" for="event_type_performance">
                                 Performance
                             </label>
@@ -58,64 +58,72 @@
                     </div>
 
                     <!-- Event Name Field -->
-                    <div class="mb-3" id="event_name_field" style="display: none;">
+                    <div class="mb-3" id="event_name_field" {% if event_type != 'performance' %}style="display: none;"{% endif %}>
                         <label for="event_name" class="form-label">Event Name</label>
                         <input type="text" class="form-control" id="event_name" name="event_name" 
-                               placeholder="Enter the name of the performance (optional)">
+                               value="{{ event_name }}" placeholder="Enter the name of the performance (optional)">
                         <div class="form-text">Optional name for the performance (e.g., 'Summer Concert', 'Holiday Show')</div>
                     </div>
 
                     <!-- Members Section -->
-                    <h6 class="mt-4 mb-3">Section Members</h6>
-                    {% if members_by_instrument %}
-                        {% for instrument, members in members_by_instrument.items %}
-                            <div class="instrument-group mb-4">
-                                <h6 class="text-primary mb-2">{{ instrument.name }}</h6>
-                                <div class="row">
-                                    {% for member in members %}
-                                        <div class="col-md-6 col-lg-4 mb-2">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" 
-                                                       id="member_{{ member.id }}" name="member_{{ member.id }}">
-                                                <label class="form-check-label" for="member_{{ member.id }}">
-                                                    {{ member }}
-                                                    <small class="text-muted">({{ instrument.name }})</small>
-                                                </label>
+                    <div id="members-section">
+                        <h6 class="mt-4 mb-3">Section Members</h6>
+                        {% if members_by_instrument %}
+                            {% for instrument, members in members_by_instrument.items %}
+                                <div class="instrument-group mb-4">
+                                    <h6 class="text-primary mb-2">{{ instrument.name }}</h6>
+                                    <div class="row">
+                                        {% for member in members %}
+                                            <div class="col-md-6 col-lg-4 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" 
+                                                           id="member_{{ member.id }}" name="member_{{ member.id }}">
+                                                    <label class="form-check-label" for="member_{{ member.id }}">
+                                                        {% if member.id in recorded_member_ids %}
+                                                            <i class="fa fa-check-circle text-success me-1" title="Already recorded for this date"></i>
+                                                        {% endif %}
+                                                        {{ member }}
+                                                        <small class="text-muted">({{ instrument.name }})</small>
+                                                    </label>
+                                                </div>
                                             </div>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        {% endfor %}
-                    {% elif section_members %}
-                        <div class="row">
-                            {% for member in section_members %}
-                                <div class="col-md-6 col-lg-4 mb-2">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" 
-                                               id="member_{{ member.id }}" name="member_{{ member.id }}">
-                                        <label class="form-check-label" for="member_{{ member.id }}">
-                                            {{ member }}
-                                            {% if member.instruments.exists %}
-                                                <small class="text-muted">
-                                                    ({% for instrument in member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
-                                                </small>
-                                            {% endif %}
-                                            {% if is_no_section %}
-                                                <small class="ms-2">
-                                                    <a href="{% url 'wagtailsnippets_blowcomotion_member:edit' member.id %}" target="_blank" class="text-primary">
-                                                        <i class="fa fa-plus-circle"></i> Add Instrument
-                                                    </a>
-                                                </small>
-                                            {% endif %}
-                                        </label>
+                                        {% endfor %}
                                     </div>
                                 </div>
                             {% endfor %}
-                        </div>
-                    {% else %}
-                        <p class="text-muted">No members found for this section.</p>
-                    {% endif %}
+                        {% elif section_members %}
+                            <div class="row">
+                                {% for member in section_members %}
+                                    <div class="col-md-6 col-lg-4 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   id="member_{{ member.id }}" name="member_{{ member.id }}">
+                                            <label class="form-check-label" for="member_{{ member.id }}">
+                                                {% if member.id in recorded_member_ids %}
+                                                    <i class="fa fa-check-circle text-success me-1" title="Already recorded for this date"></i>
+                                                {% endif %}
+                                                {{ member }}
+                                                {% if member.instruments.exists %}
+                                                    <small class="text-muted">
+                                                        ({% for instrument in member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
+                                                    </small>
+                                                {% endif %}
+                                                {% if is_no_section %}
+                                                    <small class="ms-2">
+                                                        <a href="{% url 'wagtailsnippets_blowcomotion_member:edit' member.id %}" target="_blank" class="text-primary">
+                                                            <i class="fa fa-plus-circle"></i> Add Instrument
+                                                        </a>
+                                                    </small>
+                                                {% endif %}
+                                            </label>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No members found for this section.</p>
+                        {% endif %}
+                    </div>
 
                     <!-- Guests Section -->
                     <h6 class="mt-4 mb-3">Guests/Visitors</h6>

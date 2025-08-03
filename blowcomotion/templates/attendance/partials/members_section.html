@@ -1,0 +1,57 @@
+<!-- Members Section Content Only -->
+<h6 class="mt-4 mb-3">Section Members</h6>
+{% if members_by_instrument %}
+    {% for instrument, members in members_by_instrument.items %}
+        <div class="instrument-group mb-4">
+            <h6 class="text-primary mb-2">{{ instrument.name }}</h6>
+            <div class="row">
+                {% for member in members %}
+                    <div class="col-md-6 col-lg-4 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" 
+                                   id="member_{{ member.id }}" name="member_{{ member.id }}">
+                            <label class="form-check-label" for="member_{{ member.id }}">
+                                {% if member.id in recorded_member_ids %}
+                                    <i class="fa fa-check-circle text-success me-1" title="Already recorded for this date"></i>
+                                {% endif %}
+                                {{ member }}
+                                <small class="text-muted">({{ instrument.name }})</small>
+                            </label>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endfor %}
+{% elif section_members %}
+    <div class="row">
+        {% for member in section_members %}
+            <div class="col-md-6 col-lg-4 mb-2">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" 
+                           id="member_{{ member.id }}" name="member_{{ member.id }}">
+                    <label class="form-check-label" for="member_{{ member.id }}">
+                        {% if member.id in recorded_member_ids %}
+                            <i class="fa fa-check-circle text-success me-1" title="Already recorded for this date"></i>
+                        {% endif %}
+                        {{ member }}
+                        {% if member.instruments.exists %}
+                            <small class="text-muted">
+                                ({% for instrument in member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
+                            </small>
+                        {% endif %}
+                        {% if is_no_section %}
+                            <small class="ms-2">
+                                <a href="{% url 'wagtailsnippets_blowcomotion_member:edit' member.id %}" target="_blank" class="text-primary">
+                                    <i class="fa fa-plus-circle"></i> Add Instrument
+                                </a>
+                            </small>
+                        {% endif %}
+                    </label>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p class="text-muted">No members found for this section.</p>
+{% endif %}
