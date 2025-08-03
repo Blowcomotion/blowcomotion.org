@@ -8,6 +8,7 @@ from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
 from django.http import Http404
+from wagtail.models import Site
 from unittest.mock import patch
 
 from blowcomotion.models import (
@@ -15,17 +16,105 @@ from blowcomotion.models import (
     Member, 
     Section, 
     Instrument, 
-    MemberInstrument
+    MemberInstrument,
+    SiteSettings
 )
 
 
-@override_settings(HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD='testpassword')
+class AttendanceAuthenticationTests(TestCase):
+    """Test cases for SiteSettings-based authentication"""
+
+    def setUp(self):
+        """Set up test data"""
+        self.client = Client()
+        self.site = Site.objects.get(is_default_site=True)
+        
+        # Create test section for basic functionality
+        self.section = Section.objects.create(name="Test Section")
+
+    def test_no_auth_when_no_password_set(self):
+        """Test that authentication is skipped when no password is set in SiteSettings"""
+        # Create SiteSettings with no password
+        SiteSettings.objects.create(
+            site=self.site,
+            attendance_password=None
+        )
+        
+        # Should be able to access without authentication
+        response = self.client.get(reverse('attendance-capture', args=['test-section']))
+        self.assertEqual(response.status_code, 200)
+
+    def test_no_auth_when_empty_password_set(self):
+        """Test that authentication is skipped when empty password is set in SiteSettings"""
+        # Create SiteSettings with empty password
+        SiteSettings.objects.create(
+            site=self.site,
+            attendance_password=''
+        )
+        
+        # Should be able to access without authentication
+        response = self.client.get(reverse('attendance-capture', args=['test-section']))
+        self.assertEqual(response.status_code, 200)
+
+    def test_auth_required_when_password_set(self):
+        """Test that authentication is required when password is set in SiteSettings"""
+        # Create SiteSettings with password
+        SiteSettings.objects.create(
+            site=self.site,
+            attendance_password='testpassword'
+        )
+        
+        # Should require authentication
+        response = self.client.get(reverse('attendance-capture', args=['test-section']))
+        self.assertEqual(response.status_code, 401)
+        self.assertIn('WWW-Authenticate', response)
+
+    def test_correct_password_allows_access(self):
+        """Test that correct password allows access"""
+        # Create SiteSettings with password
+        SiteSettings.objects.create(
+            site=self.site,
+            attendance_password='testpassword'
+        )
+        
+        # Set up correct credentials
+        credentials = base64.b64encode(b'testuser:testpassword').decode('ascii')
+        self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
+        
+        # Should allow access
+        response = self.client.get(reverse('attendance-capture', args=['test-section']))
+        self.assertEqual(response.status_code, 200)
+
+    def test_wrong_password_denies_access(self):
+        """Test that wrong password denies access"""
+        # Create SiteSettings with password
+        SiteSettings.objects.create(
+            site=self.site,
+            attendance_password='testpassword'
+        )
+        
+        # Set up wrong credentials
+        credentials = base64.b64encode(b'testuser:wrongpassword').decode('ascii')
+        self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
+        
+        # Should deny access
+        response = self.client.get(reverse('attendance-capture', args=['test-section']))
+        self.assertEqual(response.status_code, 401)
+
+
 class AttendanceCaptureViewTests(TestCase):
     """Test cases for the attendance_capture view"""
 
     def setUp(self):
         """Set up test data"""
         self.client = Client()
+        
+        # Set up SiteSettings with test password
+        self.site = Site.objects.get(is_default_site=True)
+        self.site_settings = SiteSettings.objects.create(
+            site=self.site,
+            attendance_password='testpassword'
+        )
         
         # Set up HTTP Basic Auth credentials
         credentials = base64.b64encode(b'testuser:testpassword').decode('ascii')
@@ -585,13 +674,19 @@ class AttendanceCaptureViewTests(TestCase):
         self.assertEqual(guest_record.notes, 'Guest - Rehearsal')
 
 
-@override_settings(HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD='testpassword')
 class AttendanceReportsViewTests(TestCase):
     """Test cases for the attendance_reports view"""
 
     def setUp(self):
         """Set up test data"""
         self.client = Client()
+        
+        # Set up SiteSettings with test password
+        self.site = Site.objects.get(is_default_site=True)
+        self.site_settings = SiteSettings.objects.create(
+            site=self.site,
+            attendance_password='testpassword'
+        )
         
         # Set up HTTP Basic Auth credentials
         credentials = base64.b64encode(b'testuser:testpassword').decode('ascii')
@@ -683,13 +778,19 @@ class AttendanceReportsViewTests(TestCase):
         # Should return all reports content for navigation
 
 
-@override_settings(HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD='testpassword')
 class AttendanceSectionReportViewTests(TestCase):
     """Test cases for the attendance_section_report_new view"""
 
     def setUp(self):
         """Set up test data"""
         self.client = Client()
+        
+        # Set up SiteSettings with test password
+        self.site = Site.objects.get(is_default_site=True)
+        self.site_settings = SiteSettings.objects.create(
+            site=self.site,
+            attendance_password='testpassword'
+        )
         
         # Set up HTTP Basic Auth credentials
         credentials = base64.b64encode(b'testuser:testpassword').decode('ascii')
@@ -871,13 +972,19 @@ class AttendanceSectionReportViewTests(TestCase):
             self.assertLessEqual(stats['percentage'], 100)
 
 
-@override_settings(HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD='testpassword')
 class AttendanceViewsIntegrationTests(TestCase):
     """Integration tests for attendance views working together"""
 
     def setUp(self):
         """Set up test data"""
         self.client = Client()
+        
+        # Set up SiteSettings with test password
+        self.site = Site.objects.get(is_default_site=True)
+        self.site_settings = SiteSettings.objects.create(
+            site=self.site,
+            attendance_password='testpassword'
+        )
         
         # Set up HTTP Basic Auth credentials
         credentials = base64.b64encode(b'testuser:testpassword').decode('ascii')

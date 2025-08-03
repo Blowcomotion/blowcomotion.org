@@ -154,24 +154,121 @@ def http_basic_auth(username=None, password=None):
     Decorator for HTTP Basic Authentication
     If username is None, any username will be accepted (only password is checked)
     If password is provided directly, uses that password for authentication.
-    If password is None, uses HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD from settings.
-    If HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD is None, authentication is skipped.
+    If password is None, uses attendance_password from SiteSettings.
+    If attendance_password is None or empty, authentication is skipped.
     """
-    if password is not None:
-        # Use the provided password directly
-        return http_basic_auth_generic(password, 'Attendance Area', username, direct_password=True)
-    else:
-        # Standard usage - get password from settings
-        return http_basic_auth_generic('HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD', 'Attendance Area', username, direct_password=False)
+    def decorator(func):
+        @wraps(func)
+        def wrapper(request, *args, **kwargs):
+            if password is not None:
+                # Use the provided password directly
+                auth_password = password
+            else:
+                # Get password from SiteSettings
+                try:
+                    site_settings = SiteSettings.for_request(request)
+                    auth_password = site_settings.attendance_password
+                except:
+                    auth_password = None
+            
+            # If password is None or empty, skip authentication
+            if not auth_password:
+                return func(request, *args, **kwargs)
+            
+            # Check if Authorization header exists
+            if 'HTTP_AUTHORIZATION' not in request.META:
+                response = HttpResponse('Unauthorized', status=401)
+                response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
+                return response
+            
+            # Parse the Authorization header
+            auth_header = request.META['HTTP_AUTHORIZATION']
+            if not auth_header.startswith('Basic '):
+                response = HttpResponse('Unauthorized', status=401)
+                response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
+                return response
+            
+            # Decode credentials
+            try:
+                encoded_credentials = auth_header[6:]  # Remove 'Basic '
+                decoded_credentials = base64.b64decode(encoded_credentials).decode('utf-8')
+                provided_username, provided_password = decoded_credentials.split(':', 1)
+            except (ValueError, UnicodeDecodeError):
+                response = HttpResponse('Unauthorized', status=401)
+                response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
+                return response
+            
+            # Check credentials
+            if username is None:
+                # Only check password if username is None
+                if provided_password == auth_password:
+                    return func(request, *args, **kwargs)
+            else:
+                # Check both username and password
+                if provided_username == username and provided_password == auth_password:
+                    return func(request, *args, **kwargs)
+            
+            response = HttpResponse('Unauthorized', status=401)
+            response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
+            return response
+        
+        return wrapper
+    return decorator
 
 
 def http_basic_auth_birthdays():
     """
     Decorator for HTTP Basic Authentication for birthdays view
-    Uses HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD from settings
-    If HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD is None, authentication is skipped
+    Uses birthdays_password from SiteSettings
+    If birthdays_password is None or empty, authentication is skipped
     """
-    return http_basic_auth_generic('HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD', 'Birthdays Area', direct_password=False)
+    def decorator(func):
+        @wraps(func)
+        def wrapper(request, *args, **kwargs):
+            # Get password from SiteSettings
+            try:
+                site_settings = SiteSettings.for_request(request)
+                password = site_settings.birthdays_password
+            except:
+                password = None
+            
+            # If password is None or empty, skip authentication
+            if not password:
+                return func(request, *args, **kwargs)
+            
+            # Check if Authorization header exists
+            if 'HTTP_AUTHORIZATION' not in request.META:
+                response = HttpResponse('Unauthorized', status=401)
+                response['WWW-Authenticate'] = 'Basic realm="Birthdays Area"'
+                return response
+            
+            # Parse the Authorization header
+            auth_header = request.META['HTTP_AUTHORIZATION']
+            if not auth_header.startswith('Basic '):
+                response = HttpResponse('Unauthorized', status=401)
+                response['WWW-Authenticate'] = 'Basic realm="Birthdays Area"'
+                return response
+            
+            # Decode credentials
+            try:
+                encoded_credentials = auth_header[6:]  # Remove 'Basic '
+                decoded_credentials = base64.b64decode(encoded_credentials).decode('utf-8')
+                provided_username, provided_password = decoded_credentials.split(':', 1)
+            except (ValueError, UnicodeDecodeError):
+                response = HttpResponse('Unauthorized', status=401)
+                response['WWW-Authenticate'] = 'Basic realm="Birthdays Area"'
+                return response
+            
+            # Only check password (any username is accepted)
+            if provided_password == password:
+                return func(request, *args, **kwargs)
+            
+            response = HttpResponse('Unauthorized', status=401)
+            response['WWW-Authenticate'] = 'Basic realm="Birthdays Area"'
+            return response
+        
+        return wrapper
+    return decorator
 
 
 def _get_form_recipients(site_settings, form_type):

@@ -90,7 +90,7 @@ The attendance tracking system allows band leaders to record and manage attendan
 #### Security
 
 - Protected by HTTP Basic Authentication
-- Password configurable via `HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD` environment variable
+- Password configurable through **Wagtail Admin > Settings > Site Settings > Access Control**
 
 ### Birthdays Function
 
@@ -118,13 +118,21 @@ The birthdays feature displays upcoming band member birthdays to help celebrate 
 #### Birthday Security
 
 - Protected by HTTP Basic Authentication  
-- Password configurable via `HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD` environment variable
+- Password configurable through **Wagtail Admin > Settings > Site Settings > Access Control**
 
 ## Environment Variables
 
 The following environment variables can be configured:
 
-- `HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD` - Password for attendance tracker access
-- `HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD` - Password for birthdays page access
 - `GIGO_API_URL` - API endpoint for GIGO integration (default: `http://localhost:8000/api`)
 - `GIGO_API_KEY` - API key for GIGO integration
+
+## Admin Configuration
+
+Site settings, including access control passwords, are configured through the Wagtail admin interface:
+
+1. Access **Wagtail Admin > Settings > Site Settings**
+2. Configure passwords in the **Access Control** section
+3. Set email recipients for forms in the **Form Email Recipients** section
+4. Update donation links in the **Donation Links** section
+5. Manage social media links and site branding

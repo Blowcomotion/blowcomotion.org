@@ -6,7 +6,7 @@ from modelcluster.fields import ParentalKey, ParentalManyToManyField
 from modelcluster.models import ClusterableModel
 from taggit.models import ItemBase, TagBase
 from wagtail import blocks
-from wagtail.admin.panels import FieldPanel, MultipleChooserPanel
+from wagtail.admin.panels import FieldPanel, MultipleChooserPanel, MultiFieldPanel
 from wagtail.contrib.settings.models import BaseSiteSetting, register_setting
 from wagtail.documents import get_document_model
 from wagtail.fields import RichTextField, StreamField
@@ -101,6 +101,54 @@ class SiteSettings(BaseSiteSetting):
         null=True,
         help_text="URL to Patreon page",
     )
+    
+    # HTTP Basic Auth passwords for protected views
+    attendance_password = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Password for accessing the attendance tracking system",
+    )
+    birthdays_password = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Password for accessing the birthdays page",
+    )
+    
+    panels = [
+        MultiFieldPanel([
+            FieldPanel('logo'),
+            FieldPanel('footer_text'),
+            FieldPanel('email'),
+        ], heading="Site Branding"),
+        
+        MultiFieldPanel([
+            FieldPanel('instagram'),
+            FieldPanel('facebook'),
+        ], heading="Social Media"),
+        
+        FieldPanel('header_menus'),
+        
+        MultiFieldPanel([
+            FieldPanel('contact_form_email_recipients'),
+            FieldPanel('join_band_form_email_recipients'),
+            FieldPanel('booking_form_email_recipients'),
+            FieldPanel('feedback_form_email_recipients'),
+            FieldPanel('donate_form_email_recipients'),
+        ], heading="Form Email Recipients"),
+        
+        MultiFieldPanel([
+            FieldPanel('venmo_donate_url'),
+            FieldPanel('square_donate_url'),
+            FieldPanel('patreon_url'),
+        ], heading="Donation Links"),
+        
+        MultiFieldPanel([
+            FieldPanel('attendance_password'),
+            FieldPanel('birthdays_password'),
+        ], heading="Access Control", help_text="Set passwords for protected areas of the site. Leave blank to disable authentication for that area."),
+    ]
 
 
 class CustomImage(AbstractImage):
