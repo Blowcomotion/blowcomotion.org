@@ -1,5 +1,5 @@
 from wagtail.admin.panels import FieldRowPanel, MultipleChooserPanel
-from wagtail.admin.ui.tables import UpdatedAtColumn
+from wagtail.admin.ui.tables import UpdatedAtColumn, DateColumn
 from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup
 
 from wagtailmedia.edit_handlers import MediaChooserPanel
@@ -178,8 +178,32 @@ class MemberViewSet(SnippetViewSet):
         super().__init__(*args, **kwargs)
 
 
+class AttendanceRecordViewSet(SnippetViewSet):
+    model = None
+    menu_label = 'Attendance Records'
+    menu_name = 'attendance_records'
+    menu_icon = 'check'
+    list_display = ['member', 'guest_name', DateColumn('date', label='Date'), 'notes', UpdatedAtColumn()]
+    list_filter = ['date', 'member']
+    search_fields = ('member__first_name', 'member__last_name', 'guest_name', 'notes')
+    panels = [
+        FieldRowPanel([
+            'date',
+            'member',
+        ], heading="Attendance Details"),
+        'guest_name',
+        'notes',
+    ]
+    ordering = ['-date', 'member__first_name']
+
+    def __init__(self, *args, **kwargs):
+        from .models import AttendanceRecord
+        self.model = AttendanceRecord
+        super().__init__(*args, **kwargs)
+
+
 class BandViewSetGroup(SnippetViewSetGroup):
-    items = (EventViewSet, SectionViewSet, InstrumentViewSet, MemberViewSet, SongViewSet, ChartViewSet)
+    items = (EventViewSet, SectionViewSet, InstrumentViewSet, MemberViewSet, SongViewSet, ChartViewSet, AttendanceRecordViewSet)
     menu_icon = 'folder-inverse'
     menu_label = 'Band Stuff'
     menu_name = 'band'
