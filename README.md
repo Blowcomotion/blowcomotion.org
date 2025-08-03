@@ -60,11 +60,11 @@ When deploying to production, always run:
 
 ### Attendance Tracker
 
-The attendance tracking system allows band administrators to record and manage attendance for rehearsals and performances.
+The attendance tracking system allows band leaders to record and manage attendance for rehearsals and performances.
 
 #### Key Features
 
-- **Section-based tracking**: Record attendance by band section (Woodwinds, Brass, etc.)
+- **Section-based tracking**: Record attendance by band section (Woodwinds, High Brass, etc.)
 - **Member and guest support**: Track both band members and guests/visitors
 - **Event types**: Differentiate between rehearsals and performances
 - **Comprehensive reporting**: View attendance statistics and trends
