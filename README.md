@@ -50,7 +50,81 @@ The templates for this codebase are derived from [here](https://themewagon.com/t
 ## Production Deployment
 
 When deploying to production, always run:
+
 - `python manage.py collectstatic` - Collects all static files (CSS, JS, images) for production
 - `python manage.py migrate` - Applies any new database migrations
 
 **Important**: Run `collectstatic` after any changes to static files (CSS, JavaScript, images) to ensure they're available in production.
+
+## Features
+
+### Attendance Tracker
+
+The attendance tracking system allows band administrators to record and manage attendance for rehearsals and performances.
+
+#### Key Features
+
+- **Section-based tracking**: Record attendance by band section (Woodwinds, Brass, etc.)
+- **Member and guest support**: Track both band members and guests/visitors
+- **Event types**: Differentiate between rehearsals and performances
+- **Comprehensive reporting**: View attendance statistics and trends
+- **Admin management**: Full CRUD operations for attendance records through Wagtail admin
+
+#### How to Use
+
+1. **Recording Attendance**: Access the attendance capture interface at `/attendance/`
+2. **Section Navigation**: Select a band section to record attendance for that group
+3. **Date Selection**: Choose the date for the attendance session
+4. **Event Type**: Specify whether it's a rehearsal or performance
+5. **Member Selection**: Check off members who attended
+6. **Guest Entry**: Add names of guests/visitors (one per line)
+7. **Reports**: View detailed attendance reports and statistics
+
+#### Admin Management
+
+- Navigate to **Wagtail Admin > Band Stuff > Attendance Records**
+- View, edit, and delete attendance records
+- Filter by date, member, or search notes
+- Export data for external analysis
+
+#### Security
+
+- Protected by HTTP Basic Authentication
+- Password configurable via `HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD` environment variable
+
+### Birthdays Function
+
+The birthdays feature displays upcoming band member birthdays to help celebrate and recognize members.
+
+#### Birthday Features
+
+- **Upcoming birthdays**: Shows members with birthdays in the current month
+- **Privacy-aware**: Only displays month/day, respects member privacy
+- **Mobile-friendly**: Responsive design for all devices
+- **Admin integration**: Birthday data managed through member profiles
+
+#### How to Access
+
+1. **Access**: Navigate to `/birthdays/` to view the birthdays page
+2. **Display**: Shows members with birthdays in the current month
+3. **Information**: Displays member name, birthday (month/day), and photo if available
+
+#### Birthday Admin Management
+
+- **Member Profiles**: Add birthday information in Wagtail Admin > Band Stuff > Members
+- **Fields**: `birth_month`, `birth_day`, and optional `birth_year`
+- **Privacy**: Birth year is optional and not displayed publicly
+
+#### Birthday Security
+
+- Protected by HTTP Basic Authentication  
+- Password configurable via `HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD` environment variable
+
+## Environment Variables
+
+The following environment variables can be configured:
+
+- `HTTP_BASIC_AUTH_ATTENDANCE_PASSWORD` - Password for attendance tracker access
+- `HTTP_BASIC_AUTH_BIRTHDAYS_PASSWORD` - Password for birthdays page access
+- `GIGO_API_URL` - API endpoint for GIGO integration (default: `http://localhost:8000/api`)
+- `GIGO_API_KEY` - API key for GIGO integration
