@@ -817,7 +817,7 @@ def attendance_capture(request, section_slug=None):
                 result = {'gigs': gig_choices}
                 cache.set(cache_key, result, 600)
     except Exception:
-        pass  # If gig fetch fails, continue with empty list
+        logger.exception("Failed to fetch gigs for date %s", attendance_date)
     
     context = {
         'section': section,
