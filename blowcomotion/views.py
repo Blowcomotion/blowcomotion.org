@@ -1145,5 +1145,7 @@ def gigs_for_date(request):
     except ValueError:
         return JsonResponse({'error': 'Invalid date format'}, status=400)
     except Exception as e:
-        logger.error("Unexpected error in gigs_for_date for date %s: %s", date_str, e, exc_info=True)
+        # Use the original date_str from request if available, otherwise 'unknown'
+        date_param = request.GET.get('date', 'unknown')
+        logger.error("Unexpected error in gigs_for_date for date %s: %s", date_param, e, exc_info=True)
         return JsonResponse({'error': f'Error fetching gigs: {str(e)}'}, status=500)
