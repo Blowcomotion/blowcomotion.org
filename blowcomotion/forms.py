@@ -1,5 +1,10 @@
+import datetime
+
+import requests
 from django import forms
+from django.conf import settings
 from django.forms import formset_factory
+
 from blowcomotion.models import AttendanceRecord, Member, Section
 
 
@@ -122,10 +127,6 @@ class SectionAttendanceForm(forms.Form):
     def _populate_gig_choices(self):
         """Populate gig choices from GigoGig API"""
         try:
-            from django.conf import settings
-            import requests
-            import datetime
-            
             # Fetch gigs from API
             response = requests.get(
                 f"{settings.GIGO_API_URL}/gigs",

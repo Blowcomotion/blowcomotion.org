@@ -1,8 +1,10 @@
-import json, logging, base64
-from io import StringIO
-from datetime import date, timedelta
+import base64
+import json
+import logging
 from collections import defaultdict
+from datetime import date, timedelta
 from functools import wraps
+from io import StringIO
 
 from django.conf import settings
 from django.contrib.auth import authenticate, login
@@ -10,17 +12,17 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.mail import send_mail
 from django.core.management import call_command
 from django.db.models import Count, Q
-from django.http import JsonResponse, HttpResponse
-from django.shortcuts import redirect, render, get_object_or_404
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
-from blowcomotion.models import (
-    SiteSettings, ContactFormSubmission, FeedbackFormSubmission, 
-    JoinBandFormSubmission, BookingFormSubmission, DonateFormSubmission,
-    Member, Section, AttendanceRecord, MemberInstrument, Instrument
-)
-from blowcomotion.forms import SectionAttendanceForm, AttendanceReportFilterForm
-
+from blowcomotion.forms import (AttendanceReportFilterForm,
+                                SectionAttendanceForm)
+from blowcomotion.models import (AttendanceRecord, BookingFormSubmission,
+                                 ContactFormSubmission, DonateFormSubmission,
+                                 FeedbackFormSubmission, Instrument,
+                                 JoinBandFormSubmission, Member,
+                                 MemberInstrument, Section, SiteSettings)
 
 logger = logging.getLogger(__name__)
 
@@ -607,8 +609,8 @@ def attendance_capture(request, section_slug=None):
         gig_title = None
         if gig_id:
             try:
-                from django.conf import settings
                 import requests
+                from django.conf import settings
                 
                 response = requests.get(
                     f"{settings.GIGO_API_URL}/gigs/{gig_id}",
@@ -771,8 +773,9 @@ def attendance_capture(request, section_slug=None):
     # Get gig choices for the current date using cached endpoint
     gig_choices = []
     try:
-        from django.core.cache import cache
         import datetime
+
+        from django.core.cache import cache
         
         if isinstance(attendance_date, str):
             selected_date = datetime.datetime.strptime(attendance_date, '%Y-%m-%d').date()
@@ -790,8 +793,8 @@ def attendance_capture(request, section_slug=None):
             gig_choices = cached_result.get('gigs', [])
         else:
             # If not cached, fetch from API and cache the result
-            from django.conf import settings
             import requests
+            from django.conf import settings
             
             response = requests.get(
                 f"{settings.GIGO_API_URL}/gigs",
@@ -1084,11 +1087,12 @@ def birthdays(request):
 @http_basic_auth()
 def gigs_for_date(request):
     """API endpoint to get gigs for a specific date"""
-    from django.http import JsonResponse
+    import datetime
+
+    import requests
     from django.conf import settings
     from django.core.cache import cache
-    import requests
-    import datetime
+    from django.http import JsonResponse
     
     date_str = request.GET.get('date')
     if not date_str:
