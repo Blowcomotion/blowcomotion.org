@@ -627,8 +627,8 @@ def attendance_capture(request, section_slug=None):
                 if response.status_code == 200:
                     gig_data = response.json()
                     gig_title = gig_data.get('title', 'Unknown Gig')
-            except Exception:
-                pass  # If gig fetch fails, continue without gig name
+            except Exception as e:
+                logger.warning("Failed to fetch gig information for gig_id %s: %s", gig_id, e, exc_info=True)
         
         # Store form data in session for persistence
         request.session['attendance_form_data'] = {
