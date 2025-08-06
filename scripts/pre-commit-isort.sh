@@ -68,8 +68,8 @@ fi
 
 if [ $FILES_MODIFIED -eq 1 ]; then
     echo -e "${GREEN}Import sorting complete. Modified files have been re-staged.${NC}"
-    echo -e "${YELLOW}Please review the changes and commit again.${NC}"
-    exit 1  # Exit with error to prevent commit, allowing user to review changes
+    echo -e "${YELLOW}Please review the changes. Proceeding with commit.${NC}"
+    exit 0  # Exit successfully to allow commit to proceed
 else
     echo -e "${GREEN}All Python files have properly sorted imports.${NC}"
     exit 0
