@@ -60,7 +60,6 @@ function updateGigOptions() {
     }
     
     updateGigOptionsTimeout = setTimeout(() => {
-        console.log('Fetching gig options for', selectedDate);
         
         // Show loading indicator
         gigSelect.innerHTML = '<option value="">Loading gigs...</option>';
