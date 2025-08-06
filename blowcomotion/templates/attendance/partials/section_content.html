@@ -44,25 +44,40 @@
                     <div class="mb-3">
                         <label class="form-label">Event Type</label>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="event_type" id="event_type_rehearsal" value="rehearsal" {% if event_type == 'rehearsal' %}checked{% endif %} required onchange="toggleEventNameField()">
+                            <input class="form-check-input" type="radio" name="event_type" id="event_type_rehearsal" value="rehearsal" {% if event_type == 'rehearsal' %}checked{% endif %} required onchange="toggleGigField()">
                             <label class="form-check-label" for="event_type_rehearsal">
                                 Rehearsal
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="event_type" id="event_type_performance" value="performance" {% if event_type == 'performance' %}checked{% endif %} required onchange="toggleEventNameField()">
+                            <input class="form-check-input" type="radio" name="event_type" id="event_type_performance" value="performance" {% if event_type == 'performance' %}checked{% endif %} required onchange="toggleGigField()">
                             <label class="form-check-label" for="event_type_performance">
                                 Performance
                             </label>
                         </div>
                     </div>
 
-                    <!-- Event Name Field -->
-                    <div class="mb-3" id="event_name_field" {% if event_type != 'performance' %}style="display: none;"{% endif %}>
-                        <label for="event_name" class="form-label">Event Name</label>
-                        <input type="text" class="form-control" id="event_name" name="event_name" 
-                               value="{{ event_name }}" placeholder="Enter the name of the performance (optional)">
-                        <div class="form-text">Optional name for the performance (e.g., 'Summer Concert', 'Holiday Show')</div>
+                    <!-- Gig Selection Field (for performances) -->
+                    <div class="mb-3" id="gig_field" {% if event_type != 'performance' %}style="display: none;"{% endif %}>
+                        <label for="gig" class="form-label">Select Gig</label>
+                        <select class="form-control" id="gig" name="gig">
+                            <option value="">No specific gig selected</option>
+                            {% for gig_choice in gig_choices %}
+                                <option value="{{ gig_choice.id }}" {% if gig == gig_choice.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ gig_choice.date }} - {{ gig_choice.title }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Select the specific gig for this performance date</div>
+                    </div>
+
+                    <!-- Notes Field (when no gigs available or for rehearsals) -->
+                    <div class="mb-3" id="notes_field" style="display: none;">
+                        <label for="event_notes" class="form-label">Event Notes</label>
+                        <input type="text" class="form-control" id="event_notes" name="event_notes" 
+                               value="{{ event_notes }}"
+                               placeholder="Enter event description (e.g., 'Community Center Practice', 'Special Rehearsal')">
+                        <div class="form-text">Optional notes about this event</div>
                     </div>
 
                     <!-- Members Section -->

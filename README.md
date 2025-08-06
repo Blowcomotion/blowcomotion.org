@@ -25,6 +25,83 @@ The templates for this codebase are derived from [here](https://themewagon.com/t
 - Create a superuser account
     `python manage.py createsuperuser`
 
+## Development Tools
+
+### Pre-commit Hook for Import Sorting
+
+This project includes a pre-commit git hook that automatically sorts Python imports using `isort` to maintain consistent code formatting.
+
+#### Pre-commit Hook Features
+
+- **Automatic import sorting**: Runs `isort` on all staged Python files before each commit
+- **Smart behavior**: Only processes files that need changes and re-stages them
+- **User-friendly**: Provides clear feedback and allows review of changes
+- **Django-optimized**: Uses Django-specific import grouping and formatting rules
+
+#### How It Works
+
+1. When you run `git commit`, the hook automatically activates
+2. It checks all staged `.py` files for import order issues
+3. If issues are found, it fixes them and re-stages the files
+4. The commit is paused to allow you to review the changes
+5. Run `git commit` again to complete the commit with properly sorted imports
+
+#### Configuration
+
+The import sorting behavior is configured in `pyproject.toml`:
+
+```toml
+[tool.isort]
+profile = "django"
+multi_line_output = 3
+include_trailing_comma = true
+line_length = 88
+known_first_party = "blowcomotion,search,website"
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "DJANGO", "FIRSTPARTY", "LOCALFOLDER"]
+```
+
+#### Manual Usage
+
+You can also run `isort` manually:
+
+```bash
+# Check if files need sorting
+isort --check-only blowcomotion/
+
+# Fix import order
+isort blowcomotion/
+```
+
+#### Requirements
+
+- `isort` must be installed: `pip install isort`
+- The hook is automatically executable after cloning the repository
+
+#### Development Workflow
+
+With the pre-commit hook enabled, your typical development workflow becomes:
+
+```bash
+# Make changes to Python files
+git add blowcomotion/views.py
+
+# Attempt to commit
+git commit -m "Update views"
+
+# If imports need fixing, the hook will:
+# 1. Automatically fix import order
+# 2. Re-stage the fixed files
+# 3. Display a message asking you to review and commit again
+
+# Review the changes (optional)
+git diff --cached
+
+# Commit again (will succeed if no further issues)
+git commit -m "Update views"
+```
+
+This ensures that all Python code follows consistent import formatting standards automatically.
+
 ## Run the web app
 
 - Start the development server
@@ -60,25 +137,48 @@ When deploying to production, always run:
 
 ### Attendance Tracker
 
-The attendance tracking system allows band leaders to record and manage attendance for rehearsals and performances.
+The attendance tracking system allows band leaders to record and manage attendance for rehearsals and performances with integrated gig management.
 
 #### Key Features
 
 - **Section-based tracking**: Record attendance by band section (Woodwinds, High Brass, etc.)
 - **Member and guest support**: Track both band members and guests/visitors
 - **Event types**: Differentiate between rehearsals and performances
+- **Gig integration**: Automatically fetch and select from confirmed gigs when recording performance attendance
+- **Smart gig selection**: Gigs are filtered by date, band (Blowcomotion), and confirmation status
+- **Dynamic form behavior**: Event type selection shows/hides relevant fields (gig selection for performances, notes for rehearsals)
 - **Comprehensive reporting**: View attendance statistics and trends
 - **Admin management**: Full CRUD operations for attendance records through Wagtail admin
+
+#### Gig Integration (New Feature)
+
+The attendance system now integrates with the GigoGig API to provide seamless gig selection:
+
+- **Automatic gig fetching**: When "Performance" is selected, available gigs are loaded for the chosen date
+- **Real-time updates**: Gig options update dynamically when the date changes
+- **Smart filtering**: Only shows confirmed Blowcomotion gigs for the selected date
+- **Caching**: Gig data is cached for 10 minutes to improve performance
+- **Fallback handling**: Gracefully handles API errors and provides fallback options
 
 #### How to Use
 
 1. **Recording Attendance**: Access the attendance capture interface at `/attendance/`
 2. **Section Navigation**: Select a band section to record attendance for that group
 3. **Date Selection**: Choose the date for the attendance session
-4. **Event Type**: Specify whether it's a rehearsal or performance
-5. **Member Selection**: Check off members who attended
-6. **Guest Entry**: Add names of guests/visitors (one per line)
-7. **Reports**: View detailed attendance reports and statistics
+4. **Event Type**:
+   - Select "Rehearsal" for practice sessions (shows notes field)
+   - Select "Performance" for gigs (shows gig selection dropdown)
+5. **Gig Selection** (Performances only): Choose from available confirmed gigs for the selected date
+6. **Member Selection**: Check off members who attended
+7. **Guest Entry**: Add names of guests/visitors (one per line)
+8. **Submit**: Record attendance with automatic event information
+
+#### Technical Features
+
+- **API Integration**: Connects to GigoGig API for real-time gig data
+- **JavaScript Enhancement**: Dynamic form behavior with HTMX for seamless user experience
+- **Caching Strategy**: Intelligent caching to reduce API calls and improve performance
+- **Error Handling**: Robust error handling for network issues and API failures
 
 #### Admin Management
 
@@ -86,6 +186,7 @@ The attendance tracking system allows band leaders to record and manage attendan
 - View, edit, and delete attendance records
 - Filter by date, member, or search notes
 - Export data for external analysis
+- View gig information in attendance notes
 
 #### Security
 
@@ -125,7 +226,30 @@ The birthdays feature displays upcoming band member birthdays to help celebrate 
 The following environment variables can be configured:
 
 - `GIGO_API_URL` - API endpoint for GIGO integration (default: `http://localhost:8000/api`)
-- `GIGO_API_KEY` - API key for GIGO integration
+- `GIGO_API_KEY` - API key for GIGO integration (required for gig features)
+
+### GigoGig API Integration
+
+The attendance system integrates with the GigoGig API to fetch gig information:
+
+#### API Endpoints Used
+
+- **GET /gigs** - Fetches all gigs, filtered client-side for date/band/status
+- **GET /gigs/{id}** - Fetches specific gig details (used for attendance notes)
+
+#### API Configuration
+
+1. Set the `GIGO_API_URL` environment variable to your GigoGig API base URL
+2. Set the `GIGO_API_KEY` environment variable with your API key
+3. The system will automatically fetch gigs when recording performance attendance
+
+#### Local API Endpoint
+
+The application also provides a local API endpoint for gig data:
+
+- **GET /attendance/gigs-for-date/?date=YYYY-MM-DD** - Returns filtered gigs for a specific date
+
+This endpoint is used by the JavaScript frontend and includes caching for performance.
 
 ## Admin Configuration
 

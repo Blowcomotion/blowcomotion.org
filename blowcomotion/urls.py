@@ -19,6 +19,7 @@ urlpatterns = [
     path("attendance/", blowcomotion_views.attendance_capture, name="attendance-main"),
     path("attendance/reports/", blowcomotion_views.attendance_reports, name="attendance-reports"),
     path("attendance/reports/<str:section_slug>/", blowcomotion_views.attendance_section_report_new, name="attendance-section-report"),
+    path("attendance/gigs-for-date/", blowcomotion_views.gigs_for_date, name="gigs-for-date"),
     path("attendance/<str:section_slug>/", blowcomotion_views.attendance_capture, name="attendance-capture"),
     
     # Birthdays URL

@@ -60,18 +60,18 @@
 
 <script>
 (function() {
-    // Reset the form but preserve the date field, event type, and event name
+    // Reset the form but preserve the date field, event type, and gig selection
     const form = document.getElementById('attendanceForm');
     const dateField = document.getElementById('attendance_date');
     const eventTypeRehearsalField = document.getElementById('event_type_rehearsal');
     const eventTypePerformanceField = document.getElementById('event_type_performance');
-    const eventNameField = document.getElementById('event_name');
+    const gigField = document.getElementById('gig');
     
     // Save current values
     const currentDate = dateField ? dateField.value : null;
     const currentEventType = eventTypeRehearsalField && eventTypeRehearsalField.checked ? 'rehearsal' :
                             eventTypePerformanceField && eventTypePerformanceField.checked ? 'performance' : 'rehearsal';
-    const currentEventName = eventNameField ? eventNameField.value : '';
+    const currentGig = gigField ? gigField.value : '';
     
     if (form) {
         // Reset all checkboxes and text areas
@@ -89,29 +89,29 @@
         // Restore event type
         if (currentEventType === 'performance' && eventTypePerformanceField) {
             eventTypePerformanceField.checked = true;
-            // Show event name field
-            const eventNameFieldDiv = document.getElementById('event_name_field');
-            if (eventNameFieldDiv) {
-                eventNameFieldDiv.style.display = 'block';
+            // Show gig field
+            const gigFieldDiv = document.getElementById('gig_field');
+            if (gigFieldDiv) {
+                gigFieldDiv.style.display = 'block';
             }
         } else if (eventTypeRehearsalField) {
             eventTypeRehearsalField.checked = true;
-            // Hide event name field
-            const eventNameFieldDiv = document.getElementById('event_name_field');
-            if (eventNameFieldDiv) {
-                eventNameFieldDiv.style.display = 'none';
+            // Hide gig field
+            const gigFieldDiv = document.getElementById('gig_field');
+            if (gigFieldDiv) {
+                gigFieldDiv.style.display = 'none';
             }
         }
         
-        // Restore event name
-        if (eventNameField) {
-            eventNameField.value = currentEventName;
+        // Restore gig selection
+        if (gigField) {
+            gigField.value = currentGig;
         }
     }
     
     // Trigger toggle function to ensure proper field visibility
-    if (typeof toggleEventNameField === 'function') {
-        toggleEventNameField();
+    if (typeof toggleGigField === 'function') {
+        toggleGigField();
     }
     
     // Update checkmarks to reflect the newly submitted attendance records
