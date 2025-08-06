@@ -802,12 +802,20 @@ def attendance_capture(request, section_slug=None):
 
     # Get gig choices for the current date using cached endpoint
     gig_choices = []
-    if isinstance(attendance_date, str):
-        selected_date = datetime.strptime(attendance_date, '%Y-%m-%d').date()
-        date_str = attendance_date
-    else:
-        selected_date = attendance_date
-        date_str = attendance_date.strftime('%Y-%m-%d')
+    date_str = None
+    
+    try:
+        if isinstance(attendance_date, str):
+            selected_date = datetime.strptime(attendance_date, '%Y-%m-%d').date()
+            date_str = attendance_date
+        else:
+            selected_date = attendance_date
+            date_str = attendance_date.strftime('%Y-%m-%d')
+    except (ValueError, TypeError) as e:
+        logger.warning("Invalid attendance_date format: %s, error: %s", attendance_date, e)
+        # Use today's date as fallback
+        selected_date = date.today()
+        date_str = selected_date.strftime('%Y-%m-%d')
         
     # Create cache key for this date
     cache_key = f"gigs_for_date_{date_str}"
@@ -1144,7 +1152,7 @@ def gigs_for_date(request):
     except ValueError:
         return JsonResponse({'error': 'Invalid date format'}, status=400)
     except Exception as e:
-        # Use the original date_str from request if available, otherwise 'unknown'
+        # Use the original date parameter from request if available, otherwise 'unknown'
         date_param = request.GET.get('date', 'unknown')
         logger.error("Unexpected error in gigs_for_date for date %s: %s", date_param, e, exc_info=True)
         return JsonResponse({'error': f'Error fetching gigs: {str(e)}'}, status=500)
