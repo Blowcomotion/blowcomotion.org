@@ -40,6 +40,40 @@ logger = logging.getLogger(__name__)
 BIRTHDAY_RANGE_DAYS = 10
 
 
+def make_gigo_api_request(endpoint, timeout=10, retries=2):
+    """
+    Helper function to make requests to the Gig-O-Matic API with proper error handling.
+    
+    Args:
+        endpoint: The API endpoint (e.g., '/gigs' or '/gigs/{id}')
+        timeout: Request timeout in seconds (default: 10)
+        retries: Number of retry attempts (default: 2)
+        
+    Returns:
+        dict: Response JSON data if successful, None if failed
+    """
+    url = f"{settings.GIGO_API_URL}{endpoint}"
+    headers = {"X-API-KEY": settings.GIGO_API_KEY}
+    
+    for attempt in range(retries + 1):
+        try:
+            response = requests.get(url, headers=headers, timeout=timeout)
+            response.raise_for_status()
+            return response.json()
+        except (requests.exceptions.RequestException, requests.exceptions.Timeout, requests.exceptions.ReadTimeout) as e:
+            if attempt < retries:
+                logger.info("API request attempt %d failed for %s, retrying: %s", attempt + 1, endpoint, e)
+                continue
+            else:
+                logger.warning("All API request attempts failed for %s: %s", endpoint, e, exc_info=True)
+                return None
+        except Exception as e:
+            logger.error("Unexpected error making API request to %s: %s", endpoint, e, exc_info=True)
+            return None
+    
+    return None
+
+
 def get_birthday(year, month, day):
     """
     Helper function to get a birthday date for a given year, handling leap year edge cases.
@@ -618,17 +652,9 @@ def attendance_capture(request, section_slug=None):
         # Get gig information if a gig is selected
         gig_title = None
         if gig_id:
-            try:
-                response = requests.get(
-                    f"{settings.GIGO_API_URL}/gigs/{gig_id}",
-                    headers={"X-API-KEY": settings.GIGO_API_KEY},
-                    timeout=5
-                )
-                if response.status_code == 200:
-                    gig_data = response.json()
-                    gig_title = gig_data.get('title', 'Unknown Gig')
-            except Exception as e:
-                logger.warning("Failed to fetch gig information for gig_id %s: %s", gig_id, e, exc_info=True)
+            gig_data = make_gigo_api_request(f"/gigs/{gig_id}")
+            if gig_data:
+                gig_title = gig_data.get('title', 'Unknown Gig')
         
         # Store form data in session for persistence
         request.session['attendance_form_data'] = {
@@ -777,47 +803,38 @@ def attendance_capture(request, section_slug=None):
 
     # Get gig choices for the current date using cached endpoint
     gig_choices = []
-    try:
-        if isinstance(attendance_date, str):
-            selected_date = datetime.strptime(attendance_date, '%Y-%m-%d').date()
-            date_str = attendance_date
-        else:
-            selected_date = attendance_date
-            date_str = attendance_date.strftime('%Y-%m-%d')
-            
-        # Create cache key for this date
-        cache_key = f"gigs_for_date_{date_str}"
+    if isinstance(attendance_date, str):
+        selected_date = datetime.strptime(attendance_date, '%Y-%m-%d').date()
+        date_str = attendance_date
+    else:
+        selected_date = attendance_date
+        date_str = attendance_date.strftime('%Y-%m-%d')
         
-        # Check cache first
-        cached_result = cache.get(cache_key)
-        if cached_result is not None:
-            gig_choices = cached_result.get('gigs', [])
-        else:
-            # If not cached, fetch from API and cache the result
-            response = requests.get(
-                f"{settings.GIGO_API_URL}/gigs",
-                headers={"X-API-KEY": settings.GIGO_API_KEY},
-                timeout=5
-            )
-            if response.status_code == 200:
-                gigs_data = response.json()
-                if gigs_data.get("gigs"):
-                    # Filter gigs for the specific date
-                    for gig_item in gigs_data["gigs"]:
-                        if (gig_item.get("date") == date_str and 
-                            gig_item.get("gig_status", "").lower() == "confirmed" and 
-                            gig_item.get("band", "").lower() == "blowcomotion"):
-                            gig_choices.append({
-                                'id': gig_item.get('id'),
-                                'title': gig_item.get('title', 'Untitled Gig'),
-                                'date': gig_item.get('date'),
-                            })
-                
-                # Cache the result for 10 minutes
-                result = {'gigs': gig_choices}
-                cache.set(cache_key, result, 600)
-    except Exception:
-        logger.exception("Failed to fetch gigs for date %s", attendance_date)
+    # Create cache key for this date
+    cache_key = f"gigs_for_date_{date_str}"
+    
+    # Check cache first
+    cached_result = cache.get(cache_key)
+    if cached_result is not None:
+        gig_choices = cached_result.get('gigs', [])
+    else:
+        # If not cached, fetch from API and cache the result
+        gigs_data = make_gigo_api_request("/gigs")
+        if gigs_data and gigs_data.get("gigs"):
+            # Filter gigs for the specific date
+            for gig_item in gigs_data["gigs"]:
+                if (gig_item.get("date") == date_str and 
+                    gig_item.get("gig_status", "").lower() == "confirmed" and 
+                    gig_item.get("band", "").lower() == "blowcomotion"):
+                    gig_choices.append({
+                        'id': gig_item.get('id'),
+                        'title': gig_item.get('title', 'Untitled Gig'),
+                        'date': gig_item.get('date'),
+                    })
+        
+        # Cache the result for 10 minutes
+        result = {'gigs': gig_choices}
+        cache.set(cache_key, result, 600)
     
     context = {
         'section': section,
@@ -1102,17 +1119,10 @@ def gigs_for_date(request):
             return JsonResponse(cached_result)
         
         # Fetch gigs from API
-        response = requests.get(
-            f"{settings.GIGO_API_URL}/gigs",
-            headers={"X-API-KEY": settings.GIGO_API_KEY},
-            timeout=5
-        )
-        response.raise_for_status()
-        
-        gigs_data = response.json()
+        gigs_data = make_gigo_api_request("/gigs")
         filtered_gigs = []
         
-        if gigs_data.get("gigs"):
+        if gigs_data and gigs_data.get("gigs"):
             # Filter gigs for the specific date and other criteria
             for gig in gigs_data["gigs"]:
                 if (gig.get("date") == date_str and 
@@ -1135,4 +1145,5 @@ def gigs_for_date(request):
     except ValueError:
         return JsonResponse({'error': 'Invalid date format'}, status=400)
     except Exception as e:
+        logger.error("Unexpected error in gigs_for_date for date %s: %s", date_str, e, exc_info=True)
         return JsonResponse({'error': f'Error fetching gigs: {str(e)}'}, status=500)
