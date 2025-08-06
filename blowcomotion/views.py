@@ -60,7 +60,7 @@ def make_gigo_api_request(endpoint, timeout=10, retries=2):
             response = requests.get(url, headers=headers, timeout=timeout)
             response.raise_for_status()
             return response.json()
-        except (requests.exceptions.RequestException, requests.exceptions.Timeout, requests.exceptions.ReadTimeout) as e:
+        except requests.exceptions.RequestException as e:
             if attempt < retries:
                 logger.info("API request attempt %d failed for %s, retrying: %s", attempt + 1, endpoint, e)
                 continue
