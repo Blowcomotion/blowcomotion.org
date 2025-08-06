@@ -26,32 +26,45 @@
                     <div class="mb-3">
                         <label for="attendance_date" class="form-label">Date</label>
                         <input type="date" class="form-control" id="attendance_date" name="attendance_date" 
-                               value="{{ today|date:'Y-m-d' }}" required>
+                               value="{{ attendance_date|date:'Y-m-d' }}" required>
                     </div>
 
                     <!-- Event Type Field -->
                     <div class="mb-3">
                         <label class="form-label">Event Type</label>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="event_type" id="event_type_rehearsal" value="rehearsal" checked required onchange="toggleEventNameField()">
+                            <input class="form-check-input" type="radio" name="event_type" id="event_type_rehearsal" value="rehearsal" 
+                                   {% if event_type == 'rehearsal' %}checked{% endif %} required onchange="toggleGigField()">
                             <label class="form-check-label" for="event_type_rehearsal">
                                 Rehearsal
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="event_type" id="event_type_performance" value="performance" required onchange="toggleEventNameField()">
+                            <input class="form-check-input" type="radio" name="event_type" id="event_type_performance" value="performance" 
+                                   {% if event_type == 'performance' %}checked{% endif %} required onchange="toggleGigField()">
                             <label class="form-check-label" for="event_type_performance">
                                 Performance
                             </label>
                         </div>
                     </div>
 
-                    <!-- Event Name Field -->
-                    <div class="mb-3" id="event_name_field" style="display: none;">
-                        <label for="event_name" class="form-label">Event Name</label>
-                        <input type="text" class="form-control" id="event_name" name="event_name" 
-                               placeholder="Enter the name of the performance (optional)">
-                        <div class="form-text">Optional name for the performance (e.g., 'Summer Concert', 'Holiday Show')</div>
+                    <!-- Gig Selection Field (for performances) -->
+                    <div class="mb-3" id="gig_field" style="display: none;">
+                        <label for="gig" class="form-label">Select Gig</label>
+                        <select class="form-control" id="gig" name="gig">
+                            <option value="">No specific gig selected</option>
+                            <!-- Gig options will be populated dynamically based on the date -->
+                        </select>
+                        <div class="form-text">Select the specific gig for this performance date</div>
+                    </div>
+
+                    <!-- Notes Field (when no gigs available or for rehearsals) -->
+                    <div class="mb-3" id="notes_field" style="display: none;">
+                        <label for="event_notes" class="form-label">Event Notes</label>
+                        <input type="text" class="form-control" id="event_notes" name="event_notes" 
+                               value="{{ event_notes }}"
+                               placeholder="Enter event description (e.g., 'Community Center Practice', 'Special Rehearsal')">
+                        <div class="form-text">Optional notes about this event</div>
                     </div>
 
                     <!-- Members Section -->

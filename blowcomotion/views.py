@@ -600,13 +600,33 @@ def attendance_capture(request, section_slug=None):
     if request.method == 'POST':
         attendance_date_str = request.POST.get('attendance_date', date.today().strftime('%Y-%m-%d'))
         event_type = request.POST.get('event_type', 'rehearsal')
-        event_name = request.POST.get('event_name', '').strip()
+        gig_id = request.POST.get('gig', '').strip()
+        event_notes = request.POST.get('event_notes', '').strip()
+        
+        # Get gig information if a gig is selected
+        gig_title = None
+        if gig_id:
+            try:
+                from django.conf import settings
+                import requests
+                
+                response = requests.get(
+                    f"{settings.GIGO_API_URL}/gigs/{gig_id}",
+                    headers={"X-API-KEY": settings.GIGO_API_KEY},
+                    timeout=5
+                )
+                if response.status_code == 200:
+                    gig_data = response.json()
+                    gig_title = gig_data.get('title', 'Unknown Gig')
+            except Exception:
+                pass  # If gig fetch fails, continue without gig name
         
         # Store form data in session for persistence
         request.session['attendance_form_data'] = {
             'attendance_date': attendance_date_str,
             'event_type': event_type,
-            'event_name': event_name
+            'gig': gig_id,
+            'event_notes': event_notes
         }
         
         # Convert string to date object for consistent handling
@@ -616,11 +636,17 @@ def attendance_capture(request, section_slug=None):
         else:
             attendance_date = attendance_date_str
         
-        # Create notes based on event type and name
-        if event_type == 'performance' and event_name:
-            event_notes = f"Performance: {event_name}"
+        # Create notes based on event type, gig, and custom notes
+        if event_type == 'performance' and gig_title:
+            event_notes_for_record = f"Performance: {gig_title}"
+        elif event_type == 'performance' and event_notes:
+            event_notes_for_record = f"Performance: {event_notes}"
+        elif event_type == 'rehearsal' and event_notes:
+            event_notes_for_record = f"Rehearsal: {event_notes}"
+        elif event_notes:
+            event_notes_for_record = event_notes
         else:
-            event_notes = event_type.capitalize()
+            event_notes_for_record = event_type.capitalize()
         
         success_count = 0
         errors = []
@@ -634,20 +660,20 @@ def attendance_capture(request, section_slug=None):
                     attendance_record, created = AttendanceRecord.objects.get_or_create(
                         date=attendance_date,
                         member=member,
-                        defaults={'notes': event_notes}
+                        defaults={'notes': event_notes_for_record}
                     )
                     if created:
                         success_count += 1
                     else:
                         # Update existing record to append event type in notes if not already present
                         if not attendance_record.notes:
-                            attendance_record.notes = event_notes
+                            attendance_record.notes = event_notes_for_record
                             attendance_record.save()
                         else:
-                            # Only append event_notes if it's not already present as a full entry
+                            # Only append event_notes_for_record if it's not already present as a full entry
                             notes_entries = [entry.strip() for entry in attendance_record.notes.split(';') if entry.strip()]
-                            if event_notes not in notes_entries:
-                                notes_entries.append(event_notes)
+                            if event_notes_for_record not in notes_entries:
+                                notes_entries.append(event_notes_for_record)
                                 attendance_record.notes = '; '.join(notes_entries)
                                 attendance_record.save()
                     
@@ -665,7 +691,7 @@ def attendance_capture(request, section_slug=None):
                 guest_names = [name.strip() for name in request.POST[guest_field].split('\n') if name.strip()]
                 for guest_name in guest_names:
                     try:
-                        guest_notes = f"Guest - {event_notes}"
+                        guest_notes = f"Guest - {event_notes_for_record}"
                         AttendanceRecord.objects.get_or_create(
                             date=attendance_date,
                             guest_name=guest_name,
@@ -723,7 +749,8 @@ def attendance_capture(request, section_slug=None):
         attendance_date = form_data.get('attendance_date', date.today().strftime('%Y-%m-%d'))
     
     event_type = form_data.get('event_type', 'rehearsal')
-    event_name = form_data.get('event_name', '')
+    gig = form_data.get('gig', '')
+    event_notes = form_data.get('event_notes', '')
     
     # Get attendance records for the selected date to show checkmarks
     if isinstance(attendance_date, str):
@@ -741,6 +768,56 @@ def attendance_capture(request, section_slug=None):
             ).values_list('member_id', flat=True)
         )
 
+    # Get gig choices for the current date using cached endpoint
+    gig_choices = []
+    try:
+        from django.core.cache import cache
+        import datetime
+        
+        if isinstance(attendance_date, str):
+            selected_date = datetime.datetime.strptime(attendance_date, '%Y-%m-%d').date()
+            date_str = attendance_date
+        else:
+            selected_date = attendance_date
+            date_str = attendance_date.strftime('%Y-%m-%d')
+            
+        # Create cache key for this date
+        cache_key = f"gigs_for_date_{date_str}"
+        
+        # Check cache first
+        cached_result = cache.get(cache_key)
+        if cached_result is not None:
+            gig_choices = cached_result.get('gigs', [])
+        else:
+            # If not cached, fetch from API and cache the result
+            from django.conf import settings
+            import requests
+            
+            response = requests.get(
+                f"{settings.GIGO_API_URL}/gigs",
+                headers={"X-API-KEY": settings.GIGO_API_KEY},
+                timeout=5
+            )
+            if response.status_code == 200:
+                gigs_data = response.json()
+                if gigs_data.get("gigs"):
+                    # Filter gigs for the specific date
+                    for gig_item in gigs_data["gigs"]:
+                        if (gig_item.get("date") == date_str and 
+                            gig_item.get("gig_status", "").lower() == "confirmed" and 
+                            gig_item.get("band", "").lower() == "blowcomotion"):
+                            gig_choices.append({
+                                'id': gig_item.get('id'),
+                                'title': gig_item.get('title', 'Untitled Gig'),
+                                'date': gig_item.get('date'),
+                            })
+                
+                # Cache the result for 10 minutes
+                result = {'gigs': gig_choices}
+                cache.set(cache_key, result, 600)
+    except Exception:
+        pass  # If gig fetch fails, continue with empty list
+    
     context = {
         'section': section,
         'section_members': section_members,
@@ -750,7 +827,9 @@ def attendance_capture(request, section_slug=None):
         'today': date.today(),
         'attendance_date': attendance_date,
         'event_type': event_type,
-        'event_name': event_name,
+        'gig': gig,
+        'event_notes': event_notes,
+        'gig_choices': gig_choices,
         'recorded_member_ids': recorded_member_ids
     }
     
@@ -1000,3 +1079,65 @@ def birthdays(request):
     }
     
     return render(request, 'birthdays.html', context)
+
+
+@http_basic_auth()
+def gigs_for_date(request):
+    """API endpoint to get gigs for a specific date"""
+    from django.http import JsonResponse
+    from django.conf import settings
+    from django.core.cache import cache
+    import requests
+    import datetime
+    
+    date_str = request.GET.get('date')
+    if not date_str:
+        return JsonResponse({'error': 'Date parameter is required'}, status=400)
+    
+    try:
+        # Validate date format
+        selected_date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        # Create cache key for this date
+        cache_key = f"gigs_for_date_{date_str}"
+        
+        # Check cache first
+        cached_result = cache.get(cache_key)
+        if cached_result is not None:
+            return JsonResponse(cached_result)
+        
+        # Fetch gigs from API
+        response = requests.get(
+            f"{settings.GIGO_API_URL}/gigs",
+            headers={"X-API-KEY": settings.GIGO_API_KEY},
+            timeout=5
+        )
+        response.raise_for_status()
+        
+        gigs_data = response.json()
+        filtered_gigs = []
+        
+        if gigs_data.get("gigs"):
+            # Filter gigs for the specific date and other criteria
+            for gig in gigs_data["gigs"]:
+                if (gig.get("date") == date_str and 
+                    gig.get("gig_status", "").lower() == "confirmed" and 
+                    gig.get("band", "").lower() == "blowcomotion"):
+                    filtered_gigs.append({
+                        'id': gig.get('id'),
+                        'title': gig.get('title', 'Untitled Gig'),
+                        'date': gig.get('date'),
+                        'address': gig.get('address', '')
+                    })
+        
+        result = {'gigs': filtered_gigs}
+        
+        # Cache the result for 10 minutes
+        cache.set(cache_key, result, 600)
+        
+        return JsonResponse(result)
+        
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': f'Error fetching gigs: {str(e)}'}, status=500)

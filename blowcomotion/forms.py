@@ -64,19 +64,21 @@ class SectionAttendanceForm(forms.Form):
         help_text="Type of event"
     )
     
-    event_name = forms.CharField(
-        max_length=255,
+    gig = forms.ChoiceField(
+        choices=[],
         required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Event name (optional for performances)',
+        widget=forms.Select(attrs={
             'class': 'form-control'
         }),
-        help_text="Optional name for the performance (e.g., 'Summer Concert', 'Holiday Show')"
+        help_text="Select a gig for this performance date (if applicable)"
     )
     
     def __init__(self, section=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.section = section
+        
+        # Populate gig choices with available gigs
+        self._populate_gig_choices()
         
         if section:
             # Get all active members in this section
@@ -116,6 +118,51 @@ class SectionAttendanceForm(forms.Form):
                         'class': 'form-control'
                     })
                 )
+
+    def _populate_gig_choices(self):
+        """Populate gig choices from GigoGig API"""
+        try:
+            from django.conf import settings
+            import requests
+            import datetime
+            
+            # Fetch gigs from API
+            response = requests.get(
+                f"{settings.GIGO_API_URL}/gigs",
+                headers={"X-API-KEY": settings.GIGO_API_KEY},
+                timeout=5
+            )
+            response.raise_for_status()
+            
+            gigs_data = response.json()
+            if gigs_data.get("gigs"):
+                # Filter gigs: confirmed, blowcomotion band, future dates
+                today = datetime.date.today().isoformat()
+                filtered_gigs = [
+                    gig for gig in gigs_data["gigs"]
+                    if (gig.get("date", "") >= today and 
+                        gig.get("gig_status", "").lower() == "confirmed" and 
+                        gig.get("band", "").lower() == "blowcomotion")
+                ]
+                
+                # Sort by date
+                filtered_gigs.sort(key=lambda g: g.get("date", ""))
+                
+                # Create choices list
+                choices = [('', 'No specific gig selected')]
+                for gig in filtered_gigs:
+                    gig_date = gig.get("date", "")
+                    gig_title = gig.get("title", "Untitled Gig")
+                    choice_label = f"{gig_date} - {gig_title}"
+                    choices.append((gig["id"], choice_label))
+                
+                self.fields['gig'].choices = choices
+            else:
+                self.fields['gig'].choices = [('', 'No gigs available')]
+                
+        except Exception as e:
+            # Fallback if API is unavailable
+            self.fields['gig'].choices = [('', 'Unable to load gigs')]
 
 
 class AttendanceReportFilterForm(forms.Form):
