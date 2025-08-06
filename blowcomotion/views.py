@@ -71,7 +71,6 @@ def make_gigo_api_request(endpoint, timeout=10, retries=2):
             logger.error("Unexpected error making API request to %s: %s", endpoint, e, exc_info=True)
             return None
     
-    return None
 
 
 def get_birthday(year, month, day):
