@@ -44,7 +44,6 @@ function updateGigOptions() {
     
     // Check cache first
     if (gigOptionsCache[selectedDate]) {
-        console.log('Using cached gig options for', selectedDate);
         populateGigSelect(gigSelect, gigOptionsCache[selectedDate]);
         return;
     }
