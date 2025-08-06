@@ -87,7 +87,7 @@ function updateGigOptions() {
             })
             .catch(error => {
                 if (error.name === 'AbortError') {
-                    console.log('Gig request was cancelled');
+                    // Request was cancelled; do nothing.
                 } else {
                     console.error('Error fetching gigs:', error);
                     gigSelect.innerHTML = '<option value="">Error loading gigs</option>';
