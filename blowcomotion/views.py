@@ -712,9 +712,66 @@ def attendance_capture(request, section_slug=None):
                     
                     # Update member's last_seen field
                     member.last_seen = attendance_date
-                    member.save(update_fields=['last_seen'])
+                    
+                    # Update member's join_date if it hasn't been set yet and set is_active to True if it's False
+                    fields_to_update = ['last_seen']
+                    if not member.join_date:
+                        member.join_date = attendance_date
+                        fields_to_update.append('join_date')
+                    if not member.is_active:
+                        member.is_active = True
+                        fields_to_update.append('is_active')
+                    
+                    member.save(update_fields=fields_to_update)
                 except Exception as e:
                     errors.append(f"Error recording attendance for {member}: {str(e)}")
+        
+        # Also process any additional member IDs that might not be in section_members (e.g., inactive members)
+        processed_member_ids = {member.id for member in section_members}
+        for field_name, field_value in request.POST.items():
+            if field_name.startswith('member_') and field_value == 'on':
+                try:
+                    member_id = int(field_name.split('_')[1])
+                    if member_id not in processed_member_ids:
+                        # This is a member not in section_members (probably inactive)
+                        member = Member.objects.get(id=member_id)
+                        
+                        # Create or update attendance record
+                        attendance_record, created = AttendanceRecord.objects.get_or_create(
+                            date=attendance_date,
+                            member=member,
+                            defaults={'notes': event_notes_for_record}
+                        )
+                        if created:
+                            success_count += 1
+                        else:
+                            # Update existing record to append event type in notes if not already present
+                            if not attendance_record.notes:
+                                attendance_record.notes = event_notes_for_record
+                                attendance_record.save()
+                            else:
+                                # Only append event_notes_for_record if it's not already present as a full entry
+                                notes_entries = [entry.strip() for entry in attendance_record.notes.split(';') if entry.strip()]
+                                if event_notes_for_record not in notes_entries:
+                                    notes_entries.append(event_notes_for_record)
+                                    attendance_record.notes = '; '.join(notes_entries)
+                                    attendance_record.save()
+                        
+                        # Update member's last_seen field
+                        member.last_seen = attendance_date
+                        
+                        # Update member's join_date if it hasn't been set yet and set is_active to True if it's False
+                        fields_to_update = ['last_seen']
+                        if not member.join_date:
+                            member.join_date = attendance_date
+                            fields_to_update.append('join_date')
+                        if not member.is_active:
+                            member.is_active = True
+                            fields_to_update.append('is_active')
+                        
+                        member.save(update_fields=fields_to_update)
+                except (ValueError, Member.DoesNotExist, Exception) as e:
+                    errors.append(f"Error processing member ID {field_name}: {str(e)}")
         
         # Process guest attendance
         if section or is_no_section:
@@ -869,6 +926,75 @@ def attendance_capture(request, section_slug=None):
             return render(request, 'attendance/partials/capture_content.html', context)
     
     return render(request, 'attendance/capture.html', context)
+
+
+@http_basic_auth()
+@require_http_methods(["GET", "POST"])
+def inactive_members(request):
+    """View for managing inactive members - display list with reactivation buttons"""
+    
+    # Get all inactive members
+    inactive_members_list = Member.objects.filter(is_active=False).order_by('first_name', 'last_name')
+    
+    # Handle POST requests for member reactivation
+    if request.method == 'POST':
+        member_id = request.POST.get('member_id')
+        if member_id:
+            try:
+                member = Member.objects.get(id=member_id, is_active=False)
+                member.is_active = True
+                member.save(update_fields=['is_active'])
+                
+                # Return success message for HTMX requests
+                context = {
+                    'message': f'Successfully reactivated {member.first_name} {member.last_name}',
+                    'reactivated_member': member,
+                    'sections': Section.objects.all().order_by('name')  # Add sections for navigation
+                }
+                
+                if request.headers.get('HX-Request'):
+                    # Refresh the inactive members list after reactivation
+                    inactive_members_list = Member.objects.filter(is_active=False).order_by('first_name', 'last_name')
+                    context['inactive_members'] = inactive_members_list
+                    return render(request, 'attendance/partials/inactive_members_content.html', context)
+                else:
+                    context['inactive_members'] = inactive_members_list
+                    return render(request, 'attendance/inactive_members.html', context)
+                    
+            except Member.DoesNotExist:
+                context = {
+                    'error': 'Member not found or already active',
+                    'inactive_members': inactive_members_list,
+                    'sections': Section.objects.all().order_by('name')  # Add sections for navigation
+                }
+                
+                if request.headers.get('HX-Request'):
+                    return render(request, 'attendance/partials/inactive_members_content.html', context)
+                else:
+                    return render(request, 'attendance/inactive_members.html', context)
+            except Exception as e:
+                context = {
+                    'error': f'Error reactivating member: {str(e)}',
+                    'inactive_members': inactive_members_list,
+                    'sections': Section.objects.all().order_by('name')  # Add sections for navigation
+                }
+                
+                if request.headers.get('HX-Request'):
+                    return render(request, 'attendance/partials/inactive_members_content.html', context)
+                else:
+                    return render(request, 'attendance/inactive_members.html', context)
+    
+    # GET request - display inactive members list
+    context = {
+        'inactive_members': inactive_members_list,
+        'sections': Section.objects.all().order_by('name')  # For navigation
+    }
+    
+    # For HTMX requests, return just the content
+    if request.headers.get('HX-Request'):
+        return render(request, 'attendance/partials/inactive_members_content.html', context)
+    
+    return render(request, 'attendance/inactive_members.html', context)
 
 
 @http_basic_auth()

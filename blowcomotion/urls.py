@@ -1,12 +1,13 @@
-from django.conf import settings
-from django.contrib import admin
-from django.urls import include, path
 from wagtail import urls as wagtail_urls
 from wagtail.admin import urls as wagtailadmin_urls
 from wagtail.documents import urls as wagtaildocs_urls
 
-from search import views as search_views
+from django.conf import settings
+from django.contrib import admin
+from django.urls import include, path
+
 import blowcomotion.views as blowcomotion_views
+from search import views as search_views
 
 urlpatterns = [
     path("django-admin/", admin.site.urls),
@@ -20,6 +21,7 @@ urlpatterns = [
     path("attendance/reports/", blowcomotion_views.attendance_reports, name="attendance-reports"),
     path("attendance/reports/<str:section_slug>/", blowcomotion_views.attendance_section_report_new, name="attendance-section-report"),
     path("attendance/gigs-for-date/", blowcomotion_views.gigs_for_date, name="gigs-for-date"),
+    path("attendance/inactive-members/", blowcomotion_views.inactive_members, name="inactive-members"),
     path("attendance/<str:section_slug>/", blowcomotion_views.attendance_capture, name="attendance-capture"),
     
     # Birthdays URL

@@ -25,6 +25,20 @@
                             <i class="fa fa-check"></i> Record {{ section.name }}
                         </a>
                     {% endfor %}
+                    <a href="{% url 'attendance-capture' 'no-section' %}" 
+                       hx-get="{% url 'attendance-capture' 'no-section' %}"
+                       hx-target="#attendance-container"
+                       class="btn btn-success mx-1 my-2">
+                        <span class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
+                        <i class="fa fa-question-circle"></i> No Section
+                    </a>
+                    <a href="{% url 'inactive-members' %}" 
+                       hx-get="{% url 'inactive-members' %}"
+                       hx-target="#attendance-container"
+                       class="btn btn-warning mx-1 my-2">
+                        <span class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
+                        <i class="fa fa-user-times"></i> Inactive Members
+                    </a>
                 </div>
             </div>
         </div>

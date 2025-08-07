@@ -33,6 +33,14 @@
                         <span id="section-loading-no-section" class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
                         <i class="fa fa-question-circle"></i> No Section
                     </a>
+                    <a href="{% url 'inactive-members' %}" 
+                       hx-get="{% url 'inactive-members' %}"
+                       hx-target="#attendance-container"
+                       hx-indicator="#section-loading-inactive"
+                       class="btn btn-outline-warning mb-2">
+                        <span id="section-loading-inactive" class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
+                        <i class="fa fa-user-times"></i> Inactive Members
+                    </a>
                 </div>
             </div>
         </div>

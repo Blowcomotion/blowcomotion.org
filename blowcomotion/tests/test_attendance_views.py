@@ -4,20 +4,22 @@ Unit tests for attendance tracking views.
 
 import base64
 from datetime import date, timedelta
-from django.test import TestCase, Client, override_settings
-from django.urls import reverse
-from django.contrib.auth.models import User
-from django.http import Http404
-from wagtail.models import Site
 from unittest.mock import patch
 
+from wagtail.models import Site
+
+from django.contrib.auth.models import User
+from django.http import Http404
+from django.test import Client, TestCase, override_settings
+from django.urls import reverse
+
 from blowcomotion.models import (
-    AttendanceRecord, 
-    Member, 
-    Section, 
-    Instrument, 
+    AttendanceRecord,
+    Instrument,
+    Member,
     MemberInstrument,
-    SiteSettings
+    Section,
+    SiteSettings,
 )
 
 
@@ -725,6 +727,143 @@ class AttendanceCaptureViewTests(TestCase):
         )
         self.assertEqual(guest_record.notes, 'Guest - Rehearsal')
 
+    def test_attendance_capture_post_populates_join_date_if_null(self):
+        """Test that recording attendance populates join_date if it hasn't been set yet"""
+        attendance_date = date.today()
+        
+        # Create a member without a join_date
+        member_no_join_date = Member.objects.create(
+            first_name="New",
+            last_name="Member",
+            email="new.member@example.com",
+            is_active=True,
+            join_date=None  # Explicitly set to None
+        )
+        MemberInstrument.objects.create(member=member_no_join_date, instrument=self.trumpet)
+        
+        # Verify join_date is None before attendance
+        self.assertIsNone(member_no_join_date.join_date)
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['high-brass']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                f'member_{member_no_join_date.id}': 'on',
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check that join_date was populated with attendance date
+        member_no_join_date.refresh_from_db()
+        self.assertEqual(member_no_join_date.join_date, attendance_date)
+        
+        # Check that last_seen was also updated
+        self.assertEqual(member_no_join_date.last_seen, attendance_date)
+
+    def test_attendance_capture_post_preserves_existing_join_date(self):
+        """Test that recording attendance preserves existing join_date"""
+        attendance_date = date.today()
+        existing_join_date = date.today() - timedelta(days=30)
+        
+        # Create a member with an existing join_date
+        member_with_join_date = Member.objects.create(
+            first_name="Existing",
+            last_name="Member",
+            email="existing.member@example.com",
+            is_active=True,
+            join_date=existing_join_date
+        )
+        MemberInstrument.objects.create(member=member_with_join_date, instrument=self.trumpet)
+        
+        # Verify join_date is set before attendance
+        self.assertEqual(member_with_join_date.join_date, existing_join_date)
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['high-brass']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                f'member_{member_with_join_date.id}': 'on',
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check that join_date was NOT changed
+        member_with_join_date.refresh_from_db()
+        self.assertEqual(member_with_join_date.join_date, existing_join_date)
+        
+        # Check that last_seen was updated
+        self.assertEqual(member_with_join_date.last_seen, attendance_date)
+
+    def test_attendance_capture_post_activates_inactive_member(self):
+        """Test that recording attendance sets is_active to True for inactive members"""
+        attendance_date = date.today()
+        
+        # Create an inactive member
+        inactive_member = Member.objects.create(
+            first_name="Inactive",
+            last_name="Member",
+            email="inactive.member@example.com",
+            is_active=False,  # Explicitly set to False
+            join_date=date.today() - timedelta(days=30)
+        )
+        MemberInstrument.objects.create(member=inactive_member, instrument=self.trumpet)
+        
+        # Verify member is inactive before attendance
+        self.assertFalse(inactive_member.is_active)
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['high-brass']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                f'member_{inactive_member.id}': 'on',
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check that is_active was set to True
+        inactive_member.refresh_from_db()
+        self.assertTrue(inactive_member.is_active)
+        
+        # Check that last_seen was also updated
+        self.assertEqual(inactive_member.last_seen, attendance_date)
+
+    def test_attendance_capture_post_preserves_active_status(self):
+        """Test that recording attendance preserves is_active=True for already active members"""
+        attendance_date = date.today()
+        
+        # Create an active member
+        active_member = Member.objects.create(
+            first_name="Active",
+            last_name="Member",
+            email="active.member@example.com",
+            is_active=True,
+            join_date=date.today() - timedelta(days=30)
+        )
+        MemberInstrument.objects.create(member=active_member, instrument=self.trumpet)
+        
+        # Verify member is active before attendance
+        self.assertTrue(active_member.is_active)
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['high-brass']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                f'member_{active_member.id}': 'on',
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check that is_active remains True
+        active_member.refresh_from_db()
+        self.assertTrue(active_member.is_active)
+        
+        # Check that last_seen was updated
+        self.assertEqual(active_member.last_seen, attendance_date)
+
 
 class AttendanceReportsViewTests(TestCase):
     """Test cases for the attendance_reports view"""
@@ -1025,6 +1164,77 @@ class AttendanceSectionReportViewTests(TestCase):
 
 
 class AttendanceViewsIntegrationTests(TestCase):
+    def test_attendance_capture_post_populates_join_date_if_null(self):
+        """Test that recording attendance populates join_date if it hasn't been set yet"""
+        attendance_date = date.today()
+        
+        # Create a member without a join_date
+        member_no_join_date = Member.objects.create(
+            first_name="New",
+            last_name="Member",
+            email="new.member@example.com",
+            is_active=True,
+            join_date=None  # Explicitly set to None
+        )
+        MemberInstrument.objects.create(member=member_no_join_date, instrument=self.trumpet)
+        
+        # Verify join_date is None before attendance
+        self.assertIsNone(member_no_join_date.join_date)
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['high-brass']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                f'member_{member_no_join_date.id}': 'on',
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check that join_date was populated with attendance date
+        member_no_join_date.refresh_from_db()
+        self.assertEqual(member_no_join_date.join_date, attendance_date)
+        
+        # Check that last_seen was also updated
+        self.assertEqual(member_no_join_date.last_seen, attendance_date)
+    
+    def test_attendance_capture_post_preserves_existing_join_date(self):
+        """Test that recording attendance preserves existing join_date"""
+        attendance_date = date.today()
+        existing_join_date = date.today() - timedelta(days=30)
+        
+        # Create a member with an existing join_date
+        member_with_join_date = Member.objects.create(
+            first_name="Existing",
+            last_name="Member",
+            email="existing.member@example.com",
+            is_active=True,
+            join_date=existing_join_date
+        )
+        MemberInstrument.objects.create(member=member_with_join_date, instrument=self.trumpet)
+        
+        # Verify join_date is set before attendance
+        self.assertEqual(member_with_join_date.join_date, existing_join_date)
+        
+        response = self.client.post(
+            reverse('attendance-capture', args=['high-brass']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                f'member_{member_with_join_date.id}': 'on',
+            }
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check that join_date was NOT changed
+        member_with_join_date.refresh_from_db()
+        self.assertEqual(member_with_join_date.join_date, existing_join_date)
+        
+        # Check that last_seen was updated
+        self.assertEqual(member_with_join_date.last_seen, attendance_date)
+
+
+class AttendanceViewsIntegrationTests(TestCase):
     """Integration tests for attendance views working together"""
 
     def setUp(self):
@@ -1305,3 +1515,78 @@ class GigsEndpointTests(TestCase):
                 member=member
             )
             self.assertEqual(attendance_record.notes, 'Performance: Test Concert')
+
+
+class InactiveMembersViewTests(TestCase):
+    """Test cases for the inactive_members view"""
+    
+    def setUp(self):
+        # Create test section
+        self.section = Section.objects.create(name="Test Section")
+        
+        # Create test instruments
+        self.instrument = Instrument.objects.create(name="Test Instrument", section=self.section)
+        
+        # Create active and inactive members
+        self.active_member = Member.objects.create(
+            first_name="Active",
+            last_name="Member",
+            email="active@test.com",
+            is_active=True
+        )
+        
+        self.inactive_member1 = Member.objects.create(
+            first_name="Inactive",
+            last_name="Member1",
+            email="inactive1@test.com",
+            is_active=False,
+            last_seen=date(2023, 1, 15),
+            join_date=date(2022, 6, 1)
+        )
+        
+        self.inactive_member2 = Member.objects.create(
+            first_name="Inactive",
+            last_name="Member2",
+            email="inactive2@test.com",
+            is_active=False
+        )
+        
+        # Assign instrument to one inactive member
+        MemberInstrument.objects.create(member=self.inactive_member1, instrument=self.instrument)
+    
+    def test_inactive_members_get_request(self):
+        """Test GET request returns inactive members list"""
+        response = self.client.get(reverse('inactive-members'))
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Inactive Members")
+        self.assertContains(response, "Inactive Member1")
+        self.assertContains(response, "Inactive Member2")
+        self.assertNotContains(response, "Active Member")
+        
+        # Check that inactive members are in context
+        self.assertIn('inactive_members', response.context)
+        inactive_members = response.context['inactive_members']
+        self.assertEqual(inactive_members.count(), 2)
+        self.assertIn(self.inactive_member1, inactive_members)
+        self.assertIn(self.inactive_member2, inactive_members)
+        self.assertNotIn(self.active_member, inactive_members)
+    
+    def test_inactive_members_reactivate_member(self):
+        """Test POST request to reactivate a member"""
+        self.assertFalse(self.inactive_member1.is_active)
+        
+        response = self.client.post(
+            reverse('inactive-members'),
+            data={'member_id': self.inactive_member1.id}
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Refresh member from database
+        self.inactive_member1.refresh_from_db()
+        self.assertTrue(self.inactive_member1.is_active)
+        
+        # Check success message
+        self.assertContains(response, "Successfully reactivated")
+        self.assertContains(response, "Inactive Member1")
