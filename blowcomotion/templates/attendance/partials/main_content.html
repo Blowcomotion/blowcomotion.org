@@ -14,7 +14,9 @@
                            hx-get="{% url 'attendance-capture' sect.name|lower|slugify %}"
                            hx-target="#main-content"
                            hx-push-url="true"
+                           hx-indicator="#main-section-loading-{{ sect.id }}"
                            class="btn {% if sect == section %}btn-primary{% else %}btn-outline-primary{% endif %} mb-2">
+                            <span id="main-section-loading-{{ sect.id }}" class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
                             {{ sect.name }}
                         </a>
                     {% endfor %}
@@ -26,16 +28,133 @@
 
 <!-- Dynamic Content Area -->
 <div id="dynamic-content">
-    {% if section %}
-        {% include 'attendance/partials/section_content.html' %}
-    {% else %}
-    <div class="row">
-        <div class="col-12">
-            <div class="alert alert-info text-center">
-                <h5><i class="fa fa-info-circle"></i> Select a Section</h5>
-                <p class="mb-0">Please select a section above to record attendance for that group.</p>
+    <!-- Global loading indicator -->
+    <div id="main-content-loading" class="text-center my-5 py-5" style="display: none;">
+        <div style="padding: 50px 20px;">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
             </div>
         </div>
     </div>
-    {% endif %}
+    
+    <div id="main-section-content">
+        {% if section %}
+            {% include 'attendance/partials/section_content.html' %}
+        {% else %}
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-info text-center">
+                    <h5><i class="fa fa-info-circle"></i> Select a Section</h5>
+                    <p class="mb-0">Please select a section above to record attendance for that group.</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
 </div>
+
+<style>
+/* Show loading spinners when HTMX request is in progress */
+.htmx-request .htmx-indicator {
+    display: inline-block !important;
+}
+
+/* Disable button interaction during loading */
+.htmx-request {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Section button loading state */
+.btn.htmx-request {
+    position: relative;
+}
+
+/* Prevent text and other elements from rotating with spinners */
+.htmx-indicator.spinner-border * {
+    animation: none !important;
+    transform: none !important;
+}
+
+/* Prevent any text inside buttons from rotating */
+.btn.htmx-request {
+    animation: none !important;
+}
+
+.btn.htmx-request * {
+    animation: none !important;
+    transform: none !important;
+}
+
+/* Only allow the spinner border itself to rotate */
+.htmx-indicator.spinner-border:not(*) {
+    animation: spinner-border .75s linear infinite;
+}
+
+/* Make sure content in loading areas doesn't rotate */
+#main-content-loading,
+#main-content-loading * {
+    animation: none !important;
+    transform: none !important;
+}
+
+/* Specifically target the main spinner in content loading */
+#main-content-loading .spinner-border {
+    animation: spinner-border .75s linear infinite !important;
+}
+
+/* Hide content and show loading indicator during section loads */
+.htmx-request #main-section-content {
+    display: none !important;
+}
+
+.htmx-request #main-content-loading {
+    display: block !important;
+}
+
+/* Ensure loading indicator has enough space and doesn't overlap */
+#main-content-loading {
+    position: relative;
+    z-index: 10;
+}
+
+/* Ensure loading indicator has enough space */
+#main-content-loading {
+    min-height: 200px;
+    position: relative;
+    z-index: 10;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show global loading indicator when section buttons are clicked
+    document.addEventListener('htmx:beforeRequest', function(event) {
+        if (event.target.hasAttribute('hx-get') && event.target.getAttribute('hx-target') === '#main-content') {
+            const loadingIndicator = document.getElementById('main-content-loading');
+            const sectionContent = document.getElementById('main-section-content');
+            
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'block';
+            }
+            if (sectionContent) {
+                sectionContent.style.display = 'none';
+            }
+        }
+    });
+    
+    // Hide global loading indicator when request completes
+    document.addEventListener('htmx:afterRequest', function(event) {
+        if (event.target.hasAttribute('hx-get') && event.target.getAttribute('hx-target') === '#main-content') {
+            const loadingIndicator = document.getElementById('main-content-loading');
+            const sectionContent = document.getElementById('main-section-content');
+            
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+            if (sectionContent) {
+                sectionContent.style.display = 'block';
+            }
+        }
+    });
+});
+</script>

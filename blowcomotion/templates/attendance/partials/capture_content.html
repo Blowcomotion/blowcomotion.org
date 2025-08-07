@@ -19,14 +19,18 @@
                         <a href="{% url 'attendance-capture' sect.name|lower|slugify %}" 
                            hx-get="{% url 'attendance-capture' sect.name|lower|slugify %}"
                            hx-target="#attendance-container"
+                           hx-indicator="#section-loading-{{ sect.id }}"
                            class="btn {% if sect == section %}btn-primary{% else %}btn-outline-primary{% endif %} mb-2">
+                            <span id="section-loading-{{ sect.id }}" class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
                             {{ sect.name }}
                         </a>
                     {% endfor %}
                     <a href="{% url 'attendance-capture' 'no-section' %}" 
                        hx-get="{% url 'attendance-capture' 'no-section' %}"
                        hx-target="#attendance-container"
+                       hx-indicator="#section-loading-no-section"
                        class="btn {% if is_no_section %}btn-primary{% else %}btn-outline-secondary{% endif %} mb-2">
+                        <span id="section-loading-no-section" class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
                         <i class="fa fa-question-circle"></i> No Section
                     </a>
                 </div>
@@ -37,16 +41,120 @@
 
 <!-- Dynamic Content Area -->
 <div id="dynamic-content">
-    {% if section or is_no_section %}
-        {% include 'attendance/partials/section_content.html' %}
-    {% else %}
-    <div class="row">
-        <div class="col-12">
-            <div class="alert alert-info text-center">
-                <h5><i class="fa fa-info-circle"></i> Select a Section</h5>
-                <p class="mb-0">Please select a section above to record attendance for that group.</p>
+    <!-- Global loading indicator -->
+    <div id="content-loading" class="text-center my-5 py-5" style="display: none;">
+        <div style="padding: 50px 20px;">
+            <div style="margin-bottom: 60px;">
+                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                </div>
+            </div>
+            <div>
+                <p class="text-muted fs-5 mb-0">Loading section data and gig information...</p>
             </div>
         </div>
     </div>
-    {% endif %}
+    
+    <div id="section-content">
+        {% if section or is_no_section %}
+            {% include 'attendance/partials/section_content.html' %}
+        {% else %}
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-info text-center">
+                    <h5><i class="fa fa-info-circle"></i> Select a Section</h5>
+                    <p class="mb-0">Please select a section above to record attendance for that group.</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
 </div>
+
+<style>
+/* Show loading spinners when HTMX request is in progress */
+.htmx-request .htmx-indicator {
+    display: inline-block !important;
+}
+
+/* Disable button interaction during loading */
+.htmx-request {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Section button loading state */
+.btn.htmx-request {
+    position: relative;
+}
+
+/* Prevent text and other elements from rotating with spinners */
+.htmx-indicator.spinner-border * {
+    animation: none !important;
+    transform: none !important;
+}
+
+/* Prevent any text inside buttons from rotating */
+.btn.htmx-request {
+    animation: none !important;
+}
+
+.btn.htmx-request * {
+    animation: none !important;
+    transform: none !important;
+}
+
+/* Only allow the spinner border itself to rotate */
+.htmx-indicator.spinner-border:not(*) {
+    animation: spinner-border .75s linear infinite;
+}
+
+
+/* Hide content and show loading indicator during section loads */
+.htmx-request #section-content {
+    display: none !important;
+}
+
+.htmx-request #content-loading {
+    display: block !important;
+}
+
+/* Ensure loading indicator has enough space and doesn't overlap */
+#content-loading {
+    position: relative;
+    z-index: 10;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show global loading indicator when section buttons are clicked
+    document.addEventListener('htmx:beforeRequest', function(event) {
+        if (event.target.hasAttribute('hx-get') && event.target.getAttribute('hx-target') === '#attendance-container') {
+            const loadingIndicator = document.getElementById('content-loading');
+            const sectionContent = document.getElementById('section-content');
+            
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'block';
+            }
+            if (sectionContent) {
+                sectionContent.style.display = 'none';
+            }
+        }
+    });
+    
+    // Hide global loading indicator when request completes
+    document.addEventListener('htmx:afterRequest', function(event) {
+        if (event.target.hasAttribute('hx-get') && event.target.getAttribute('hx-target') === '#attendance-container') {
+            const loadingIndicator = document.getElementById('content-loading');
+            const sectionContent = document.getElementById('section-content');
+            
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+            if (sectionContent) {
+                sectionContent.style.display = 'block';
+            }
+        }
+    });
+});
+</script>

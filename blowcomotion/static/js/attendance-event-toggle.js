@@ -1,5 +1,3 @@
-console.log('Attendance event toggle script loaded');
-
 // Cache and debouncing variables
 let gigOptionsCache = {};
 let updateGigOptionsTimeout = null;
