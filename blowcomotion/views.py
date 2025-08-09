@@ -37,7 +37,7 @@ from blowcomotion.models import (
 logger = logging.getLogger(__name__)
 
 # Constants
-BIRTHDAY_RANGE_DAYS = 10
+BIRTHDAY_RANGE_DAYS = 30
 
 
 def make_gigo_api_request(endpoint, timeout=10, retries=2):
