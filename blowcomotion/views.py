@@ -1195,7 +1195,7 @@ def birthdays(request):
             'member': member,
             'birthday': birthday_this_year,
             'age': age,
-            'display_name': member.preferred_name or member.first_name
+            'display_name': f'"{member.preferred_name}" {member.first_name}' if member.preferred_name else f'{member.first_name}',
         }
         
         # Check if birthday is today

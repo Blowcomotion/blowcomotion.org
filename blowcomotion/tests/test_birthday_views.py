@@ -199,7 +199,7 @@ class BirthdayViewTests(TestCase):
         bobby_birthday = next((b for b in today_birthdays if b['member'].first_name == "Robert"), None)
         
         self.assertIsNotNone(bobby_birthday)
-        self.assertEqual(bobby_birthday['display_name'], "Bobby")
+        self.assertEqual(bobby_birthday['display_name'], "\"Bobby\" Robert")
 
     def test_age_calculation(self):
         """Test that ages are calculated correctly"""
