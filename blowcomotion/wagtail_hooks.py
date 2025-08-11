@@ -1,14 +1,19 @@
-from django.urls import path, reverse
 from wagtail import hooks
 from wagtail.admin.menu import Menu, MenuItem, SubmenuMenuItem
 from wagtail.snippets.models import register_snippet
 
+from django.urls import path, reverse
+
 from blowcomotion.views import dump_data
 
-from .chooser_viewsets import (event_chooser_viewset, gigo_gig_chooser_viewset,
-                               instrument_chooser_viewset,
-                               member_chooser_viewset, section_chooser_viewset,
-                               song_chooser_viewset)
+from .chooser_viewsets import (
+    event_chooser_viewset,
+    gigo_gig_chooser_viewset,
+    instrument_chooser_viewset,
+    member_chooser_viewset,
+    section_chooser_viewset,
+    song_chooser_viewset,
+)
 from .snippet_viewsets import BandViewSetGroup, FormsViewSetGroup
 
 register_snippet(BandViewSetGroup)

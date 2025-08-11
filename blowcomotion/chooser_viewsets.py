@@ -2,18 +2,21 @@ import datetime
 import re
 
 import requests
-from django.conf import settings
-from django.views.generic.base import View
 from queryish.rest import APIModel, APIQuerySet
 from wagtail.admin.ui.tables import Column, TitleColumn
-from wagtail.admin.views.generic.chooser import (BaseChooseView,
-                                                 ChooseResultsViewMixin,
-                                                 ChooseViewMixin,
-                                                 ChosenResponseMixin,
-                                                 ChosenViewMixin,
-                                                 CreationFormMixin)
+from wagtail.admin.views.generic.chooser import (
+    BaseChooseView,
+    ChooseResultsViewMixin,
+    ChooseViewMixin,
+    ChosenResponseMixin,
+    ChosenViewMixin,
+    CreationFormMixin,
+)
 from wagtail.admin.viewsets.chooser import ChooserViewSet
 from wagtail.admin.widgets import BaseChooser
+
+from django.conf import settings
+from django.views.generic.base import View
 
 
 class ChartChooserViewset(ChooserViewSet):

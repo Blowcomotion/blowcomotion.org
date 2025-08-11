@@ -3,13 +3,20 @@ import time
 from datetime import timedelta, tzinfo
 
 import requests
-from django.conf import settings
-from django.core.cache import cache
-from django.utils import timezone
 from wagtail import blocks
 from wagtail.images.blocks import ImageChooserBlock
 
-from blowcomotion.chooser_blocks import EventChooserBlock, GigoGigChooserBlock, SongChooserBlock
+from django.conf import settings
+from django.core.cache import cache
+from django.utils import timezone
+
+from blowcomotion.chooser_blocks import (
+    EventChooserBlock,
+    GigoGigChooserBlock,
+    SongChooserBlock,
+)
+
+
 class HeroBlock(blocks.StructBlock):
     image = ImageChooserBlock()
     top_line = blocks.CharBlock(required=False)

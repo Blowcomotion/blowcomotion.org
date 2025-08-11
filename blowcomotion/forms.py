@@ -1,9 +1,10 @@
 import datetime
 
+import requests
+
 from django import forms
 from django.conf import settings
 from django.forms import formset_factory
-import requests
 
 from blowcomotion.models import AttendanceRecord, Member, Section
 
