@@ -86,6 +86,12 @@ class SiteSettings(BaseSiteSetting):
         null=True,
         help_text="Comma-separated list of email addresses to receive donate form submissions",
     )
+    birthday_summary_email_recipients = models.CharField(
+        max_length=1024,
+        blank=True,
+        null=True,
+        help_text="Comma-separated list of email addresses to receive monthly birthday summary emails",
+    )
     venmo_donate_url = models.URLField(
         blank=True,
         null=True,
@@ -136,6 +142,7 @@ class SiteSettings(BaseSiteSetting):
             FieldPanel('booking_form_email_recipients'),
             FieldPanel('feedback_form_email_recipients'),
             FieldPanel('donate_form_email_recipients'),
+            FieldPanel('birthday_summary_email_recipients'),
         ], heading="Form Email Recipients"),
         
         MultiFieldPanel([
