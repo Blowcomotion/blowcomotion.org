@@ -1,7 +1,11 @@
 # blowcomotion.org
 Stores the codebase for the blowcomotion.org website
 
-The templates for this codebase are derived from [here](https://themewagon.com/themes/free-bootstrap-responsive-personal-portfolio-template-djoz/)
+**Live Site:** [https://blowcomotion.org](https://blowcomotion.org)
+
+**Template Demo:** [https://themewagon.github.io/Djoz/index.html](https://themewagon.github.io/Djoz/index.html)
+
+The templates for this codebase are derived from the [Djoz theme](https://themewagon.com/themes/free-bootstrap-responsive-personal-portfolio-template-djoz/)
 
 
 ## Installation
