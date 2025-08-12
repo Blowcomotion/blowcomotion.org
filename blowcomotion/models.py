@@ -1,18 +1,20 @@
 import datetime
-from django.core.exceptions import ValidationError
-from django.db import models
+
 from modelcluster.contrib.taggit import ClusterTaggableManager
 from modelcluster.fields import ParentalKey, ParentalManyToManyField
 from modelcluster.models import ClusterableModel
 from taggit.models import ItemBase, TagBase
 from wagtail import blocks
-from wagtail.admin.panels import FieldPanel, MultipleChooserPanel, MultiFieldPanel
+from wagtail.admin.panels import FieldPanel, MultiFieldPanel, MultipleChooserPanel
 from wagtail.contrib.settings.models import BaseSiteSetting, register_setting
 from wagtail.documents import get_document_model
 from wagtail.fields import RichTextField, StreamField
 from wagtail.images.models import AbstractImage, AbstractRendition, Image
 from wagtail.models import Orderable, Page
 from wagtail.search import index
+
+from django.core.exceptions import ValidationError
+from django.db import models
 
 from blowcomotion import blocks as blowcomotion_blocks
 
@@ -542,7 +544,7 @@ class Member(ClusterableModel, index.Indexed):
 
     def clean(self):
         from django.core.exceptions import ValidationError
-        
+
         # Check for duplicate members based on first and last name
         if self.first_name and self.last_name:
             existing_members = Member.objects.filter(

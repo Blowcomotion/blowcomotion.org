@@ -1,7 +1,6 @@
 from wagtail.admin.panels import FieldRowPanel, MultipleChooserPanel
-from wagtail.admin.ui.tables import UpdatedAtColumn, DateColumn
+from wagtail.admin.ui.tables import DateColumn, UpdatedAtColumn
 from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup
-
 from wagtailmedia.edit_handlers import MediaChooserPanel
 
 
