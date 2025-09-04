@@ -9,7 +9,7 @@
                         <h3 class="pb-1">{{ gig.title }}</h3>
                         {% is_url gig.address as address_is_url %}
                         {% get_current_timezone as TIME_ZONE %}
-                        <p class="pl-4">{{ gig.date|date:"l F jS" }}{% if gig.set_time %}, {{ gig.set_time|timezone:TIME_ZONE|date:"P" }}{% endif %}</p>
+                        <p class="pl-4">{{ gig.date|date:"l, F jS" }}{% if gig.set_time %}, {{ gig.set_time|timezone:TIME_ZONE|date:"P" }}{% endif %}</p>
                         {% if address_is_url %}
                             <p class="pl-4"><a href="{{ gig.address }}" target="_blank">Map Link</a></p>
                         {% else %}
