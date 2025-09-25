@@ -585,8 +585,8 @@ class UpcomingPublicGigs(blocks.StructBlock):
                 for gig in context['gigs']:
                     # Parse and validate date; skip if invalid
                     try:
-                        gig_date = datetime.datetime.strptime(gig['date'], "%Y-%m-%d")
-                    except (ValueError, TypeError, KeyError):
+                        parsed_date = datetime.datetime.strptime(gig.get('date', ''), "%Y-%m-%d")
+                    except (ValueError, TypeError):  # includes missing or malformed date
                         continue
 
                     # Prefer set_time; fallback to call_time if set_time is missing (None)
@@ -599,7 +599,7 @@ class UpcomingPublicGigs(blocks.StructBlock):
                         except (ValueError, TypeError):
                             parsed_time = None
 
-                    gig['date'] = gig_date
+                    gig['date'] = parsed_date  # overwrite with datetime object for downstream usage
                     gig['set_time'] = parsed_time
                     validated_gigs.append(gig)
 
