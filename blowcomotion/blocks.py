@@ -590,7 +590,8 @@ class UpcomingPublicGigs(blocks.StructBlock):
                         continue
 
                     # Prefer set_time; fallback to call_time if set_time is missing (None)
-                    raw_time = gig.get('set_time') if gig.get('set_time') is not None else gig.get('call_time')
+                    set_time = gig.get('set_time')
+                    raw_time = set_time if set_time is not None else gig.get('call_time')
                     parsed_time = None
                     if raw_time:
                         try:
