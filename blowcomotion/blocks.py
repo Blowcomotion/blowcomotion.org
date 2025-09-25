@@ -582,21 +582,26 @@ class UpcomingPublicGigs(blocks.StructBlock):
                 context['gigs'] = [gig for gig in r.json()['gigs'] if gig['gig_status'].lower() == 'confirmed' and gig['band'].lower() == 'blowcomotion' and gig["date"] >= datetime.date.today().isoformat() and gig['is_private'] == False and gig["hide_from_calendar"] == False and gig["is_archived"] == False and gig["is_in_trash"] == False]
                 localtime = time.localtime()
                 for gig in context['gigs']:
+                    # Parse and validate date
                     try:
                         gig['date'] = datetime.datetime.strptime(gig['date'], "%Y-%m-%d")
                     except ValueError:
-                        # remove gigs with invalid date format
+                        # Skip gigs with invalid date format entirely
                         continue
-                    try:
-                        gig['set_time'] = datetime.datetime.strptime(gig['set_time'], "%H:%M").replace(tzinfo=datetime.timezone.utc)
-                    except ValueError:
-                        # remove gigs with invalid set_time format
-                        continue
-                    try:
-                        gig['set_time'] = gig['set_time'] + timedelta(hours=localtime.tm_isdst)
-                    except TypeError:
-                        # if set_time is None, skip the gig
-                        continue
+
+                    # Prefer set_time; fallback to call_time if set_time missing/blank/invalid
+                    raw_time = gig.get('set_time') or gig.get('call_time')
+                    parsed_time = None
+                    if raw_time:
+                        try:
+                            parsed_time = datetime.datetime.strptime(raw_time, "%H:%M").replace(tzinfo=datetime.timezone.utc)
+                            # Adjust for DST (tm_isdst is 1 if DST in effect, else 0)
+                            parsed_time = parsed_time + timedelta(hours=localtime.tm_isdst)
+                        except (ValueError, TypeError):
+                            parsed_time = None
+
+                    # Always provide a key so templates can rely on it; may be None
+                    gig['set_time'] = parsed_time
                 context['gigs'].sort(key=lambda gig: gig['date'])
 
                 cache.set('upcoming_public_gigs', context['gigs'], 60 * 60) # cache for 1 hour
