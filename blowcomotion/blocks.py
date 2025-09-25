@@ -589,8 +589,8 @@ class UpcomingPublicGigs(blocks.StructBlock):
                     except (ValueError, TypeError, KeyError):
                         continue
 
-                    # Prefer set_time; fallback to call_time if set_time missing/blank/invalid
-                    raw_time = gig.get('set_time') or gig.get('call_time')
+                    # Prefer set_time; fallback to call_time if set_time is missing (None)
+                    raw_time = gig.get('set_time') if gig.get('set_time') is not None else gig.get('call_time')
                     parsed_time = None
                     if raw_time:
                         try:
