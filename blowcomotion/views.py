@@ -358,7 +358,7 @@ def _create_email_message(form_type, name, email, **kwargs):
             'greeting': f'Hello {name},\n\n',
             'intro': 'Thank you for your interest in joining our band! We have received your application with the following details:\n\n',
             'fields': f'Name: {name}\nEmail: {email}\nInstrument: {kwargs.get("instrument", "")}\nInstrument Rental: {kwargs.get("instrument_rental", "")}\n' + (f'Message: {kwargs.get("message", "")}\n' if kwargs.get("message") else ''),
-            'closing': 'We will review your application and get back to you soon.\n\n',
+            'closing': '\nWe will review your application and get back to you soon.\n\n',
         },
         'booking_form': {
             'greeting': f'Hello {name},\n\n',
