@@ -1,10 +1,12 @@
 from wagtail import hooks
 from wagtail.admin.menu import Menu, MenuItem, SubmenuMenuItem
+from wagtail.admin.userbar import AccessibilityItem
 from wagtail.snippets.models import register_snippet
 
 from django.urls import path, reverse
 
 from blowcomotion.views import dump_data
+from blowcomotion.accessibility import CustomAccessibilityItem
 
 from .chooser_viewsets import (
     event_chooser_viewset,
@@ -51,3 +53,15 @@ def register_viewset():
         event_chooser_viewset,
         gigo_gig_chooser_viewset,
     )
+
+
+@hooks.register('construct_wagtail_userbar')
+def replace_userbar_accessibility_item(request, items, page):
+    """
+    Replace the default AccessibilityItem with our CustomAccessibilityItem
+    to disable the accessibility checker.
+    """
+    for i, item in enumerate(items):
+        if isinstance(item, AccessibilityItem):
+            items[i] = CustomAccessibilityItem()
+            break
