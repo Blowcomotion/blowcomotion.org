@@ -362,10 +362,6 @@ class MemberSignupForm(forms.Form):
         birth_day = cleaned_data.get('birth_day')
         
         # Validate birthday using shared utility function
-        try:
-            validate_birthday(birth_day, birth_month)
-        except Exception:
-            # Re-raise as forms.ValidationError for proper form handling
-            pass  # validate_birthday already raises ValidationError which Django forms will catch
+        validate_birthday(birth_day, birth_month)
         
         return cleaned_data
