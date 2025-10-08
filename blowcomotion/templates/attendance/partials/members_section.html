@@ -35,9 +35,9 @@
                             <i class="fa fa-check-circle text-success me-1" title="Already recorded for this date"></i>
                         {% endif %}
                         {{ member }}
-                        {% if member.instruments.exists %}
+                        {% if member.primary_instrument %}
                             <small class="text-muted">
-                                ({% for instrument in member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
+                                ({{ member.primary_instrument.name }})
                             </small>
                         {% endif %}
                         {% if is_no_section %}

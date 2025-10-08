@@ -45,8 +45,8 @@
                                     {% endif %}
                                     <h5 class="card-title">
                                         {{ birthday.display_name }} {{ birthday.member.last_name }}
-                                        {% if birthday.member.instruments.exists %}
-                                            <small class="text-muted">({% for instrument in birthday.member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %})</small>
+                                        {% if birthday.member.primary_instrument %}
+                                            <small class="text-muted">({{ birthday.member.primary_instrument.name }})</small>
                                         {% endif %}
                                     </h5>
                                     <p class="card-text">
@@ -95,8 +95,8 @@
                             <div class="flex-grow-1">
                                 <h6 class="mb-1">
                                     {{ birthday.display_name }} {{ birthday.member.last_name }}
-                                    {% if birthday.member.instruments.exists %}
-                                        <small class="text-muted">({% for instrument in birthday.member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %})</small>
+                                    {% if birthday.member.primary_instrument %}
+                                        <small class="text-muted">({{ birthday.member.primary_instrument.name }})</small>
                                     {% endif %}
                                 </h6>
                                 <p class="mb-1">
@@ -161,8 +161,8 @@
                             <div class="flex-grow-1">
                                 <h6 class="mb-1">
                                     {{ birthday.display_name }} {{ birthday.member.last_name }}
-                                    {% if birthday.member.instruments.exists %}
-                                        <small class="text-muted">({% for instrument in birthday.member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %})</small>
+                                    {% if birthday.member.primary_instrument %}
+                                        <small class="text-muted">({{ birthday.member.primary_instrument.name }})</small>
                                     {% endif %}
                                 </h6>
                                 <p class="mb-1">

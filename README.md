@@ -137,6 +137,31 @@ When deploying to production, always run:
 
 **Important**: Run `collectstatic` after any changes to static files (CSS, JavaScript, images) to ensure they're available in production.
 
+## Database Schema
+
+### Member Model (Updated October 2025)
+
+The Member model was refactored to better represent instrument relationships:
+
+#### Instrument Fields
+
+- **`primary_instrument`** (ForeignKey): The member's main instrument - determines which section they appear in for attendance
+- **`additional_instruments`** (ManyToMany through MemberInstrument): Any extra instruments the member can play
+
+#### Key Changes
+
+- Members now appear in **only ONE section** during attendance tracking (based on primary_instrument)
+- The old `instruments` many-to-many field was split into primary + additional
+- Migration 0076 automatically migrated existing data: first instrument → primary, rest → additional
+- Admin search for Members uses Django queries instead of Wagtail FTS indexing for better SQLite compatibility
+
+#### Adding/Editing Members
+
+1. Navigate to **Wagtail Admin > Band Stuff > Members**
+2. Set the **Primary Instrument** - this determines their section for attendance
+3. Optionally add **Additional Instruments** they can also play
+4. The primary instrument should NOT be listed in additional instruments
+
 ## Features
 
 ### Attendance Tracker
@@ -146,6 +171,7 @@ The attendance tracking system allows band leaders to record and manage attendan
 #### Key Features
 
 - **Section-based tracking**: Record attendance by band section (Woodwinds, High Brass, etc.)
+- **Single section assignment**: Each member appears in only one section based on their primary instrument
 - **Member and guest support**: Track both band members and guests/visitors
 - **Event types**: Differentiate between rehearsals and performances
 - **Gig integration**: Automatically fetch and select from confirmed gigs when recording performance attendance
@@ -264,3 +290,20 @@ Site settings, including access control passwords, are configured through the Wa
 3. Set email recipients for forms in the **Form Email Recipients** section
 4. Update donation links in the **Donation Links** section
 5. Manage social media links and site branding
+
+## Recent Changes
+
+### Member Model Refactoring (October 2025)
+
+The Member model was refactored to improve instrument management and section assignment. See [MEMBER_MODEL_REFACTOR.md](MEMBER_MODEL_REFACTOR.md) for complete details.
+
+**Key changes:**
+- Split instruments into `primary_instrument` (single) and `additional_instruments` (multiple)
+- Members now appear in only one section during attendance based on primary instrument
+- Migration 0076 automatically converted existing data
+- Admin search uses Django queries instead of Wagtail FTS for better SQLite compatibility
+
+**Breaking changes:**
+- Attendance views now filter by `primary_instrument` instead of many-to-many `instruments`
+- Templates display `member.primary_instrument` instead of looping through `member.instruments.all`
+- Forms require setting primary instrument for proper section assignment

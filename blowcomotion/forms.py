@@ -6,7 +6,7 @@ from django import forms
 from django.conf import settings
 from django.forms import formset_factory
 
-from blowcomotion.models import AttendanceRecord, Member, Section
+from blowcomotion.models import AttendanceRecord, Instrument, Member, Section
 
 
 class AttendanceForm(forms.Form):
@@ -87,10 +87,9 @@ class SectionAttendanceForm(forms.Form):
         self._populate_gig_choices()
         
         if section:
-            # Get all active members in this section
-            member_instruments = section.instrument_set.all().values_list('memberinstrument__member', flat=True)
+            # Get all active members whose primary instrument is in this section
             section_members = Member.objects.filter(
-                id__in=member_instruments,
+                primary_instrument__section=section,
                 is_active=True
             ).distinct().order_by('first_name', 'last_name')
             
@@ -195,3 +194,197 @@ class AttendanceReportFilterForm(forms.Form):
         empty_label="All Members",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+
+
+class MemberSignupForm(forms.Form):
+    """Form for new members to sign up and enter their profile data"""
+    
+    # Required fields (matching Member model requirements)
+    first_name = forms.CharField(
+        max_length=255,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'First name'
+        })
+    )
+    
+    last_name = forms.CharField(
+        max_length=255,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Last name'
+        })
+    )
+    
+    # Instrument selection - Primary and Additional
+    primary_instrument = forms.ModelChoiceField(
+        queryset=Instrument.objects.all().order_by('name'),
+        required=False,
+        empty_label='Select your primary instrument',
+        widget=forms.Select(attrs={
+            'class': 'form-control'
+        }),
+        help_text='Select the primary instrument you play (optional)'
+    )
+    
+    additional_instruments = forms.ModelMultipleChoiceField(
+        queryset=Instrument.objects.all().order_by('name'),
+        required=False,
+        widget=forms.CheckboxSelectMultiple(attrs={
+            'class': 'form-check-input'
+        }),
+        help_text='Select any additional instruments you play (optional)'
+    )
+    
+    # Optional personal information
+    preferred_name = forms.CharField(
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Preferred name (if different from first name)'
+        }),
+        help_text='Name you prefer to be called (optional)'
+    )
+    
+    # Birthday fields
+    birth_month = forms.ChoiceField(
+        choices=[('', 'Month')] + [(i, datetime.date(2000, i, 1).strftime('%B')) for i in range(1, 13)],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    birth_day = forms.IntegerField(
+        required=False,
+        min_value=1,
+        max_value=31,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Day (1-31)'
+        })
+    )
+    
+    birth_year = forms.IntegerField(
+        required=False,
+        min_value=1900,
+        max_value=datetime.date.today().year,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': f'Year (e.g., {datetime.date.today().year - 30})'
+        })
+    )
+    
+    # Contact information
+    email = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Email address'
+        })
+    )
+    
+    phone = forms.CharField(
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Phone number'
+        })
+    )
+    
+    # Address information
+    address = forms.CharField(
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Street address'
+        })
+    )
+    
+    city = forms.CharField(
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'City'
+        })
+    )
+    
+    state = forms.CharField(
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'State'
+        })
+    )
+    
+    zip_code = forms.CharField(
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'ZIP code'
+        })
+    )
+    
+    country = forms.CharField(
+        max_length=255,
+        required=False,
+        initial='USA',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Country'
+        })
+    )
+    
+    # Emergency contact
+    emergency_contact = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 2,
+            'placeholder': 'Emergency contact name and phone number'
+        }),
+        help_text='Name and phone number of emergency contact'
+    )
+    
+    # Custom field for inspiration
+    inspired_by = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Tell us what event or person inspired you to join the band'
+        }),
+        label='What inspired you to join?',
+        help_text='Share what event or person inspired you to join Blowcomotion'
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        birth_month = cleaned_data.get('birth_month')
+        birth_day = cleaned_data.get('birth_day')
+        birth_year = cleaned_data.get('birth_year')
+        
+        # Validate birthday if any birthday field is provided
+        if birth_day:
+            if birth_day < 1 or birth_day > 31:
+                raise forms.ValidationError("Birth day must be between 1 and 31")
+            
+            # Check if day is valid for the given month
+            if birth_month:
+                month_num = int(birth_month)
+                days_in_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+                max_day = days_in_month[month_num - 1]
+                if birth_day > max_day:
+                    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
+                                 'July', 'August', 'September', 'October', 'November', 'December']
+                    raise forms.ValidationError(
+                        f"Day {birth_day} is not valid for {month_names[month_num - 1]}"
+                    )
+        
+        return cleaned_data

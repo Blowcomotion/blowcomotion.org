@@ -19,7 +19,11 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
-from blowcomotion.forms import AttendanceReportFilterForm, SectionAttendanceForm
+from blowcomotion.forms import (
+    AttendanceReportFilterForm,
+    MemberSignupForm,
+    SectionAttendanceForm,
+)
 from blowcomotion.models import (
     AttendanceRecord,
     BookingFormSubmission,
@@ -613,32 +617,28 @@ def attendance_capture(request, section_slug=None):
     members_by_instrument = {}
     
     if is_no_section:
-        # Get members who don't have any instrument assignments
-        members_with_instruments = MemberInstrument.objects.values_list('member_id', flat=True).distinct()
+        # Get members who don't have a primary instrument
         section_members = Member.objects.filter(
-            is_active=True
-        ).exclude(id__in=members_with_instruments).order_by('first_name', 'last_name')
+            is_active=True,
+            primary_instrument__isnull=True
+        ).order_by('first_name', 'last_name')
     elif section:
         # Get instruments that belong to this section
         section_instruments = Instrument.objects.filter(section=section).order_by('name')
         
-        # Group members by instrument
+        # Group members by their primary instrument only
         for instrument in section_instruments:
             members_for_instrument = Member.objects.filter(
-                instruments__instrument=instrument,
+                primary_instrument=instrument,
                 is_active=True
-            ).distinct().order_by('first_name', 'last_name')
+            ).order_by('first_name', 'last_name')
             
             if members_for_instrument.exists():
                 members_by_instrument[instrument] = members_for_instrument
         
-        # Also get all section members for backward compatibility
-        member_ids = MemberInstrument.objects.filter(
-            instrument__in=section_instruments
-        ).values_list('member_id', flat=True).distinct()
-        
+        # Also get all section members (those with primary instrument in this section)
         section_members = Member.objects.filter(
-            id__in=member_ids,
+            primary_instrument__in=section_instruments,
             is_active=True
         ).distinct().order_by('first_name', 'last_name')
     
@@ -799,16 +799,16 @@ def attendance_capture(request, section_slug=None):
                 date=attendance_date
             ).filter(
                 Q(member__in=section_members) | Q(member__isnull=True)
-            ).select_related('member').prefetch_related('member__instruments__instrument').order_by('member__first_name', 'member__last_name', 'guest_name')
+            ).select_related('member', 'member__primary_instrument').order_by('member__first_name', 'member__last_name', 'guest_name')
         elif is_no_section:
             # Get all records for this date and no-section members
             todays_records = AttendanceRecord.objects.filter(
                 date=attendance_date
             ).filter(
                 Q(member__in=section_members) | Q(member__isnull=True)
-            ).select_related('member').prefetch_related('member__instruments__instrument').order_by('member__first_name', 'member__last_name', 'guest_name')
+            ).select_related('member', 'member__primary_instrument').order_by('member__first_name', 'member__last_name', 'guest_name')
         else:
-            todays_records = AttendanceRecord.objects.filter(date=attendance_date).select_related('member').prefetch_related('member__instruments__instrument')
+            todays_records = AttendanceRecord.objects.filter(date=attendance_date).select_related('member', 'member__primary_instrument')
         
         context = {
             'success_count': success_count,
@@ -1021,8 +1021,10 @@ def attendance_reports(request):
     
     if section_id:
         section = Section.objects.get(id=section_id)
-        member_instruments = Instrument.objects.filter(section=section)
-        section_member_ids = list(set(member_instruments))
+        # Get members whose primary instrument is in this section
+        section_member_ids = Member.objects.filter(
+            primary_instrument__section=section
+        ).values_list('id', flat=True)
         attendance_records = attendance_records.filter(
             Q(member_id__in=section_member_ids) | Q(member__isnull=True)
         )
@@ -1044,7 +1046,7 @@ def attendance_reports(request):
     
     context = {
         'filter_form': filter_form,
-        'attendance_records': attendance_records.select_related('member').prefetch_related('member__instruments__instrument').order_by('-date', 'member__first_name', 'member__last_name')[:100],  # Limit for performance
+        'attendance_records': attendance_records.select_related('member', 'member__primary_instrument').order_by('-date', 'member__first_name', 'member__last_name')[:100],  # Limit for performance
         'attendance_by_date': attendance_by_date,
         'total_records': total_records,
         'member_records': member_records,
@@ -1076,17 +1078,13 @@ def attendance_section_report_new(request, section_slug):
     if request.GET.get('end_date'):
         end_date = date.fromisoformat(request.GET.get('end_date'))
     
-    # Get members in this section
-    # Get instruments that belong to this section
-    section_instruments = Instrument.objects.filter(section=section)
-    # Get member IDs who have instruments in this section
-    section_member_ids = list(MemberInstrument.objects.filter(
-        instrument__in=section_instruments
-    ).values_list('member_id', flat=True).distinct())
+    # Get members in this section (those with primary instrument in this section)
     section_members = Member.objects.filter(
-        id__in=section_member_ids, 
+        primary_instrument__section=section,
         is_active=True
-    ).order_by('first_name', 'last_name').prefetch_related('instruments__instrument')
+    ).order_by('first_name', 'last_name')
+    
+    section_member_ids = list(section_members.values_list('id', flat=True))
     
     # Get attendance records for this section (filter by members in this section)
     attendance_records = AttendanceRecord.objects.filter(
@@ -1126,7 +1124,7 @@ def attendance_section_report_new(request, section_slug):
     context = {
         'section': section,
         'section_members': section_members,
-        'attendance_records': attendance_records.select_related('member').prefetch_related('member__instruments__instrument'),
+        'attendance_records': attendance_records.select_related('member', 'member__primary_instrument'),
         'member_attendance': member_attendance,
         'attendance_by_date': attendance_by_date,
         'start_date': start_date,
@@ -1172,7 +1170,7 @@ def birthdays(request):
         birth_month__isnull=False,
         birth_day__isnull=False,
         birth_month__in=relevant_months
-    ).prefetch_related('instruments__instrument').order_by('first_name', 'last_name')
+    ).select_related('primary_instrument').order_by('first_name', 'last_name')
     
     recent_birthdays = []
     upcoming_birthdays = []
@@ -1282,3 +1280,147 @@ def gigs_for_date(request):
         date_param = request.GET.get('date', 'unknown')
         logger.error("Unexpected error in gigs_for_date for date %s: %s", date_param, e, exc_info=True)
         return JsonResponse({'error': f'Error fetching gigs: {str(e)}'}, status=500)
+
+
+def member_signup(request):
+    """View for new members to sign up and enter their profile data"""
+    context = {}
+    
+    if request.method == 'POST':
+        form = MemberSignupForm(request.POST)
+        
+        if form.is_valid():
+            try:
+                # Create new member from form data
+                member = Member(
+                    first_name=form.cleaned_data['first_name'],
+                    last_name=form.cleaned_data['last_name'],
+                    preferred_name=form.cleaned_data.get('preferred_name') or None,
+                    primary_instrument=form.cleaned_data.get('primary_instrument'),
+                    birth_month=int(form.cleaned_data['birth_month']) if form.cleaned_data.get('birth_month') else None,
+                    birth_day=form.cleaned_data.get('birth_day'),
+                    birth_year=form.cleaned_data.get('birth_year'),
+                    email=form.cleaned_data.get('email') or None,
+                    phone=form.cleaned_data.get('phone') or None,
+                    address=form.cleaned_data.get('address') or None,
+                    city=form.cleaned_data.get('city') or None,
+                    state=form.cleaned_data.get('state') or None,
+                    zip_code=form.cleaned_data.get('zip_code') or None,
+                    country=form.cleaned_data.get('country') or None,
+                    emergency_contact=form.cleaned_data.get('emergency_contact') or None,
+                    inspired_by=form.cleaned_data.get('inspired_by') or None,
+                    is_active=False,  # New signups are inactive until approved by admin
+                    instructor=False,
+                    board_member=False,
+                )
+                
+                member.save()
+                logger.info(f"New member signup: {member.first_name} {member.last_name}")
+                
+                # Add additional instruments if selected
+                if form.cleaned_data.get('additional_instruments'):
+                    for instrument in form.cleaned_data['additional_instruments']:
+                        MemberInstrument.objects.create(
+                            member=member,
+                            instrument=instrument
+                        )
+                    logger.info(f"Added additional instruments to member {member.first_name} {member.last_name}")
+                
+                # Send email notification to admin
+                site_settings = SiteSettings.for_request(request=request)
+                recipients = site_settings.join_band_form_email_recipients
+                
+                if recipients:
+                    recipient_list = [email.strip() for email in recipients.split(',')]
+                    
+                    # Build email message
+                    email_message = f"""New Member Signup
+
+A new member has signed up through the website:
+
+Name: {member.first_name} {member.last_name}"""
+                    
+                    if member.preferred_name:
+                        email_message += f"\nPreferred Name: {member.preferred_name}"
+                    
+                    # Show selected instruments
+                    if form.cleaned_data.get('primary_instrument'):
+                        email_message += f"\nPrimary Instrument: {form.cleaned_data['primary_instrument']}"
+                    
+                    if form.cleaned_data.get('additional_instruments'):
+                        additional_names = [str(inst) for inst in form.cleaned_data['additional_instruments']]
+                        email_message += f"\nAdditional Instruments: {', '.join(additional_names)}"
+                    
+                    if member.birthday_display:
+                        email_message += f"\nBirthday: {member.birthday_display}"
+                    
+                    if member.email:
+                        email_message += f"\nEmail: {member.email}"
+                    
+                    if member.phone:
+                        email_message += f"\nPhone: {member.phone}"
+                    
+                    if member.address:
+                        address_parts = [member.address]
+                        if member.city:
+                            address_parts.append(member.city)
+                        if member.state:
+                            address_parts.append(member.state)
+                        if member.zip_code:
+                            address_parts.append(member.zip_code)
+                        if member.country:
+                            address_parts.append(member.country)
+                        email_message += f"\nAddress: {', '.join(address_parts)}"
+                    
+                    if member.emergency_contact:
+                        email_message += f"\nEmergency Contact: {member.emergency_contact}"
+                    
+                    if member.inspired_by:
+                        email_message += f"\n\nWhat inspired them to join:\n{member.inspired_by}"
+                    
+                    email_message += f"\n\nThe member has been created with inactive status. Please review and activate in the admin panel."
+                    email_message += "\n\nStart Wearing Purple,\nBlowcomotion Website"
+                    
+                    _send_form_email(
+                        subject='New Member Signup',
+                        message=email_message,
+                        recipient_list=recipient_list
+                    )
+                    logger.info(f"Member signup notification email sent for {member.first_name} {member.last_name}")
+                
+                # Send confirmation email to new member if they provided an email
+                if member.email:
+                    confirmation_message = f"""Hello {member.first_name},
+
+Thank you for signing up with Blowcomotion! We've received your information and will review your application soon.
+
+We'll be in touch with next steps about joining the band.
+
+Start Wearing Purple,
+Blowcomotion"""
+                    
+                    _send_form_email(
+                        subject='Welcome to Blowcomotion - Application Received',
+                        message=confirmation_message,
+                        recipient_list=[member.email]
+                    )
+                
+                context['message'] = 'Thank you for signing up! We have received your information and will be in touch soon.'
+                return render(request, 'member_signup_success.html', context)
+                
+            except Exception as e:
+                logger.error(f"Error processing member signup: {str(e)}", exc_info=True)
+                context['error'] = f'Error processing signup: {str(e)}'
+                context['form'] = form
+                return render(request, 'member_signup.html', context)
+        else:
+            # Form validation errors
+            context['form'] = form
+            context['error'] = 'Please correct the errors below.'
+            return render(request, 'member_signup.html', context)
+    
+    else:
+        # GET request - display empty form
+        form = MemberSignupForm()
+        context['form'] = form
+        return render(request, 'member_signup.html', context)
