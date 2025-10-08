@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Member Signup - Blowcomotion{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <h1 class="text-center mb-4">
+                <i class="fa fa-users"></i> Join Blowcomotion
+            </h1>
+            <p class="text-center text-muted mb-5">
+                Welcome! Please fill out the form below to join our band. All fields are optional except for your name.
+            </p>
+
+            {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fa fa-exclamation-circle"></i> {{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endif %}
+
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post" action="{% url 'member-signup' %}" novalidate>
+                        {% csrf_token %}
+
+                        <!-- Personal Information Section -->
+                        <div class="mb-4">
+                            <h4 class="border-bottom pb-2 mb-3">
+                                <i class="fa fa-user"></i> Personal Information
+                            </h4>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                                        First Name <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.first_name }}
+                                    {% if form.first_name.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.first_name.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                                        Last Name <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.last_name }}
+                                    {% if form.last_name.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.last_name.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.preferred_name.id_for_label }}" class="form-label">
+                                    Preferred Name
+                                </label>
+                                {{ form.preferred_name }}
+                                <small class="form-text text-muted">{{ form.preferred_name.help_text }}</small>
+                                {% if form.preferred_name.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.preferred_name.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.primary_instrument.id_for_label }}" class="form-label">
+                                    Instrument
+                                </label>
+                                {{ form.primary_instrument }}
+                                <small class="form-text text-muted">{{ form.primary_instrument.help_text }}</small>
+                                {% if form.primary_instrument.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.primary_instrument.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Birthday Section -->
+                        <div class="mb-4">
+                            <h4 class="border-bottom pb-2 mb-3">
+                                <i class="fa fa-birthday-cake"></i> Birthday
+                            </h4>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.birth_month.id_for_label }}" class="form-label">
+                                        Birth Month
+                                    </label>
+                                    {{ form.birth_month }}
+                                    {% if form.birth_month.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.birth_month.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.birth_day.id_for_label }}" class="form-label">
+                                        Birth Day
+                                    </label>
+                                    {{ form.birth_day }}
+                                    {% if form.birth_day.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.birth_day.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.birth_year.id_for_label }}" class="form-label">
+                                        Birth Year
+                                    </label>
+                                    {{ form.birth_year }}
+                                    {% if form.birth_year.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.birth_year.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact Information Section -->
+                        <div class="mb-4">
+                            <h4 class="border-bottom pb-2 mb-3">
+                                <i class="fa fa-envelope"></i> Contact Information
+                            </h4>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.email.id_for_label }}" class="form-label">
+                                        Email Address
+                                    </label>
+                                    {{ form.email }}
+                                    {% if form.email.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.email.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.phone.id_for_label }}" class="form-label">
+                                        Phone Number
+                                    </label>
+                                    {{ form.phone }}
+                                    {% if form.phone.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.phone.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Address Section -->
+                        <div class="mb-4">
+                            <h4 class="border-bottom pb-2 mb-3">
+                                <i class="fa fa-home"></i> Address
+                            </h4>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.address.id_for_label }}" class="form-label">
+                                    Street Address
+                                </label>
+                                {{ form.address }}
+                                {% if form.address.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.address.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.city.id_for_label }}" class="form-label">
+                                        City
+                                    </label>
+                                    {{ form.city }}
+                                    {% if form.city.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.city.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.state.id_for_label }}" class="form-label">
+                                        State
+                                    </label>
+                                    {{ form.state }}
+                                    {% if form.state.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.state.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.zip_code.id_for_label }}" class="form-label">
+                                        ZIP Code
+                                    </label>
+                                    {{ form.zip_code }}
+                                    {% if form.zip_code.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.zip_code.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.country.id_for_label }}" class="form-label">
+                                        Country
+                                    </label>
+                                    {{ form.country }}
+                                    {% if form.country.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.country.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Emergency Contact Section -->
+                        <div class="mb-4">
+                            <h4 class="border-bottom pb-2 mb-3">
+                                <i class="fa fa-phone"></i> Emergency Contact
+                            </h4>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.emergency_contact.id_for_label }}" class="form-label">
+                                    Emergency Contact
+                                </label>
+                                {{ form.emergency_contact }}
+                                <small class="form-text text-muted">{{ form.emergency_contact.help_text }}</small>
+                                {% if form.emergency_contact.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.emergency_contact.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Inspiration Section -->
+                        <div class="mb-4">
+                            <h4 class="border-bottom pb-2 mb-3">
+                                <i class="fa fa-lightbulb-o"></i> Your Story
+                            </h4>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.inspired_by.id_for_label }}" class="form-label">
+                                    {{ form.inspired_by.label }}
+                                </label>
+                                {{ form.inspired_by }}
+                                <small class="form-text text-muted">{{ form.inspired_by.help_text }}</small>
+                                {% if form.inspired_by.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.inspired_by.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Form validation errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <!-- Submit Button -->
+                        <div class="text-center">
+                            <button type="submit" class="site-btn btn-lg px-5">
+                                <i class="fa fa-paper-plane"></i> Submit Application
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <p class="text-muted">
+                    <small>
+                        <i class="fa fa-lock"></i> Your information is secure and will only be used for band management purposes.
+                    </small>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.card {
+    border-radius: 10px;
+}
+
+.form-label {
+    font-weight: 500;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+.site-btn {
+    transition: all 0.3s ease;
+}
+
+.site-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.border-bottom {
+    border-color: #dee2e6 !important;
+}
+
+h4 i {
+    margin-right: 0.5rem;
+}
+</style>
+{% endblock %}

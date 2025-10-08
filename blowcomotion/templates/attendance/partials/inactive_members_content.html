@@ -121,11 +121,15 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            {% if member.instruments.exists %}
-                                                {% for instrument in member.instruments.all %}
+                                            {% if member.primary_instrument %}
+                                                <span class="badge bg-primary text-white me-1">{{ member.primary_instrument.name }}</span>
+                                            {% endif %}
+                                            {% if member.additional_instruments.exists %}
+                                                {% for instrument in member.additional_instruments.all %}
                                                     <span class="badge bg-info text-white me-1">{{ instrument.instrument.name }}</span>
                                                 {% endfor %}
-                                            {% else %}
+                                            {% endif %}
+                                            {% if not member.primary_instrument and not member.additional_instruments.exists %}
                                                 <span class="text-muted">No instruments</span>
                                             {% endif %}
                                         </td>

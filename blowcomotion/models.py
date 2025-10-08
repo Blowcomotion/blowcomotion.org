@@ -17,6 +17,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from blowcomotion import blocks as blowcomotion_blocks
+from blowcomotion.utils import validate_birthday
 
 
 def get_default_expiration_date():
@@ -427,7 +428,7 @@ class Instrument(models.Model, index.Indexed):
 
 
 class MemberInstrument(Orderable):
-    member = ParentalKey("blowcomotion.Member", related_name="instruments")
+    member = ParentalKey("blowcomotion.Member", related_name="additional_instruments")
     instrument = models.ForeignKey("blowcomotion.Instrument", on_delete=models.CASCADE)
 
     panels = [
@@ -443,7 +444,8 @@ class Member(ClusterableModel, index.Indexed):
         first_name: CharField
         last_name: CharField
         preferred_name: CharField
-        instruments: ManyToManyField
+        primary_instrument: ForeignKey - primary instrument (single choice)
+        additional_instruments: ManyToManyField - additional instruments through MemberInstrument
         birth_month: IntegerField
         birth_day: IntegerField
         birth_year: IntegerField
@@ -474,6 +476,14 @@ class Member(ClusterableModel, index.Indexed):
         blank=True,
         null=True,
         help_text="Name the member prefers to be called (optional)"
+    )
+    primary_instrument = models.ForeignKey(
+        "blowcomotion.Instrument",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="primary_members",
+        help_text="Primary instrument played by this member"
     )
     birth_month = models.IntegerField(
         blank=True, 
@@ -523,24 +533,31 @@ class Member(ClusterableModel, index.Indexed):
         null=True,
         help_text="Name and phone number of emergency contact",
     )
+    inspired_by = models.TextField(
+        blank=True,
+        null=True,
+        help_text="What event or person inspired this member to join the band",
+    )
 
-    search_fields = [
-        index.SearchField("first_name"),
-        index.SearchField("last_name"),
-        index.SearchField("preferred_name"),
-        index.AutocompleteField("first_name"),
-        index.AutocompleteField("last_name"),
-        index.AutocompleteField("preferred_name"),
-        index.SearchField("bio"),
-        index.SearchField("email"),
-        index.SearchField("phone"),
-        index.SearchField("address"),
-        index.SearchField("city"),
-        index.SearchField("state"),
-        index.SearchField("zip_code"),
-        index.SearchField("country"),
-        index.SearchField("notes"),
-    ]
+    # Commenting out search_fields to avoid FTS indexing issues
+    # Admin search still works via snippet_viewsets.py search_fields
+    # search_fields = [
+    #     index.SearchField("first_name"),
+    #     index.SearchField("last_name"),
+    #     index.SearchField("preferred_name"),
+    #     index.AutocompleteField("first_name"),
+    #     index.AutocompleteField("last_name"),
+    #     index.AutocompleteField("preferred_name"),
+    #     index.SearchField("bio"),
+    #     index.SearchField("email"),
+    #     index.SearchField("phone"),
+    #     index.SearchField("address"),
+    #     index.SearchField("city"),
+    #     index.SearchField("state"),
+    #     index.SearchField("zip_code"),
+    #     index.SearchField("country"),
+    #     index.SearchField("notes"),
+    # ]
 
     def clean(self):
         from django.core.exceptions import ValidationError
@@ -563,18 +580,7 @@ class Member(ClusterableModel, index.Indexed):
                 )
         
         # Existing birthday validation
-        if self.birth_day is not None:
-            if self.birth_day < 1 or self.birth_day > 31:
-                raise ValidationError("Birth day must be between 1 and 31")
-            
-            # Check if day is valid for the given month
-            if self.birth_month is not None:
-                days_in_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-                max_day = days_in_month[self.birth_month - 1]
-                if self.birth_day > max_day:
-                    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
-                                 'July', 'August', 'September', 'October', 'November', 'December']
-                    raise ValidationError(f"Day {self.birth_day} is not valid for {month_names[self.birth_month - 1]}")
+        validate_birthday(self.birth_day, self.birth_month)
 
     @property
     def birthday(self):

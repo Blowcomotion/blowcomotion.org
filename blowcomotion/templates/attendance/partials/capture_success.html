@@ -3,6 +3,11 @@
 <div class="alert alert-success alert-dismissible fade show" role="alert">
     <h5 class="alert-heading">
         <i class="fa fa-check-circle"></i> Attendance Recorded Successfully!
+        {% if record.member.primary_instrument %}
+            <small class="text-muted">
+                ({{ record.member.primary_instrument.name }})
+            </small>
+        {% endif %}
     </h5>
     
     <p class="mb-2">

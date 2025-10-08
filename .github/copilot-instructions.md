@@ -89,6 +89,12 @@ Always reference these instructions first and fallback to search or bash command
 
 ### Key Models:
 - **Member**: Band member information including birthdays
+  - `primary_instrument`: ForeignKey to Instrument - the member's main instrument (single choice)
+  - `additional_instruments`: ManyToMany through MemberInstrument - extra instruments the member plays
+  - Members appear in only ONE section based on their primary_instrument
+  - Wagtail search indexing is disabled for Member model (search works via Django queries in admin)
+- **MemberInstrument**: Through model linking Members to additional instruments
+- **Instrument**: Musical instruments with section association
 - **AttendanceRecord**: Records attendance for rehearsals/performances  
 - **Section**: Band sections (Woodwinds, High Brass, etc.)
 - **Event**: Band events and performances
@@ -99,6 +105,7 @@ Always reference these instructions first and fallback to search or bash command
 - Migrations are in `blowcomotion/migrations/`
 - Run `python manage.py migrate` after model changes
 - Development uses SQLite database (`db.sqlite3`)
+- **Important**: Migration 0076 migrates existing instruments to primary/additional structure
 
 ## API Integration
 
@@ -139,6 +146,15 @@ python manage.py createsuperuser
 - **Site Settings**: Wagtail Admin > Settings > Site Settings
 - **Form Submissions**: Wagtail Admin > Form Submissions  
 - **Page Management**: Wagtail Admin > Pages
+
+### Managing Members:
+- **Adding Members**: Wagtail Admin > Band Stuff > Members > Add Member
+  - Set `primary_instrument`: The member's main instrument (required for section assignment)
+  - Set `additional_instruments`: Any extra instruments the member plays (optional)
+  - Members appear in attendance by their primary instrument's section only
+- **Editing Members**: Update primary/additional instruments as needed
+- **Data Migration**: Migration 0076 automatically converted old instrument data to new structure
+
 
 ### Static File Management:
 - Development: Files served automatically from `blowcomotion/static/`
