@@ -1,10 +1,10 @@
 {% load static %}
 
-<div cl                                {% if record.member.primary_instrument %}
-                                    <small class="text-muted">
-                                        ({{ record.member.primary_instrument.name }})
-                                    </small>
-                                {% endif %}alert alert-success alert-dismissible fade show" role="alert">
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    {% if record.member.primary_instrument %}
+        <small class="text-muted">
+            ({{ record.member.primary_instrument.name }})
+        </small>
     <h5 class="alert-heading">
         <i class="fa fa-check-circle"></i> Attendance Recorded Successfully!
     </h5>
