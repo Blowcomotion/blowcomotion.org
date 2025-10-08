@@ -218,24 +218,15 @@ class MemberSignupForm(forms.Form):
         })
     )
     
-    # Instrument selection - Primary and Additional
+    # Instrument selection
     primary_instrument = forms.ModelChoiceField(
         queryset=Instrument.objects.all().order_by('name'),
         required=False,
-        empty_label='Select your primary instrument',
+        empty_label='Select your instrument',
         widget=forms.Select(attrs={
             'class': 'form-control'
         }),
-        help_text='Select the primary instrument you play (optional)'
-    )
-    
-    additional_instruments = forms.ModelMultipleChoiceField(
-        queryset=Instrument.objects.all().order_by('name'),
-        required=False,
-        widget=forms.CheckboxSelectMultiple(attrs={
-            'class': 'form-check-input'
-        }),
-        help_text='Select any additional instruments you play (optional)'
+        help_text='Select the instrument you play (optional)'
     )
     
     # Optional personal information
