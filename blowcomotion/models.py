@@ -17,6 +17,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from blowcomotion import blocks as blowcomotion_blocks
+from blowcomotion.utils import validate_birthday
 
 
 def get_default_expiration_date():
@@ -579,18 +580,7 @@ class Member(ClusterableModel, index.Indexed):
                 )
         
         # Existing birthday validation
-        if self.birth_day is not None:
-            if self.birth_day < 1 or self.birth_day > 31:
-                raise ValidationError("Birth day must be between 1 and 31")
-            
-            # Check if day is valid for the given month
-            if self.birth_month is not None:
-                days_in_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-                max_day = days_in_month[self.birth_month - 1]
-                if self.birth_day > max_day:
-                    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
-                                 'July', 'August', 'September', 'October', 'November', 'December']
-                    raise ValidationError(f"Day {self.birth_day} is not valid for {month_names[self.birth_month - 1]}")
+        validate_birthday(self.birth_day, self.birth_month)
 
     @property
     def birthday(self):

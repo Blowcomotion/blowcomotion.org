@@ -7,6 +7,7 @@ from django.conf import settings
 from django.forms import formset_factory
 
 from blowcomotion.models import AttendanceRecord, Instrument, Member, Section
+from blowcomotion.utils import validate_birthday
 
 
 class AttendanceForm(forms.Form):
@@ -359,23 +360,12 @@ class MemberSignupForm(forms.Form):
         cleaned_data = super().clean()
         birth_month = cleaned_data.get('birth_month')
         birth_day = cleaned_data.get('birth_day')
-        birth_year = cleaned_data.get('birth_year')
         
-        # Validate birthday if any birthday field is provided
-        if birth_day:
-            if birth_day < 1 or birth_day > 31:
-                raise forms.ValidationError("Birth day must be between 1 and 31")
-            
-            # Check if day is valid for the given month
-            if birth_month:
-                month_num = int(birth_month)
-                days_in_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-                max_day = days_in_month[month_num - 1]
-                if birth_day > max_day:
-                    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
-                                 'July', 'August', 'September', 'October', 'November', 'December']
-                    raise forms.ValidationError(
-                        f"Day {birth_day} is not valid for {month_names[month_num - 1]}"
-                    )
+        # Validate birthday using shared utility function
+        try:
+            validate_birthday(birth_day, birth_month)
+        except Exception:
+            # Re-raise as forms.ValidationError for proper form handling
+            pass  # validate_birthday already raises ValidationError which Django forms will catch
         
         return cleaned_data
