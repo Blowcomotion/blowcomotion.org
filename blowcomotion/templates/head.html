@@ -1,15 +1,6 @@
-{% load static wagtailcore_tags compress livereload_tags %}
+{% load static compress livereload_tags %}
 <head>
     <meta charset="utf-8" />
-    <title>
-        {% block title %}
-        {% if page.seo_title %}{{ page.seo_title }}{% else %}{{ page.title }}{% endif %}
-        {% endblock %}
-        {% block title_suffix %}
-        {% wagtail_site as current_site %}
-        {% if current_site and current_site.site_name %}- {{ current_site.site_name }}{% endif %}
-        {% endblock %}
-    </title>
     {% if page.search_description %}
     <meta name="description" content="{{ page.search_description }}" />
     {% endif %}
