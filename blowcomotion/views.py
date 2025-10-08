@@ -1317,15 +1317,6 @@ def member_signup(request):
                 member.save()
                 logger.info(f"New member signup: {member.first_name} {member.last_name}")
                 
-                # Add additional instruments if selected
-                if form.cleaned_data.get('additional_instruments'):
-                    for instrument in form.cleaned_data['additional_instruments']:
-                        MemberInstrument.objects.create(
-                            member=member,
-                            instrument=instrument
-                        )
-                    logger.info(f"Added additional instruments to member {member.first_name} {member.last_name}")
-                
                 # Send email notification to admin
                 site_settings = SiteSettings.for_request(request=request)
                 recipients = site_settings.join_band_form_email_recipients
@@ -1343,13 +1334,9 @@ Name: {member.first_name} {member.last_name}"""
                     if member.preferred_name:
                         email_message += f"\nPreferred Name: {member.preferred_name}"
                     
-                    # Show selected instruments
+                    # Show selected instrument
                     if form.cleaned_data.get('primary_instrument'):
-                        email_message += f"\nPrimary Instrument: {form.cleaned_data['primary_instrument']}"
-                    
-                    if form.cleaned_data.get('additional_instruments'):
-                        additional_names = [str(inst) for inst in form.cleaned_data['additional_instruments']]
-                        email_message += f"\nAdditional Instruments: {', '.join(additional_names)}"
+                        email_message += f"\nInstrument: {form.cleaned_data['primary_instrument']}"
                     
                     if member.birthday_display:
                         email_message += f"\nBirthday: {member.birthday_display}"
