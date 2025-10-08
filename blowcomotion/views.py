@@ -1283,7 +1283,21 @@ def gigs_for_date(request):
 
 
 def member_signup(request):
-    """View for new members to sign up and enter their profile data"""
+    """
+    Handles new member signups by processing the MemberSignupForm, creating a Member instance,
+    and sending notification emails to administrators.
+
+    Parameters:
+        request (HttpRequest): The HTTP request object, expected to be a GET or POST.
+
+    Returns:
+        HttpResponse: Renders the signup form on GET or after successful signup.
+        JsonResponse: May return error details in case of form validation or other errors.
+
+    Exceptions:
+        Handles form validation errors, database errors, and email sending errors internally.
+        Unexpected exceptions are logged and may result in a 500 error response.
+    """
     context = {}
     
     if request.method == 'POST':
