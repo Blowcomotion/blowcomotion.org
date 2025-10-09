@@ -43,6 +43,14 @@ class SiteSettings(BaseSiteSetting):
         on_delete=models.SET_NULL,
         related_name="+",
     )
+    favicon = models.ForeignKey(
+        "blowcomotion.CustomImage",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text="Image used for the browser favicon. Upload a square image for best results.",
+    )
     footer_text = models.CharField(
         max_length=255,
         blank=True,
@@ -122,6 +130,7 @@ class SiteSettings(BaseSiteSetting):
     panels = [
         MultiFieldPanel([
             FieldPanel('logo'),
+            FieldPanel('favicon'),
             FieldPanel('footer_text'),
             FieldPanel('email'),
         ], heading="Site Branding"),
