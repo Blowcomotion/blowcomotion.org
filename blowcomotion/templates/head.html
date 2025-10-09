@@ -1,4 +1,4 @@
-{% load static compress livereload_tags %}
+{% load static compress livereload_tags wagtailsettings_tags wagtailimages_tags %}
 <head>
     <meta charset="utf-8" />
     {% if page.search_description %}
@@ -39,4 +39,13 @@
     <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
     {% if include_countdown_js %}<script src="{% static 'js/jquery.countdown.min.js' %}"></script>{% endif %}
     {% if include_form_js %}<script src="{% static 'js/form.js' %}"></script>{% endif %}
+
+    {% get_settings %}
+    {% if settings.blowcomotion.SiteSettings.favicon %}
+        {% image settings.blowcomotion.SiteSettings.favicon fill-32x32 as favicon_rendition %}
+        <link rel="icon" type="{{ favicon_rendition.mime_type }}" href="{{ favicon_rendition.url }}">
+        <link rel="apple-touch-icon" href="{{ favicon_rendition.url }}">
+    {% else %}
+        <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.png' %}">
+    {% endif %}
 </head>
