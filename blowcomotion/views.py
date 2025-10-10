@@ -1,6 +1,8 @@
 import base64
 import json
 import logging
+import os
+import tempfile
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from functools import wraps
@@ -17,6 +19,7 @@ from django.core.management import call_command
 from django.db.models import Count, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from blowcomotion.forms import (
@@ -491,6 +494,49 @@ def dump_data(request):
         # If something goes wrong, return an error message
         return JsonResponse({'error': str(e)}, status=500)
     
+
+def export_members_csv(request):
+    if not request.user.is_superuser:
+        logger.warning("Unauthorized access attempt to export members by user %s", request.user.username)
+        return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
+
+    include_extra = True
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
+    temp_path = temp_file.name
+    temp_file.close()
+
+    try:
+        logger.info(
+            "Starting member export by user %s (include_extra=%s)",
+            request.user.username,
+            include_extra,
+        )
+        call_command(
+            'export_members_to_csv',
+            output=temp_path,
+            include_extra=include_extra,
+            stdout=StringIO(),
+        )
+
+    except Exception as e:
+        logger.error("Error during member export by user %s: %s", request.user.username, str(e))
+        return JsonResponse({'error': str(e)}, status=500)
+    else:
+        with open(temp_path, 'rb') as csv_file:
+            csv_data = csv_file.read()
+
+        timestamp = timezone.now().strftime('%Y%m%d-%H%M%S')
+        filename = f'members_export_{timestamp}.csv'
+        response = HttpResponse(csv_data, content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        logger.info("Member export completed successfully by user %s", request.user.username)
+        return response
+    finally:
+        try:
+            os.remove(temp_path)
+        except OSError:
+            logger.warning("Temporary file %s could not be removed after member export", temp_path)
+
 
 def process_form(request):
     """

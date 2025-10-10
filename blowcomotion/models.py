@@ -530,6 +530,12 @@ class Member(ClusterableModel, index.Indexed):
     last_seen = models.DateField(blank=True, null=True, help_text="This field auto-populates whenever attendance is taken.")
     separation_date = models.DateField(blank=True, null=True, help_text="Date of separation from the organization.")
     email = models.EmailField(blank=True, null=True)
+    gigomatic_username = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Username used on Gig-O-Matic for this member",
+    )
     phone = models.CharField(max_length=255, blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
     city = models.CharField(max_length=255, blank=True, null=True)
