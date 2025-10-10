@@ -142,11 +142,12 @@ class MemberViewSet(SnippetViewSet):
     menu_icon = 'group'
     list_display = ["first_name", "last_name", "last_seen", UpdatedAtColumn()]
     list_filter = ["primary_instrument", "instructor", "board_member", "is_active"]
-    search_fields = ("first_name", "last_name", "preferred_name", "bio")
+    search_fields = ("first_name", "last_name", "preferred_name", "gigomatic_username", "bio")
     panels = [
         "first_name",
         "last_name",
         "preferred_name",
+        "gigomatic_username",
         "primary_instrument",
         MultipleChooserPanel("additional_instruments", chooser_field_name="instrument", 
                            help_text="Select any additional instruments this member plays"),

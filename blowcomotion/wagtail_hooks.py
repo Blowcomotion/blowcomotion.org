@@ -4,7 +4,7 @@ from wagtail.snippets.models import register_snippet
 
 from django.urls import path, reverse
 
-from blowcomotion.views import dump_data
+from blowcomotion.views import dump_data, export_members_csv
 
 from .chooser_viewsets import (
     event_chooser_viewset,
@@ -27,6 +27,7 @@ def register_admin_urls():
     """
     return [
         path("dump_data/", dump_data, name="dump_data"),
+        path("export_members/", export_members_csv, name="export_members"),
     ]
 
 
@@ -36,7 +37,8 @@ def register_admin_menu_item():
     Register the admin menu item for the app.
     """
     submenu = Menu(items=[
-            MenuItem('Dump Data', reverse('dump_data'), icon_name='download'),
+        MenuItem('Dump Data', reverse('dump_data'), icon_name='download'),
+        MenuItem('Export Members CSV', reverse('export_members'), icon_name='table'),
     ])
     return SubmenuMenuItem('Management', submenu, icon_name='cogs', order=10000)
 
