@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "livereload",
     "wagtail.contrib.forms",
     "wagtail.contrib.redirects",
+    "wagtailseo",
     "wagtail.contrib.settings",
     "wagtail.embeds",
     "wagtail.sites",
