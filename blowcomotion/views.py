@@ -538,6 +538,55 @@ def export_members_csv(request):
             logger.warning("Temporary file %s could not be removed after member export", temp_path)
 
 
+def export_attendance_csv(request):
+    if not request.user.is_superuser:
+        logger.warning("Unauthorized access attempt to export attendance by user %s", request.user.username)
+        return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
+
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
+    temp_path = temp_file.name
+    temp_file.close()
+
+    try:
+        logger.info(
+            "Starting attendance export by user %s (start_date=%s, end_date=%s)",
+            request.user.username,
+            start_date or 'min',
+            end_date or 'max',
+        )
+        command_kwargs = {
+            'output': temp_path,
+            'stdout': StringIO(),
+        }
+        if start_date:
+            command_kwargs['start_date'] = start_date
+        if end_date:
+            command_kwargs['end_date'] = end_date
+
+        call_command('export_attendance_to_csv', **command_kwargs)
+
+    except Exception as e:
+        logger.error("Error during attendance export by user %s: %s", request.user.username, str(e))
+        return JsonResponse({'error': str(e)}, status=500)
+    else:
+        with open(temp_path, 'rb') as csv_file:
+            csv_data = csv_file.read()
+
+        timestamp = timezone.now().strftime('%Y%m%d-%H%M%S')
+        filename = f'attendance_export_{timestamp}.csv'
+        response = HttpResponse(csv_data, content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        logger.info("Attendance export completed successfully by user %s", request.user.username)
+        return response
+    finally:
+        try:
+            os.remove(temp_path)
+        except OSError:
+            logger.warning("Temporary file %s could not be removed after attendance export", temp_path)
+
+
 def process_form(request):
     """
     Process the form submission.
