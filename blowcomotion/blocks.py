@@ -703,3 +703,45 @@ class CountdownBlock(blocks.StructBlock):
         template = "blocks/countdown_block.html"
         label_format = "Countdown to {countdown_date}"
 
+
+class TimelineItemBlock(blocks.StructBlock):
+    image = ImageChooserBlock(
+        required=False,
+        help_text="Select an image for this timeline item."
+    )
+    title = blocks.CharBlock(
+        required=False,
+        help_text="Enter the title for this timeline item."
+    )
+    date = blocks.CharBlock(
+        required=False,
+        help_text="Enter the date or year for this timeline item (e.g. '2017' or 'March 2020')."
+    )
+    description = blocks.RichTextBlock(
+        required=False,
+        help_text="Enter the description for this timeline item."
+    )
+
+    class Meta:
+        icon = "date"
+        label_format = "{title} - {date}"
+
+
+class TimelineBlock(blocks.StructBlock):
+    timeline_items = blocks.ListBlock(
+        TimelineItemBlock(),
+        help_text="Add timeline items. They will alternate between left and right automatically.",
+        min_num=1,
+    )
+    background_color = blocks.CharBlock(
+        required=False,
+        default="#F0F2F5",
+        help_text="Enter the background color for the timeline section (e.g. #F0F2F5 or rgb(240, 242, 245))."
+    )
+
+    class Meta:
+        icon = "list-ol"
+        template = "blocks/timeline_block.html"
+        label = "Timeline"
+        help_text = "This displays a timeline with alternating left/right items."
+
