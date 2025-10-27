@@ -1,6 +1,6 @@
 {% load wagtailcore_tags wagtailimages_tags %}
 <section style="background-color: {{ value.background_color|default:'#F0F2F5' }};">
-  <div class="container py-5">
+  <div class="container-fluid py-5">
     <div class="main-timeline-2">
       {% for item in value.timeline_items %}
       <div class="timeline-2 {% if forloop.counter|divisibleby:2 %}right-2{% else %}left-2{% endif %}">
