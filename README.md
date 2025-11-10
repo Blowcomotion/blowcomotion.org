@@ -115,13 +115,18 @@ This ensures that all Python code follows consistent import formatting standards
 - To stop the server, press `Ctrl+C` in the terminal
 
 ## Import data from the website to the local database
-
-- Navigate to the website admin [data dump page](http://localhost:8000//admin/dump_data/)
+- Navigate to the live website admin [data dump page](https://www.blowcomotion.org/admin/dump_data/)
 - Save the json file to your local machine
 - Navigate to the project directory
     `cd blowcomotion.org`
-- Find and replace all instances of `"live_revision": [id or null]` with `"live_revision": null,` in the json file
-- Find and replace all instances of `"latest_revision": [id or null]` with `"latest_revision": null,` in the json file
+- Find and replace all instances of `"live_revision": [id or null]` with `"live_revision": null,` in the json file 
+    - Using VS Code:
+        - Open the json file and select the Search button
+        - Click on `.*` button in the search bar to enable regex option
+        - In the Search box, paste the following `"live_revision":.*` 
+        - In Replace box, enter `"live_revision": null,`
+        - Click the Replace All button
+        - Repeat these steps again, searching for `"latest_revision": [id or null]` and replacing all instances with `"latest_revision": null,`
 - Run the following command to import the data into the local database
     `python manage.py loaddata <path_to_json_file>`
 - Log in to the admin panel at [http://localhost:8000/admin](http://localhost:8000/admin) to verify that the data has been imported successfully
