@@ -432,20 +432,23 @@ def _process_form_submission(request, form_type, form_data, submission_model):
         logger.info(f"{form_type} submission saved successfully for user {request.user.username}")
         
         # Send email if recipients are configured
-        if recipients or (form_type == 'feedback_form' and form_data.get('email')):
-            email_message = _create_email_message(form_type, **form_data)
-            subject = f'{form_type.replace("_", " ").title()} Submission'
-            
-            # Build complete recipient list
-            recipient_list = []
-            if recipients:
-                recipient_list.extend([email.strip() for email in recipients.split(',')])
-            if form_data.get('email'):
-                recipient_list.append(form_data['email'])
-            
-            if recipient_list:
-                _send_form_email(subject, email_message, recipient_list)
-                logger.info(f"Email sent successfully for {form_type} submission by user {request.user.username}")
+        try:
+            if recipients or (form_type == 'feedback_form' and form_data.get('email')):
+                email_message = _create_email_message(form_type, **form_data)
+                subject = f'{form_type.replace("_", " ").title()} Submission'
+                
+                # Build complete recipient list
+                recipient_list = []
+                if recipients:
+                    recipient_list.extend([email.strip() for email in recipients.split(',')])
+                if form_data.get('email'):
+                    recipient_list.append(form_data['email'])
+                
+                if recipient_list:
+                    _send_form_email(subject, email_message, recipient_list)
+                    logger.info(f"Email sent successfully for {form_type} submission by user {request.user.username}")
+        except Exception as e:
+            logger.error(f"Error sending email for {form_type} submission by user {request.user.username}: {str(e)}")
         
         return {
             'message': _get_success_message(form_type),
