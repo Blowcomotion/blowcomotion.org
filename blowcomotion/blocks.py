@@ -15,6 +15,7 @@ from blowcomotion.chooser_blocks import (
     GigoGigChooserBlock,
     SongChooserBlock,
 )
+from blowcomotion.utils import adjust_gig_date_for_early_morning
 
 
 class HeroBlock(blocks.StructBlock):
@@ -583,9 +584,12 @@ class UpcomingPublicGigs(blocks.StructBlock):
                 localtime = time.localtime()
                 validated_gigs = []
                 for gig in context['gigs']:
-                    # Parse and validate date; skip if invalid
+                    # Adjust gig date for early morning times using shared helper function
+                    adjusted_date_str = adjust_gig_date_for_early_morning(gig)
+                    
+                    # Parse and validate adjusted date; skip if invalid
                     try:
-                        parsed_date = datetime.datetime.strptime(gig.get('date', ''), "%Y-%m-%d")
+                        parsed_date = datetime.datetime.strptime(adjusted_date_str, "%Y-%m-%d")
                     except (ValueError, TypeError):  # includes missing or malformed date
                         continue
 
@@ -601,12 +605,6 @@ class UpcomingPublicGigs(blocks.StructBlock):
                         try:
                             parsed_time = datetime.datetime.strptime(raw_time, "%H:%M").replace(tzinfo=datetime.timezone.utc)
                             parsed_time = parsed_time + timedelta(hours=localtime.tm_isdst)
-                            
-                            # Workaround: If gig time is very early morning (before 6 AM), 
-                            # assume it's actually the previous evening's event and adjust date back by 1 day
-                            time_only = datetime.datetime.strptime(raw_time, "%H:%M")
-                            if time_only.hour < 6:  # Before 6 AM
-                                parsed_date = parsed_date - timedelta(days=1)
                         except (ValueError, TypeError):
                             parsed_time = None
 

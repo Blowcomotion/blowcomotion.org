@@ -1,7 +1,46 @@
 """
 Utility functions for the Blowcomotion application.
 """
+from datetime import datetime, timedelta
+
 from django.core.exceptions import ValidationError
+
+
+def adjust_gig_date_for_early_morning(gig):
+    """
+    Adjust gig date if the time is very early morning (before 6 AM).
+    This handles cases where events that happen late at night are stored with
+    the next day's date and a post-midnight time.
+    
+    Args:
+        gig: Dictionary containing gig data with 'date', 'set_time', and/or 'call_time' fields
+        
+    Returns:
+        str: Adjusted date string in YYYY-MM-DD format
+    """
+    gig_date = gig.get('date', '')
+    if not gig_date:
+        return gig_date
+    
+    # Prefer set_time; fallback to call_time
+    set_time = gig.get('set_time', '').strip() if isinstance(gig.get('set_time'), str) else ''
+    call_time = gig.get('call_time', '').strip() if isinstance(gig.get('call_time'), str) else ''
+    time_str = set_time if set_time else call_time
+    
+    if time_str:
+        try:
+            # Parse the time
+            time_obj = datetime.strptime(time_str, "%H:%M")
+            # If time is before 6 AM, subtract one day from the date
+            if time_obj.hour < 6:
+                date_obj = datetime.strptime(gig_date, "%Y-%m-%d")
+                adjusted_date = date_obj - timedelta(days=1)
+                return adjusted_date.strftime("%Y-%m-%d")
+        except (ValueError, TypeError):
+            # If parsing fails, return original date
+            pass
+    
+    return gig_date
 
 
 def validate_birthday(birth_day, birth_month):

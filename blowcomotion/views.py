@@ -40,6 +40,7 @@ from blowcomotion.models import (
     Section,
     SiteSettings,
 )
+from blowcomotion.utils import adjust_gig_date_for_early_morning
 
 logger = logging.getLogger(__name__)
 
@@ -77,44 +78,6 @@ def make_gigo_api_request(endpoint, timeout=10, retries=2):
         except Exception as e:
             logger.error("Unexpected error making API request to %s: %s", endpoint, e, exc_info=True)
             return None
-
-
-def adjust_gig_date_for_early_morning(gig):
-    """
-    Adjust gig date if the time is very early morning (before 6 AM).
-    This handles cases where events that happen late at night are stored with
-    the next day's date and a post-midnight time.
-    
-    Args:
-        gig: Dictionary containing gig data with 'date', 'set_time', and/or 'call_time' fields
-        
-    Returns:
-        str: Adjusted date string in YYYY-MM-DD format
-    """
-    gig_date = gig.get('date', '')
-    if not gig_date:
-        return gig_date
-    
-    # Prefer set_time; fallback to call_time
-    set_time = gig.get('set_time', '').strip() if isinstance(gig.get('set_time'), str) else ''
-    call_time = gig.get('call_time', '').strip() if isinstance(gig.get('call_time'), str) else ''
-    time_str = set_time if set_time else call_time
-    
-    if time_str:
-        try:
-            # Parse the time
-            time_obj = datetime.strptime(time_str, "%H:%M")
-            # If time is before 6 AM, subtract one day from the date
-            if time_obj.hour < 6:
-                date_obj = datetime.strptime(gig_date, "%Y-%m-%d")
-                adjusted_date = date_obj - timedelta(days=1)
-                return adjusted_date.strftime("%Y-%m-%d")
-        except (ValueError, TypeError):
-            # If parsing fails, return original date
-            pass
-    
-    return gig_date
-    
 
 
 def get_birthday(year, month, day):
