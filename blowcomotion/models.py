@@ -556,23 +556,25 @@ class Member(ClusterableModel, index.Indexed):
 
     # Commenting out search_fields to avoid FTS indexing issues
     # Admin search still works via snippet_viewsets.py search_fields
-    # search_fields = [
-    #     index.SearchField("first_name"),
-    #     index.SearchField("last_name"),
-    #     index.SearchField("preferred_name"),
-    #     index.AutocompleteField("first_name"),
-    #     index.AutocompleteField("last_name"),
-    #     index.AutocompleteField("preferred_name"),
-    #     index.SearchField("bio"),
-    #     index.SearchField("email"),
-    #     index.SearchField("phone"),
-    #     index.SearchField("address"),
-    #     index.SearchField("city"),
-    #     index.SearchField("state"),
-    #     index.SearchField("zip_code"),
-    #     index.SearchField("country"),
-    #     index.SearchField("notes"),
-    # ]
+    search_fields = [
+        index.SearchField("first_name"),
+        index.SearchField("last_name"),
+        index.SearchField("preferred_name"),
+        index.SearchField("gigomatic_username"),
+        index.AutocompleteField("first_name"),
+        index.AutocompleteField("last_name"),
+        index.AutocompleteField("preferred_name"),
+        index.AutocompleteField("gigomatic_username"),
+        index.SearchField("bio"),
+        index.SearchField("email"),
+        index.SearchField("phone"),
+        index.SearchField("address"),
+        index.SearchField("city"),
+        index.SearchField("state"),
+        index.SearchField("zip_code"),
+        index.SearchField("country"),
+        index.SearchField("notes"),
+    ]
 
     def clean(self):
         from django.core.exceptions import ValidationError
