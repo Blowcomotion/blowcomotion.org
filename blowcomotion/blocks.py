@@ -601,6 +601,12 @@ class UpcomingPublicGigs(blocks.StructBlock):
                         try:
                             parsed_time = datetime.datetime.strptime(raw_time, "%H:%M").replace(tzinfo=datetime.timezone.utc)
                             parsed_time = parsed_time + timedelta(hours=localtime.tm_isdst)
+                            
+                            # Workaround: If gig time is very early morning (before 6 AM), 
+                            # assume it's actually the previous evening's event and adjust date back by 1 day
+                            time_only = datetime.datetime.strptime(raw_time, "%H:%M")
+                            if time_only.hour < 6:  # Before 6 AM
+                                parsed_date = parsed_date - timedelta(days=1)
                         except (ValueError, TypeError):
                             parsed_time = None
 
