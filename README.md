@@ -252,7 +252,7 @@ The attendance system now integrates with the GigoGig API to provide seamless gi
    - Select "Performance" for gigs (shows gig selection dropdown)
 5. **Gig Selection** (Performances only): Choose from available confirmed gigs for the selected date
 6. **Member Selection**: Check off members who attended
-7. **Instrument Choice**: Use the dropdown next to each attendee to note the instrument they played (defaults to primary/section instrument)
+7. **Instrument Choice**: The instrument is automatically determined for each attendee based on the section being viewed and the member's instrument assignments (no manual selection required)
 8. **Guest Entry**: Add names of guests/visitors (one per line)
 9. **Submit**: Record attendance with automatic event information
 
@@ -353,7 +353,7 @@ The Member model was refactored to improve instrument management and section ass
 **Key changes:**
 
 - Split instruments into `primary_instrument` (single) and `additional_instruments` (multiple)
-- Members now appear in only one section during attendance based on primary instrument
+- Members appear in their primary section by default, with additional instruments surfaced (and flagged as "Additional") in the relevant sections for quick access during attendance
 - Migration 0076 automatically converted existing data
 - Admin search uses Django queries instead of Wagtail FTS for better SQLite compatibility
 

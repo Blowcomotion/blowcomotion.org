@@ -774,7 +774,7 @@ def attendance_capture(request, section_slug=None):
 
         return None
 
-    section_members = Member.objects.none()
+
     members_by_instrument = []
     member_entries_map = {}
     member_instrument_meta = {}
@@ -1300,7 +1300,7 @@ def attendance_reports(request):
     
     context = {
         'filter_form': filter_form,
-    'attendance_records': attendance_records.select_related('member', 'member__primary_instrument', 'played_instrument').order_by('-date', 'member__first_name', 'member__last_name')[:100],  # Limit for performance
+        'attendance_records': attendance_records.select_related('member', 'member__primary_instrument', 'played_instrument').order_by('-date', 'member__first_name', 'member__last_name')[:100],  # Limit for performance
         'attendance_by_date': attendance_by_date,
         'total_records': total_records,
         'member_records': member_records,
@@ -1380,7 +1380,7 @@ def attendance_section_report_new(request, section_slug):
     context = {
         'section': section,
         'section_members': section_members,
-    'attendance_records': attendance_records.select_related('member', 'member__primary_instrument', 'played_instrument'),
+        'attendance_records': attendance_records.select_related('member', 'member__primary_instrument', 'played_instrument'),
         'member_attendance': member_attendance,
         'attendance_by_date': attendance_by_date,
         'start_date': start_date,
