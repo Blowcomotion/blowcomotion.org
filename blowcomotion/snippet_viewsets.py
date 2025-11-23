@@ -186,13 +186,14 @@ class AttendanceRecordViewSet(SnippetViewSet):
     menu_label = 'Attendance Records'
     menu_name = 'attendance_records'
     menu_icon = 'check'
-    list_display = ['member', 'guest_name', DateColumn('date', label='Date'), 'notes', UpdatedAtColumn()]
-    list_filter = ['date', 'member']
-    search_fields = ('member__first_name', 'member__last_name', 'guest_name', 'notes')
+    list_display = ['member', 'played_instrument', 'guest_name', DateColumn('date', label='Date'), 'notes', UpdatedAtColumn()]
+    list_filter = ['date', 'member', 'played_instrument']
+    search_fields = ('member__first_name', 'member__last_name', 'guest_name', 'notes', 'played_instrument__name')
     panels = [
         FieldRowPanel([
             'date',
             'member',
+            'played_instrument',
         ], heading="Attendance Details"),
         'guest_name',
         'notes',

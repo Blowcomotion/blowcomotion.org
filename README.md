@@ -11,23 +11,59 @@ The templates for this codebase are derived from the [Djoz theme](https://themew
 ## Installation
 - Clone the repository
 
-    `git clone <repository-url>`
+    ```bash
+    git clone <repository-url>
+    ```
 
 - Navigate to the project directory
-    `cd blowcomotion.org`
+
+    ```bash
+    cd blowcomotion.org
+    ```
+
 - Create a virtual environment
-    `python -m venv venv`
+
+    ```bash
+    python -m venv venv
+    ```
+
 - Activate the virtual environment
-    - On Windows:
-        `venv\Scripts\activate`
-    - On macOS/Linux:
-        `source venv/bin/activate`
+
+    **Windows**
+
+    ```powershell
+    venv\Scripts\activate
+    ```
+
+    **macOS/Linux**
+
+    ```bash
+    source venv/bin/activate
+    ```
+
 - Install the required packages
-    `pip install -r requirements.txt`
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+- Install isort for import sorting
+
+    ```bash
+    pip install isort
+    ```
+
 - Run database migrations
-    `python manage.py migrate`
+
+    ```bash
+    python manage.py migrate
+    ```
+
 - Create a superuser account
-    `python manage.py createsuperuser`
+
+    ```bash
+    python manage.py createsuperuser
+    ```
 
 ## Development Tools
 
@@ -115,23 +151,33 @@ This ensures that all Python code follows consistent import formatting standards
 - To stop the server, press `Ctrl+C` in the terminal
 
 ## Import data from the website to the local database
+
 - Navigate to the live website admin [data dump page](https://www.blowcomotion.org/admin/dump_data/)
-- Save the json file to your local machine
+- Save the JSON file to your local machine
 - Navigate to the project directory
-    `cd blowcomotion.org`
-- Find and replace all instances of `"live_revision": [id or null]` with `"live_revision": null,` in the json file 
-    - Using VS Code:
-        - Open the json file and select the Search button
-        - Click on `.*` button in the search bar to enable regex option
-        - In the Search box, paste the following `"live_revision":.*` 
-        - In Replace box, enter `"live_revision": null,`
-        - Click the Replace All button
-        - Repeat these steps again, searching for `"latest_revision": [id or null]` and replacing all instances with `"latest_revision": null,`
-- Run the following command to import the data into the local database
-    `python manage.py loaddata <path_to_json_file>`
+
+    ```bash
+    cd blowcomotion.org
+    ```
+
+- Clean up the JSON so `live_revision` and `latest_revision` values are `null`
+
+    Using VS Code:
+
+    1. Open the JSON file and select the Search button.
+    2. Enable regex search by clicking the `.*` toggle in the search bar.
+    3. Search for `"live_revision":.*` and replace it with `"live_revision": null,`.
+    4. Repeat for `"latest_revision":.*`, replacing it with `"latest_revision": null,`.
+
+- Import the cleaned data into the local database
+
+    ```bash
+    python manage.py loaddata <path_to_json_file>
+    ```
+
 - Log in to the admin panel at [http://localhost:8000/admin](http://localhost:8000/admin) to verify that the data has been imported successfully
-- Navigate to [page explorer](http://localhost:8000/admin/pages/) Delete the default "Welcome to your new Wagtail site!" page if it exists in the admin panel
-- Navigate to the [sites settings](http://localhost:8000/admin/sites/) and change the localhost root page to the homepage of the imported data
+- In [Page Explorer](http://localhost:8000/admin/pages/), delete the default "Welcome to your new Wagtail site!" page if it still exists
+- In [Sites settings](http://localhost:8000/admin/sites/), set the localhost root page to the imported homepage
 
 ## Production Deployment
 
@@ -155,7 +201,7 @@ The Member model was refactored to better represent instrument relationships:
 
 #### Key Changes
 
-- Members now appear in **only ONE section** during attendance tracking (based on primary_instrument)
+- Members appear in their primary section by default, with additional instruments surfaced (and flagged) in the relevant sections for quick access
 - The old `instruments` many-to-many field was split into primary + additional
 - Migration 0076 automatically migrated existing data: first instrument → primary, rest → additional
 - Admin search for Members uses Django queries instead of Wagtail FTS indexing for better SQLite compatibility
@@ -176,8 +222,9 @@ The attendance tracking system allows band leaders to record and manage attendan
 #### Key Features
 
 - **Section-based tracking**: Record attendance by band section (Woodwinds, High Brass, etc.)
-- **Single section assignment**: Each member appears in only one section based on their primary instrument
+- **Section-aware roster**: Members default to their primary section, while additional instruments make them available (flagged) in those sections too
 - **Member and guest support**: Track both band members and guests/visitors
+- **Instrument capture**: Record the specific instrument each member played for that session
 - **Event types**: Differentiate between rehearsals and performances
 - **Gig integration**: Automatically fetch and select from confirmed gigs when recording performance attendance
 - **Smart gig selection**: Gigs are filtered by date, band (Blowcomotion), and confirmation status
@@ -205,8 +252,9 @@ The attendance system now integrates with the GigoGig API to provide seamless gi
    - Select "Performance" for gigs (shows gig selection dropdown)
 5. **Gig Selection** (Performances only): Choose from available confirmed gigs for the selected date
 6. **Member Selection**: Check off members who attended
-7. **Guest Entry**: Add names of guests/visitors (one per line)
-8. **Submit**: Record attendance with automatic event information
+7. **Instrument Choice**: The instrument is automatically determined for each attendee based on the section being viewed and the member's instrument assignments (no manual selection required)
+8. **Guest Entry**: Add names of guests/visitors (one per line)
+9. **Submit**: Record attendance with automatic event information
 
 #### Technical Features
 
@@ -303,12 +351,14 @@ Site settings, including access control passwords, are configured through the Wa
 The Member model was refactored to improve instrument management and section assignment. See [MEMBER_MODEL_REFACTOR.md](MEMBER_MODEL_REFACTOR.md) for complete details.
 
 **Key changes:**
+
 - Split instruments into `primary_instrument` (single) and `additional_instruments` (multiple)
-- Members now appear in only one section during attendance based on primary instrument
+- Members appear in their primary section by default, with additional instruments surfaced (and flagged as "Additional") in the relevant sections for quick access during attendance
 - Migration 0076 automatically converted existing data
 - Admin search uses Django queries instead of Wagtail FTS for better SQLite compatibility
 
 **Breaking changes:**
+
 - Attendance views now filter by `primary_instrument` instead of many-to-many `instruments`
 - Templates display `member.primary_instrument` instead of looping through `member.instruments.all`
 - Forms require setting primary instrument for proper section assignment
