@@ -3,7 +3,7 @@ import json
 import logging
 import os
 import tempfile
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from datetime import date, datetime, timedelta
 from functools import wraps
 from io import StringIO
@@ -710,35 +710,138 @@ def attendance_capture(request, section_slug=None):
         else:
             section = get_object_or_404(Section, name__iexact=section_slug.replace('-', ' '))
     
-    # Get section members for display grouped by instrument
-    section_members = []
-    members_by_instrument = {}
-    
+    def build_member_entry(member, current_section):
+        """Build template data and metadata for a member within the attendance form."""
+        instruments = []
+        seen_instrument_ids = set()
+
+        if member.primary_instrument:
+            instruments.append((member.primary_instrument, True))
+            seen_instrument_ids.add(member.primary_instrument_id)
+
+        for link in member.additional_instruments.all():
+            instrument = link.instrument
+            if instrument and instrument.id not in seen_instrument_ids:
+                instruments.append((instrument, False))
+                seen_instrument_ids.add(instrument.id)
+
+        display_instrument = None
+        if current_section:
+            if member.primary_instrument and member.primary_instrument.section_id == current_section.id:
+                display_instrument = member.primary_instrument
+            else:
+                for instrument, _ in instruments:
+                    if instrument and instrument.section_id == current_section.id:
+                        display_instrument = instrument
+                        break
+        elif instruments:
+            display_instrument = instruments[0][0]
+
+        if not display_instrument and instruments:
+            display_instrument = instruments[0][0]
+
+        entry = {
+            'member': member,
+            'display_instrument': display_instrument,
+            'is_additional_for_section': bool(
+                current_section and display_instrument and (
+                    not member.primary_instrument or member.primary_instrument_id != display_instrument.id
+                )
+            ),
+        }
+
+        meta = {
+            'section_instrument': display_instrument,
+            'default': instruments[0][0] if instruments else None,
+        }
+
+        return entry, meta
+
+    def resolve_played_instrument(member, meta):
+        """Determine the instrument a member played based on metadata."""
+        if meta:
+            if meta.get('section_instrument'):
+                return meta['section_instrument']
+            if meta.get('default'):
+                return meta['default']
+
+        if member.primary_instrument:
+            return member.primary_instrument
+
+        for link in member.additional_instruments.all():
+            if link.instrument:
+                return link.instrument
+
+        return None
+
+    section_members = Member.objects.none()
+    members_by_instrument = []
+    member_entries_map = {}
+    member_instrument_meta = {}
+    section_member_ids = set()
+
     if is_no_section:
-        # Get members who don't have a primary instrument
         section_members = Member.objects.filter(
             is_active=True,
             primary_instrument__isnull=True
-        ).order_by('first_name', 'last_name')
+        ).select_related('primary_instrument').prefetch_related('additional_instruments__instrument').order_by('first_name', 'last_name')
+
+        for member in section_members:
+            entry, meta = build_member_entry(member, None)
+            member_entries_map[member.id] = entry
+            member_instrument_meta[member.id] = meta
+            section_member_ids.add(member.id)
     elif section:
-        # Get instruments that belong to this section
-        section_instruments = Instrument.objects.filter(section=section).order_by('name')
-        
-        # Group members by their primary instrument only
-        for instrument in section_instruments:
-            members_for_instrument = Member.objects.filter(
-                primary_instrument=instrument,
+        section_instruments = list(Instrument.objects.filter(section=section).order_by('name'))
+
+        primary_ids = set(
+            Member.objects.filter(
+                primary_instrument__in=section_instruments,
                 is_active=True
-            ).order_by('first_name', 'last_name')
-            
-            if members_for_instrument.exists():
-                members_by_instrument[instrument] = members_for_instrument
-        
-        # Also get all section members (those with primary instrument in this section)
-        section_members = Member.objects.filter(
-            primary_instrument__in=section_instruments,
-            is_active=True
-        ).distinct().order_by('first_name', 'last_name')
+            ).values_list('id', flat=True)
+        )
+
+        additional_ids = set(
+            Member.objects.filter(
+                is_active=True,
+                additional_instruments__instrument__section=section
+            ).values_list('id', flat=True)
+        )
+
+        section_member_ids = primary_ids.union(additional_ids)
+
+        if section_member_ids:
+            section_members = Member.objects.filter(
+                id__in=section_member_ids
+            ).select_related('primary_instrument').prefetch_related('additional_instruments__instrument').order_by('first_name', 'last_name')
+        else:
+            section_members = Member.objects.none()
+
+        grouped_entries = OrderedDict(
+            (instrument.id, {'instrument': instrument, 'entries': []})
+            for instrument in section_instruments
+        )
+
+        for member in section_members:
+            entry, meta = build_member_entry(member, section)
+
+            # Skip members that do not align with this section in any way
+            if section and not entry['display_instrument']:
+                continue
+
+            member_entries_map[member.id] = entry
+            member_instrument_meta[member.id] = meta
+
+            display_instrument = entry['display_instrument']
+            if display_instrument and display_instrument.id in grouped_entries:
+                grouped_entries[display_instrument.id]['entries'].append(entry)
+
+        members_by_instrument = [
+            group for group in grouped_entries.values()
+            if group['entries']
+        ]
+    else:
+        section_members = Member.objects.none()
     
     if request.method == 'POST':
         attendance_date_str = request.POST.get('attendance_date', date.today().strftime('%Y-%m-%d'))
@@ -787,26 +890,42 @@ def attendance_capture(request, section_slug=None):
             checkbox_name = f'member_{member.id}'
             if checkbox_name in request.POST:
                 try:
+                    meta = member_instrument_meta.get(member.id)
+                    played_instrument = resolve_played_instrument(member, meta)
+
                     # Create or update attendance record
                     attendance_record, created = AttendanceRecord.objects.get_or_create(
                         date=attendance_date,
                         member=member,
-                        defaults={'notes': event_notes_for_record}
+                        defaults={
+                            'notes': event_notes_for_record,
+                            'played_instrument': played_instrument,
+                        }
                     )
                     if created:
                         success_count += 1
                     else:
+                        fields_changed = []
                         # Update existing record to append event type in notes if not already present
                         if not attendance_record.notes:
                             attendance_record.notes = event_notes_for_record
-                            attendance_record.save()
+                            fields_changed.append('notes')
                         else:
                             # Only append event_notes_for_record if it's not already present as a full entry
                             notes_entries = [entry.strip() for entry in attendance_record.notes.split(';') if entry.strip()]
                             if event_notes_for_record not in notes_entries:
                                 notes_entries.append(event_notes_for_record)
                                 attendance_record.notes = '; '.join(notes_entries)
-                                attendance_record.save()
+                                fields_changed.append('notes')
+
+                        current_instrument_id = attendance_record.played_instrument_id
+                        new_instrument_id = played_instrument.id if played_instrument else None
+                        if current_instrument_id != new_instrument_id:
+                            attendance_record.played_instrument = played_instrument
+                            fields_changed.append('played_instrument')
+
+                        if fields_changed:
+                            attendance_record.save(update_fields=list(set(fields_changed)))
                     
                     # Update member's last_seen field
                     member.last_seen = attendance_date
@@ -825,7 +944,7 @@ def attendance_capture(request, section_slug=None):
                     errors.append(f"Error recording attendance for {member}: {str(e)}")
         
         # Also process any additional member IDs that might not be in section_members (e.g., inactive members)
-        processed_member_ids = {member.id for member in section_members}
+        processed_member_ids = set(section_member_ids)
         for field_name, field_value in request.POST.items():
             if field_name.startswith('member_') and field_value == 'on':
                 try:
@@ -833,27 +952,47 @@ def attendance_capture(request, section_slug=None):
                     if member_id not in processed_member_ids:
                         # This is a member not in section_members (probably inactive)
                         member = Member.objects.get(id=member_id)
+                        meta = member_instrument_meta.get(member.id)
+                        if not meta:
+                            _, meta = build_member_entry(member, section if section else None)
+                            member_instrument_meta[member.id] = meta
+                            meta = member_instrument_meta[member.id]
+
+                        played_instrument = resolve_played_instrument(member, meta)
                         
                         # Create or update attendance record
                         attendance_record, created = AttendanceRecord.objects.get_or_create(
                             date=attendance_date,
                             member=member,
-                            defaults={'notes': event_notes_for_record}
+                            defaults={
+                                'notes': event_notes_for_record,
+                                'played_instrument': played_instrument,
+                            }
                         )
                         if created:
                             success_count += 1
                         else:
+                            fields_changed = []
                             # Update existing record to append event type in notes if not already present
                             if not attendance_record.notes:
                                 attendance_record.notes = event_notes_for_record
-                                attendance_record.save()
+                                fields_changed.append('notes')
                             else:
                                 # Only append event_notes_for_record if it's not already present as a full entry
                                 notes_entries = [entry.strip() for entry in attendance_record.notes.split(';') if entry.strip()]
                                 if event_notes_for_record not in notes_entries:
                                     notes_entries.append(event_notes_for_record)
                                     attendance_record.notes = '; '.join(notes_entries)
-                                    attendance_record.save()
+                                    fields_changed.append('notes')
+
+                            current_instrument_id = attendance_record.played_instrument_id
+                            new_instrument_id = played_instrument.id if played_instrument else None
+                            if current_instrument_id != new_instrument_id:
+                                attendance_record.played_instrument = played_instrument
+                                fields_changed.append('played_instrument')
+
+                            if fields_changed:
+                                attendance_record.save(update_fields=list(set(fields_changed)))
                         
                         # Update member's last_seen field
                         member.last_seen = attendance_date
@@ -897,16 +1036,16 @@ def attendance_capture(request, section_slug=None):
                 date=attendance_date
             ).filter(
                 Q(member__in=section_members) | Q(member__isnull=True)
-            ).select_related('member', 'member__primary_instrument').order_by('member__first_name', 'member__last_name', 'guest_name')
+            ).select_related('member', 'member__primary_instrument', 'played_instrument').order_by('member__first_name', 'member__last_name', 'guest_name')
         elif is_no_section:
             # Get all records for this date and no-section members
             todays_records = AttendanceRecord.objects.filter(
                 date=attendance_date
             ).filter(
                 Q(member__in=section_members) | Q(member__isnull=True)
-            ).select_related('member', 'member__primary_instrument').order_by('member__first_name', 'member__last_name', 'guest_name')
+            ).select_related('member', 'member__primary_instrument', 'played_instrument').order_by('member__first_name', 'member__last_name', 'guest_name')
         else:
-            todays_records = AttendanceRecord.objects.filter(date=attendance_date).select_related('member', 'member__primary_instrument')
+            todays_records = AttendanceRecord.objects.filter(date=attendance_date).select_related('member', 'member__primary_instrument', 'played_instrument')
         
         context = {
             'success_count': success_count,
@@ -948,12 +1087,21 @@ def attendance_capture(request, section_slug=None):
     
     recorded_member_ids = set()
     if section_members:
-        recorded_member_ids = set(
-            AttendanceRecord.objects.filter(
-                date=attendance_date_obj,
-                member__in=section_members
-            ).values_list('member_id', flat=True)
-        )
+        existing_records = AttendanceRecord.objects.filter(
+            date=attendance_date_obj,
+            member__in=section_members
+        ).select_related('played_instrument')
+        for record in existing_records:
+            if record.member_id:
+                recorded_member_ids.add(record.member_id)
+                
+
+    member_entries_sequence = []
+    if section_members:
+        for member in section_members:
+            entry = member_entries_map.get(member.id)
+            if entry:
+                member_entries_sequence.append(entry)
 
     # Get gig choices for the current date using cached endpoint
     gig_choices = []
@@ -1005,6 +1153,8 @@ def attendance_capture(request, section_slug=None):
         'section': section,
         'section_members': section_members,
         'members_by_instrument': members_by_instrument,
+        'member_entries_map': member_entries_map,
+        'member_entries_sequence': member_entries_sequence,
         'sections': sections,
         'is_no_section': is_no_section,
         'today': date.today(),
@@ -1013,7 +1163,7 @@ def attendance_capture(request, section_slug=None):
         'gig': gig,
         'event_notes': event_notes,
         'gig_choices': gig_choices,
-        'recorded_member_ids': recorded_member_ids
+        'recorded_member_ids': recorded_member_ids,
     }
     
     # For HTMX section switching, return the main content including navigation
@@ -1122,10 +1272,13 @@ def attendance_reports(request):
     
     if section_id:
         section = Section.objects.get(id=section_id)
-        # Get members whose primary instrument is in this section
+        # Include members whose primary or additional instruments belong to this section
         section_member_ids = Member.objects.filter(
-            primary_instrument__section=section
-        ).values_list('id', flat=True)
+            is_active=True
+        ).filter(
+            Q(primary_instrument__section=section) |
+            Q(additional_instruments__instrument__section=section)
+        ).values_list('id', flat=True).distinct()
         attendance_records = attendance_records.filter(
             Q(member_id__in=section_member_ids) | Q(member__isnull=True)
         )
@@ -1147,7 +1300,7 @@ def attendance_reports(request):
     
     context = {
         'filter_form': filter_form,
-        'attendance_records': attendance_records.select_related('member', 'member__primary_instrument').order_by('-date', 'member__first_name', 'member__last_name')[:100],  # Limit for performance
+    'attendance_records': attendance_records.select_related('member', 'member__primary_instrument', 'played_instrument').order_by('-date', 'member__first_name', 'member__last_name')[:100],  # Limit for performance
         'attendance_by_date': attendance_by_date,
         'total_records': total_records,
         'member_records': member_records,
@@ -1179,11 +1332,13 @@ def attendance_section_report_new(request, section_slug):
     if request.GET.get('end_date'):
         end_date = date.fromisoformat(request.GET.get('end_date'))
     
-    # Get members in this section (those with primary instrument in this section)
+    # Include members whose primary or additional instruments belong to this section
     section_members = Member.objects.filter(
-        primary_instrument__section=section,
         is_active=True
-    ).order_by('first_name', 'last_name')
+    ).filter(
+        Q(primary_instrument__section=section) |
+        Q(additional_instruments__instrument__section=section)
+    ).select_related('primary_instrument').prefetch_related('additional_instruments__instrument').order_by('first_name', 'last_name').distinct()
     
     section_member_ids = list(section_members.values_list('id', flat=True))
     
@@ -1225,7 +1380,7 @@ def attendance_section_report_new(request, section_slug):
     context = {
         'section': section,
         'section_members': section_members,
-        'attendance_records': attendance_records.select_related('member', 'member__primary_instrument'),
+    'attendance_records': attendance_records.select_related('member', 'member__primary_instrument', 'played_instrument'),
         'member_attendance': member_attendance,
         'attendance_by_date': attendance_by_date,
         'start_date': start_date,
@@ -1352,6 +1507,8 @@ def gigs_for_date(request):
         
         # Fetch gigs from API
         gigs_data = make_gigo_api_request("/gigs")
+        if gigs_data is None:
+            return JsonResponse({'error': 'Unable to fetch gigs at this time.'}, status=500)
         filtered_gigs = []
         
         if gigs_data and gigs_data.get("gigs"):

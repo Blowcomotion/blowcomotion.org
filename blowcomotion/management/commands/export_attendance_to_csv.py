@@ -40,6 +40,8 @@ class Command(BaseCommand):
             "member",
             "member__primary_instrument",
             "member__primary_instrument__section",
+            "played_instrument",
+            "played_instrument__section",
         ).order_by("date", "member__last_name", "member__first_name", "guest_name")
 
         if start_date:
@@ -59,6 +61,8 @@ class Command(BaseCommand):
             "member_is_active",
             "member_primary_instrument",
             "member_section",
+            "played_instrument",
+            "played_instrument_section",
             "guest_name",
             "notes",
             "created_at",
@@ -89,6 +93,8 @@ class Command(BaseCommand):
                     "YES" if (member and member.is_active) else ("NO" if member else ""),
                     primary_instrument.name if primary_instrument else "",
                     section.name if section else "",
+                    record.played_instrument.name if record.played_instrument else "",
+                    record.played_instrument.section.name if getattr(record.played_instrument, "section", None) else "",
                     record.guest_name or "",
                     record.notes or "",
                     record.created_at.isoformat() if record.created_at else "",

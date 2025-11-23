@@ -156,6 +156,12 @@ class AttendanceCaptureViewTests(TestCase):
         MemberInstrument.objects.create(member=self.member1, instrument=self.trumpet)
         MemberInstrument.objects.create(member=self.member2, instrument=self.trombone)
         MemberInstrument.objects.create(member=self.inactive_member, instrument=self.trumpet)
+        self.member1.primary_instrument = self.trumpet
+        self.member1.save(update_fields=['primary_instrument'])
+        self.member2.primary_instrument = self.trombone
+        self.member2.save(update_fields=['primary_instrument'])
+        self.inactive_member.primary_instrument = self.trumpet
+        self.inactive_member.save(update_fields=['primary_instrument'])
         
         # Create a member without any instrument assignment for no-section testing
         self.no_section_member = Member.objects.create(
@@ -232,6 +238,7 @@ class AttendanceCaptureViewTests(TestCase):
             member=self.member1
         )
         self.assertIsNotNone(attendance_record)
+        self.assertEqual(attendance_record.played_instrument, self.trumpet)
         
         # Check member's last_seen was updated
         self.member1.refresh_from_db()
@@ -239,6 +246,34 @@ class AttendanceCaptureViewTests(TestCase):
         
         # Check response contains success message
         self.assertContains(response, "Successfully recorded attendance")
+
+    def test_attendance_capture_records_additional_instrument_members(self):
+        """Members with additional instruments should appear in that section and record the selected instrument."""
+        woodwinds = Section.objects.create(name="Woodwinds")
+        flute = Instrument.objects.create(name="Flute", section=woodwinds)
+
+        MemberInstrument.objects.create(member=self.member1, instrument=flute)
+
+        response = self.client.get(reverse('attendance-capture', args=['woodwinds']))
+        self.assertEqual(response.status_code, 200)
+        section_members = list(response.context['section_members'])
+        self.assertIn(self.member1, section_members)
+
+        entry = response.context['member_entries_map'][self.member1.id]
+        self.assertEqual(entry['display_instrument'], flute)
+
+        attendance_date = date.today()
+        post_response = self.client.post(
+            reverse('attendance-capture', args=['woodwinds']),
+            {
+                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
+                f'member_{self.member1.id}': 'on',
+            }
+        )
+
+        self.assertEqual(post_response.status_code, 200)
+        record = AttendanceRecord.objects.get(date=attendance_date, member=self.member1)
+        self.assertEqual(record.played_instrument, flute)
 
     def test_attendance_capture_post_member_attendance_rehearsal(self):
         """Test POST request to record member attendance for rehearsal (default event type)"""
@@ -261,6 +296,7 @@ class AttendanceCaptureViewTests(TestCase):
             member=self.member1
         )
         self.assertEqual(attendance_record.notes, 'Rehearsal')
+        self.assertEqual(attendance_record.played_instrument, self.trumpet)
 
     def test_attendance_capture_post_member_attendance_rehearsal_with_notes(self):
         """Test POST request to record member attendance for rehearsal with custom notes"""
@@ -285,6 +321,7 @@ class AttendanceCaptureViewTests(TestCase):
             member=self.member1
         )
         self.assertEqual(attendance_record.notes, f'Rehearsal: {custom_notes}')
+        self.assertEqual(attendance_record.played_instrument, self.trumpet)
 
     def test_attendance_capture_post_member_attendance_performance_no_name(self):
         """Test POST request to record member attendance for performance without event name"""
@@ -307,6 +344,7 @@ class AttendanceCaptureViewTests(TestCase):
             member=self.member1
         )
         self.assertEqual(attendance_record.notes, 'Performance')
+        self.assertEqual(attendance_record.played_instrument, self.trumpet)
 
     def test_attendance_capture_post_member_attendance_performance_with_notes(self):
         """Test POST request to record member attendance for performance with custom notes"""
@@ -331,6 +369,7 @@ class AttendanceCaptureViewTests(TestCase):
             member=self.member1
         )
         self.assertEqual(attendance_record.notes, f'Performance: {custom_notes}')
+        self.assertEqual(attendance_record.played_instrument, self.trumpet)
 
     def test_attendance_capture_post_guest_attendance_rehearsal(self):
         """Test POST request to record guest attendance for rehearsal"""
@@ -466,7 +505,8 @@ class AttendanceCaptureViewTests(TestCase):
         existing_record = AttendanceRecord.objects.create(
             date=attendance_date,
             member=self.member1,
-            notes=existing_notes
+            notes=existing_notes,
+            played_instrument=self.trumpet
         )
         
         response = self.client.post(
@@ -485,6 +525,7 @@ class AttendanceCaptureViewTests(TestCase):
         existing_record.refresh_from_db()
         expected_notes = f"{existing_notes}; Performance: New Performance"
         self.assertEqual(existing_record.notes, expected_notes)
+        self.assertEqual(existing_record.played_instrument, self.trumpet)
 
     def test_attendance_capture_post_default_event_type(self):
         """Test that attendance capture works without explicit event_type (defaults to rehearsal)"""

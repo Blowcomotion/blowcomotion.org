@@ -647,6 +647,14 @@ class AttendanceRecord(models.Model):
         on_delete=models.CASCADE,
         related_name="attendance_records"
     )
+    played_instrument = models.ForeignKey(
+        "blowcomotion.Instrument",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="attendance_records_as_played",
+        help_text="Instrument the member played for this attendance entry"
+    )
     guest_name = models.CharField(
         max_length=255,
         blank=True,
@@ -668,7 +676,8 @@ class AttendanceRecord(models.Model):
     
     def __str__(self):
         if self.member:
-            return f"{self.member} - {self.date}"
+            instrument_label = f" ({self.played_instrument.name})" if self.played_instrument else ""
+            return f"{self.member}{instrument_label} - {self.date}"
         else:
             return f"{self.guest_name} (Guest) - {self.date}"
 
