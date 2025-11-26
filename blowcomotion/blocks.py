@@ -30,6 +30,21 @@ class HeroBlock(blocks.StructBlock):
         template = "blocks/hero_block.html"
         label_format = "Hero: {top_line} {middle_line} {bottom_line}"
 
+    def get_context(self, value, parent_context=None):
+        context = super().get_context(value, parent_context)
+        context['youtube_embed_url'] = ''
+        if value.get('youtube_url'):
+            youtube_url = value['youtube_url']
+            if "watch?v=" in youtube_url:
+                video_id = youtube_url.split("watch?v=")[-1].split("&")[0]
+            elif "youtu.be/" in youtube_url:
+                video_id = youtube_url.split("youtu.be/")[-1].split("?")[0]
+            else:
+                video_id = ''
+            if video_id:
+                context['youtube_embed_url'] = f"https://www.youtube.com/embed/{video_id}"
+        return context
+
 
 class EventsBlock(blocks.StructBlock):
     scroller_title = blocks.CharBlock()

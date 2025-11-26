@@ -10,7 +10,7 @@
                         {% if value.middle_line %}<h1>{{ value.middle_line }}</h1>{% endif %}
                         {% if value.bottom_line %}<p>{{ value.bottom_line }}</p>{% endif %}
                         {% if value.youtube_url %}
-                            <a href="{{ value.youtube_url }}" class="play-btn video-popup"><i class="fa fa-play"></i></a>
+                            <a href="#" class="play-btn video-popup-trigger" data-video-url="{{ youtube_embed_url }}"><i class="fa fa-play"></i></a>
                         {% endif %}
                     </div>
                 </div>
@@ -21,3 +21,21 @@
         <i class="fa fa-angle-double-down"></i>
     </div>
 </section>
+
+<!-- Video Modal -->
+<div class="modal fade" id="videoModal" tabindex="-1" role="dialog" aria-labelledby="videoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-0">
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="embed-responsive embed-responsive-16by9">
+                    <iframe id="videoIframe" class="embed-responsive-item" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -91,10 +91,24 @@
     });
 
     /*------------------
-		Magnific
+		Video Popup Modal
 	--------------------*/
-    $('.video-popup').magnificPopup({
-        type: 'iframe'
+    $('.video-popup-trigger').on('click', function(e) {
+        e.preventDefault();
+        var videoUrl = $(this).data('video-url');
+        // Add autoplay parameter to URL
+        if (videoUrl.indexOf('?') > -1) {
+            videoUrl += '&autoplay=1';
+        } else {
+            videoUrl += '?autoplay=1';
+        }
+        $('#videoIframe').attr('src', videoUrl);
+        $('#videoModal').modal('show');
+    });
+
+    // Clear video when modal is closed to stop playback
+    $('#videoModal').on('hidden.bs.modal', function () {
+        $('#videoIframe').attr('src', '');
     });
 
 
