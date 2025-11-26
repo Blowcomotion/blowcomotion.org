@@ -94,10 +94,15 @@ class BaseMemberChooseView(BaseChooseView):
     @property
     def columns(self):
         return [
-            TitleColumn("first_name", label="First name"),
-            TitleColumn("last_name", label="Last name"),
-            TitleColumn("instructor", label="Instructor"),
-            TitleColumn("board_member", label="Board member"),
+            TitleColumn(
+                "first_name",
+                label="First name",
+                url_name=self.chosen_url_name,
+                link_attrs={"data-chooser-modal-choice": True},
+            ),
+            Column("last_name", label="Last name"),
+            Column("instructor", label="Instructor"),
+            Column("board_member", label="Board member"),
         ]
 
 
