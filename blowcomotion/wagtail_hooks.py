@@ -69,7 +69,7 @@ class NotificationBannerPanel(Component):
         
         return format_html(
             """
-            <section class="panel summary nice-padding">
+            <section class="panel summary nice-padding" style="margin-bottom: 20px;">
                 <h3>Notification Banner</h3>
                 <p>Quickly edit the site-wide notification banner message.</p>
                 <a href="{}" class="button">Edit Notification Banner</a>
