@@ -1,9 +1,9 @@
-Django==5.1.13
-django-compressor==4.5.1
+Django==5.2.8
+django-compressor==4.6.0
 django-libsass==0.9
 django-livereload-server==0.5.1
 queryish==0.3
-wagtail==7.2
+wagtail==7.2.1
 wagtailmedia==0.17.2
 wagtail-seo==3.1.1
 wagtailtwbsicons==1.0.1
