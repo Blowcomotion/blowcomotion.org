@@ -1,8 +1,10 @@
 from wagtail import hooks
 from wagtail.admin.menu import Menu, MenuItem, SubmenuMenuItem
+from wagtail.admin.ui.components import Component
 from wagtail.snippets.models import register_snippet
 
 from django.urls import path, reverse
+from django.utils.html import format_html
 
 from blowcomotion.views import dump_data, export_attendance_csv, export_members_csv
 
@@ -55,3 +57,29 @@ def register_viewset():
         event_chooser_viewset,
         gigo_gig_chooser_viewset,
     )
+
+
+class NotificationBannerPanel(Component):
+    """Panel for quick access to notification banner editing."""
+    order = 100
+
+    def render_html(self, parent_context):
+        # Get the notification banner settings URL
+        edit_url = reverse('wagtailsettings:edit', args=['blowcomotion', 'NotificationBanner'])
+        
+        return format_html(
+            """
+            <section class="panel summary nice-padding">
+                <h3>Notification Banner</h3>
+                <p>Quickly edit the site-wide notification banner message.</p>
+                <a href="{}" class="button">Edit Notification Banner</a>
+            </section>
+            """,
+            edit_url
+        )
+
+
+@hooks.register('construct_homepage_panels')
+def add_notification_banner_panel(request, panels):
+    """Add notification banner shortcut to the admin homepage."""
+    panels.append(NotificationBannerPanel())
