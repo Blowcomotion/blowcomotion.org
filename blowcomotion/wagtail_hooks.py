@@ -71,7 +71,7 @@ class NotificationBannerPanel(Component):
             """
             <section class="panel summary nice-padding" style="margin-bottom: 20px;">
                 <h3>Notification Banner</h3>
-                <p>Quickly edit the site-wide notification banner message.</p>
+                <p>Quickly edit the site-wide notification banner message. Usually to notify of rehearsal location changes or other important announcements.</p>
                 <a href="{}" class="button">Edit Notification Banner</a>
             </section>
             """,
