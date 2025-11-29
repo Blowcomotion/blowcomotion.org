@@ -543,7 +543,10 @@ class Member(ClusterableModel, index.Indexed):
     )
     instructor = models.BooleanField(default=False)
     board_member = models.BooleanField(default=False)
-    renting = models.BooleanField(default=False, help_text="Is the member renting an instrument?")
+    renting = models.BooleanField(
+        default=False, 
+        help_text="Is the member renting an instrument? (Auto-updated when instruments are rented/returned)"
+    )
     last_seen = models.DateField(blank=True, null=True, help_text="This field auto-populates whenever attendance is taken.")
     separation_date = models.DateField(blank=True, null=True, help_text="Date of separation from the organization.")
     email = models.EmailField(blank=True, null=True)
