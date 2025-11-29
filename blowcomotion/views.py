@@ -224,6 +224,13 @@ def instrument_library_quick_rent(request):
                         f"{instrument.instrument.name} returned from {renter_display}.",
                     )
                     return redirect('instrument_library_quick_rent')
+            else:
+                # Form validation failed - likely no instrument selected
+                if 'instrument' in return_form.errors:
+                    messages.error(
+                        request,
+                        "Please select an instrument to return by clicking the 'Return' button next to it in the 'Currently rented' list above."
+                    )
 
     context = {
         'page_title': 'Instrument Library Quick Rent',
