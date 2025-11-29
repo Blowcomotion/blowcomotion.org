@@ -969,6 +969,29 @@ class LibraryInstrument(DraftStateMixin, RevisionMixin, LockableMixin, Clusterab
 
         super().save(*args, **kwargs)
 
+        # Update member renting status
+        members_to_update = set()
+        
+        # If this instrument is rented and has a member, ensure member.renting = True
+        if self.status == self.STATUS_RENTED and self.member:
+            members_to_update.add(self.member)
+            self.member.renting = True
+            self.member.save(update_fields=['renting'])
+        
+        # If member changed or status changed from rented, check old member's status
+        if old_member and old_member != self.member:
+            members_to_update.add(old_member)
+        
+        # Update old member's renting status if they have no other rentals
+        for member in members_to_update:
+            if member != self.member:  # Don't recheck current member
+                still_renting = LibraryInstrument.objects.filter(
+                    member=member,
+                    status=self.STATUS_RENTED
+                ).exists()
+                member.renting = still_renting
+                member.save(update_fields=['renting'])
+
         if is_new:
             InstrumentHistoryLog.objects.create(
                 library_instrument=self,
