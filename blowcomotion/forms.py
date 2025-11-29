@@ -7,13 +7,7 @@ from django.conf import settings
 from django.forms import formset_factory
 from django.utils import timezone
 
-from blowcomotion.models import (
-    AttendanceRecord,
-    Instrument,
-    LibraryInstrument,
-    Member,
-    Section,
-)
+from blowcomotion.models import Instrument, LibraryInstrument, Member, Section
 from blowcomotion.utils import validate_birthday
 
 

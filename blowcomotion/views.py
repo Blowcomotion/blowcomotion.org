@@ -197,6 +197,8 @@ def instrument_library_quick_rent(request):
                     instrument.member = None
                     instrument.rental_date = None
                     instrument.agreement_signed_date = None
+                    instrument.review_date_6_month = None
+                    instrument.review_date_12_month = None
                     instrument.patreon_active = False
                     instrument.patreon_amount = None
                     instrument.save()

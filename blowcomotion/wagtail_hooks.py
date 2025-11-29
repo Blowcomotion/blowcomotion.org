@@ -96,6 +96,7 @@ def register_icons(icons):
         'icons/french-horn.svg',
     ]
 
+
 @hooks.register("register_admin_viewset")
 def register_viewset():
     return (
