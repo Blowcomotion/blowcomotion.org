@@ -11,6 +11,8 @@ from io import StringIO
 import requests
 
 from django.conf import settings
+from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.cache import cache
@@ -24,6 +26,8 @@ from django.views.decorators.http import require_http_methods
 
 from blowcomotion.forms import (
     AttendanceReportFilterForm,
+    LibraryInstrumentRentForm,
+    LibraryInstrumentReturnForm,
     MemberSignupForm,
     SectionAttendanceForm,
 )
@@ -34,7 +38,9 @@ from blowcomotion.models import (
     DonateFormSubmission,
     FeedbackFormSubmission,
     Instrument,
+    InstrumentHistoryLog,
     JoinBandFormSubmission,
+    LibraryInstrument,
     Member,
     MemberInstrument,
     Section,
@@ -47,6 +53,184 @@ logger = logging.getLogger(__name__)
 # Constants
 BIRTHDAY_RANGE_DAYS = 30
 
+# Instrument Library Dashboard Views
+
+
+@staff_member_required
+def instrument_library_rented(request):
+    instruments = (
+        LibraryInstrument.objects.filter(status=LibraryInstrument.STATUS_RENTED)
+        .select_related('instrument', 'member')
+        .order_by('instrument__name', 'serial_number')
+    )
+    return render(
+        request,
+        'instrument_library/list.html',
+        {
+            'page_title': 'Rented Instruments',
+            'instruments': instruments,
+        },
+    )
+
+
+@staff_member_required
+def instrument_library_available(request):
+    instruments = (
+        LibraryInstrument.objects.filter(status=LibraryInstrument.STATUS_AVAILABLE)
+        .select_related('instrument', 'member')
+        .order_by('instrument__name', 'serial_number')
+    )
+    return render(
+        request,
+        'instrument_library/list.html',
+        {
+            'page_title': 'Available Instruments',
+            'instruments': instruments,
+        },
+    )
+
+
+@staff_member_required
+def instrument_library_needs_repair(request):
+    instruments = (
+        LibraryInstrument.objects.filter(
+            status__in=[
+                LibraryInstrument.STATUS_NEEDS_REPAIR,
+                LibraryInstrument.STATUS_OUT_FOR_REPAIR,
+            ]
+        )
+        .select_related('instrument', 'member')
+        .order_by('instrument__name', 'serial_number')
+    )
+    return render(
+        request,
+        'instrument_library/list.html',
+        {
+            'page_title': 'Instruments Needing Repair / Maintenance',
+            'instruments': instruments,
+        },
+    )
+
+
+@staff_member_required
+@require_http_methods(["GET", "POST"])
+def instrument_library_quick_rent(request):
+    available_qs = LibraryInstrument.objects.filter(
+        status=LibraryInstrument.STATUS_AVAILABLE
+    ).select_related('instrument')
+    rented_qs = LibraryInstrument.objects.filter(
+        status=LibraryInstrument.STATUS_RENTED
+    ).select_related('instrument', 'member')
+
+    instrument_id = request.GET.get('instrument')
+    initial_instrument = None
+    if instrument_id:
+        try:
+            initial_instrument = available_qs.get(pk=instrument_id)
+        except LibraryInstrument.DoesNotExist:
+            messages.error(request, "That instrument is no longer available to rent.")
+            return redirect('instrument_library_quick_rent')
+
+    action = request.POST.get('action') if request.method == 'POST' else None
+
+    rent_form = LibraryInstrumentRentForm(
+        request.POST if action == 'rent' else None,
+        instrument_queryset=available_qs,
+        initial_instrument=initial_instrument,
+    )
+    return_form = LibraryInstrumentReturnForm(
+        request.POST if action == 'return' else None,
+    )
+
+    if request.method == 'POST':
+        if action == 'rent':
+            if rent_form.is_valid():
+                instrument = rent_form.cleaned_data['instrument']
+                member = rent_form.cleaned_data['member']
+
+                if instrument.status != LibraryInstrument.STATUS_AVAILABLE:
+                    messages.error(request, "Instrument is no longer available to rent.")
+                    rent_form.add_error('instrument', "Instrument is no longer available to rent.")
+                else:
+                    instrument.member = member
+                    instrument.status = LibraryInstrument.STATUS_RENTED
+                    instrument.rental_date = (
+                        rent_form.cleaned_data['rental_date'] or timezone.localdate()
+                    )
+                    instrument.agreement_signed_date = rent_form.cleaned_data[
+                        'agreement_signed_date'
+                    ]
+                    instrument.patreon_active = rent_form.cleaned_data['patreon_active']
+                    instrument.patreon_amount = rent_form.cleaned_data['patreon_amount']
+                    comments = rent_form.cleaned_data['comments']
+                    if comments:
+                        instrument.comments = comments
+
+                    instrument.save()
+
+                    if comments:
+                        InstrumentHistoryLog.objects.create(
+                            library_instrument=instrument,
+                            event_category=InstrumentHistoryLog.EVENT_RENTAL_NOTE,
+                            event_date=timezone.localdate(),
+                            notes=f"Rental notes: {comments}",
+                            user=request.user,
+                        )
+
+                    messages.success(
+                        request,
+                        f"{instrument.instrument.name} rented to {member.full_name}.",
+                    )
+                    return redirect('instrument_library_quick_rent')
+
+        elif action == 'return':
+            if return_form.is_valid():
+                instrument = return_form.cleaned_data['instrument']
+                condition_notes = return_form.cleaned_data['condition_notes']
+                previous_member = instrument.member
+
+                if instrument.status != LibraryInstrument.STATUS_RENTED:
+                    messages.error(request, "Instrument is not currently rented out.")
+                    return_form.add_error('instrument', "Instrument is not currently rented out.")
+                else:
+                    instrument.status = LibraryInstrument.STATUS_AVAILABLE
+                    instrument.member = None
+                    instrument.rental_date = None
+                    instrument.agreement_signed_date = None
+                    instrument.review_date_6_month = None
+                    instrument.review_date_12_month = None
+                    instrument.patreon_active = False
+                    instrument.patreon_amount = None
+                    instrument.save()
+
+                    if condition_notes:
+                        InstrumentHistoryLog.objects.create(
+                            library_instrument=instrument,
+                            event_category=InstrumentHistoryLog.EVENT_RETURN_NOTE,
+                            event_date=timezone.localdate(),
+                            notes=f"Return notes: {condition_notes}",
+                            user=request.user,
+                        )
+
+                    renter_display = (
+                        previous_member.full_name if previous_member else 'previous renter'
+                    )
+                    messages.success(
+                        request,
+                        f"{instrument.instrument.name} returned from {renter_display}.",
+                    )
+                    return redirect('instrument_library_quick_rent')
+
+    context = {
+        'page_title': 'Instrument Library Quick Rent',
+        'rent_form': rent_form,
+        'return_form': return_form,
+        'available_instruments': available_qs,
+        'rented_instruments': rented_qs,
+        'selected_instrument': initial_instrument,
+    }
+
+    return render(request, 'instrument_library/manage.html', context)
 
 def make_gigo_api_request(endpoint, timeout=10, retries=2):
     """

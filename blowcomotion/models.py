@@ -10,10 +10,17 @@ from wagtail.contrib.settings.models import BaseSiteSetting, register_setting
 from wagtail.documents import get_document_model
 from wagtail.fields import RichTextField, StreamField
 from wagtail.images.models import AbstractImage, AbstractRendition, Image
-from wagtail.models import Orderable, Page
+from wagtail.models import (
+    DraftStateMixin,
+    LockableMixin,
+    Orderable,
+    Page,
+    RevisionMixin,
+)
 from wagtail.search import index
 
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models
 
 from blowcomotion import blocks as blowcomotion_blocks
@@ -97,6 +104,12 @@ class SiteSettings(BaseSiteSetting):
         null=True,
         help_text="Comma-separated list of email addresses to receive donate form submissions",
     )
+    instrument_rental_notification_recipients = models.CharField(
+        max_length=1024,
+        blank=True,
+        null=True,
+        help_text="Comma-separated list of email addresses to receive instrument rental notifications",
+    )
     venmo_donate_url = models.URLField(
         blank=True,
         null=True,
@@ -160,6 +173,10 @@ class SiteSettings(BaseSiteSetting):
             FieldPanel('attendance_password'),
             FieldPanel('birthdays_password'),
         ], heading="Access Control", help_text="Set passwords for protected areas of the site. Leave blank to disable authentication for that area."),
+
+        MultiFieldPanel([
+            FieldPanel('instrument_rental_notification_recipients'),
+        ], heading="Instrument Library Notifications", help_text="Configure who receives rental status reports."),
     ]
 
 
@@ -623,6 +640,13 @@ class Member(ClusterableModel, index.Indexed):
                 return f"{month_name} {self.birth_day}"
         return None
 
+    @property
+    def full_name(self):
+        """Return the preferred full name for display."""
+        if self.preferred_name:
+            return f"{self.preferred_name} {self.last_name}"
+        return f"{self.first_name} {self.last_name}"
+
     def __str__(self):
         return f"\"{self.preferred_name}\" {self.first_name} {self.last_name}" if self.preferred_name else f"{self.first_name} {self.last_name}"
 
@@ -816,7 +840,322 @@ class WikiPage(BlankCanvasPage):
 
     def __str__(self):
         return self.title
+
+
+class LibraryInstrument(DraftStateMixin, RevisionMixin, LockableMixin, ClusterableModel, index.Indexed):
+    """Track each physical instrument in the Blowcomotion inventory."""
+
+    STATUS_AVAILABLE = "available"
+    STATUS_RENTED = "rented"
+    STATUS_NEEDS_REPAIR = "needs_repair"
+    STATUS_OUT_FOR_REPAIR = "out_for_repair"
+    STATUS_DISPOSED = "disposed"
+
+    STATUS_CHOICES = [
+        (STATUS_AVAILABLE, "Available"),
+        (STATUS_RENTED, "Rented"),
+        (STATUS_NEEDS_REPAIR, "Needs Repair/Unplayable"),
+        (STATUS_OUT_FOR_REPAIR, "Out for Repair"),
+        (STATUS_DISPOSED, "Disposed"),
+    ]
+
+    instrument = models.ForeignKey(
+        "blowcomotion.Instrument",
+        on_delete=models.PROTECT,
+        related_name="library_inventory",
+        help_text="Instrument type (e.g. Trombone, Trumpet)",
+    )
+    status = models.CharField(
+        max_length=50,
+        choices=STATUS_CHOICES,
+        default=STATUS_AVAILABLE,
+        help_text="Current availability of this instrument",
+    )
+    serial_number = models.TextField(help_text="Serial number or other identifying marks")
+    member = models.ForeignKey(
+        "blowcomotion.Member",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="rented_instruments",
+        help_text="Person currently storing or borrowing this instrument",
+    )
+    rental_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date the instrument was lent to the current member",
+    )
+    agreement_signed_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date the rental agreement was signed",
+    )
+    review_date_6_month = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Six-month rental review date (auto-calculated)",
+    )
+    review_date_12_month = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Twelve-month rental review date (auto-calculated)",
+    )
+    patreon_active = models.BooleanField(
+        default=False,
+        help_text="Is the renter currently an active Patreon supporter?",
+    )
+    patreon_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Monthly Patreon support amount",
+    )
+    comments = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Additional context or maintenance notes",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    search_fields = [
+        index.SearchField("serial_number"),
+        index.SearchField("instrument_name"),
+        index.SearchField("comments"),
+        index.AutocompleteField("serial_number"),
+    ]
+
+    class Meta:
+        ordering = ["instrument__name", "serial_number"]
+        verbose_name = "Library Instrument"
+        verbose_name_plural = "Library Instruments"
+
+    def __str__(self):
+        status_display = self.get_status_display()
+        if self.member:
+            return f"{self.instrument.name} ({self.serial_number[:20]}) - {status_display} - {self.member.full_name}"
+        return f"{self.instrument.name} ({self.serial_number[:20]}) - {status_display}"
+
+    @property
+    def instrument_name(self):
+        return self.instrument.name if self.instrument else ""
+
+    def clean(self):
+        super().clean()
+        if self.status == self.STATUS_RENTED and not self.member:
+            raise ValidationError({"member": "Rented instruments must be assigned to a member."})
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        old_status = None
+        old_member_id = None
+        old_member = None
+
+        if not is_new:
+            old_instance = LibraryInstrument.objects.filter(pk=self.pk).first()
+            if old_instance:
+                old_status = old_instance.status
+                old_member_id = old_instance.member_id
+                old_member = old_instance.member
+
+        # Auto-calculate review dates based on rental date when not set manually
+        if self.rental_date:
+            if not self.review_date_6_month:
+                self.review_date_6_month = self.rental_date + datetime.timedelta(days=182)
+            if not self.review_date_12_month:
+                self.review_date_12_month = self.rental_date + datetime.timedelta(days=365)
+
+        super().save(*args, **kwargs)
+
+        if is_new:
+            InstrumentHistoryLog.objects.create(
+                library_instrument=self,
+                event_category=InstrumentHistoryLog.EVENT_ACQUISITION,
+                event_date=datetime.date.today(),
+                notes="Instrument added to library inventory",
+            )
+            if self.status == self.STATUS_RENTED:
+                InstrumentHistoryLog.objects.create(
+                    library_instrument=self,
+                    event_category=InstrumentHistoryLog.EVENT_OUT_FOR_LOAN,
+                    event_date=datetime.date.today(),
+                    notes=f"Instrument rented to {self.member.full_name}" if self.member else "Instrument marked as rented",
+                )
+
+        if old_status and old_status != self.status:
+            self._create_status_change_log(old_status, self.status)
+        elif (
+            self.status == self.STATUS_RENTED
+            and old_member_id
+            and old_member_id != self.member_id
+        ):
+            # Member changed without updating status
+            InstrumentHistoryLog.objects.create(
+                library_instrument=self,
+                event_category=InstrumentHistoryLog.EVENT_RETURNED_FROM_LOAN,
+                event_date=datetime.date.today(),
+                notes=(
+                    f"Instrument returned from {old_member.full_name}"
+                    if old_member
+                    else "Instrument returned from loan"
+                ),
+            )
+            if self.member:
+                InstrumentHistoryLog.objects.create(
+                    library_instrument=self,
+                    event_category=InstrumentHistoryLog.EVENT_OUT_FOR_LOAN,
+                    event_date=datetime.date.today(),
+                    notes=f"Instrument rented to {self.member.full_name}",
+                )
+
+    def _create_status_change_log(self, old_status, new_status):
+        status_map = dict(self.STATUS_CHOICES)
+        notes = f"Status changed from {status_map.get(old_status)} to {status_map.get(new_status)}"
+        event_category = None
+
+        if new_status == self.STATUS_RENTED:
+            event_category = InstrumentHistoryLog.EVENT_OUT_FOR_LOAN
+            if self.member:
+                notes = f"Instrument rented to {self.member.full_name}"
+        elif new_status == self.STATUS_AVAILABLE:
+            if old_status == self.STATUS_RENTED:
+                event_category = InstrumentHistoryLog.EVENT_RETURNED_FROM_LOAN
+                notes = "Instrument returned from rental"
+            elif old_status == self.STATUS_OUT_FOR_REPAIR:
+                event_category = InstrumentHistoryLog.EVENT_RETURNED_FROM_REPAIR
+        elif new_status == self.STATUS_OUT_FOR_REPAIR:
+            event_category = InstrumentHistoryLog.EVENT_OUT_FOR_REPAIR
+            notes = "Instrument sent out for repair"
+        elif new_status == self.STATUS_NEEDS_REPAIR:
+            event_category = InstrumentHistoryLog.EVENT_LOCATION_CHECK
+            notes = "Instrument flagged as needing repair/unplayable"
+        elif new_status == self.STATUS_DISPOSED:
+            event_category = InstrumentHistoryLog.EVENT_DISPOSAL
+
+        if event_category:
+            InstrumentHistoryLog.objects.create(
+                library_instrument=self,
+                event_category=event_category,
+                event_date=datetime.date.today(),
+                notes=notes,
+            )
+
+    @property
+    def review_schedule(self):
+        return {
+            "6-month": self.review_date_6_month,
+            "12-month": self.review_date_12_month,
+        }
+
+    @property
+    def needs_review(self):
+        if self.status != self.STATUS_RENTED:
+            return False
+        today = datetime.date.today()
+        return any(date and today >= date for date in self.review_schedule.values())
+
+    @property
+    def renter_inactive(self):
+        if self.status != self.STATUS_RENTED or not self.member or not self.member.last_seen:
+            return False
+        return (datetime.date.today() - self.member.last_seen).days >= 21 or not self.member.is_active
+
+
+class LibraryInstrumentPhoto(Orderable):
+    library_instrument = ParentalKey(
+        "blowcomotion.LibraryInstrument",
+        related_name="photos",
+        on_delete=models.CASCADE,
+    )
+    image = models.ForeignKey(
+        "blowcomotion.CustomImage",
+        on_delete=models.CASCADE,
+        related_name="+",
+    )
+    caption = models.CharField(max_length=255, blank=True)
+
+    panels = [
+        FieldPanel("image"),
+        FieldPanel("caption"),
+    ]
+
+    def __str__(self):
+        return f"Photo for {self.library_instrument}"
+
+
+class InstrumentHistoryLog(models.Model):
+    """
+    Model for tracking the event history of library instruments.
+    Auto-populated when status changes, but can also be manually created.
+    """
     
+    # Event category choices
+    EVENT_ACQUISITION = 'acquisition'
+    EVENT_OUT_FOR_REPAIR = 'out_for_repair'
+    EVENT_RETURNED_FROM_REPAIR = 'returned_from_repair'
+    EVENT_OUT_FOR_LOAN = 'out_for_loan'
+    EVENT_RETURNED_FROM_LOAN = 'returned_from_loan'
+    EVENT_LOCATION_CHECK = 'location_check'
+    EVENT_DISPOSAL = 'disposal'
+    EVENT_RENTAL_NOTE = 'rental_note'
+    EVENT_RETURN_NOTE = 'return_note'
+    
+    EVENT_CHOICES = [
+        (EVENT_ACQUISITION, 'Acquisition'),
+        (EVENT_OUT_FOR_REPAIR, 'Out for Repair'),
+        (EVENT_RETURNED_FROM_REPAIR, 'Returned from Repair'),
+        (EVENT_OUT_FOR_LOAN, 'Out for Loan'),
+        (EVENT_RETURNED_FROM_LOAN, 'Returned from Loan'),
+        (EVENT_LOCATION_CHECK, 'Location Check'),
+        (EVENT_RENTAL_NOTE, 'Rental Note'),
+        (EVENT_RETURN_NOTE, 'Return Note'),
+        (EVENT_DISPOSAL, 'Disposal'),
+    ]
+    
+    library_instrument = ParentalKey(
+        'blowcomotion.LibraryInstrument',
+        on_delete=models.CASCADE,
+        related_name='history_logs'
+    )
+    event_date = models.DateField(
+        default=datetime.date.today,
+        help_text='Date of this event'
+    )
+    event_category = models.CharField(
+        max_length=50,
+        choices=EVENT_CHOICES,
+        help_text='Type of event'
+    )
+    notes = models.TextField(
+        blank=True,
+        help_text='Details about this event'
+    )
+    user = models.ForeignKey(
+        'auth.User',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        help_text='User who created this log entry'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    panels = [
+        FieldPanel('event_date'),
+        FieldPanel('event_category'),
+        FieldPanel('notes'),
+        FieldPanel('user'),
+    ]
+    
+    class Meta:
+        ordering = ['-event_date', '-created_at']
+        verbose_name = 'Instrument History Log'
+        verbose_name_plural = 'Instrument History Logs'
+    
+    def __str__(self):
+        return f"{self.library_instrument.instrument.name} - {self.get_event_category_display()} on {self.event_date}"
+
 
 class BaseFormSubmission(models.Model):
     """

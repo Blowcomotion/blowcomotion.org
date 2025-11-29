@@ -1,0 +1,162 @@
+{% extends "wagtailadmin/base.html" %}
+{% load i18n %}
+
+{% block titletag %}{{ page_title }}{% endblock %}
+
+{% block content %}
+{% include "wagtailadmin/shared/header.html" with title=page_title icon="french-horn" %}
+
+<div class="nice-padding">
+    {% include "wagtailadmin/shared/messages.html" %}
+
+    <div class="w-grid w-grid--collapse">
+        <div class="w-grid__item w-grid__item--1-2">
+            <section class="w-panel">
+                <header class="w-panel__header">
+                    <h2 class="w-panel__title">{% trans "Rent an instrument" %}</h2>
+                </header>
+                <div class="w-panel__content">
+                    {% if selected_instrument %}
+                        <div class="w-flex w-flex-wrap w-gap-3 w-items-center w-bg-surface-info-panel w-border w-border-transparent w-rounded w-p-3 w-text-text-context">
+                            <p class="w-m-0 w-text-text-label">
+                                {% blocktrans with instrument=selected_instrument.instrument.name serial=selected_instrument.serial_number %}
+                                    You are renting <strong>{{ instrument }}</strong> (serial {{ serial }}).
+                                {% endblocktrans %}
+                            </p>
+                            <div class="w-ml-auto">
+                                <a class="button button-secondary button-small" href="{% url 'instrument_library_quick_rent' %}">{% trans "Clear selection" %}</a>
+                            </div>
+                        </div>
+                    {% endif %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="rent">
+                        <fieldset class="w-fieldset">
+                            {% for field in rent_form %}
+                                {% if field.is_hidden %}
+                                    {{ field }}
+                                {% else %}
+                                    <div class="w-field {% if field.errors %}w-field--error{% endif %}">
+                                        <label class="w-field__label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="w-required-mark">*</span>{% endif %}</label>
+                                        <div class="w-field__input">{{ field }}</div>
+                                        {% if field.help_text %}
+                                            <p class="help-block">{{ field.help_text }}</p>
+                                        {% endif %}
+                                        {% for error in field.errors %}
+                                            <p class="error-message">{{ error }}</p>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </fieldset>
+                        {% if rent_form.non_field_errors %}
+                            <ul class="errorlist">
+                                {% for error in rent_form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        <button type="submit" class="button button-longrunning">{% trans "Rent instrument" %}</button>
+                    </form>
+                </div>
+            </section>
+        </div>
+        <div class="w-grid__item w-grid__item--1-2">
+            <section class="w-panel">
+                <header class="w-panel__header">
+                    <h2 class="w-panel__title">{% trans "Available instruments" %}</h2>
+                </header>
+                <div class="w-panel__content">
+                    {% if available_instruments %}
+                        <table class="listing">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Instrument" %}</th>
+                                    <th>{% trans "Serial" %}</th>
+                                    <th style="text-align: right;">{% trans "Action" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for instrument in available_instruments %}
+                                    <tr>
+                                        <td>{{ instrument.instrument.name }}</td>
+                                        <td>{{ instrument.serial_number }}</td>
+                                        <td style="text-align: right;">
+                                            <a class="button button-small" href="{% url 'instrument_library_quick_rent' %}?instrument={{ instrument.pk }}">{% trans "Rent" %}</a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>{% trans "No instruments are currently available." %}</p>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <section class="w-panel" style="margin-top: 2rem;">
+        <header class="w-panel__header">
+            <h2 class="w-panel__title">{% trans "Return an instrument" %}</h2>
+        </header>
+        <div class="w-panel__content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="return">
+                <fieldset class="w-fieldset">
+                    {% for field in return_form %}
+                        {% if field.is_hidden %}
+                            {{ field }}
+                        {% else %}
+                            <div class="w-field {% if field.errors %}w-field--error{% endif %}">
+                                <label class="w-field__label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="w-required-mark">*</span>{% endif %}</label>
+                                <div class="w-field__input">{{ field }}</div>
+                                {% if field.help_text %}
+                                    <p class="help-block">{{ field.help_text }}</p>
+                                {% endif %}
+                                {% for error in field.errors %}
+                                    <p class="error-message">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </fieldset>
+                {% if return_form.non_field_errors %}
+                    <ul class="errorlist">
+                        {% for error in return_form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                <button type="submit" class="button">{% trans "Mark as returned" %}</button>
+            </form>
+            <div style="margin-top: 1rem;">
+                <h3 class="w-panel__title w-panel__title--sub">{% trans "Currently rented" %}</h3>
+                {% if rented_instruments %}
+                    <table class="listing">
+                        <thead>
+                            <tr>
+                                <th>{% trans "Instrument" %}</th>
+                                <th>{% trans "Member" %}</th>
+                                <th>{% trans "Since" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for instrument in rented_instruments %}
+                                <tr>
+                                    <td>{{ instrument.instrument.name }}</td>
+                                    <td>{{ instrument.member.full_name|default:"—" }}</td>
+                                    <td>{{ instrument.rental_date|date:"F j, Y"|default:"—" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>{% trans "No instruments are currently rented out." %}</p>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

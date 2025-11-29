@@ -1,4 +1,10 @@
-from wagtail.admin.panels import FieldRowPanel, MultipleChooserPanel
+from wagtail.admin.panels import (
+    FieldPanel,
+    FieldRowPanel,
+    InlinePanel,
+    MultiFieldPanel,
+    MultipleChooserPanel,
+)
 from wagtail.admin.ui.tables import DateColumn, UpdatedAtColumn
 from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup
 from wagtailmedia.edit_handlers import MediaChooserPanel
@@ -27,7 +33,7 @@ class SongViewSet(SnippetViewSet):
     model = None
     menu_label = 'Songs'
     menu_name = 'songs'
-    menu_icon = 'pick'
+    menu_icon = 'music'
     list_display = ['title', 'composer', 'style', UpdatedAtColumn()]
     panels = [
         'title',
@@ -118,7 +124,7 @@ class InstrumentViewSet(SnippetViewSet):
     model = None
     menu_label = 'Instruments'
     menu_name = 'instruments'
-    icon = 'pick'
+    icon = 'french-horn'
     list_display = ["name", "section", UpdatedAtColumn()]
     list_filter = ["section"]
     search_fields = ("name", "description")
@@ -206,9 +212,75 @@ class AttendanceRecordViewSet(SnippetViewSet):
         super().__init__(*args, **kwargs)
 
 
+class LibraryInstrumentViewSet(SnippetViewSet):
+    model = None
+    menu_label = 'Library Instruments'
+    menu_name = 'library_instruments'
+    menu_icon = 'french-horn'
+    list_display = ['instrument', 'serial_number', 'status', 'member', 'rental_date', 'review_date_6_month', 'review_date_12_month', UpdatedAtColumn()]
+    list_filter = ['status', 'instrument', 'patreon_active', 'live']
+    search_fields = ('instrument__name', 'serial_number', 'member__first_name', 'member__last_name', 'comments')
+    panels = [
+        MultiFieldPanel([
+            'instrument',
+            'status',
+            'serial_number',
+            'member',
+        ], heading="Basic Information"),
+        MultiFieldPanel([
+            FieldRowPanel([
+                'rental_date',
+                'agreement_signed_date',
+            ]),
+            FieldRowPanel([
+                'review_date_6_month',
+                'review_date_12_month',
+            ], heading="Review Cycle"),
+        ], heading="Rental Dates"),
+        MultiFieldPanel([
+            'patreon_active',
+            'patreon_amount',
+        ], heading="Patreon Support"),
+        FieldPanel('comments'),
+        InlinePanel('photos', label="Photos"),
+        InlinePanel('history_logs', label="History Log", help_text="Event history for this instrument"),
+    ]
+    ordering = ['instrument__name', 'serial_number']
+
+    def __init__(self, *args, **kwargs):
+        from .models import LibraryInstrument
+        self.model = LibraryInstrument
+        super().__init__(*args, **kwargs)
+
+
+class InstrumentHistoryLogViewSet(SnippetViewSet):
+    model = None
+    menu_label = 'Instrument History Logs'
+    menu_name = 'instrument_history_logs'
+    menu_icon = 'list-ul'
+    list_display = ['library_instrument', DateColumn('event_date', label='Event Date'), 'event_category', 'notes', 'user']
+    list_filter = ['event_category', 'event_date']
+    search_fields = ('library_instrument__instrument__name', 'library_instrument__serial_number', 'notes')
+    panels = [
+        'library_instrument',
+        FieldRowPanel([
+            'event_date',
+            'event_category',
+        ]),
+        'notes',
+        'user',
+    ]
+    ordering = ['-event_date', '-created_at']
+
+    def __init__(self, *args, **kwargs):
+        from .models import InstrumentHistoryLog
+        self.model = InstrumentHistoryLog
+        super().__init__(*args, **kwargs)
+
+
 class BandViewSetGroup(SnippetViewSetGroup):
-    items = (EventViewSet, SectionViewSet, InstrumentViewSet, MemberViewSet, SongViewSet, ChartViewSet, AttendanceRecordViewSet)
-    menu_icon = 'folder-inverse'
+    items = (EventViewSet, SectionViewSet, InstrumentViewSet, MemberViewSet, SongViewSet, ChartViewSet, AttendanceRecordViewSet, LibraryInstrumentViewSet, InstrumentHistoryLogViewSet)
+    menu_icon = 'drum'
     menu_label = 'Band Stuff'
     menu_name = 'band'
 
