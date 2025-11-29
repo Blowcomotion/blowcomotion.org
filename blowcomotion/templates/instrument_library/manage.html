@@ -64,6 +64,27 @@
                 messageDiv.remove();
             }
         }
+        
+        // Prevent submitting return form without an instrument selected
+        document.addEventListener('DOMContentLoaded', function() {
+            const returnForm = document.querySelector('input[name="action"][value="return"]').closest('form');
+            if (returnForm) {
+                returnForm.addEventListener('submit', function(e) {
+                    const instrumentField = returnForm.querySelector('input[name="instrument"]');
+                    if (!instrumentField || !instrumentField.value) {
+                        e.preventDefault();
+                        alert('Please select an instrument to return by clicking the "Return" button next to it in the "Currently rented" list above.');
+                        // Scroll to the rented instruments section
+                        const rentedSection = document.querySelector('.w-panel:has(h2:contains("Currently rented"))') || 
+                                            document.querySelectorAll('.w-panel')[2];
+                        if (rentedSection) {
+                            rentedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                        return false;
+                    }
+                });
+            }
+        });
     </script>
 {% endblock %}
 
@@ -74,6 +95,39 @@
     {% include "wagtailadmin/shared/messages.html" %}
 
     <div class="w-grid w-grid--collapse">
+        <div class="w-grid__item w-grid__item--1-2">
+            <section class="w-panel">
+                <header class="w-panel__header">
+                    <h2 class="w-panel__title">{% trans "Available instruments" %}</h2>
+                </header>
+                <div class="w-panel__content">
+                    {% if available_instruments %}
+                        <table class="listing">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Instrument" %}</th>
+                                    <th>{% trans "Serial" %}</th>
+                                    <th style="text-align: right;">{% trans "Action" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for instrument in available_instruments %}
+                                    <tr>
+                                        <td>{{ instrument.instrument.name }}</td>
+                                        <td>{{ instrument.serial_number }}</td>
+                                        <td style="text-align: right;">
+                                            <a class="button button-small" href="{% url 'instrument_library_quick_rent' %}?instrument={{ instrument.pk }}">{% trans "Rent" %}</a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>{% trans "No instruments are currently available." %}</p>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
         <div class="w-grid__item w-grid__item--1-2">
             <section class="w-panel">
                 <header class="w-panel__header">
@@ -125,40 +179,44 @@
                 </div>
             </section>
         </div>
-        <div class="w-grid__item w-grid__item--1-2">
-            <section class="w-panel">
-                <header class="w-panel__header">
-                    <h2 class="w-panel__title">{% trans "Available instruments" %}</h2>
-                </header>
-                <div class="w-panel__content">
-                    {% if available_instruments %}
-                        <table class="listing">
-                            <thead>
-                                <tr>
-                                    <th>{% trans "Instrument" %}</th>
-                                    <th>{% trans "Serial" %}</th>
-                                    <th style="text-align: right;">{% trans "Action" %}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for instrument in available_instruments %}
-                                    <tr>
-                                        <td>{{ instrument.instrument.name }}</td>
-                                        <td>{{ instrument.serial_number }}</td>
-                                        <td style="text-align: right;">
-                                            <a class="button button-small" href="{% url 'instrument_library_quick_rent' %}?instrument={{ instrument.pk }}">{% trans "Rent" %}</a>
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    {% else %}
-                        <p>{% trans "No instruments are currently available." %}</p>
-                    {% endif %}
-                </div>
-            </section>
-        </div>
     </div>
+
+    <section class="w-panel" style="margin-top: 2rem;">
+        <header class="w-panel__header">
+            <h2 class="w-panel__title">{% trans "Currently rented" %}</h2>
+        </header>
+        <div class="w-panel__content">
+            {% if rented_instruments %}
+                <table class="listing">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Instrument" %}</th>
+                            <th>{% trans "Member" %}</th>
+                            <th>{% trans "Since" %}</th>
+                            <th style="text-align: right;">{% trans "Action" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for instrument in rented_instruments %}
+                            <tr>
+                                <td>{{ instrument.instrument.name }}</td>
+                                <td>{{ instrument.member.full_name|default:"—" }}</td>
+                                <td>{{ instrument.rental_date|date:"F j, Y"|default:"—" }}</td>
+                                <td style="text-align: right;">
+                                    <button type="button" class="button button-small button-secondary" 
+                                            onclick="selectInstrumentForReturn({{ instrument.pk }}, '{{ instrument.instrument.name|escapejs }}')">
+                                        {% trans "Return" %}
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>{% trans "No instruments are currently rented out." %}</p>
+            {% endif %}
+        </div>
+    </section>
 
     <section class="w-panel" style="margin-top: 2rem;">
         <header class="w-panel__header">
@@ -195,38 +253,6 @@
                 {% endif %}
                 <button type="submit" class="button">{% trans "Mark as returned" %}</button>
             </form>
-            <div style="margin-top: 1rem;">
-                <h3 class="w-panel__title w-panel__title--sub">{% trans "Currently rented" %}</h3>
-                {% if rented_instruments %}
-                    <table class="listing">
-                        <thead>
-                            <tr>
-                                <th>{% trans "Instrument" %}</th>
-                                <th>{% trans "Member" %}</th>
-                                <th>{% trans "Since" %}</th>
-                                <th style="text-align: right;">{% trans "Action" %}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for instrument in rented_instruments %}
-                                <tr>
-                                    <td>{{ instrument.instrument.name }}</td>
-                                    <td>{{ instrument.member.full_name|default:"—" }}</td>
-                                    <td>{{ instrument.rental_date|date:"F j, Y"|default:"—" }}</td>
-                                    <td style="text-align: right;">
-                                        <button type="button" class="button button-small button-secondary" 
-                                                onclick="selectInstrumentForReturn({{ instrument.pk }}, '{{ instrument.instrument.name|escapejs }}')">
-                                            {% trans "Return" %}
-                                        </button>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                {% else %}
-                    <p>{% trans "No instruments are currently rented out." %}</p>
-                {% endif %}
-            </div>
         </div>
     </section>
 </div>
