@@ -163,6 +163,10 @@ def instrument_library_quick_rent(request):
 
                     instrument.save()
 
+                    # Update member's renting status
+                    member.renting = True
+                    member.save()
+
                     # Handle rental document if provided
                     rental_document = rent_form.cleaned_data.get('rental_document')
                     if rental_document:
@@ -206,6 +210,16 @@ def instrument_library_quick_rent(request):
                     instrument.patreon_active = False
                     instrument.patreon_amount = None
                     instrument.save()
+
+                    # Update previous member's renting status if they have no other rentals
+                    if previous_member:
+                        still_renting = LibraryInstrument.objects.filter(
+                            member=previous_member,
+                            status=LibraryInstrument.STATUS_RENTED
+                        ).exists()
+                        if not still_renting:
+                            previous_member.renting = False
+                            previous_member.save()
 
                     if condition_notes:
                         InstrumentHistoryLog.objects.create(
