@@ -1,12 +1,19 @@
 import datetime
 
 import requests
+from wagtail.documents import get_document_model
+from wagtail.documents.widgets import AdminDocumentChooser
 
 from django import forms
 from django.conf import settings
 from django.forms import formset_factory
 from django.utils import timezone
 
+from blowcomotion.chooser_viewsets import (
+    instrument_chooser_viewset,
+    library_instrument_available_chooser_viewset,
+    member_chooser_viewset,
+)
 from blowcomotion.models import Instrument, LibraryInstrument, Member, Section
 from blowcomotion.utils import validate_birthday
 
@@ -375,12 +382,14 @@ class LibraryInstrumentRentForm(forms.Form):
         queryset=LibraryInstrument.objects.none(),
         required=True,
         label="Instrument",
+        widget=library_instrument_available_chooser_viewset.widget_class,
     )
     member = forms.ModelChoiceField(
         queryset=Member.objects.filter(is_active=True).order_by("first_name", "last_name"),
         required=True,
         label="Member",
         help_text="Assign the instrument to an active member",
+        widget=member_chooser_viewset.widget_class,
     )
     rental_date = forms.DateField(
         required=False,
@@ -391,6 +400,19 @@ class LibraryInstrumentRentForm(forms.Form):
         required=False,
         widget=forms.DateInput(attrs={"type": "date"}),
         label="Agreement signed",
+    )
+    rental_document = forms.ModelChoiceField(
+        queryset=get_document_model().objects.all(),
+        required=False,
+        label="Rental document",
+        help_text="Optional: Attach a rental agreement or other document",
+        widget=AdminDocumentChooser,
+    )
+    document_description = forms.CharField(
+        required=False,
+        max_length=255,
+        label="Document description",
+        help_text="e.g. 'Rental Agreement', 'Receipt'",
     )
     patreon_active = forms.BooleanField(
         required=False,
@@ -437,6 +459,7 @@ class LibraryInstrumentReturnForm(forms.Form):
         queryset=LibraryInstrument.objects.none(),
         required=True,
         label="Instrument",
+        widget=forms.HiddenInput(),  # Hidden - will be set via action button
     )
     condition_notes = forms.CharField(
         required=False,

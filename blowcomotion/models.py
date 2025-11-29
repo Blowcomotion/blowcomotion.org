@@ -1085,6 +1085,35 @@ class LibraryInstrumentPhoto(Orderable):
         return f"Photo for {self.library_instrument}"
 
 
+class LibraryInstrumentDocument(Orderable):
+    """Rental documents (agreements, receipts, etc.) attached to a library instrument."""
+    
+    library_instrument = ParentalKey(
+        "blowcomotion.LibraryInstrument",
+        related_name="rental_documents",
+        on_delete=models.CASCADE,
+    )
+    document = models.ForeignKey(
+        "wagtaildocs.Document",
+        on_delete=models.CASCADE,
+        related_name="+",
+    )
+    description = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="e.g. 'Rental Agreement', 'Receipt', 'Return Inspection Form'"
+    )
+    uploaded_date = models.DateField(auto_now_add=True)
+
+    panels = [
+        FieldPanel("document"),
+        FieldPanel("description"),
+    ]
+
+    def __str__(self):
+        return f"Document for {self.library_instrument}: {self.description or self.document.title}"
+
+
 class InstrumentHistoryLog(models.Model):
     """
     Model for tracking the event history of library instruments.

@@ -3,6 +3,70 @@
 
 {% block titletag %}{{ page_title }}{% endblock %}
 
+{% block extra_css %}
+    {{ block.super }}
+    {{ rent_form.media.css }}
+    {{ return_form.media.css }}
+{% endblock %}
+
+{% block extra_js %}
+    {{ block.super }}
+    {{ rent_form.media.js }}
+    {{ return_form.media.js }}
+    <script>
+        function selectInstrumentForReturn(instrumentId, instrumentName) {
+            // Find the return form and set the hidden instrument field value
+            const returnForm = document.querySelector('input[name="action"][value="return"]').closest('form');
+            const instrumentField = returnForm.querySelector('input[name="instrument"]');
+            if (instrumentField) {
+                instrumentField.value = instrumentId;
+            }
+            
+            // Scroll to the return form
+            if (returnForm) {
+                returnForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Add a visual indicator
+                returnForm.style.border = '2px solid #007d7e';
+                returnForm.style.padding = '1rem';
+                returnForm.style.borderRadius = '4px';
+                setTimeout(() => {
+                    returnForm.style.border = '';
+                    returnForm.style.padding = '';
+                }, 2000);
+                
+                // Focus on the condition notes field
+                const conditionNotesField = returnForm.querySelector('textarea[name="condition_notes"]');
+                if (conditionNotesField) {
+                    setTimeout(() => conditionNotesField.focus(), 500);
+                }
+                
+                // Add a message above the form
+                let messageDiv = returnForm.querySelector('.selected-instrument-message');
+                if (!messageDiv) {
+                    messageDiv = document.createElement('div');
+                    messageDiv.className = 'selected-instrument-message';
+                    messageDiv.style.cssText = 'background: #e3f2fd; padding: 1rem; margin-bottom: 1rem; border-radius: 4px; border-left: 4px solid #007d7e;';
+                    returnForm.insertBefore(messageDiv, returnForm.firstChild);
+                }
+                messageDiv.innerHTML = '<strong>Selected instrument:</strong> ' + instrumentName + ' <button type="button" onclick="clearInstrumentSelection()" style="margin-left: 1rem;" class="button button-small button-secondary">Clear</button>';
+            }
+        }
+        
+        function clearInstrumentSelection() {
+            const returnForm = document.querySelector('input[name="action"][value="return"]').closest('form');
+            const instrumentField = returnForm.querySelector('input[name="instrument"]');
+            if (instrumentField) {
+                instrumentField.value = '';
+            }
+            const messageDiv = document.querySelector('.selected-instrument-message');
+            if (messageDiv) {
+                messageDiv.remove();
+            }
+        }
+    </script>
+{% endblock %}
+
 {% block content %}
 {% include "wagtailadmin/shared/header.html" with title=page_title icon="french-horn" %}
 
@@ -140,6 +204,7 @@
                                 <th>{% trans "Instrument" %}</th>
                                 <th>{% trans "Member" %}</th>
                                 <th>{% trans "Since" %}</th>
+                                <th style="text-align: right;">{% trans "Action" %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -148,6 +213,12 @@
                                     <td>{{ instrument.instrument.name }}</td>
                                     <td>{{ instrument.member.full_name|default:"—" }}</td>
                                     <td>{{ instrument.rental_date|date:"F j, Y"|default:"—" }}</td>
+                                    <td style="text-align: right;">
+                                        <button type="button" class="button button-small button-secondary" 
+                                                onclick="selectInstrumentForReturn({{ instrument.pk }}, '{{ instrument.instrument.name|escapejs }}')">
+                                            {% trans "Return" %}
+                                        </button>
+                                    </td>
                                 </tr>
                             {% endfor %}
                         </tbody>

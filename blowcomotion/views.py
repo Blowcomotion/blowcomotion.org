@@ -39,6 +39,7 @@ from blowcomotion.models import (
     InstrumentHistoryLog,
     JoinBandFormSubmission,
     LibraryInstrument,
+    LibraryInstrumentDocument,
     Member,
     MemberInstrument,
     Section,
@@ -161,6 +162,15 @@ def instrument_library_quick_rent(request):
                         instrument.comments = comments
 
                     instrument.save()
+
+                    # Handle rental document if provided
+                    rental_document = rent_form.cleaned_data.get('rental_document')
+                    if rental_document:
+                        LibraryInstrumentDocument.objects.create(
+                            library_instrument=instrument,
+                            document=rental_document,
+                            description=rent_form.cleaned_data.get('document_description', ''),
+                        )
 
                     if comments:
                         InstrumentHistoryLog.objects.create(

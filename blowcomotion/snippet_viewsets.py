@@ -243,6 +243,7 @@ class LibraryInstrumentViewSet(SnippetViewSet):
         ], heading="Patreon Support"),
         FieldPanel('comments'),
         InlinePanel('photos', label="Photos"),
+        InlinePanel('rental_documents', label="Rental Documents"),
         InlinePanel('history_logs', label="History Log", help_text="Event history for this instrument"),
     ]
     ordering = ['instrument__name', 'serial_number']

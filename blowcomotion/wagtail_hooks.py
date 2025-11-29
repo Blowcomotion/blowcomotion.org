@@ -20,6 +20,8 @@ from .chooser_viewsets import (
     event_chooser_viewset,
     gigo_gig_chooser_viewset,
     instrument_chooser_viewset,
+    library_instrument_available_chooser_viewset,
+    library_instrument_chooser_viewset,
     member_chooser_viewset,
     section_chooser_viewset,
     song_chooser_viewset,
@@ -102,6 +104,8 @@ def register_viewset():
     return (
         member_chooser_viewset,
         instrument_chooser_viewset,
+        library_instrument_chooser_viewset,
+        library_instrument_available_chooser_viewset,
         section_chooser_viewset,
         song_chooser_viewset,
         event_chooser_viewset,
