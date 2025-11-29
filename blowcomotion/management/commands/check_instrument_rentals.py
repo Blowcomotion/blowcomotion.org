@@ -11,7 +11,6 @@ import datetime
 
 from wagtail.models import Site
 
-from django.conf import settings
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
 
@@ -32,7 +31,6 @@ class Command(BaseCommand):
         dry_run = options['dry_run']
         
         # Get email recipients from site settings
-        settings.configure()
         site_settings = self._get_site_settings()
         if not site_settings:
             return
