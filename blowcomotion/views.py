@@ -12,8 +12,6 @@ import requests
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib.auth import authenticate, login
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.cache import cache
 from django.core.mail import send_mail
@@ -56,7 +54,6 @@ BIRTHDAY_RANGE_DAYS = 30
 # Instrument Library Dashboard Views
 
 
-@staff_member_required
 def instrument_library_rented(request):
     instruments = (
         LibraryInstrument.objects.filter(status=LibraryInstrument.STATUS_RENTED)
@@ -73,7 +70,6 @@ def instrument_library_rented(request):
     )
 
 
-@staff_member_required
 def instrument_library_available(request):
     instruments = (
         LibraryInstrument.objects.filter(status=LibraryInstrument.STATUS_AVAILABLE)
@@ -90,7 +86,6 @@ def instrument_library_available(request):
     )
 
 
-@staff_member_required
 def instrument_library_needs_repair(request):
     instruments = (
         LibraryInstrument.objects.filter(
@@ -112,7 +107,6 @@ def instrument_library_needs_repair(request):
     )
 
 
-@staff_member_required
 @require_http_methods(["GET", "POST"])
 def instrument_library_quick_rent(request):
     available_qs = LibraryInstrument.objects.filter(
