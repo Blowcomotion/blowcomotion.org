@@ -515,6 +515,36 @@ class ThreeColumnBlock(blocks.StructBlock):
     left_column = ColumnContentBlock(required=False)
     middle_column = ColumnContentBlock(required=False)
     right_column = ColumnContentBlock(required=False)
+    show_left_border = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Show vertical border on the right side of the left column"
+    )
+    show_right_border = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Show vertical border on the right side of the middle column"
+    )
+    border_width = blocks.IntegerBlock(
+        required=False,
+        default=3,
+        min_value=1,
+        help_text="Border width in pixels"
+    )
+    border_color = blocks.CharBlock(
+        required=False,
+        default="#5b1a76",
+        help_text="Border color (e.g., #5b1a76 or rgb(91, 26, 118))"
+    )
+    border_style = blocks.ChoiceBlock(
+        choices=[
+            ("solid", "Solid"),
+            ("dashed", "Dashed"),
+            ("dotted", "Dotted"),
+        ],
+        default="solid",
+        help_text="Select the border style"
+    )
 
     class Meta:
         template = "blocks/three_column_block.html"
@@ -523,6 +553,13 @@ class ThreeColumnBlock(blocks.StructBlock):
 
 class TwoColumnBlock(ThreeColumnBlock):
     middle_column = None
+    show_left_border = None
+    show_right_border = None
+    show_vertical_border = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Show vertical border between the two columns"
+    )
     left_column_width = blocks.ChoiceBlock(choices=[
             ("one-half", "One Half"),
             ("one-third", "One Third"),
@@ -554,6 +591,41 @@ class FourColumnBlock(blocks.StructBlock):
     middle_left_column = ColumnContentBlock(required=False)
     middle_right_column = ColumnContentBlock(required=False)
     right_column = ColumnContentBlock(required=False)
+    show_left_border = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Show vertical border on the right side of the left column"
+    )
+    show_middle_border = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Show vertical border on the right side of the middle-left column"
+    )
+    show_right_border = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Show vertical border on the right side of the middle-right column"
+    )
+    border_width = blocks.IntegerBlock(
+        required=False,
+        default=3,
+        min_value=1,
+        help_text="Border width in pixels"
+    )
+    border_color = blocks.CharBlock(
+        required=False,
+        default="#5b1a76",
+        help_text="Border color (e.g., #5b1a76 or rgb(91, 26, 118))"
+    )
+    border_style = blocks.ChoiceBlock(
+        choices=[
+            ("solid", "Solid"),
+            ("dashed", "Dashed"),
+            ("dotted", "Dotted"),
+        ],
+        default="solid",
+        help_text="Select the border style"
+    )
 
     class Meta:
         template = "blocks/four_column_block.html"
