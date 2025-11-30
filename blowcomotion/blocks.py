@@ -639,7 +639,7 @@ class UpcomingPublicGigs(blocks.StructBlock):
     class Meta:
         icon = "date"
         label = "Upcoming Public Gigs"
-        help_text = "This displays a list of confirmed upcoming public Blowco gigs as a list."
+        help_text = "This displays a list of confirmed upcoming public Blowco gigs as a list. (sourced from gig-o-matic)"
         template = "blocks/upcoming_public_gigs.html"
         preview_value = {}
 
