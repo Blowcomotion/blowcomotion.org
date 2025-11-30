@@ -2,7 +2,7 @@
 
 <div class="container my-4">
     <div class="row">
-        <div class="col-lg-{{ left_column_width }}{% if value.show_vertical_border %} border-end{% endif %}" {% if value.show_vertical_border %}style="border-right-width: {{ value.border_width|default:'3' }}px !important; border-right-color: {{ value.border_color|default:'#5b1a76' }} !important; border-right-style: {{ value.border_style|default:'solid' }} !important;"{% endif %}>
+        <div class="col-lg-{{ left_column_width }}{% if value.show_vertical_border %} border-end{% endif %}" {% include "blocks/includes/border_style.html" with show_border=value.show_vertical_border border_width=value.border_width border_color=value.border_color border_style=value.border_style %}>
             {% for block in value.left_column %}
                 {% include_block block %}
             {% endfor %}
