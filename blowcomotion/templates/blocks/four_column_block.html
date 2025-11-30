@@ -2,26 +2,25 @@
 
 <div class="container my-4">
     <div class="row">
-        {% for block in value.left_column %}
-            <div class="col">
+        <div class="col-md-3{% if value.show_left_border %} border-end{% endif %}" {% if value.show_left_border %}style="border-right-width: {{ value.border_width|default:'3' }}px !important; border-right-color: {{ value.border_color|default:'#5b1a76' }} !important; border-right-style: {{ value.border_style|default:'solid' }} !important;"{% endif %}>
+            {% for block in value.left_column %}
                 {% include_block block %}
-            </div>
-        {% endfor %}
-        {% for block in value.middle_left_column %}
-            <div class="col">
-                {% include_block block %}
-            </div>
-        {% endfor %}
-        {% block middle_column %}
-            {% for block in value.middle_right_column %}
-                <div class="col">
-                    {% include_block block %}
-                </div>
             {% endfor %}
-        {% endblock middle_column %}
-        {% for block in value.right_column %}
-            <div class="col">
+        </div>
+        <div class="col-md-3{% if value.show_middle_border %} border-end{% endif %}" {% if value.show_middle_border %}style="border-right-width: {{ value.border_width|default:'3' }}px !important; border-right-color: {{ value.border_color|default:'#5b1a76' }} !important; border-right-style: {{ value.border_style|default:'solid' }} !important;"{% endif %}>
+            {% for block in value.middle_left_column %}
                 {% include_block block %}
-            </div>
-        {% endfor %}
+            {% endfor %}
+        </div>
+        <div class="col-md-3{% if value.show_right_border %} border-end{% endif %}" {% if value.show_right_border %}style="border-right-width: {{ value.border_width|default:'3' }}px !important; border-right-color: {{ value.border_color|default:'#5b1a76' }} !important; border-right-style: {{ value.border_style|default:'solid' }} !important;"{% endif %}>
+            {% for block in value.middle_right_column %}
+                {% include_block block %}
+            {% endfor %}
+        </div>
+        <div class="col-md-3">
+            {% for block in value.right_column %}
+                {% include_block block %}
+            {% endfor %}
+        </div>
     </div>
+</div>
