@@ -310,6 +310,7 @@ class PayPalDonateButton(blocks.StructBlock):
         icon = "bi-paypal"
         template = "blocks/paypal_donate_button.html"
         label = "PayPal Donate Button"
+        label_format = "PayPal Donate Button: {button_text}"
         help_text = "This PayPal donate button is used to make Paypal donations. The PayPal url is set in the settings if your admin account has permission to change it. The button will be aligned according to the selected alignment."
 
 
@@ -340,6 +341,7 @@ class VenmoDonateButton(blocks.StructBlock):
         icon = "bi-currency-dollar"
         template = "blocks/venmo_donate_button.html"
         label = "Venmo Donate Button"
+        label_format = "Venmo Donate Button: {button_text}"
         help_text = "This is Venmo donate button adds a button for making Venmo donations. The Venmo url is set in the settings if your admin account has permission to change it. The button will be aligned according to the selected alignment."
 
 
@@ -370,6 +372,7 @@ class PatreonButton(blocks.StructBlock):
         icon = "bi-currency-dollar"
         template = "blocks/patreon_button.html"
         label = "Patreon Button"
+        label_format = "Patreon Button: {button_text}"
         help_text = "This is Patreon button adds a button for making Patreon donations. The Patreon url is set in the settings if your admin account has permission to change it. The button will be aligned according to the selected alignment."
 
 
@@ -400,6 +403,7 @@ class SquareDonateButton(blocks.StructBlock):
         icon = "bi-currency-dollar"
         template = "blocks/square_donate_button.html"
         label = "Square Donate Button"
+        label_format = "Square Donate Button: {button_text}"
         help_text = "This is Square donate button adds a button for making Square donations. The Square url is set in the settings if your admin account has permission to change it. The button will be aligned according to the selected alignment."
 
 
