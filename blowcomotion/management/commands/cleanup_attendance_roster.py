@@ -17,7 +17,6 @@ class Command(BaseCommand):
             action='store_true',
             help='Simulate the cleanup without making any changes or sending emails.',
         )
-        return super().add_arguments(parser)
 
     def _send_mail(self, subject, message, recipients, dry_run):
         if dry_run:
