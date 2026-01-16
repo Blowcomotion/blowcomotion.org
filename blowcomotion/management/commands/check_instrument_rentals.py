@@ -207,7 +207,7 @@ class Command(BaseCommand):
             send_mail(
                 subject=subject,
                 message=message,
-                from_email='info@blowcomotion.org',
+                from_email='website@blowcomotion.org',
                 recipient_list=recipients,
                 fail_silently=False,
             )

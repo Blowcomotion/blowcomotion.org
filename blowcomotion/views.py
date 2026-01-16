@@ -555,7 +555,7 @@ def _send_form_email(subject, message, recipient_list):
     send_mail(
         subject=subject,
         message=message,
-        from_email='info@blowcomotion.org',
+        from_email='website@blowcomotion.org',
         recipient_list=recipient_list,
         fail_silently=False,
     )
