@@ -60,66 +60,56 @@
 
 <script>
 (function() {
-    // Reset the form but preserve the date field, event type, and gig selection
+    // Reset the form but preserve the date field, event type selection, and notes
     const form = document.getElementById('attendanceForm');
     const dateField = document.getElementById('attendance_date');
-    const eventTypeRehearsalField = document.getElementById('event_type_rehearsal');
-    const eventTypePerformanceField = document.getElementById('event_type_performance');
-    const gigField = document.getElementById('gig');
+    const eventNotesField = document.getElementById('event_notes');
     
     // Save current values
     const currentDate = dateField ? dateField.value : null;
-    const currentEventType = eventTypeRehearsalField && eventTypeRehearsalField.checked ? 'rehearsal' :
-                            eventTypePerformanceField && eventTypePerformanceField.checked ? 'performance' : 'rehearsal';
-    const currentGig = gigField ? gigField.value : '';
+    const currentNotes = eventNotesField ? eventNotesField.value : '';
+    
+    // Find which event_type radio is currently checked
+    const checkedEventType = form ? form.querySelector('input[name="event_type"]:checked') : null;
+    const currentEventTypeValue = checkedEventType ? checkedEventType.value : 'rehearsal';
     
     if (form) {
-        // Reset all checkboxes and text areas
+        // Reset all member/guest checkboxes and guest text areas
         const checkboxes = form.querySelectorAll('input[type="checkbox"]');
         checkboxes.forEach(cb => cb.checked = false);
         
-        const textareas = form.querySelectorAll('textarea');
-        textareas.forEach(ta => ta.value = '');
+        const guestTextareas = form.querySelectorAll('textarea[id^="guest_"]');
+        guestTextareas.forEach(ta => ta.value = '');
         
         // Restore preserved fields
         if (dateField) {
             dateField.value = currentDate || '{{ today|date:"Y-m-d" }}';
         }
         
-        // Restore event type
-        if (currentEventType === 'performance' && eventTypePerformanceField) {
-            eventTypePerformanceField.checked = true;
-            // Show gig field
-            const gigFieldDiv = document.getElementById('gig_field');
-            if (gigFieldDiv) {
-                gigFieldDiv.style.display = 'block';
-            }
-        } else if (eventTypeRehearsalField) {
-            eventTypeRehearsalField.checked = true;
-            // Hide gig field
-            const gigFieldDiv = document.getElementById('gig_field');
-            if (gigFieldDiv) {
-                gigFieldDiv.style.display = 'none';
-            }
+        if (eventNotesField) {
+            eventNotesField.value = currentNotes;
         }
         
-        // Restore gig selection
-        if (gigField) {
-            gigField.value = currentGig;
+        // Restore event type selection
+        const eventTypeToCheck = form.querySelector(`input[name="event_type"][value="${currentEventTypeValue}"]`);
+        if (eventTypeToCheck) {
+            eventTypeToCheck.checked = true;
+        } else {
+            // Fallback: check rehearsal if the selected option no longer exists
+            const rehearsalRadio = document.getElementById('event_type_rehearsal');
+            if (rehearsalRadio) {
+                rehearsalRadio.checked = true;
+            }
         }
     }
     
-    // Trigger toggle function to ensure proper field visibility
-    if (typeof toggleGigField === 'function') {
-        toggleGigField();
-    }
-    
-    // Update checkmarks to reflect the newly submitted attendance records
-    if (typeof updateAttendanceCheckmarks === 'function') {
-        // Use a small delay to ensure the form reset is complete
-        setTimeout(function() {
-            updateAttendanceCheckmarks();
-        }, 100);
-    }
+    // Auto-dismiss the alert after 5 seconds
+    setTimeout(function() {
+        const alert = document.querySelector('.alert-success');
+        if (alert) {
+            alert.classList.remove('show');
+            setTimeout(() => alert.remove(), 150);
+        }
+    }, 5000);
 })();
 </script>

@@ -1054,22 +1054,31 @@ def attendance_capture(request, section_slug=None):
     
     if request.method == 'POST':
         attendance_date_str = request.POST.get('attendance_date', date.today().strftime('%Y-%m-%d'))
-        event_type = request.POST.get('event_type', 'rehearsal')
-        gig_id = request.POST.get('gig', '').strip()
+        event_type_raw = request.POST.get('event_type', 'rehearsal')
         event_notes = request.POST.get('event_notes', '').strip()
         
-        # Get gig information if a gig is selected
+        # Parse event_type: can be 'rehearsal', 'performance_no_gig', or 'gig_<id>'
+        gig_id = None
         gig_title = None
-        if gig_id:
+        event_type = 'rehearsal'
+        
+        if event_type_raw.startswith('gig_'):
+            # Extract gig ID from 'gig_<id>' format
+            gig_id = event_type_raw.split('_', 1)[1]
+            event_type = 'performance'
+            # Get gig information
             gig_data = make_gigo_api_request(f"/gigs/{gig_id}")
             if gig_data:
                 gig_title = gig_data.get('title', 'Unknown Gig')
+        elif event_type_raw == 'performance_no_gig':
+            event_type = 'performance'
+        else:
+            event_type = 'rehearsal'
         
         # Store form data in session for persistence
         request.session['attendance_form_data'] = {
             'attendance_date': attendance_date_str,
-            'event_type': event_type,
-            'gig': gig_id,
+            'event_type': event_type_raw,  # Store the raw value for radio preselection
             'event_notes': event_notes
         }
         
@@ -1276,7 +1285,9 @@ def attendance_capture(request, section_slug=None):
     
     # Check if date is being passed as a query parameter (for dynamic updates)
     query_date = request.GET.get('attendance_date')
+    date_changed = False
     if query_date:
+        date_changed = (form_data.get('attendance_date') != query_date)
         attendance_date = query_date
         # Update session with the new date
         form_data['attendance_date'] = attendance_date
@@ -1284,8 +1295,8 @@ def attendance_capture(request, section_slug=None):
     else:
         attendance_date = form_data.get('attendance_date', date.today().strftime('%Y-%m-%d'))
     
-    event_type = form_data.get('event_type', 'rehearsal')
-    gig = form_data.get('gig', '')
+    # event_type from session can be 'rehearsal', 'performance_no_gig', or 'gig_<id>'
+    event_type_selection = form_data.get('event_type', None)
     event_notes = form_data.get('event_notes', '')
     
     # Get attendance records for the selected date to show checkmarks
@@ -1358,6 +1369,34 @@ def attendance_capture(request, section_slug=None):
         result = {'gigs': gig_choices}
         cache.set(cache_key, result, 600)
     
+    # Determine default event_type selection
+    # Priority: last selected (if exists and not date changed) > first gig > rehearsal
+    if not event_type_selection:
+        # No selection in session, use default
+        if gig_choices:
+            # Select first gig by default
+            event_type_selection = f"gig_{gig_choices[0]['id']}"
+        else:
+            # Select rehearsal by default
+            event_type_selection = 'rehearsal'
+    elif date_changed:
+        # Date changed, but keep selection if it's still valid
+        if event_type_selection.startswith('gig_'):
+            # Check if the selected gig still exists for the new date
+            selected_gig_id = event_type_selection.split('_', 1)[1]
+            gig_exists = any(str(gig['id']) == selected_gig_id for gig in gig_choices)
+            if not gig_exists:
+                # Selected gig doesn't exist for new date, pick a new default
+                if gig_choices:
+                    event_type_selection = f"gig_{gig_choices[0]['id']}"
+                else:
+                    event_type_selection = 'rehearsal'
+        elif event_type_selection == 'performance_no_gig':
+            # If gigs now exist, switch to first gig
+            if gig_choices:
+                event_type_selection = f"gig_{gig_choices[0]['id']}"
+        # If it's 'rehearsal', keep it as is
+    
     context = {
         'section': section,
         'section_members': section_members,
@@ -1368,8 +1407,7 @@ def attendance_capture(request, section_slug=None):
         'is_no_section': is_no_section,
         'today': date.today(),
         'attendance_date': attendance_date,
-        'event_type': event_type,
-        'gig': gig,
+        'event_type_selection': event_type_selection,
         'event_notes': event_notes,
         'gig_choices': gig_choices,
         'recorded_member_ids': recorded_member_ids,
@@ -1712,16 +1750,20 @@ def gigs_for_date(request):
         # Check cache first
         cached_result = cache.get(cache_key)
         if cached_result is not None:
+            logger.info(f"Returning cached gigs for {date_str}: {len(cached_result.get('gigs', []))} gig(s)")
             return JsonResponse(cached_result)
         
         # Fetch gigs from API
+        logger.info(f"Fetching gigs from API for date {date_str}")
         gigs_data = make_gigo_api_request("/gigs")
         if gigs_data is None:
+            logger.error(f"Failed to fetch gigs from API for date {date_str}")
             return JsonResponse({'error': 'Unable to fetch gigs at this time.'}, status=500)
         filtered_gigs = []
         
         if gigs_data and gigs_data.get("gigs"):
             # Filter gigs for the specific date and other criteria
+            logger.info(f"Processing {len(gigs_data.get('gigs', []))} total gigs from API")
             for gig in gigs_data["gigs"]:
                 # Adjust gig date for early morning times
                 adjusted_date = adjust_gig_date_for_early_morning(gig)
@@ -1729,6 +1771,7 @@ def gigs_for_date(request):
                 if (adjusted_date == date_str and 
                     gig.get("gig_status", "").lower() == "confirmed" and 
                     gig.get("band", "").lower() == "blowcomotion"):
+                    logger.info(f"Found matching gig: {gig.get('title')} (ID: {gig.get('id')}) for {date_str}")
                     filtered_gigs.append({
                         'id': gig.get('id'),
                         'title': gig.get('title', 'Untitled Gig'),
@@ -1737,6 +1780,7 @@ def gigs_for_date(request):
                     })
         
         result = {'gigs': filtered_gigs}
+        logger.info(f"Returning {len(filtered_gigs)} gig(s) for {date_str}, caching for 10 minutes")
         
         # Cache the result for 10 minutes
         cache.set(cache_key, result, 600)
