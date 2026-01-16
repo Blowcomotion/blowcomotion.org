@@ -139,6 +139,16 @@ class SiteSettings(BaseSiteSetting):
         null=True,
         help_text="Password for accessing the birthdays page",
     )
+    attendance_cleanup_days = models.IntegerField(
+        default=90,
+        help_text="Number of days since last seeing a member to automatically mark them inactive when cleaning attendance records for the attendance system.",
+    )
+    attendance_cleanup_notification_recipients = models.CharField(
+        max_length=1024,
+        blank=True,
+        null=True,
+        help_text="Comma-separated list of email addresses to receive attendance cleanup notifications",
+    )
     
     panels = [
         MultiFieldPanel([
@@ -177,6 +187,11 @@ class SiteSettings(BaseSiteSetting):
         MultiFieldPanel([
             FieldPanel('instrument_rental_notification_recipients'),
         ], heading="Instrument Library Notifications", help_text="Configure who receives rental status reports."),
+
+        MultiFieldPanel([
+            FieldPanel('attendance_cleanup_days'),
+            FieldPanel('attendance_cleanup_notification_recipients'),
+        ], heading="Attendance Cleanup Notifications", help_text="Configure attendance cleanup settings."),
     ]
 
 
