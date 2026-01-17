@@ -978,12 +978,10 @@ class LibraryInstrument(DraftStateMixin, RevisionMixin, LockableMixin, Clusterab
                 old_member_id = old_instance.member_id
                 old_member = old_instance.member
 
-        # Auto-calculate review dates based on rental date when not set manually
+        # Auto-calculate review dates based on rental date
         if self.rental_date:
-            if not self.review_date_6_month:
-                self.review_date_6_month = self.rental_date + datetime.timedelta(days=182)
-            if not self.review_date_12_month:
-                self.review_date_12_month = self.rental_date + datetime.timedelta(days=365)
+            self.review_date_6_month = self.rental_date + datetime.timedelta(days=182)
+            self.review_date_12_month = self.rental_date + datetime.timedelta(days=365)
 
         super().save(*args, **kwargs)
 
