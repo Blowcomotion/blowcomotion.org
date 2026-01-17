@@ -17,6 +17,12 @@ class Command(BaseCommand):
             action='store_true',
             help='Simulate the cleanup without making any changes or sending emails.',
         )
+        parser.add_argument(
+            '--day-to-run',
+            type=int,
+            choices=range(7),
+            help='Day of the week to run the command (0=Monday, 6=Sunday)',
+        )
 
     def _send_mail(self, subject, message, recipients, dry_run):
         if dry_run:
@@ -51,6 +57,18 @@ class Command(BaseCommand):
             return None
 
     def handle(self, *args, **options):
+        today = datetime.date.today()
+        weekday = today.weekday()  # Monday=0, Sunday=6
+        day_to_run = options['day_to_run']
+        days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        if day_to_run is not None and weekday != day_to_run:
+            self.stdout.write(
+                self.style.WARNING(
+                    f'This command is intended to be run on {days_of_week[day_to_run]} only. Exiting.'
+                )
+            )
+            return
+
         # Get site settings to determine cleanup threshold
         site_settings = self._get_site_settings()
         if not site_settings:
