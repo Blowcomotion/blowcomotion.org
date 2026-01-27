@@ -15,12 +15,11 @@ Options:
 
 import calendar
 import logging
-from datetime import date, datetime
+from datetime import date
 
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 
 from blowcomotion.models import Member, SiteSettings
 from blowcomotion.views import get_birthday
