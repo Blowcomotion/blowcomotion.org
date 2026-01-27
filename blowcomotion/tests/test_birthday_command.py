@@ -2,7 +2,7 @@
 Tests for the monthly birthday summary management command.
 """
 
-from datetime import date
+
 from io import StringIO
 
 from wagtail.models import Site
@@ -14,7 +14,7 @@ from django.test import TestCase
 from blowcomotion.models import (
     Instrument,
     Member,
-    MemberInstrument,
+
     Section,
     SiteSettings,
 )
@@ -160,9 +160,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         """Test command with default next month behavior"""
         out = StringIO()
         
-        # Mock today's date to August 2025
 
-        
         # We can't easily mock the date in the command, so we'll test with explicit month
         self._run_command(month=9, year=2025, dry_run=True, stdout=out)
         

@@ -114,10 +114,13 @@ class Command(BaseCommand):
                 
                 recipient_list = [email.strip() for email in recipients.split(',')]
                 self.stdout.write(f'Recipients: {", ".join(recipient_list)}')
-                
+
+            except CommandError:
+                # Preserve specific command error messages raised above
+                raise
             except Exception as e:
-                logger.error(f"Error getting site settings: {str(e)}")
-                raise CommandError(f"Error getting site settings: {str(e)}")
+                logger.error("Error getting site settings: %s", e)
+                raise CommandError(f"Error getting site settings: {e}")
 
             # Get members with birthdays in the target month
             upcoming_birthdays = self._get_upcoming_birthdays(target_month, target_year)
