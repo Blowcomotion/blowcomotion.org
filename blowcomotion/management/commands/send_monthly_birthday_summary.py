@@ -132,18 +132,17 @@ class Command(BaseCommand):
                 )
                 return
 
-            if upcoming_birthdays:
-                for birthday in upcoming_birthdays:
-                    member = birthday['member']
-                    birthday_date = birthday['birthday']
-                    age_info = f" (turning {birthday['age']})" if birthday.get('age') else ""
-                    instrument_names = birthday.get('instruments', [])
-                    instruments_info = f" - {', '.join(instrument_names)}" if instrument_names else ""
-                    
-                    self.stdout.write(
-                        f"  • {member.first_name} {member.last_name} - "
-                        f"{birthday_date.strftime('%B %d')}{age_info}{instruments_info}"
-                    )
+            for birthday in upcoming_birthdays:
+                member = birthday['member']
+                birthday_date = birthday['birthday']
+                age_info = f" (turning {birthday['age']})" if birthday.get('age') else ""
+                instrument_names = birthday.get('instruments', [])
+                instruments_info = f" - {', '.join(instrument_names)}" if instrument_names else ""
+                
+                self.stdout.write(
+                    f"  • {member.first_name} {member.last_name} - "
+                    f"{birthday_date.strftime('%B %d')}{age_info}{instruments_info}"
+                )
 
             # Generate email content
             context = {
