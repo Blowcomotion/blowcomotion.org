@@ -16,6 +16,7 @@ Options:
 import calendar
 import logging
 from datetime import date, datetime
+
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import render_to_string
@@ -46,12 +47,27 @@ class Command(BaseCommand):
             action='store_true',
             help='Print what would be sent without actually sending emails',
         )
+        parser.add_argument(
+            '--ignore-date-check',
+            action='store_true',
+            help='Bypass the first-day-of-month check (for manual/testing runs)',
+        )
 
     def handle(self, *args, **options):
         """Main command handler"""
         try:
             # Determine target month and year
             today = date.today()
+            
+            # Check if it's the first day of the month (unless bypassed)
+            if not options['ignore_date_check'] and today.day != 1:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f'This command is intended to be run on the 1st of each month only. '
+                        f'Today is {today.strftime("%B %d, %Y")}. Use --ignore-date-check to bypass this restriction.'
+                    )
+                )
+                return
             
             if options['month'] and options['year']:
                 target_month = options['month']
@@ -115,8 +131,13 @@ class Command(BaseCommand):
                     member = birthday['member']
                     birthday_date = birthday['birthday']
                     age_info = f" (turning {birthday['age']})" if birthday.get('age') else ""
-                    instruments = ", ".join([inst.instrument.name for inst in member.instruments.all()])
-                    instruments_info = f" - {instruments}" if instruments else ""
+                    
+                    # Get all instruments (primary + additional)
+                    instrument_names = []
+                    if member.primary_instrument:
+                        instrument_names.append(member.primary_instrument.name)
+                    instrument_names.extend([inst.instrument.name for inst in member.additional_instruments.all()])
+                    instruments_info = f" - {', '.join(instrument_names)}" if instrument_names else ""
                     
                     self.stdout.write(
                         f"  • {member.first_name} {member.last_name} - "
@@ -190,7 +211,7 @@ class Command(BaseCommand):
             is_active=True,
             birth_month=target_month,
             birth_day__isnull=False,
-        ).prefetch_related('instruments__instrument').order_by('birth_day', 'first_name', 'last_name')
+        ).prefetch_related('primary_instrument', 'additional_instruments__instrument').order_by('birth_day', 'first_name', 'last_name')
 
         upcoming_birthdays = []
 
@@ -250,11 +271,12 @@ class Command(BaseCommand):
                 # Add age if available
                 age_info = f" - Turning {birthday['age']}" if birthday.get('age') else ""
                 
-                # Add instruments if available
-                instruments = []
-                if member.instruments.exists():
-                    instruments = [inst.instrument.name for inst in member.instruments.all()]
-                instruments_info = f" (🎵 {', '.join(instruments)})" if instruments else ""
+                # Add instruments if available (primary + additional)
+                instrument_names = []
+                if member.primary_instrument:
+                    instrument_names.append(member.primary_instrument.name)
+                instrument_names.extend([inst.instrument.name for inst in member.additional_instruments.all()])
+                instruments_info = f" (🎵 {', '.join(instrument_names)})" if instrument_names else ""
                 
                 text_lines.append(f"• {name}")
                 text_lines.append(f"  {birthday_date}{age_info}{instruments_info}")
