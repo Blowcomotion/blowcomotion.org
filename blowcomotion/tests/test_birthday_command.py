@@ -2,13 +2,13 @@
 Tests for the monthly birthday summary management command.
 """
 
-
 from io import StringIO
 
 from wagtail.models import Site
 
 from django.core import mail
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import TestCase
 
 from blowcomotion.models import Instrument, Member, Section, SiteSettings
@@ -143,7 +143,6 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         self.site_settings.birthday_summary_email_recipients = ''
         self.site_settings.save()
         
-        from django.core.management.base import CommandError
         
         with self.assertRaises(CommandError) as cm:
             self._run_command(month=9, year=2025)
@@ -154,7 +153,6 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         """Test command with default next month behavior"""
         out = StringIO()
         
-
         # We can't easily mock the date in the command, so we'll test with explicit month
         self._run_command(month=9, year=2025, dry_run=True, stdout=out)
         
@@ -163,8 +161,6 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
 
     def test_command_invalid_month(self):
         """Test command with invalid month parameter"""
-        from django.core.management.base import CommandError
-        
         with self.assertRaises(CommandError) as cm:
             self._run_command(month=13, year=2025)
         

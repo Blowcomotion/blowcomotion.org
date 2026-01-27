@@ -62,7 +62,7 @@ crontab -e
 ```python
 # In settings.py
 CRONJOBS = [
-    ('0 9 1 * *', 'blowcomotion.management.commands.send_monthly_birthday_summary'),
+    ('0 9 1 * *', 'django.core.management.call_command', ['send_monthly_birthday_summary']),
 ]
 ```
 
@@ -91,7 +91,7 @@ Description=Run Birthday Summary Monthly
 Requires=birthday-summary.service
 
 [Timer]
-OnCalendar=monthly
+OnCalendar=*-*-01 09:00:00
 Persistent=true
 
 [Install]
@@ -116,8 +116,11 @@ python manage.py send_monthly_birthday_summary --dry-run --ignore-date-check
 # Test with specific month (ignores 1st-of-month date check)
 python manage.py send_monthly_birthday_summary --month 9 --year 2025 --dry-run --ignore-date-check
 
-# Test actual sending (be careful in production; only works on the 1st)
+# Test actual sending on the 1st (even with --month/--year, the command only runs on the 1st unless --ignore-date-check is used)
 python manage.py send_monthly_birthday_summary --month 9 --year 2025
+
+# Force actual sending on any day (bypasses the 1st-of-month safety check; be very careful in production)
+python manage.py send_monthly_birthday_summary --month 9 --year 2025 --ignore-date-check
 ```
 
 ### Run Tests
