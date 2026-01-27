@@ -178,7 +178,7 @@ class Command(BaseCommand):
                     subject=subject,
                     message=text_content,
                     html_message=html_content,
-                    from_email='info@blowcomotion.org',
+                    from_email='website@blowcomotion.org',
                     recipient_list=recipient_list,
                     fail_silently=False,
                 )
