@@ -71,23 +71,29 @@ class Command(BaseCommand):
                 )
                 return
             
+            # First, compute the default target period: next month from today
+            if today.month == 12:
+                default_month = 1
+                default_year = today.year + 1
+            else:
+                default_month = today.month + 1
+                default_year = today.year
+
             if options['month'] and options['year']:
+                # Explicit month and year: use exactly as provided
                 target_month = options['month']
                 target_year = options['year']
             elif options['month']:
+                # Month only: choose a year so the target is not before the default "next month"
                 target_month = options['month']
-                target_year = today.year
-                # If the specified month is before current month, assume next year
-                if target_month < today.month:
-                    target_year = today.year + 1
-            else:
-                # Default: next month
-                if today.month == 12:
-                    target_month = 1
-                    target_year = today.year + 1
+                if target_month < default_month:
+                    target_year = default_year + 1
                 else:
-                    target_month = today.month + 1
-                    target_year = today.year
+                    target_year = default_year
+            else:
+                # No month specified: use the default "next month" period
+                target_month = default_month
+                target_year = default_year
 
             # Validate month
             if not (1 <= target_month <= 12):
