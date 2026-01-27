@@ -110,13 +110,13 @@ sudo systemctl start birthday-summary.timer
 ### Test the Command
 
 ```bash
-# Test with dry run
-python manage.py send_monthly_birthday_summary --dry-run
+# Test with dry run (ignores 1st-of-month date check)
+python manage.py send_monthly_birthday_summary --dry-run --ignore-date-check
 
-# Test with specific month
-python manage.py send_monthly_birthday_summary --month 9 --year 2025 --dry-run
+# Test with specific month (ignores 1st-of-month date check)
+python manage.py send_monthly_birthday_summary --month 9 --year 2025 --dry-run --ignore-date-check
 
-# Test actual sending (be careful in production)
+# Test actual sending (be careful in production; only works on the 1st)
 python manage.py send_monthly_birthday_summary --month 9 --year 2025
 ```
 

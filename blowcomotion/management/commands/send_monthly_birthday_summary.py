@@ -5,22 +5,22 @@ This command sends a monthly email digest with upcoming member birthdays
 to designated recipients configured in SiteSettings.
 
 Usage:
-    python manage.py send_monthly_birthday_summary [--month MONTH] [--year YEAR] [--dry-run]
+    python manage.py send_monthly_birthday_summary [--month MONTH] [--year YEAR] [--dry-run] [--ignore-date-check]
 
 Options:
     --month: Month to generate summary for (1-12, default: next month)
     --year: Year to generate summary for (default: current year, or next year if month wraps)
     --dry-run: Print what would be sent without actually sending emails
+    --ignore-date-check: Bypass the first-day-of-month check (for manual/testing runs)
 """
 
 import calendar
 import logging
-from datetime import date, datetime
+from datetime import date
 
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 
 from blowcomotion.models import Member, SiteSettings
 from blowcomotion.views import get_birthday
@@ -211,7 +211,7 @@ class Command(BaseCommand):
             is_active=True,
             birth_month=target_month,
             birth_day__isnull=False,
-        ).prefetch_related('primary_instrument', 'additional_instruments__instrument').order_by('birth_day', 'first_name', 'last_name')
+        ).select_related('primary_instrument').prefetch_related('additional_instruments__instrument').order_by('birth_day', 'first_name', 'last_name')
 
         upcoming_birthdays = []
 
