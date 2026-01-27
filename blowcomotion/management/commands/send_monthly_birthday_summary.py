@@ -126,6 +126,15 @@ class Command(BaseCommand):
                 f'Found {len(upcoming_birthdays)} birthday(s) in {month_name} {target_year}'
             )
 
+            # Skip email if no birthdays
+            if not upcoming_birthdays:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f'No birthdays scheduled for {month_name} {target_year}. Skipping email.'
+                    )
+                )
+                return
+
             if upcoming_birthdays:
                 for birthday in upcoming_birthdays:
                     member = birthday['member']
