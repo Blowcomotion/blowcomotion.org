@@ -3,13 +3,21 @@ Tests for the monthly birthday summary management command.
 """
 
 from datetime import date
+from io import StringIO
+
+from wagtail.models import Site
+
 from django.core import mail
 from django.core.management import call_command
 from django.test import TestCase
-from io import StringIO
 
-from blowcomotion.models import Member, Instrument, Section, SiteSettings, MemberInstrument
-from wagtail.models import Site
+from blowcomotion.models import (
+    Instrument,
+    Member,
+    MemberInstrument,
+    Section,
+    SiteSettings,
+)
 
 
 class SendMonthlyBirthdaySummaryTests(TestCase):
@@ -40,7 +48,8 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
             birth_day=15,
             birth_year=1990,
             is_active=True,
-            preferred_name='Johnny'
+            preferred_name='Johnny',
+            primary_instrument=self.trumpet
         )
         
         self.member_no_age = Member.objects.create(
@@ -48,7 +57,8 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
             last_name='NoAge',
             birth_month=9,  # September
             birth_day=25,
-            is_active=True
+            is_active=True,
+            primary_instrument=self.trombone
         )
         
         self.inactive_member = Member.objects.create(
@@ -57,7 +67,8 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
             birth_month=9,  # September
             birth_day=5,
             birth_year=1985,
-            is_active=False  # Should not appear in summary
+            is_active=False,  # Should not appear in summary
+            primary_instrument=self.snare
         )
         
         self.member_different_month = Member.objects.create(
@@ -66,18 +77,14 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
             birth_month=10,  # October
             birth_day=10,
             birth_year=1995,
-            is_active=True
+            is_active=True,
+            primary_instrument=self.trumpet
         )
-        
-        # Assign instruments
-        MemberInstrument.objects.create(member=self.member_with_age, instrument=self.trumpet)
-        MemberInstrument.objects.create(member=self.member_no_age, instrument=self.trombone)
-        MemberInstrument.objects.create(member=self.inactive_member, instrument=self.snare)
 
     def test_command_with_birthdays_dry_run(self):
         """Test command with birthdays in dry-run mode"""
         out = StringIO()
-        call_command('send_monthly_birthday_summary', '--month=9', '--year=2025', '--dry-run', stdout=out)
+        call_command('send_monthly_birthday_summary', '--month=9', '--year=2025', '--ignore-date-check', '--dry-run', stdout=out)
         
         output = out.getvalue()
         
@@ -96,7 +103,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
     def test_command_with_birthdays_actual_send(self):
         """Test command with actual email sending"""
         out = StringIO()
-        call_command('send_monthly_birthday_summary', '--month=9', '--year=2025', stdout=out)
+        self._run_command(month=9, year=2025, stdout=out)
         
         output = out.getvalue()
         
@@ -108,7 +115,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         
         email = mail.outbox[0]
         self.assertEqual(email.subject, 'Monthly Birthday Summary - September 2025')
-        self.assertEqual(email.from_email, 'info@blowcomotion.org')
+        self.assertEqual(email.from_email, 'website@blowcomotion.org')
         self.assertEqual(email.to, ['test1@example.com', 'test2@example.com'])
         
         # Check email content
@@ -128,7 +135,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
     def test_command_no_birthdays(self):
         """Test command when there are no birthdays in the target month"""
         out = StringIO()
-        call_command('send_monthly_birthday_summary', '--month=11', '--year=2025', '--dry-run', stdout=out)
+        self._run_command(month=11, year=2025, dry_run=True, stdout=out)
         
         output = out.getvalue()
         
@@ -145,7 +152,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         from django.core.management.base import CommandError
         
         with self.assertRaises(CommandError) as cm:
-            call_command('send_monthly_birthday_summary', '--month=9', '--year=2025')
+            self._run_command(month=9, year=2025)
         
         self.assertIn('No birthday email recipients configured', str(cm.exception))
 
@@ -157,7 +164,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
 
         
         # We can't easily mock the date in the command, so we'll test with explicit month
-        call_command('send_monthly_birthday_summary', '--month=9', '--year=2025', '--dry-run', stdout=out)
+        self._run_command(month=9, year=2025, dry_run=True, stdout=out)
         
         output = out.getvalue()
         self.assertIn('September 2025', output)
@@ -167,13 +174,13 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         from django.core.management.base import CommandError
         
         with self.assertRaises(CommandError) as cm:
-            call_command('send_monthly_birthday_summary', '--month=13', '--year=2025')
+            self._run_command(month=13, year=2025)
         
         self.assertIn('Month must be between 1 and 12', str(cm.exception))
 
     def test_email_template_html_content(self):
         """Test that HTML email template renders correctly"""
-        call_command('send_monthly_birthday_summary', '--month=9', '--year=2025')
+        self._run_command(month=9, year=2025)
         
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
@@ -195,7 +202,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
     def test_age_calculation(self):
         """Test age calculation in birthday summary"""
         out = StringIO()
-        call_command('send_monthly_birthday_summary', '--month=9', '--year=2025', '--dry-run', stdout=out)
+        self._run_command(month=9, year=2025, dry_run=True, stdout=out)
         
         output = out.getvalue()
         
@@ -204,3 +211,8 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         
         # Jane NoAge has no birth year, so no age info
         self.assertNotIn('Jane NoAge - September 25 (turning', output)
+
+    def _run_command(self, **kwargs):
+        """Helper to run command with date check bypassed for tests"""
+        kwargs.setdefault('ignore_date_check', True)
+        return call_command('send_monthly_birthday_summary', **kwargs)

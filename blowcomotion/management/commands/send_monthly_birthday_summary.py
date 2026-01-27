@@ -131,12 +131,7 @@ class Command(BaseCommand):
                     member = birthday['member']
                     birthday_date = birthday['birthday']
                     age_info = f" (turning {birthday['age']})" if birthday.get('age') else ""
-                    
-                    # Get all instruments (primary + additional)
-                    instrument_names = []
-                    if member.primary_instrument:
-                        instrument_names.append(member.primary_instrument.name)
-                    instrument_names.extend([inst.instrument.name for inst in member.additional_instruments.all()])
+                    instrument_names = birthday.get('instruments', [])
                     instruments_info = f" - {', '.join(instrument_names)}" if instrument_names else ""
                     
                     self.stdout.write(
@@ -227,10 +222,16 @@ class Command(BaseCommand):
             if member.birth_year:
                 age = target_year - member.birth_year
 
+            instrument_names = []
+            if member.primary_instrument:
+                instrument_names.append(member.primary_instrument.name)
+            instrument_names.extend([inst.instrument.name for inst in member.additional_instruments.all()])
+
             birthday_info = {
                 'member': member,
                 'birthday': birthday_this_year,
                 'age': age,
+                'instruments': instrument_names,
             }
 
             upcoming_birthdays.append(birthday_info)
@@ -270,13 +271,8 @@ class Command(BaseCommand):
                 
                 # Add age if available
                 age_info = f" - Turning {birthday['age']}" if birthday.get('age') else ""
-                
-                # Add instruments if available (primary + additional)
-                instrument_names = []
-                if member.primary_instrument:
-                    instrument_names.append(member.primary_instrument.name)
-                instrument_names.extend([inst.instrument.name for inst in member.additional_instruments.all()])
-                instruments_info = f" (🎵 {', '.join(instrument_names)})" if instrument_names else ""
+                instruments = birthday.get('instruments', [])
+                instruments_info = f" (🎵 {', '.join(instruments)})" if instruments else ""
                 
                 text_lines.append(f"• {name}")
                 text_lines.append(f"  {birthday_date}{age_info}{instruments_info}")

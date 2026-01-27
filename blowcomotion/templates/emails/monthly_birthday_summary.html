@@ -214,9 +214,9 @@
                                     <span class="age-info"> - Turning {{ birthday.age }}</span>
                                 {% endif %}
                             </div>
-                            {% if birthday.member.instruments.exists %}
+                            {% if birthday.instruments %}
                                 <div class="instruments">
-                                    🎵 {% for instrument in birthday.member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                                    🎵 {{ birthday.instruments|join:", " }}
                                 </div>
                             {% endif %}
                         </li>
