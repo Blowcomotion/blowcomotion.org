@@ -200,6 +200,72 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         # Jane NoAge has no birth year, so no age info
         self.assertNotIn('Jane NoAge - September 25 (turning', output)
 
+    def test_member_with_additional_instruments(self):
+        """Test that both primary and additional instruments are included in birthday summary"""
+        from blowcomotion.models import MemberInstrument
+
+        # Create a member with birthday in September
+        member_multi_instruments = Member.objects.create(
+            first_name='Alex',
+            last_name='MultiInstrument',
+            birth_month=9,  # September
+            birth_day=20,
+            birth_year=1988,
+            is_active=True,
+            primary_instrument=self.trumpet  # Primary instrument
+        )
+        
+        # Add additional instruments
+        MemberInstrument.objects.create(
+            member=member_multi_instruments,
+            instrument=self.trombone
+        )
+        MemberInstrument.objects.create(
+            member=member_multi_instruments,
+            instrument=self.snare
+        )
+        
+        # Test dry-run output
+        out = StringIO()
+        self._run_command(month=9, year=2025, dry_run=True, stdout=out)
+        
+        output = out.getvalue()
+        
+        # Check that all instruments are listed in output
+        self.assertIn('Alex MultiInstrument', output)
+        self.assertIn('Trumpet', output)
+        self.assertIn('Trombone', output)
+        self.assertIn('Snare Drum', output)
+        
+        # Test actual email sending
+        mail.outbox = []  # Clear previous emails
+        self._run_command(month=9, year=2025)
+        
+        # Verify email was sent
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        
+        # Check email content includes all instruments
+        email_body = email.body
+        self.assertIn('Alex MultiInstrument', email_body)
+        self.assertIn('Trumpet', email_body)
+        self.assertIn('Trombone', email_body)
+        self.assertIn('Snare Drum', email_body)
+        self.assertIn('Turning 37', email_body)  # Born in 1988, turns 37 in 2025
+        
+        # Check HTML email content
+        html_content = None
+        for part in email.message().walk():
+            if part.get_content_type() == 'text/html':
+                html_content = part.get_payload()
+                break
+        
+        self.assertIsNotNone(html_content)
+        self.assertIn('Alex MultiInstrument', html_content)
+        self.assertIn('Trumpet', html_content)
+        self.assertIn('Trombone', html_content)
+        self.assertIn('Snare Drum', html_content)
+
     def _run_command(self, **kwargs):
         """Helper to run command with date check bypassed for tests"""
         kwargs.setdefault('ignore_date_check', True)
