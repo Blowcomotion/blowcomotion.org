@@ -143,7 +143,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         self.site_settings.birthday_summary_email_recipients = ''
         self.site_settings.save()
         
-        
+
         with self.assertRaises(CommandError) as cm:
             self._run_command(month=9, year=2025)
         

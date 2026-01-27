@@ -113,7 +113,7 @@ class Command(BaseCommand):
                     "Please add recipients in Django admin under Site Settings."
                 )
             
-            recipient_list = [email.strip() for email in recipients.split(',')]
+            recipient_list = [email.strip() for email in recipients.split(',') if email.strip()]
             self.stdout.write(f'Recipients: {", ".join(recipient_list)}')
 
             # Get members with birthdays in the target month
