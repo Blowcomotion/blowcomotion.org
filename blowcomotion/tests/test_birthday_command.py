@@ -154,7 +154,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         out = StringIO()
         
         # Mock today's date to August 2025
-        today = date(2025, 8, 15)
+
         
         # We can't easily mock the date in the command, so we'll test with explicit month
         call_command('send_monthly_birthday_summary', '--month=9', '--year=2025', '--dry-run', stdout=out)
