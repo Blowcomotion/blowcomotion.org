@@ -18,6 +18,8 @@ import calendar
 import logging
 from datetime import date
 
+from wagtail.models import Site
+
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import render_to_string
@@ -100,24 +102,19 @@ class Command(BaseCommand):
             )
 
             # Get site settings for email recipients
-            try:
-                site_settings = SiteSettings.objects.first()
-                if not site_settings:
-                    raise CommandError("No SiteSettings found. Please configure site settings in Django admin.")
-                
-                recipients = site_settings.birthday_summary_email_recipients
-                if not recipients:
-                    raise CommandError(
-                        "No birthday email recipients configured. "
-                        "Please add recipients in Django admin under Site Settings."
-                    )
-                
-                recipient_list = [email.strip() for email in recipients.split(',')]
-                self.stdout.write(f'Recipients: {", ".join(recipient_list)}')
-                
-            except Exception as e:
-                logger.error(f"Error getting site settings: {str(e)}")
-                raise CommandError(f"Error getting site settings: {str(e)}")
+            site_settings = self._get_site_settings()
+            if not site_settings:
+                return
+            
+            recipients = site_settings.birthday_summary_email_recipients
+            if not recipients:
+                raise CommandError(
+                    "No birthday email recipients configured. "
+                    "Please add recipients in Django admin under Site Settings."
+                )
+            
+            recipient_list = [email.strip() for email in recipients.split(',')]
+            self.stdout.write(f'Recipients: {", ".join(recipient_list)}')
 
             # Get members with birthdays in the target month
             upcoming_birthdays = self._get_upcoming_birthdays(target_month, target_year)
@@ -246,6 +243,21 @@ class Command(BaseCommand):
             upcoming_birthdays.append(birthday_info)
 
         return upcoming_birthdays
+
+    def _get_site_settings(self):
+        """Retrieve SiteSettings using the established pattern for multi-site configurations"""
+        try:
+            site = Site.objects.filter(is_default_site=True).select_related('root_page').first()
+            if not site:
+                site = Site.objects.select_related('root_page').first()
+            if not site:
+                self.stdout.write(self.style.ERROR('No Site configured. Cannot load SiteSettings.'))
+                return None
+            return SiteSettings.for_site(site)
+        except Exception as exc:
+            logger.error(f'Error retrieving SiteSettings: {exc}')
+            self.stdout.write(self.style.ERROR(f'Error retrieving SiteSettings: {exc}'))
+            return None
 
     def _generate_text_content(self, context):
         """Generate plain text version of the email"""
