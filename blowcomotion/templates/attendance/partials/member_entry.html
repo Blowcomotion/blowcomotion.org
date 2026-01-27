@@ -1,0 +1,17 @@
+<div class="col-12 col-md-6 col-lg-4 mb-3">
+    <div class="attendance-member-item border rounded py-2 px-3 h-100">
+        <div class="form-check m-0">
+            <input class="form-check-input" type="checkbox"
+                   id="member_{{ entry.member.id }}" name="member_{{ entry.member.id }}">
+            <label class="form-check-label fw-semibold" for="member_{{ entry.member.id }}">
+                {% if entry.member.id in recorded_member_ids %}
+                    <i class="fa fa-check-circle text-success me-1" title="Already recorded for this date"></i>
+                {% endif %}
+                {{ entry.member }}
+                {% if entry.is_additional_for_section %}
+                    <span class="badge bg-warning text-dark ms-2">Additional</span>
+                {% endif %}
+            </label>
+        </div>
+    </div>
+</div>

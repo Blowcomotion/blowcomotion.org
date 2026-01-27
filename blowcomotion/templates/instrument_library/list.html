@@ -1,0 +1,37 @@
+{% extends "wagtailadmin/base.html" %}
+{% load i18n %}
+
+{% block titletag %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<header class="nice-padding">
+    <h1 class="wagtail__main-heading">{{ page_title }}</h1>
+</header>
+
+<section class="nice-padding">
+    {% if instruments %}
+        <table class="listing">
+            <thead>
+                <tr>
+                    <th>{% trans "Instrument" %}</th>
+                    <th>{% trans "Status" %}</th>
+                    <th>{% trans "Serial Number" %}</th>
+                    <th>{% trans "Member" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for instrument in instruments %}
+                    <tr>
+                        <td>{{ instrument.instrument.name }}</td>
+                        <td>{{ instrument.get_status_display }}</td>
+                        <td>{{ instrument.serial_number }}</td>
+                        <td>{{ instrument.member|default:"—" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>{% trans "No instruments to display." %}</p>
+    {% endif %}
+</section>
+{% endblock %}

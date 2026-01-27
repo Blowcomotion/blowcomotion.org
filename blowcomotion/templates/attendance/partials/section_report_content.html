@@ -88,11 +88,16 @@
                                     <tr>
                                         <td>
                                             {{ member }}
-                                            {% if member.instruments.exists %}
-                                                <br><small class="text-muted">
-                                                    ({% for instrument in member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
-                                                </small>
+                                            {% if member.primary_instrument %}
+                                                <br><small class="text-muted">Primary: {{ member.primary_instrument.name }}</small>
                                             {% endif %}
+                                            {% with extras=member.additional_instruments.all %}
+                                                {% if extras %}
+                                                    <br><small class="text-muted">
+                                                        Additional: {% for extra in extras %}{{ extra.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                                                    </small>
+                                                {% endif %}
+                                            {% endwith %}
                                         </td>
                                         <td>{{ stats.count }}</td>
                                         <td>{{ stats.total_tuesdays }}</td>
@@ -182,6 +187,7 @@
                                     <th>Date</th>
                                     <th>Name</th>
                                     <th>Type</th>
+                                    <th>Instrument</th>
                                     <th>Notes</th>
                                     <th>Recorded</th>
                                 </tr>
@@ -193,11 +199,6 @@
                                         <td>
                                             {% if record.member %}
                                                 {{ record.member }}
-                                                {% if record.member.instruments.exists %}
-                                                    <br><small class="text-muted">
-                                                        ({% for instrument in record.member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
-                                                    </small>
-                                                {% endif %}
                                             {% else %}
                                                 {{ record.guest_name }}
                                             {% endif %}
@@ -207,6 +208,19 @@
                                                 <span class="badge bg-success text-white">Member</span>
                                             {% else %}
                                                 <span class="badge bg-info text-white">Guest</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if record.member %}
+                                                {% if record.played_instrument %}
+                                                    {{ record.played_instrument.name }}
+                                                {% elif record.member.primary_instrument %}
+                                                    {{ record.member.primary_instrument.name }}
+                                                {% else %}
+                                                    <em class="text-muted">Not set</em>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
                                             {% endif %}
                                         </td>
                                         <td>{{ record.notes|default:"-" }}</td>

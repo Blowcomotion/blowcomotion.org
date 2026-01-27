@@ -1,0 +1,41 @@
+/* Video Modal Styles */
+#videoModal .modal-content {
+    background-color: #000;
+    border: none;
+}
+
+#videoModal .modal-header {
+    border-bottom: none;
+    padding: 0.5rem 1rem;
+}
+
+#videoModal .modal-header .close {
+    color: #fff;
+    opacity: 0.8;
+    text-shadow: none;
+    font-size: 2rem;
+    font-weight: 300;
+}
+
+#videoModal .modal-header .close:hover {
+    opacity: 1;
+    color: #fff;
+}
+
+#videoModal .modal-body {
+    padding: 0;
+}
+
+#videoModal .embed-responsive {
+    background-color: #000;
+}
+
+#videoModal .modal-dialog {
+    max-width: 90vw;
+}
+
+@media (min-width: 992px) {
+    #videoModal .modal-dialog {
+        max-width: 900px;
+    }
+}

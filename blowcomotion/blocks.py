@@ -3,13 +3,21 @@ import time
 from datetime import timedelta, tzinfo
 
 import requests
-from django.conf import settings
-from django.core.cache import cache
-from django.utils import timezone
 from wagtail import blocks
 from wagtail.images.blocks import ImageChooserBlock
 
-from blowcomotion.chooser_blocks import EventChooserBlock, GigoGigChooserBlock, SongChooserBlock
+from django.conf import settings
+from django.core.cache import cache
+from django.utils import timezone
+
+from blowcomotion.chooser_blocks import (
+    EventChooserBlock,
+    GigoGigChooserBlock,
+    SongChooserBlock,
+)
+from blowcomotion.utils import adjust_gig_date_for_early_morning
+
+
 class HeroBlock(blocks.StructBlock):
     image = ImageChooserBlock()
     top_line = blocks.CharBlock(required=False)
@@ -21,6 +29,21 @@ class HeroBlock(blocks.StructBlock):
         icon = "image"
         template = "blocks/hero_block.html"
         label_format = "Hero: {top_line} {middle_line} {bottom_line}"
+
+    def get_context(self, value, parent_context=None):
+        context = super().get_context(value, parent_context)
+        context['youtube_embed_url'] = ''
+        if value.get('youtube_url'):
+            youtube_url = value['youtube_url']
+            if "watch?v=" in youtube_url:
+                video_id = youtube_url.split("watch?v=")[-1].split("&")[0]
+            elif "youtu.be/" in youtube_url:
+                video_id = youtube_url.split("youtu.be/")[-1].split("?")[0]
+            else:
+                video_id = ''
+            if video_id:
+                context['youtube_embed_url'] = f"https://www.youtube.com/embed/{video_id}"
+        return context
 
 
 class EventsBlock(blocks.StructBlock):
@@ -287,6 +310,7 @@ class PayPalDonateButton(blocks.StructBlock):
         icon = "bi-paypal"
         template = "blocks/paypal_donate_button.html"
         label = "PayPal Donate Button"
+        label_format = "PayPal Donate Button: {button_text}"
         help_text = "This PayPal donate button is used to make Paypal donations. The PayPal url is set in the settings if your admin account has permission to change it. The button will be aligned according to the selected alignment."
 
 
@@ -317,6 +341,7 @@ class VenmoDonateButton(blocks.StructBlock):
         icon = "bi-currency-dollar"
         template = "blocks/venmo_donate_button.html"
         label = "Venmo Donate Button"
+        label_format = "Venmo Donate Button: {button_text}"
         help_text = "This is Venmo donate button adds a button for making Venmo donations. The Venmo url is set in the settings if your admin account has permission to change it. The button will be aligned according to the selected alignment."
 
 
@@ -347,6 +372,7 @@ class PatreonButton(blocks.StructBlock):
         icon = "bi-currency-dollar"
         template = "blocks/patreon_button.html"
         label = "Patreon Button"
+        label_format = "Patreon Button: {button_text}"
         help_text = "This is Patreon button adds a button for making Patreon donations. The Patreon url is set in the settings if your admin account has permission to change it. The button will be aligned according to the selected alignment."
 
 
@@ -377,6 +403,7 @@ class SquareDonateButton(blocks.StructBlock):
         icon = "bi-currency-dollar"
         template = "blocks/square_donate_button.html"
         label = "Square Donate Button"
+        label_format = "Square Donate Button: {button_text}"
         help_text = "This is Square donate button adds a button for making Square donations. The Square url is set in the settings if your admin account has permission to change it. The button will be aligned according to the selected alignment."
 
 
@@ -492,6 +519,36 @@ class ThreeColumnBlock(blocks.StructBlock):
     left_column = ColumnContentBlock(required=False)
     middle_column = ColumnContentBlock(required=False)
     right_column = ColumnContentBlock(required=False)
+    show_left_border = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Show vertical border on the right side of the left column"
+    )
+    show_right_border = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Show vertical border on the right side of the middle column"
+    )
+    border_width = blocks.IntegerBlock(
+        required=False,
+        default=3,
+        min_value=1,
+        help_text="Border width in pixels"
+    )
+    border_color = blocks.CharBlock(
+        required=False,
+        default="#5b1a76",
+        help_text="Border color (e.g., #5b1a76 or rgb(91, 26, 118))"
+    )
+    border_style = blocks.ChoiceBlock(
+        choices=[
+            ("solid", "Solid"),
+            ("dashed", "Dashed"),
+            ("dotted", "Dotted"),
+        ],
+        default="solid",
+        help_text="Select the border style"
+    )
 
     class Meta:
         template = "blocks/three_column_block.html"
@@ -500,6 +557,13 @@ class ThreeColumnBlock(blocks.StructBlock):
 
 class TwoColumnBlock(ThreeColumnBlock):
     middle_column = None
+    show_left_border = None
+    show_right_border = None
+    show_vertical_border = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Show vertical border between the two columns"
+    )
     left_column_width = blocks.ChoiceBlock(choices=[
             ("one-half", "One Half"),
             ("one-third", "One Third"),
@@ -531,6 +595,41 @@ class FourColumnBlock(blocks.StructBlock):
     middle_left_column = ColumnContentBlock(required=False)
     middle_right_column = ColumnContentBlock(required=False)
     right_column = ColumnContentBlock(required=False)
+    show_left_border = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Show vertical border on the right side of the left column"
+    )
+    show_middle_border = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Show vertical border on the right side of the middle-left column"
+    )
+    show_right_border = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Show vertical border on the right side of the middle-right column"
+    )
+    border_width = blocks.IntegerBlock(
+        required=False,
+        default=3,
+        min_value=1,
+        help_text="Border width in pixels"
+    )
+    border_color = blocks.CharBlock(
+        required=False,
+        default="#5b1a76",
+        help_text="Border color (e.g., #5b1a76 or rgb(91, 26, 118))"
+    )
+    border_style = blocks.ChoiceBlock(
+        choices=[
+            ("solid", "Solid"),
+            ("dashed", "Dashed"),
+            ("dotted", "Dotted"),
+        ],
+        default="solid",
+        help_text="Select the border style"
+    )
 
     class Meta:
         template = "blocks/four_column_block.html"
@@ -574,23 +673,38 @@ class UpcomingPublicGigs(blocks.StructBlock):
                     )
                 context['gigs'] = [gig for gig in r.json()['gigs'] if gig['gig_status'].lower() == 'confirmed' and gig['band'].lower() == 'blowcomotion' and gig["date"] >= datetime.date.today().isoformat() and gig['is_private'] == False and gig["hide_from_calendar"] == False and gig["is_archived"] == False and gig["is_in_trash"] == False]
                 localtime = time.localtime()
+                validated_gigs = []
                 for gig in context['gigs']:
+                    # Adjust gig date for early morning times using shared helper function
+                    adjusted_date_str = adjust_gig_date_for_early_morning(gig)
+                    
+                    # Parse and validate adjusted date; skip if invalid
                     try:
-                        gig['date'] = datetime.datetime.strptime(gig['date'], "%Y-%m-%d")
-                    except ValueError:
-                        # remove gigs with invalid date format
+                        parsed_date = datetime.datetime.strptime(adjusted_date_str, "%Y-%m-%d")
+                    except (ValueError, TypeError):  # includes missing or malformed date
                         continue
-                    try:
-                        gig['set_time'] = datetime.datetime.strptime(gig['set_time'], "%H:%M").replace(tzinfo=datetime.timezone.utc)
-                    except ValueError:
-                        # remove gigs with invalid set_time format
-                        continue
-                    try:
-                        gig['set_time'] = gig['set_time'] + timedelta(hours=localtime.tm_isdst)
-                    except TypeError:
-                        # if set_time is None, skip the gig
-                        continue
-                context['gigs'].sort(key=lambda gig: gig['date'])
+
+                    # Prefer set_time; fallback to call_time if set_time is missing/blank/whitespace
+                    set_time = gig.get('set_time')
+                    if isinstance(set_time, str):
+                        set_time = set_time.strip()
+                    raw_time = set_time if set_time else gig.get('call_time')
+                    if isinstance(raw_time, str):
+                        raw_time = raw_time.strip()
+                    parsed_time = None
+                    if raw_time:
+                        try:
+                            parsed_time = datetime.datetime.strptime(raw_time, "%H:%M").replace(tzinfo=datetime.timezone.utc)
+                            parsed_time = parsed_time + timedelta(hours=localtime.tm_isdst)
+                        except (ValueError, TypeError):
+                            parsed_time = None
+
+                    gig['date'] = parsed_date  # overwrite with datetime object for downstream usage
+                    gig['set_time'] = parsed_time
+                    validated_gigs.append(gig)
+
+                validated_gigs.sort(key=lambda gig: gig['date'])
+                context['gigs'] = validated_gigs
 
                 cache.set('upcoming_public_gigs', context['gigs'], 60 * 60) # cache for 1 hour
         except Exception as e:
@@ -601,7 +715,7 @@ class UpcomingPublicGigs(blocks.StructBlock):
     class Meta:
         icon = "date"
         label = "Upcoming Public Gigs"
-        help_text = "This displays a list of confirmed upcoming public Blowco gigs as a list."
+        help_text = "This displays a list of confirmed upcoming public Blowco gigs as a list. (sourced from gig-o-matic)"
         template = "blocks/upcoming_public_gigs.html"
         preview_value = {}
 
@@ -683,4 +797,46 @@ class CountdownBlock(blocks.StructBlock):
         icon = "calendar-alt"
         template = "blocks/countdown_block.html"
         label_format = "Countdown to {countdown_date}"
+
+
+class TimelineItemBlock(blocks.StructBlock):
+    image = ImageChooserBlock(
+        required=False,
+        help_text="Select an image for this timeline item."
+    )
+    title = blocks.CharBlock(
+        required=False,
+        help_text="Enter the title for this timeline item."
+    )
+    date = blocks.CharBlock(
+        required=False,
+        help_text="Enter the date or year for this timeline item (e.g. '2017' or 'March 2020')."
+    )
+    description = blocks.RichTextBlock(
+        required=False,
+        help_text="Enter the description for this timeline item."
+    )
+
+    class Meta:
+        icon = "date"
+        label_format = "{title} - {date}"
+
+
+class TimelineBlock(blocks.StructBlock):
+    timeline_items = blocks.ListBlock(
+        TimelineItemBlock(),
+        help_text="Add timeline items. They will alternate between left and right automatically.",
+        min_num=1,
+    )
+    background_color = blocks.CharBlock(
+        required=False,
+        default="#F0F2F5",
+        help_text="Enter the background color for the timeline section (e.g. #F0F2F5 or rgb(240, 242, 245))."
+    )
+
+    class Meta:
+        icon = "list-ol"
+        template = "blocks/timeline_block.html"
+        label = "Timeline"
+        help_text = "This displays a timeline with alternating left/right items."
 

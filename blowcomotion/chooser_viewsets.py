@@ -2,18 +2,21 @@ import datetime
 import re
 
 import requests
-from django.conf import settings
-from django.views.generic.base import View
 from queryish.rest import APIModel, APIQuerySet
 from wagtail.admin.ui.tables import Column, TitleColumn
-from wagtail.admin.views.generic.chooser import (BaseChooseView,
-                                                 ChooseResultsViewMixin,
-                                                 ChooseViewMixin,
-                                                 ChosenResponseMixin,
-                                                 ChosenViewMixin,
-                                                 CreationFormMixin)
+from wagtail.admin.views.generic.chooser import (
+    BaseChooseView,
+    ChooseResultsViewMixin,
+    ChooseViewMixin,
+    ChosenResponseMixin,
+    ChosenViewMixin,
+    CreationFormMixin,
+)
 from wagtail.admin.viewsets.chooser import ChooserViewSet
 from wagtail.admin.widgets import BaseChooser
+
+from django.conf import settings
+from django.views.generic.base import View
 
 
 class ChartChooserViewset(ChooserViewSet):
@@ -87,14 +90,97 @@ class InstrumentChooserViewset(ChooserViewSet):
     ]
 
 
+class BaseLibraryInstrumentChooseView(BaseChooseView):
+    @property
+    def columns(self):
+        return [
+            TitleColumn(
+                "instrument",
+                label="Instrument",
+                url_name=self.chosen_url_name,
+                link_attrs={"data-chooser-modal-choice": True},
+            ),
+            Column("serial_number", label="Serial #"),
+            Column("status", label="Status"),
+            Column("member", label="Current holder"),
+        ]
+
+    def get_object_list(self):
+        objects = super().get_object_list()
+        # Apply status filter if provided in request
+        status_filter = self.request.GET.get('status_filter')
+        if status_filter:
+            from blowcomotion.models import LibraryInstrument
+            objects = objects.filter(status=status_filter)
+        return objects
+
+
+class LibraryInstrumentChooseView(ChooseViewMixin, CreationFormMixin, BaseLibraryInstrumentChooseView):
+    pass
+
+
+class LibraryInstrumentChooseResultsView(
+    ChooseResultsViewMixin, CreationFormMixin, BaseLibraryInstrumentChooseView
+):
+    pass
+
+
+class LibraryInstrumentChooserViewset(ChooserViewSet):
+    icon = "french-horn"
+    model = "blowcomotion.LibraryInstrument"
+    choose_view_class = LibraryInstrumentChooseView
+    choose_results_view_class = LibraryInstrumentChooseResultsView
+    choose_one_text = "Choose a library instrument"
+    choose_another_text = "Choose another library instrument"
+    edit_item_text = "Edit library instrument"
+    search_tab_label = "Search Library Instruments"
+
+    form_fields = [
+        "instrument",
+        "status",
+        "serial_number",
+        "member",
+    ]
+    
+    def __init__(self, name=None, **kwargs):
+        self.status_filter = kwargs.pop('status_filter', None)
+        super().__init__(name, **kwargs)
+    
+    @property
+    def widget_class(self):
+        """Return a widget class that passes status_filter to the chooser."""
+        if self.status_filter:
+            # Get the base widget class from parent
+            base_class = super().widget_class
+            
+            status_filter = self.status_filter
+            
+            class FilteredLibraryInstrumentChooser(base_class):
+                icon = 'french-horn'
+                
+                def get_chooser_modal_url(self):
+                    url = super().get_chooser_modal_url()
+                    separator = '&' if '?' in url else '?'
+                    return f'{url}{separator}status_filter={status_filter}'
+            
+            return FilteredLibraryInstrumentChooser
+        else:
+            return super().widget_class
+
+
 class BaseMemberChooseView(BaseChooseView):
     @property
     def columns(self):
         return [
-            TitleColumn("first_name", label="First name"),
-            TitleColumn("last_name", label="Last name"),
-            TitleColumn("instructor", label="Instructor"),
-            TitleColumn("board_member", label="Board member"),
+            TitleColumn(
+                "first_name",
+                label="First name",
+                url_name=self.chosen_url_name,
+                link_attrs={"data-chooser-modal-choice": True},
+            ),
+            Column("last_name", label="Last name"),
+            Column("instructor", label="Instructor"),
+            Column("board_member", label="Board member"),
         ]
 
 
@@ -260,6 +346,11 @@ class GigoGigChooserViewSet(ChooserViewSet):
 gigo_gig_chooser_viewset = GigoGigChooserViewSet("gigo_gig_chooser")
 member_chooser_viewset = MemberChooserViewset("member_chooser")
 instrument_chooser_viewset = InstrumentChooserViewset("instrument_chooser")
+library_instrument_chooser_viewset = LibraryInstrumentChooserViewset("library_instrument_chooser")
+library_instrument_available_chooser_viewset = LibraryInstrumentChooserViewset(
+    "library_instrument_available_chooser",
+    status_filter="available"
+)
 section_chooser_viewset = SectionChooserViewset("section_chooser")
 event_chooser_viewset = EventChooserViewset("event_chooser")
 song_chooser_viewset = SongChooserViewset("song_chooser")

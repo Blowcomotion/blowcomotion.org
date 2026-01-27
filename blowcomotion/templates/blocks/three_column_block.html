@@ -2,13 +2,13 @@
 
 <div class="container my-4">
     <div class="row">
-        <div class="{% block left_column_class %} col-md-4{% endblock left_column_class %}">
+        <div class="{% block left_column_class %} col-md-4{% endblock left_column_class %}{% if value.show_left_border %} border-end{% endif %}" {% include "blocks/includes/border_style.html" with show_border=value.show_left_border border_width=value.border_width border_color=value.border_color border_style=value.border_style %}>
             {% for block in value.left_column %}
                 {% include_block block %}
             {% endfor %}
         </div>
         {% block middle_column %}
-            <div class="{% block middle_column_class %} col-md-4{% endblock middle_column_class %}">
+            <div class="{% block middle_column_class %} col-md-4{% endblock middle_column_class %}{% if value.show_right_border %} border-end{% endif %}" {% include "blocks/includes/border_style.html" with show_border=value.show_right_border border_width=value.border_width border_color=value.border_color border_style=value.border_style %}>
                 {% for block in value.middle_column %}
                     {% include_block block %}
                 {% endfor %}

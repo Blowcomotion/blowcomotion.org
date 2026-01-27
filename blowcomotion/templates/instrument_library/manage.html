@@ -1,0 +1,259 @@
+{% extends "wagtailadmin/base.html" %}
+{% load i18n %}
+
+{% block titletag %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    {{ rent_form.media.css }}
+    {{ return_form.media.css }}
+{% endblock %}
+
+{% block extra_js %}
+    {{ block.super }}
+    {{ rent_form.media.js }}
+    {{ return_form.media.js }}
+    <script>
+        function selectInstrumentForReturn(instrumentId, instrumentName) {
+            // Find the return form and set the hidden instrument field value
+            const returnForm = document.querySelector('input[name="action"][value="return"]').closest('form');
+            const instrumentField = returnForm.querySelector('input[name="instrument"]');
+            if (instrumentField) {
+                instrumentField.value = instrumentId;
+            }
+            
+            // Scroll to the return form
+            if (returnForm) {
+                returnForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Add a visual indicator
+                returnForm.style.border = '2px solid #007d7e';
+                returnForm.style.padding = '1rem';
+                returnForm.style.borderRadius = '4px';
+                setTimeout(() => {
+                    returnForm.style.border = '';
+                    returnForm.style.padding = '';
+                }, 2000);
+                
+                // Focus on the condition notes field
+                const conditionNotesField = returnForm.querySelector('textarea[name="condition_notes"]');
+                if (conditionNotesField) {
+                    setTimeout(() => conditionNotesField.focus(), 500);
+                }
+                
+                // Add a message above the form
+                let messageDiv = returnForm.querySelector('.selected-instrument-message');
+                if (!messageDiv) {
+                    messageDiv = document.createElement('div');
+                    messageDiv.className = 'selected-instrument-message';
+                    messageDiv.style.cssText = 'background: #e3f2fd; padding: 1rem; margin-bottom: 1rem; border-radius: 4px; border-left: 4px solid #007d7e;';
+                    returnForm.insertBefore(messageDiv, returnForm.firstChild);
+                }
+                messageDiv.innerHTML = '<strong>Selected instrument:</strong> ' + instrumentName + ' <button type="button" onclick="clearInstrumentSelection()" style="margin-left: 1rem;" class="button button-small button-secondary">Clear</button>';
+            }
+        }
+        
+        function clearInstrumentSelection() {
+            const returnForm = document.querySelector('input[name="action"][value="return"]').closest('form');
+            const instrumentField = returnForm.querySelector('input[name="instrument"]');
+            if (instrumentField) {
+                instrumentField.value = '';
+            }
+            const messageDiv = document.querySelector('.selected-instrument-message');
+            if (messageDiv) {
+                messageDiv.remove();
+            }
+        }
+        
+        // Prevent submitting return form without an instrument selected
+        document.addEventListener('DOMContentLoaded', function() {
+            const returnForm = document.querySelector('input[name="action"][value="return"]').closest('form');
+            if (returnForm) {
+                returnForm.addEventListener('submit', function(e) {
+                    const instrumentField = returnForm.querySelector('input[name="instrument"]');
+                    if (!instrumentField || !instrumentField.value) {
+                        e.preventDefault();
+                        alert('Please select an instrument to return by clicking the "Return" button next to it in the "Currently rented" list above.');
+                        // Scroll to the rented instruments section
+                        const rentedSection = document.querySelector('.w-panel:has(h2:contains("Currently rented"))') || 
+                                            document.querySelectorAll('.w-panel')[2];
+                        if (rentedSection) {
+                            rentedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                        return false;
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock %}
+
+{% block content %}
+{% include "wagtailadmin/shared/header.html" with title=page_title icon="french-horn" %}
+
+<div class="nice-padding">
+    {% include "wagtailadmin/shared/messages.html" %}
+
+    <div class="w-grid w-grid--collapse">
+        <div class="w-grid__item w-grid__item--1-2">
+            <section class="w-panel">
+                <header class="w-panel__header">
+                    <h2 class="w-panel__title">{% trans "Available instruments" %}</h2>
+                </header>
+                <div class="w-panel__content">
+                    {% if available_instruments %}
+                        <table class="listing">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Instrument" %}</th>
+                                    <th>{% trans "Serial" %}</th>
+                                    <th style="text-align: right;">{% trans "Action" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for instrument in available_instruments %}
+                                    <tr>
+                                        <td>{{ instrument.instrument.name }}</td>
+                                        <td>{{ instrument.serial_number }}</td>
+                                        <td style="text-align: right;">
+                                            <a class="button button-small" href="{% url 'instrument_library_quick_rent' %}?instrument={{ instrument.pk }}">{% trans "Rent" %}</a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>{% trans "No instruments are currently available." %}</p>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+        <div class="w-grid__item w-grid__item--1-2">
+            <section class="w-panel">
+                <header class="w-panel__header">
+                    <h2 class="w-panel__title">{% trans "Rent an instrument" %}</h2>
+                </header>
+                <div class="w-panel__content">
+                    {% if selected_instrument %}
+                        <div class="w-flex w-flex-wrap w-gap-3 w-items-center w-bg-surface-info-panel w-border w-border-transparent w-rounded w-p-3 w-text-text-context">
+                            <p class="w-m-0 w-text-text-label">
+                                {% blocktrans with instrument=selected_instrument.instrument.name serial=selected_instrument.serial_number %}
+                                    You are renting <strong>{{ instrument }}</strong> (serial {{ serial }}).
+                                {% endblocktrans %}
+                            </p>
+                            <div class="w-ml-auto">
+                                <a class="button button-secondary button-small" href="{% url 'instrument_library_quick_rent' %}">{% trans "Clear selection" %}</a>
+                            </div>
+                        </div>
+                    {% endif %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="rent">
+                        <fieldset class="w-fieldset">
+                            {% for field in rent_form %}
+                                {% if field.is_hidden %}
+                                    {{ field }}
+                                {% else %}
+                                    <div class="w-field {% if field.errors %}w-field--error{% endif %}">
+                                        <label class="w-field__label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="w-required-mark">*</span>{% endif %}</label>
+                                        <div class="w-field__input">{{ field }}</div>
+                                        {% if field.help_text %}
+                                            <p class="help-block">{{ field.help_text }}</p>
+                                        {% endif %}
+                                        {% for error in field.errors %}
+                                            <p class="error-message">{{ error }}</p>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </fieldset>
+                        {% if rent_form.non_field_errors %}
+                            <ul class="errorlist">
+                                {% for error in rent_form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        <button type="submit" class="button button-longrunning">{% trans "Rent instrument" %}</button>
+                    </form>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <section class="w-panel" style="margin-top: 2rem;">
+        <header class="w-panel__header">
+            <h2 class="w-panel__title">{% trans "Currently rented" %}</h2>
+        </header>
+        <div class="w-panel__content">
+            {% if rented_instruments %}
+                <table class="listing">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Instrument" %}</th>
+                            <th>{% trans "Member" %}</th>
+                            <th>{% trans "Since" %}</th>
+                            <th style="text-align: right;">{% trans "Action" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for instrument in rented_instruments %}
+                            <tr>
+                                <td>{{ instrument.instrument.name }}</td>
+                                <td>{{ instrument.member.full_name|default:"—" }}</td>
+                                <td>{{ instrument.rental_date|date:"F j, Y"|default:"—" }}</td>
+                                <td style="text-align: right;">
+                                    <button type="button" class="button button-small button-secondary" 
+                                            onclick="selectInstrumentForReturn({{ instrument.pk }}, '{{ instrument.instrument.name|escapejs }}')">
+                                        {% trans "Return" %}
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>{% trans "No instruments are currently rented out." %}</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="w-panel" style="margin-top: 2rem;">
+        <header class="w-panel__header">
+            <h2 class="w-panel__title">{% trans "Return an instrument" %}</h2>
+        </header>
+        <div class="w-panel__content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="return">
+                <fieldset class="w-fieldset">
+                    {% for field in return_form %}
+                        {% if field.is_hidden %}
+                            {{ field }}
+                        {% else %}
+                            <div class="w-field {% if field.errors %}w-field--error{% endif %}">
+                                <label class="w-field__label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="w-required-mark">*</span>{% endif %}</label>
+                                <div class="w-field__input">{{ field }}</div>
+                                {% if field.help_text %}
+                                    <p class="help-block">{{ field.help_text }}</p>
+                                {% endif %}
+                                {% for error in field.errors %}
+                                    <p class="error-message">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </fieldset>
+                {% if return_form.non_field_errors %}
+                    <ul class="errorlist">
+                        {% for error in return_form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                <button type="submit" class="button">{% trans "Mark as returned" %}</button>
+            </form>
+        </div>
+    </section>
+</div>
+{% endblock %}

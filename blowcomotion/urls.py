@@ -16,6 +16,9 @@ urlpatterns = [
     path("search/", search_views.search, name="search"),
     path("process-form/", blowcomotion_views.process_form, name="process-form"),
     
+    # Member signup URL
+    path("member-signup/", blowcomotion_views.member_signup, name="member-signup"),
+    
     # Attendance URLs
     path("attendance/", blowcomotion_views.attendance_capture, name="attendance-main"),
     path("attendance/reports/", blowcomotion_views.attendance_reports, name="attendance-reports"),

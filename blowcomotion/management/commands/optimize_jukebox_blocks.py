@@ -1,6 +1,8 @@
-from django.core.management.base import BaseCommand
-from wagtail.models import Page
 import json
+
+from wagtail.models import Page
+
+from django.core.management.base import BaseCommand
 
 
 class Command(BaseCommand):
@@ -21,7 +23,7 @@ class Command(BaseCommand):
         
         # Import the page models
         from blowcomotion.models import BlankCanvasPage, WikiIndexPage, WikiPage
-        
+
         # Find all pages that have StreamField body content
         page_models = [BlankCanvasPage, WikiIndexPage, WikiPage]
         all_pages = []

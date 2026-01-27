@@ -83,6 +83,7 @@
                                     <th>Date</th>
                                     <th>Name</th>
                                     <th>Type</th>
+                                    <th>Instrument</th>
                                     <th>Notes</th>
                                 </tr>
                             </thead>
@@ -93,11 +94,6 @@
                                         <td>
                                             {% if record.member %}
                                                 {{ record.member }}
-                                                {% if record.member.instruments.exists %}
-                                                    <small class="text-muted">
-                                                        ({% for instrument in record.member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
-                                                    </small>
-                                                {% endif %}
                                             {% else %}
                                                 {{ record.guest_name }}
                                             {% endif %}
@@ -107,6 +103,19 @@
                                                 <span class="badge bg-success text-white">Member</span>
                                             {% else %}
                                                 <span class="badge bg-info text-white">Guest</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if record.member %}
+                                                {% if record.played_instrument %}
+                                                    {{ record.played_instrument.name }}
+                                                {% elif record.member.primary_instrument %}
+                                                    {{ record.member.primary_instrument.name }}
+                                                {% else %}
+                                                    <em class="text-muted">Not set</em>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
                                             {% endif %}
                                         </td>
                                         <td>{{ record.notes|default:"-" }}</td>

@@ -40,104 +40,60 @@
                                value="{{ attendance_date }}" required>
                     </div>
 
-                    <!-- Event Type Field -->
+                    <!-- Event Type Field (Radio buttons for all options) -->
                     <div class="mb-3">
                         <label class="form-label">Event Type</label>
+                        
+                        <!-- Rehearsal option -->
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="event_type" id="event_type_rehearsal" value="rehearsal" {% if event_type == 'rehearsal' %}checked{% endif %} required onchange="toggleGigField()">
+                            <input class="form-check-input" type="radio" name="event_type" id="event_type_rehearsal" 
+                                   value="rehearsal" {% if event_type_selection == 'rehearsal' %}checked{% endif %} required>
                             <label class="form-check-label" for="event_type_rehearsal">
                                 Rehearsal
                             </label>
                         </div>
+                        
+                        <!-- Individual gig options -->
+                        {% for gig_choice in gig_choices %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="event_type" 
+                                       id="event_type_gig_{{ gig_choice.id }}" 
+                                       value="gig_{{ gig_choice.id }}" 
+                                       {% if event_type_selection == 'gig_'|add:gig_choice.id|stringformat:"s" or event_type_selection|stringformat:"s" == 'gig_'|add:gig_choice.id|stringformat:"s" %}checked{% endif %} 
+                                       required>
+                                <label class="form-check-label" for="event_type_gig_{{ gig_choice.id }}">
+                                    {{ gig_choice.title }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                        
+                        <!-- Performance (no gig) option - only show when no gigs exist -->
+                        {% if not gig_choices %}
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="event_type" id="event_type_performance" value="performance" {% if event_type == 'performance' %}checked{% endif %} required onchange="toggleGigField()">
-                            <label class="form-check-label" for="event_type_performance">
-                                Performance
+                            <input class="form-check-input" type="radio" name="event_type" 
+                                   id="event_type_performance_no_gig" 
+                                   value="performance_no_gig" 
+                                   {% if event_type_selection == 'performance_no_gig' %}checked{% endif %} 
+                                   required>
+                            <label class="form-check-label" for="event_type_performance_no_gig">
+                                Performance (no gig scheduled)
                             </label>
                         </div>
+                        {% endif %}
                     </div>
 
-                    <!-- Gig Selection Field (for performances) -->
-                    <div class="mb-3" id="gig_field" {% if event_type != 'performance' %}style="display: none;"{% endif %}>
-                        <label for="gig" class="form-label">Select Gig</label>
-                        <select class="form-control" id="gig" name="gig">
-                            <option value="">No specific gig selected</option>
-                            {% for gig_choice in gig_choices %}
-                                <option value="{{ gig_choice.id }}" {% if gig == gig_choice.id|stringformat:"s" %}selected{% endif %}>
-                                    {{ gig_choice.date }} - {{ gig_choice.title }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                        <div class="form-text">Select the specific gig for this performance date</div>
-                    </div>
-
-                    <!-- Notes Field (when no gigs available or for rehearsals) -->
-                    <div class="mb-3" id="notes_field" style="display: none;">
+                    <!-- Notes Field (always visible) -->
+                    <div class="mb-3">
                         <label for="event_notes" class="form-label">Event Notes</label>
                         <input type="text" class="form-control" id="event_notes" name="event_notes" 
                                value="{{ event_notes }}"
-                               placeholder="Enter event description (e.g., 'Community Center Practice', 'Special Rehearsal')">
+                               placeholder="Optional notes (e.g., 'Community Center Practice', 'Special Rehearsal')">
                         <div class="form-text">Optional notes about this event</div>
                     </div>
 
                     <!-- Members Section -->
                     <div id="members-section">
-                        <h6 class="mt-4 mb-3">Section Members</h6>
-                        {% if members_by_instrument %}
-                            {% for instrument, members in members_by_instrument.items %}
-                                <div class="instrument-group mb-4">
-                                    <h6 class="text-primary mb-2">{{ instrument.name }}</h6>
-                                    <div class="row">
-                                        {% for member in members %}
-                                            <div class="col-md-6 col-lg-4 mb-2">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" 
-                                                           id="member_{{ member.id }}" name="member_{{ member.id }}">
-                                                    <label class="form-check-label" for="member_{{ member.id }}">
-                                                        {% if member.id in recorded_member_ids %}
-                                                            <i class="fa fa-check-circle text-success me-1" title="Already recorded for this date"></i>
-                                                        {% endif %}
-                                                        {{ member }}
-                                                        <small class="text-muted">({{ instrument.name }})</small>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        {% elif section_members %}
-                            <div class="row">
-                                {% for member in section_members %}
-                                    <div class="col-md-6 col-lg-4 mb-2">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" 
-                                                   id="member_{{ member.id }}" name="member_{{ member.id }}">
-                                            <label class="form-check-label" for="member_{{ member.id }}">
-                                                {% if member.id in recorded_member_ids %}
-                                                    <i class="fa fa-check-circle text-success me-1" title="Already recorded for this date"></i>
-                                                {% endif %}
-                                                {{ member }}
-                                                {% if member.instruments.exists %}
-                                                    <small class="text-muted">
-                                                        ({% for instrument in member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
-                                                    </small>
-                                                {% endif %}
-                                                {% if is_no_section %}
-                                                    <small class="ms-2">
-                                                        <a href="{% url 'wagtailsnippets_blowcomotion_member:edit' member.id %}" target="_blank" class="text-primary">
-                                                            <i class="fa fa-plus-circle"></i> Add Instrument
-                                                        </a>
-                                                    </small>
-                                                {% endif %}
-                                            </label>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <p class="text-muted">No members found for this section.</p>
-                        {% endif %}
+                        {% include 'attendance/partials/members_section.html' %}
                     </div>
 
                     <!-- Guests Section -->
@@ -206,6 +162,10 @@
 .instrument-group h6 {
     margin-bottom: 10px;
     font-weight: 600;
+}
+
+.attendance-member-card {
+    background-color: #fdfdfd;
 }
 </style>
 

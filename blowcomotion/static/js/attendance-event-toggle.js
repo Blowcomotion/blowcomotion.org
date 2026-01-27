@@ -1,53 +1,29 @@
-// Cache and debouncing variables
+// Cache for gig options by date
 let gigOptionsCache = {};
 let updateGigOptionsTimeout = null;
 let currentGigRequest = null;
 
-function toggleGigField() {
-    const eventTypeRadios = document.querySelectorAll('input[name="event_type"]');
-    const gigField = document.getElementById('gig_field');
-    const gigSelect = document.getElementById('gig');
-    const notesField = document.getElementById('notes_field');
-    
-    if (eventTypeRadios.length > 0 && gigField && gigSelect) {
-        const selectedEventType = document.querySelector('input[name="event_type"]:checked');
-        if (selectedEventType && selectedEventType.value === 'performance') {
-            gigField.style.display = 'block';
-            // Hide notes field initially for performance, will show if no gigs
-            if (notesField) {
-                notesField.style.display = 'none';
-            }
-            // When switching to performance, update gig options based on current date
-            updateGigOptions();
-        } else {
-            gigField.style.display = 'none';
-            // Show notes field for rehearsals
-            if (notesField) {
-                notesField.style.display = 'block';
-            }
-            // Don't clear the field value to maintain persistence
-        }
-    }
-}
-
 function updateGigOptions() {
     const dateField = document.getElementById('attendance_date');
-    const gigSelect = document.getElementById('gig');
     
-    if (!dateField || !gigSelect || !dateField.value) {
+    if (!dateField || !dateField.value) {
+        console.log('No date field or value');
         return;
     }
     
     const selectedDate = dateField.value;
+    console.log('Updating gig options for date:', selectedDate);
     
     // Check cache first
     if (gigOptionsCache[selectedDate]) {
-        populateGigSelect(gigSelect, gigOptionsCache[selectedDate]);
+        console.log('Using cached gigs for', selectedDate);
+        populateGigRadios(gigOptionsCache[selectedDate]);
         return;
     }
     
     // Cancel any pending request
     if (currentGigRequest) {
+        console.log('Cancelling previous request');
         currentGigRequest.abort();
         currentGigRequest = null;
     }
@@ -58,10 +34,7 @@ function updateGigOptions() {
     }
     
     updateGigOptionsTimeout = setTimeout(() => {
-        
-        // Show loading indicator
-        gigSelect.innerHTML = '<option value="">Loading gigs...</option>';
-        gigSelect.disabled = true;
+        console.log('Fetching gigs from API for', selectedDate);
         
         // Create AbortController for this request
         const controller = new AbortController();
@@ -77,64 +50,127 @@ function updateGigOptions() {
                 return response.json();
             })
             .then(data => {
+                console.log('Received gigs data:', data);
                 // Cache the result
                 gigOptionsCache[selectedDate] = data;
-                populateGigSelect(gigSelect, data);
-                gigSelect.disabled = false;
+                populateGigRadios(data);
                 currentGigRequest = null;
             })
             .catch(error => {
                 if (error.name === 'AbortError') {
-                    // Request was cancelled; do nothing.
+                    console.log('Request was aborted');
                 } else {
                     console.error('Error fetching gigs:', error);
-                    gigSelect.innerHTML = '<option value="">Error loading gigs</option>';
                 }
-                gigSelect.disabled = false;
                 currentGigRequest = null;
             });
     }, 300); // 300ms debounce
 }
 
-function populateGigSelect(gigSelect, data) {
-    const notesField = document.getElementById('notes_field');
-    const selectedEventType = document.querySelector('input[name="event_type"]:checked');
-    
-    // Clear existing options
-    gigSelect.innerHTML = '<option value="">No specific gig selected</option>';
-    
-    let hasGigs = false;
-    
-    // Add gig options
-    if (data.gigs && data.gigs.length > 0) {
-        hasGigs = true;
-        data.gigs.forEach(gig => {
-            const option = document.createElement('option');
-            option.value = gig.id;
-            option.textContent = `${gig.date} - ${gig.title}`;
-            gigSelect.appendChild(option);
-        });
-    } else {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = 'No gigs scheduled for this date';
-        gigSelect.appendChild(option);
+function populateGigRadios(data) {
+    // Find the specific event type container by looking for the rehearsal radio
+    const rehearsalRadio = document.getElementById('event_type_rehearsal');
+    if (!rehearsalRadio) {
+        console.log('Rehearsal radio not found');
+        return;
     }
     
-    // Show/hide notes field based on gig availability and event type
-    if (notesField && selectedEventType) {
-        if (selectedEventType.value === 'performance') {
-            if (hasGigs) {
-                // Hide notes field when gigs are available for performance
-                notesField.style.display = 'none';
-            } else {
-                // Show notes field when no gigs are available for performance
-                notesField.style.display = 'block';
-            }
-        } else {
-            // Show notes field for rehearsals
-            notesField.style.display = 'block';
+    // Get the parent container of all radio buttons
+    const eventTypeContainer = rehearsalRadio.closest('.mb-3');
+    if (!eventTypeContainer) {
+        console.log('Event type container not found');
+        return;
+    }
+    
+    // Remove all existing gig radio buttons and performance_no_gig
+    const allRadios = eventTypeContainer.querySelectorAll('.form-check');
+    allRadios.forEach(radioDiv => {
+        const input = radioDiv.querySelector('input[type="radio"]');
+        if (input && (input.value.startsWith('gig_') || input.value === 'performance_no_gig')) {
+            radioDiv.remove();
         }
+    });
+    
+    // Check if any radio was previously selected (before we removed gig radios)
+    const currentlySelected = eventTypeContainer.querySelector('input[type="radio"]:checked');
+    const wasGigSelected = !currentlySelected; // If nothing is checked now, a gig was selected before
+    
+    // Add new gig radio buttons or performance_no_gig option
+    let firstGigRadio = null;
+    let lastInsertedElement = rehearsalRadio.parentElement;
+    
+    if (data.gigs && data.gigs.length > 0) {
+        console.log(`Adding ${data.gigs.length} gig(s) to radio buttons`);
+        // Add individual gig radio buttons
+        data.gigs.forEach((gig, index) => {
+            const radioDiv = document.createElement('div');
+            radioDiv.className = 'form-check';
+            
+            const radioInput = document.createElement('input');
+            radioInput.className = 'form-check-input';
+            radioInput.type = 'radio';
+            radioInput.name = 'event_type';
+            radioInput.id = `event_type_gig_${gig.id}`;
+            radioInput.value = `gig_${gig.id}`;
+            radioInput.required = true;
+            
+            const radioLabel = document.createElement('label');
+            radioLabel.className = 'form-check-label';
+            radioLabel.htmlFor = `event_type_gig_${gig.id}`;
+            radioLabel.textContent = gig.title;
+            
+            radioDiv.appendChild(radioInput);
+            radioDiv.appendChild(radioLabel);
+            
+            // Insert after the last inserted element to maintain order
+            lastInsertedElement.insertAdjacentElement('afterend', radioDiv);
+            lastInsertedElement = radioDiv;
+            
+            if (index === 0) {
+                firstGigRadio = radioInput;
+            }
+        });
+    } else {
+        console.log('No gigs available, adding performance_no_gig option');
+        // No gigs available, add the performance_no_gig option
+        const radioDiv = document.createElement('div');
+        radioDiv.className = 'form-check';
+        
+        const radioInput = document.createElement('input');
+        radioInput.className = 'form-check-input';
+        radioInput.type = 'radio';
+        radioInput.name = 'event_type';
+        radioInput.id = 'event_type_performance_no_gig';
+        radioInput.value = 'performance_no_gig';
+        radioInput.required = true;
+        
+        const radioLabel = document.createElement('label');
+        radioLabel.className = 'form-check-label';
+        radioLabel.htmlFor = 'event_type_performance_no_gig';
+        radioLabel.textContent = 'Performance (no gig scheduled)';
+        
+        radioDiv.appendChild(radioInput);
+        radioDiv.appendChild(radioLabel);
+        
+        // Insert after the rehearsal radio
+        lastInsertedElement.insertAdjacentElement('afterend', radioDiv);
+    }
+    
+    // Determine what should be selected after update
+    if (wasGigSelected || !currentlySelected) {
+        // Previously selected gig is no longer available or nothing was selected
+        if (firstGigRadio) {
+            // Select the first new gig
+            firstGigRadio.checked = true;
+            console.log('Selected first gig:', firstGigRadio.value);
+        } else {
+            // No gigs available, select rehearsal
+            rehearsalRadio.checked = true;
+            console.log('Selected rehearsal (no gigs available)');
+        }
+    } else {
+        // Keep the current selection (rehearsal is still checked)
+        console.log('Keeping current selection:', currentlySelected ? currentlySelected.value : 'none');
     }
 }
 
@@ -144,8 +180,7 @@ function updateAttendanceCheckmarks() {
     if (dateField && dateField.value) {
         const selectedDate = dateField.value;
         
-        // Always update gig options when date changes, even if performance isn't selected
-        // This ensures the dropdown is ready when users switch to performance mode
+        // Update gig options when date changes
         updateGigOptions();
         
         // Since HTMX loads section content dynamically without changing URL,
@@ -186,8 +221,6 @@ function updateAttendanceCheckmarks() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    toggleGigField();
-    
     // Pre-fetch gigs for the current date if we have one
     const dateField = document.getElementById('attendance_date');
     if (dateField && dateField.value) {
@@ -198,21 +231,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (dateField) {
         dateField.addEventListener('change', function() {
             updateAttendanceCheckmarks();
-            // Don't call updateGigOptions here separately as updateAttendanceCheckmarks already calls it
         });
     }
-    
-    // Add event listeners for event type changes
-    const eventTypeRadios = document.querySelectorAll('input[name="event_type"]');
-    eventTypeRadios.forEach(radio => {
-        radio.addEventListener('change', toggleGigField);
-    });
 });
 
 // Also initialize after HTMX requests
 document.body.addEventListener('htmx:afterSettle', function() {
-    toggleGigField();
-    
     // Pre-fetch gigs for the current date if we have one
     const dateField = document.getElementById('attendance_date');
     if (dateField && dateField.value) {
@@ -224,14 +248,6 @@ document.body.addEventListener('htmx:afterSettle', function() {
         dateField.removeEventListener('change', updateAttendanceCheckmarks);
         dateField.addEventListener('change', function() {
             updateAttendanceCheckmarks();
-            // Don't call updateGigOptions here separately as updateAttendanceCheckmarks already calls it
         });
     }
-    
-    // Re-add event listeners for event type changes after HTMX updates
-    const eventTypeRadios = document.querySelectorAll('input[name="event_type"]');
-    eventTypeRadios.forEach(radio => {
-        radio.removeEventListener('change', toggleGigField);
-        radio.addEventListener('change', toggleGigField);
-    });
 });

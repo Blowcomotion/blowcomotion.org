@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Signup Successful - Blowcomotion{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 text-center">
+            <div class="card shadow-sm">
+                <div class="card-body p-5">
+                    <div class="mb-4">
+                        <i class="fa fa-check-circle text-success" style="font-size: 5rem;"></i>
+                    </div>
+                    
+                    <h1 class="mb-4">Thank You for Signing Up!</h1>
+                    
+                    {% if message %}
+                        <div class="alert alert-success">
+                            {{ message }}
+                        </div>
+                    {% endif %}
+
+                    <p class="lead mb-4">
+                        We've received your application and will review it soon. 
+                        You'll hear from us about next steps for joining Blowcomotion!
+                    </p>
+
+                    <div class="mb-4">
+                        <p class="text-muted">
+                            <i class="fa fa-envelope"></i> Check your email for a confirmation message.
+                        </p>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="mt-4">
+                        <a href="/" class="site-btn btn-lg px-5 me-3">
+                            <i class="fa fa-home"></i> Return Home
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.card {
+    border-radius: 10px;
+}
+
+.text-success {
+    color: #198754 !important;
+}
+
+.fa-check-circle {
+    animation: scaleIn 0.5s ease-in-out;
+}
+
+@keyframes scaleIn {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+</style>
+{% endblock %}

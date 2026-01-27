@@ -1,0 +1,23 @@
+{% load wagtailcore_tags wagtailimages_tags %}
+<section style="background-color: {{ value.background_color|default:'#F0F2F5' }};">
+  <div class="container-fluid py-5">
+    <div class="main-timeline-2">
+      {% for item in value.timeline_items %}
+      <div class="timeline-2 {% if forloop.counter|divisibleby:2 %}right-2{% else %}left-2{% endif %}">
+        <div class="card">
+          {% if item.image %}
+            {% image item.image original class="card-img-top img-fluid" %}
+          {% endif %}
+          <div class="card-body p-4">
+            <h4 class="fw-bold mb-4">{{ item.title }}</h4>
+            {% if item.date %}
+              <p class="text-muted mb-4"><i class="far fa-clock" aria-hidden="true"></i> {{ item.date }}</p>
+            {% endif %}
+            <div class="mb-0">{{ item.description|richtext }}</div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

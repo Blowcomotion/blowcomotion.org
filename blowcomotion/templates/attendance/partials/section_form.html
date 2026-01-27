@@ -98,9 +98,9 @@
                                                id="member_{{ member.id }}" name="member_{{ member.id }}">
                                         <label class="form-check-label" for="member_{{ member.id }}">
                                             {{ member }}
-                                            {% if member.instruments.exists %}
+                                            {% if member.primary_instrument %}
                                                 <small class="text-muted">
-                                                    ({% for instrument in member.instruments.all %}{{ instrument.instrument.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
+                                                    ({{ member.primary_instrument.name }})
                                                 </small>
                                             {% endif %}
                                         </label>
