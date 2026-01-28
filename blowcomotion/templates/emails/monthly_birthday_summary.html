@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monthly Birthday Summary - {{ month_name }} {{ year }}</title>
+    <style>
+        /* Email-safe CSS */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .header .subtitle {
+            margin: 10px 0 0 0;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .intro {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #6c757d;
+            font-size: 16px;
+        }
+        .birthday-section {
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .birthday-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .birthday-item {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        /* These are enhancements that may not work in all email clients. */
+        .birthday-item:hover {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .member-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+        .member-details {
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+        .birthday-date {
+            font-weight: 600;
+            color: #6f42c1;
+        }
+        .age-info {
+            font-style: italic;
+            color: #28a745;
+        }
+        .instruments {
+            display: inline-block;
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .no-birthdays {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 30px 20px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+        }
+        .summary-stats {
+            background: linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%);
+            color: white;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stats-item {
+            display: inline-block;
+            margin: 0 20px;
+        }
+        .stats-number {
+            font-size: 24px;
+            font-weight: 700;
+            display: block;
+        }
+        .stats-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .footer {
+            background-color: #495057;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .footer a {
+            color: #ffc107;
+            text-decoration: none;
+        }
+        /* Mobile responsive */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .header {
+                padding: 20px 15px;
+            }
+            .content {
+                padding: 20px 15px;
+            }
+            .header h1 {
+                font-size: 24px;
+            }
+            .stats-item {
+                display: block;
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎂 Monthly Birthday Summary</h1>
+            <p class="subtitle">{{ month_name }} {{ year }} - Blowcomotion Band</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="intro">
+                <p>Here are the upcoming birthdays for <strong>{{ month_name }} {{ year }}</strong>. 
+                Don't forget to celebrate our amazing band members!</p>
+            </div>
+
+            <!-- Summary Statistics -->
+            {% if upcoming_birthdays %}
+            <div class="summary-stats">
+                <div class="stats-item">
+                    <span class="stats-number">{{ upcoming_birthdays|length }}</span>
+                    <span class="stats-label">Birthday{{ upcoming_birthdays|length|pluralize }} this month</span>
+                </div>
+                {% if members_with_age %}
+                <div class="stats-item">
+                    <span class="stats-number">{{ members_with_age }}</span>
+                    <span class="stats-label">Member{{ members_with_age|pluralize }} with age info</span>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Birthdays Section -->
+            <div class="birthday-section">
+                <h2 class="section-title">🎉 Upcoming Birthdays</h2>
+                
+                {% if upcoming_birthdays %}
+                    <ul class="birthday-list">
+                        {% for birthday in upcoming_birthdays %}
+                        <li class="birthday-item">
+                            <div class="member-name">
+                                {% if birthday.member.preferred_name %}
+                                    "{{ birthday.member.preferred_name }}" {{ birthday.member.first_name }} {{ birthday.member.last_name }}
+                                {% else %}
+                                    {{ birthday.member.first_name }} {{ birthday.member.last_name }}
+                                {% endif %}
+                            </div>
+                            <div class="member-details">
+                                <span class="birthday-date">{{ birthday.birthday|date:"F j" }}</span>
+                                {% if birthday.age %}
+                                    <span class="age-info"> - Turning {{ birthday.age }}</span>
+                                {% endif %}
+                            </div>
+                            {% if birthday.instruments %}
+                                <div class="instruments">
+                                    🎵 {{ birthday.instruments|join:", " }}
+                                </div>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="no-birthdays">
+                        <p>🎈 No birthdays scheduled for {{ month_name }} {{ year }}.</p>
+                        <p>Enjoy the break from birthday celebrations!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>Start Wearing Purple</strong><br>
+            Blowcomotion Band Management<br>
+            <small>This is an automated monthly birthday summary. For questions, contact the band leadership.</small></p>
+        </div>
+    </div>
+</body>
+</html>
