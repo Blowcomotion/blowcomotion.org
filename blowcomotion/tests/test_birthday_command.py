@@ -271,7 +271,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
     def test_year_inference_future_month_in_current_year(self):
         """Test year inference when specifying a month later than today"""
         # Setup: Create a member with birthday in November
-        member_nov = Member.objects.create(
+        Member.objects.create(
             first_name='Bob',
             last_name='November',
             birth_month=11,  # November
@@ -299,7 +299,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
     def test_year_inference_past_month_rolls_to_next_year(self):
         """Test year inference when specifying a month earlier than current month"""
         # Setup: Create a member with birthday in September
-        member_sep = Member.objects.create(
+        Member.objects.create(
             first_name='Charlie',
             last_name='September',
             birth_month=9,  # September
@@ -330,7 +330,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
     def test_year_inference_edge_case_same_day_as_target_month(self):
         """Test year inference when today is the first day of the target month"""
         # Setup: Create a member with birthday in January
-        member_jan = Member.objects.create(
+        Member.objects.create(
             first_name='Diana',
             last_name='January',
             birth_month=1,  # January
@@ -358,7 +358,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
     def test_year_inference_december_edge_case(self):
         """Test year inference when specifying December from an earlier month"""
         # Setup: Create a member with birthday in December
-        member_dec = Member.objects.create(
+        Member.objects.create(
             first_name='Eve',
             last_name='December',
             birth_month=12,  # December
@@ -386,7 +386,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
     def test_year_inference_january_from_december(self):
         """Test year inference when specifying January from December of previous year"""
         # Setup: Create a member with birthday in January
-        member_jan = Member.objects.create(
+        Member.objects.create(
             first_name='Frank',
             last_name='January',
             birth_month=1,  # January
@@ -432,7 +432,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
     def test_year_inference_explicit_year_overrides_inference(self):
         """Test that explicit year parameter overrides inference logic"""
         # Setup: Create a member with birthday in January
-        member_jan = Member.objects.create(
+        Member.objects.create(
             first_name='Grace',
             last_name='January',
             birth_month=1,  # January
