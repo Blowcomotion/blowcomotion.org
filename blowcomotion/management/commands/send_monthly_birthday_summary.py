@@ -84,12 +84,17 @@ class Command(BaseCommand):
                 target_month = options['month']
                 target_year = options['year']
             elif options['month']:
-                # Month only: choose a year so the target is not before the default "next month"
+                # Month only: choose a year so the target month is not in the past
                 target_month = options['month']
-                if target_month < default_month:
-                    target_year = default_year + 1
-                else:
-                    target_year = default_year
+                # Start with the current year; if that would be in the past, roll to next year
+                target_year = today.year
+                try:
+                    target_date = date(target_year, target_month, 1)
+                    if target_date < today:
+                        target_year = today.year + 1
+                except ValueError:
+                    # Invalid month will be handled by the validation below
+                    pass
             else:
                 # No month specified: use the default "next month" period
                 target_month = default_month
