@@ -88,8 +88,8 @@ class Command(BaseCommand):
                 target_month = options['month']
                 # Start with the current year; if that month has already passed, roll to next year
                 target_year = today.year
-                # Compare year and month only to determine if month has passed
-                if target_year < today.year or (target_year == today.year and target_month < today.month):
+                # If the specified month has already passed this year, roll to next year
+                if target_month < today.month:
                     target_year = today.year + 1
             else:
                 # No month specified: use the default "next month" period
