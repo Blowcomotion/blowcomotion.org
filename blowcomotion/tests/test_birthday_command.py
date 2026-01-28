@@ -284,7 +284,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         # Mock today as January 27, 2026
         with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
             mock_date.today.return_value = date(2026, 1, 27)
-            mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
+            mock_date.side_effect = date
             
             out = StringIO()
             call_command('send_monthly_birthday_summary', month=11, ignore_date_check=True, dry_run=True, stdout=out)
@@ -315,7 +315,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         # If today is October 2026, then September 2026 is past, so use 2027
         with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
             mock_date.today.return_value = date(2026, 10, 15)  # October 15, 2026
-            mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
+            mock_date.side_effect = date
             
             out = StringIO()
             call_command('send_monthly_birthday_summary', month=9, ignore_date_check=True, dry_run=True, stdout=out)
@@ -343,7 +343,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         # Mock today as January 1, 2026 (first day of January)
         with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
             mock_date.today.return_value = date(2026, 1, 1)
-            mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
+            mock_date.side_effect = date
             
             out = StringIO()
             call_command('send_monthly_birthday_summary', month=1, ignore_date_check=True, dry_run=True, stdout=out)
@@ -371,7 +371,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         # Mock today as June 15, 2026 (middle of year)
         with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
             mock_date.today.return_value = date(2026, 6, 15)
-            mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
+            mock_date.side_effect = date
             
             out = StringIO()
             call_command('send_monthly_birthday_summary', month=12, ignore_date_check=True, dry_run=True, stdout=out)
@@ -399,7 +399,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         # Mock today as December 15, 2025 (December of previous year)
         with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
             mock_date.today.return_value = date(2025, 12, 15)
-            mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
+            mock_date.side_effect = date
             
             out = StringIO()
             call_command('send_monthly_birthday_summary', month=1, ignore_date_check=True, dry_run=True, stdout=out)
@@ -418,7 +418,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         # Mock today as February 1, 2026
         with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
             mock_date.today.return_value = date(2026, 2, 1)
-            mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
+            mock_date.side_effect = date
             
             out = StringIO()
             call_command('send_monthly_birthday_summary', month=1, ignore_date_check=True, dry_run=True, stdout=out)
@@ -445,7 +445,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         # Mock today as June 15, 2026
         with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
             mock_date.today.return_value = date(2026, 6, 15)
-            mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
+            mock_date.side_effect = date
             
             out = StringIO()
             # Explicitly provide year=2025 (even though it's in the past)
