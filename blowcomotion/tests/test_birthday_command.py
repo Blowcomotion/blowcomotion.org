@@ -2,7 +2,9 @@
 Tests for the monthly birthday summary management command.
 """
 
+from datetime import date
 from io import StringIO
+from unittest.mock import patch
 
 from wagtail.models import Site
 
@@ -265,6 +267,197 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         self.assertIn('Trumpet', html_content)
         self.assertIn('Trombone', html_content)
         self.assertIn('Snare Drum', html_content)
+
+    def test_year_inference_future_month_in_current_year(self):
+        """Test year inference when specifying a month later than today"""
+        # Setup: Create a member with birthday in November
+        member_nov = Member.objects.create(
+            first_name='Bob',
+            last_name='November',
+            birth_month=11,  # November
+            birth_day=10,
+            birth_year=2000,
+            is_active=True,
+            primary_instrument=self.trumpet
+        )
+        
+        # Mock today as January 27, 2026
+        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+            mock_date.today.return_value = date(2026, 1, 27)
+            mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
+            
+            out = StringIO()
+            call_command('send_monthly_birthday_summary', month=11, ignore_date_check=True, dry_run=True, stdout=out)
+            
+            output = out.getvalue()
+            
+            # November comes later in 2026, so it should use 2026 (current year)
+            self.assertIn('November 2026', output)
+            self.assertIn('Bob November', output)
+            self.assertNotIn('November 2027', output)
+
+    def test_year_inference_past_month_rolls_to_next_year(self):
+        """Test year inference when specifying a month earlier than current month"""
+        # Setup: Create a member with birthday in September
+        member_sep = Member.objects.create(
+            first_name='Charlie',
+            last_name='September',
+            birth_month=9,  # September
+            birth_day=15,
+            birth_year=1995,
+            is_active=True,
+            primary_instrument=self.trumpet
+        )
+        
+        # Mock today as January 27, 2026
+        # September 2026 would be in the future, so it should use 2026
+        # But if today is March 2026, then September 2026 is future
+        # If today is October 2026, then September 2026 is past, so use 2027
+        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+            mock_date.today.return_value = date(2026, 10, 15)  # October 15, 2026
+            mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
+            
+            out = StringIO()
+            call_command('send_monthly_birthday_summary', month=9, ignore_date_check=True, dry_run=True, stdout=out)
+            
+            output = out.getvalue()
+            
+            # September has already passed in 2026, so it should roll to 2027
+            self.assertIn('September 2027', output)
+            self.assertIn('Charlie September', output)
+            self.assertNotIn('September 2026', output)
+
+    def test_year_inference_edge_case_same_day_as_target_month(self):
+        """Test year inference when today is the first day of the target month"""
+        # Setup: Create a member with birthday in January
+        member_jan = Member.objects.create(
+            first_name='Diana',
+            last_name='January',
+            birth_month=1,  # January
+            birth_day=20,
+            birth_year=2000,
+            is_active=True,
+            primary_instrument=self.trumpet
+        )
+        
+        # Mock today as January 1, 2026 (first day of January)
+        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+            mock_date.today.return_value = date(2026, 1, 1)
+            mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
+            
+            out = StringIO()
+            call_command('send_monthly_birthday_summary', month=1, ignore_date_check=True, dry_run=True, stdout=out)
+            
+            output = out.getvalue()
+            
+            # Today IS in January 2026, so target is January 2026 (not 2027)
+            self.assertIn('January 2026', output)
+            self.assertIn('Diana January', output)
+            self.assertNotIn('January 2027', output)
+
+    def test_year_inference_december_edge_case(self):
+        """Test year inference when specifying December from an earlier month"""
+        # Setup: Create a member with birthday in December
+        member_dec = Member.objects.create(
+            first_name='Eve',
+            last_name='December',
+            birth_month=12,  # December
+            birth_day=25,
+            birth_year=1990,
+            is_active=True,
+            primary_instrument=self.trumpet
+        )
+        
+        # Mock today as June 15, 2026 (middle of year)
+        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+            mock_date.today.return_value = date(2026, 6, 15)
+            mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
+            
+            out = StringIO()
+            call_command('send_monthly_birthday_summary', month=12, ignore_date_check=True, dry_run=True, stdout=out)
+            
+            output = out.getvalue()
+            
+            # December is later in 2026, so use 2026
+            self.assertIn('December 2026', output)
+            self.assertIn('Eve December', output)
+            self.assertNotIn('December 2027', output)
+
+    def test_year_inference_january_from_december(self):
+        """Test year inference when specifying January from December of previous year"""
+        # Setup: Create a member with birthday in January
+        member_jan = Member.objects.create(
+            first_name='Frank',
+            last_name='January',
+            birth_month=1,  # January
+            birth_day=10,
+            birth_year=1985,
+            is_active=True,
+            primary_instrument=self.trumpet
+        )
+        
+        # Mock today as December 15, 2025 (December of previous year)
+        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+            mock_date.today.return_value = date(2025, 12, 15)
+            mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
+            
+            out = StringIO()
+            call_command('send_monthly_birthday_summary', month=1, ignore_date_check=True, dry_run=True, stdout=out)
+            
+            output = out.getvalue()
+            
+            # January 2025 is in the past, so should use January 2026
+            self.assertIn('January 2026', output)
+            self.assertIn('Frank January', output)
+            self.assertNotIn('January 2025', output)
+
+    def test_year_inference_with_only_month_no_birthdays_correct_year(self):
+        """Test year inference targets correct year even when no birthdays found"""
+        # No members with birthdays in May
+        
+        # Mock today as February 1, 2026
+        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+            mock_date.today.return_value = date(2026, 2, 1)
+            mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
+            
+            out = StringIO()
+            call_command('send_monthly_birthday_summary', month=1, ignore_date_check=True, dry_run=True, stdout=out)
+            
+            output = out.getvalue()
+            
+            # January is in the past (month 1 < current month 2), so should roll to 2027
+            self.assertIn('January 2027', output)
+            self.assertIn('No birthdays scheduled for January 2027', output)
+
+    def test_year_inference_explicit_year_overrides_inference(self):
+        """Test that explicit year parameter overrides inference logic"""
+        # Setup: Create a member with birthday in January
+        member_jan = Member.objects.create(
+            first_name='Grace',
+            last_name='January',
+            birth_month=1,  # January
+            birth_day=5,
+            birth_year=1999,
+            is_active=True,
+            primary_instrument=self.trumpet
+        )
+        
+        # Mock today as June 15, 2026
+        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+            mock_date.today.return_value = date(2026, 6, 15)
+            mock_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
+            
+            out = StringIO()
+            # Explicitly provide year=2025 (even though it's in the past)
+            call_command('send_monthly_birthday_summary', month=1, year=2025, ignore_date_check=True, dry_run=True, stdout=out)
+            
+            output = out.getvalue()
+            
+            # Should respect explicit year=2025, not infer 2026
+            self.assertIn('January 2025', output)
+            # Member still appears because they have a birthday in 2025 (born 1999, so age 26 in 2025)
+            self.assertIn('Grace January', output)
+            self.assertNotIn('January 2026', output)
 
     def _run_command(self, **kwargs):
         """Helper to run command with date check bypassed for tests"""
