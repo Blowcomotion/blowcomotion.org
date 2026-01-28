@@ -138,6 +138,9 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         # Check command output
         self.assertIn('Found 0 birthday(s) in November 2025', output)
         self.assertIn('No birthdays scheduled for November 2025', output)
+        
+        # Verify no email is sent when there are no birthdays
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_command_no_recipients_configured(self):
         """Test command when no email recipients are configured"""
