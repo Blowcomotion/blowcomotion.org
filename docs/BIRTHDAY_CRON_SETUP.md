@@ -116,7 +116,7 @@ python manage.py send_monthly_birthday_summary --dry-run --ignore-date-check
 # Test a specific month with dry run and --ignore-date-check (bypasses the 1st-of-month date check for testing)
 python manage.py send_monthly_birthday_summary --month 9 --year 2025 --dry-run --ignore-date-check
 
-# Test actual sending on the 1st (even with --month/--year, the command only runs on the 1st unless --ignore-date-check is used)
+# Test actual sending on the 1st (command only sends on the 1st due to a safety check; use --ignore-date-check to bypass this)
 python manage.py send_monthly_birthday_summary --month 9 --year 2025
 
 # Force actual sending on any day (bypasses the 1st-of-month safety check; be very careful in production)
