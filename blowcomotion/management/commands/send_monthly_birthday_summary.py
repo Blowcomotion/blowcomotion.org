@@ -125,6 +125,11 @@ class Command(BaseCommand):
                 )
             
             recipient_list = [email.strip() for email in recipients.split(',') if email.strip()]
+            if not recipient_list:
+                raise CommandError(
+                    "No valid birthday email recipients configured. "
+                    "Please add at least one valid email address in Django admin under Site Settings."
+                )
             self.stdout.write(f'Recipients: {", ".join(recipient_list)}')
 
             # Get members with birthdays in the target month
