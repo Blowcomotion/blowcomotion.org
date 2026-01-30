@@ -155,6 +155,12 @@ class SiteSettings(BaseSiteSetting):
         null=True,
         help_text="Comma-separated list of email addresses to receive attendance cleanup notifications",
     )
+    member_signup_notification_recipients = models.CharField(
+        max_length=1024,
+        blank=True,
+        null=True,
+        help_text="Comma-separated list of email addresses to receive member signup notifications",
+    )
     
     panels = [
         MultiFieldPanel([
@@ -178,6 +184,9 @@ class SiteSettings(BaseSiteSetting):
             FieldPanel('feedback_form_email_recipients'),
             FieldPanel('donate_form_email_recipients'),
             FieldPanel('birthday_summary_email_recipients'),
+            FieldPanel('instrument_rental_notification_recipients'),
+            FieldPanel('attendance_cleanup_notification_recipients'),
+            FieldPanel('member_signup_notification_recipients'),
         ], heading="Form Email Recipients"),
         
         MultiFieldPanel([
@@ -192,12 +201,7 @@ class SiteSettings(BaseSiteSetting):
         ], heading="Access Control", help_text="Set passwords for protected areas of the site. Leave blank to disable authentication for that area."),
 
         MultiFieldPanel([
-            FieldPanel('instrument_rental_notification_recipients'),
-        ], heading="Instrument Library Notifications", help_text="Configure who receives rental status reports."),
-
-        MultiFieldPanel([
             FieldPanel('attendance_cleanup_days'),
-            FieldPanel('attendance_cleanup_notification_recipients'),
         ], heading="Attendance Cleanup Notifications", help_text="Configure attendance cleanup settings."),
     ]
 

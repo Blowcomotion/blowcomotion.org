@@ -1847,7 +1847,7 @@ def member_signup(request):
                 
                 # Send email notification to admin
                 site_settings = SiteSettings.for_request(request=request)
-                recipients = site_settings.join_band_form_email_recipients
+                recipients = site_settings.member_signup_notification_recipients
                 
                 if recipients:
                     recipient_list = [email.strip() for email in recipients.split(',')]
@@ -1902,6 +1902,8 @@ Name: {member.first_name} {member.last_name}"""
                         recipient_list=recipient_list
                     )
                     logger.info(f"Member signup notification email sent for {member.first_name} {member.last_name}")
+                else:
+                    logger.warning("No member signup notification recipients configured in site settings.")
                 
                 # Send confirmation email to new member if they provided an email
                 if member.email:
