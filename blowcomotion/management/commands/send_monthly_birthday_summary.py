@@ -71,13 +71,9 @@ class Command(BaseCommand):
                 )
                 return
             
-            # First, compute the default target period: next month from today
-            if today.month == 12:
-                default_month = 1
-                default_year = today.year + 1
-            else:
-                default_month = today.month + 1
-                default_year = today.year
+            # First, compute the default target period: this month
+            default_month = today.month
+            default_year = today.year
 
             if options['month'] and options['year']:
                 # Explicit month and year: use exactly as provided
@@ -92,7 +88,7 @@ class Command(BaseCommand):
                 if target_month < today.month:
                     target_year = today.year + 1
             else:
-                # No month specified: use the default "next month" period
+                # No month specified: use the default "this month" period
                 target_month = default_month
                 target_year = default_year
 
