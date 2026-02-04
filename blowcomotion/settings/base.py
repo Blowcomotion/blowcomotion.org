@@ -212,3 +212,5 @@ WAGTAILIMAGES_IMAGE_MODEL = 'blowcomotion.CustomImage'
 
 GIGO_API_URL = "http://localhost:8000/api"
 GIGO_API_KEY = None
+
+WAGTAILADMIN_BASE_URL = 'http://localhost:8000'
