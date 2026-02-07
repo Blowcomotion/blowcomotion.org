@@ -198,7 +198,7 @@ class AttendanceCaptureViewTests(TestCase):
         self.assertContains(response, 'name="event_type"')
         self.assertContains(response, 'name="event_notes"')
         self.assertContains(response, 'value="rehearsal"')
-        self.assertContains(response, 'value="performance"')
+        self.assertContains(response, 'value="performance_no_gig"')
         self.assertContains(response, 'Event Type')
         self.assertContains(response, 'Event Notes')
 
@@ -331,7 +331,7 @@ class AttendanceCaptureViewTests(TestCase):
             reverse('attendance-capture', args=['high-brass']),
             {
                 'attendance_date': attendance_date.strftime('%Y-%m-%d'),
-                'event_type': 'performance',
+                'event_type': 'performance_no_gig',
                 f'member_{self.member1.id}': 'on',
             }
         )
@@ -355,7 +355,7 @@ class AttendanceCaptureViewTests(TestCase):
             reverse('attendance-capture', args=['high-brass']),
             {
                 'attendance_date': attendance_date.strftime('%Y-%m-%d'),
-                'event_type': 'performance',
+                'event_type': 'performance_no_gig',
                 'event_notes': custom_notes,
                 f'member_{self.member1.id}': 'on',
             }
@@ -435,7 +435,7 @@ class AttendanceCaptureViewTests(TestCase):
             reverse('attendance-capture', args=['high-brass']),
             {
                 'attendance_date': attendance_date.strftime('%Y-%m-%d'),
-                'event_type': 'performance',
+                'event_type': 'performance_no_gig',
                 'event_notes': custom_notes,
                 f'guest_{self.high_brass.id}': guest_names,
             }
@@ -470,7 +470,7 @@ class AttendanceCaptureViewTests(TestCase):
             reverse('attendance-capture', args=['high-brass']),
             {
                 'attendance_date': attendance_date.strftime('%Y-%m-%d'),
-                'event_type': 'performance',
+                'event_type': 'performance_no_gig',
                 'event_notes': custom_notes,
                 f'member_{self.member1.id}': 'on',
                 f'member_{member2_high_brass.id}': 'on',
@@ -513,7 +513,7 @@ class AttendanceCaptureViewTests(TestCase):
             reverse('attendance-capture', args=['high-brass']),
             {
                 'attendance_date': attendance_date.strftime('%Y-%m-%d'),
-                'event_type': 'performance',
+                'event_type': 'performance_no_gig',
                 'event_notes': 'New Performance',
                 f'member_{self.member1.id}': 'on',
             }
@@ -730,7 +730,7 @@ class AttendanceCaptureViewTests(TestCase):
             reverse('attendance-capture', args=['no-section']),
             {
                 'attendance_date': attendance_date.strftime('%Y-%m-%d'),
-                'event_type': 'performance',
+                'event_type': 'performance_no_gig',
                 'event_notes': custom_notes,
                 f'member_{self.no_section_member.id}': 'on',
             }
@@ -1537,8 +1537,7 @@ class GigsEndpointTests(TestCase):
                 reverse('attendance-capture', args=['test-section']),
                 {
                     'attendance_date': attendance_date.strftime('%Y-%m-%d'),
-                    'event_type': 'performance',
-                    'gig': '123',
+                    'event_type': 'gig_123',
                     f'member_{member.id}': 'on',
                 }
             )
