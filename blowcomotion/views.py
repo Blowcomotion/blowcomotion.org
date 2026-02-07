@@ -1893,7 +1893,6 @@ Name: {member.first_name} {member.last_name}"""
                     if member.inspired_by:
                         email_message += f"\n\nWhat inspired them to join:\n{member.inspired_by}"
                     
-                    email_message += f"\n\nThe member has been created with inactive status. Please review and activate in the admin panel."
                     email_message += "\n\nStart Wearing Purple,\nBlowcomotion Website"
                     
                     _send_form_email(
