@@ -1837,7 +1837,7 @@ def member_signup(request):
                     country=form.cleaned_data.get('country') or None,
                     emergency_contact=form.cleaned_data.get('emergency_contact') or None,
                     inspired_by=form.cleaned_data.get('inspired_by') or None,
-                    is_active=False,  # New signups are inactive until approved by admin
+                    is_active=True,
                     instructor=False,
                     board_member=False,
                 )
