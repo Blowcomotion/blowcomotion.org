@@ -278,11 +278,12 @@ class MemberSignupForm(forms.Form):
     
     # Contact information
     email = forms.EmailField(
-        required=False,
+        required=True,
         widget=forms.EmailInput(attrs={
             'class': 'form-control',
             'placeholder': 'Email address'
-        })
+        }),
+        help_text='Required for gig-o-matic invitation'
     )
     
     phone = forms.CharField(

@@ -11,6 +11,12 @@ ALLOWED_HOSTS = ["*"]
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
+# GO3 Local Development Settings
+GIGO_API_URL = None
+# Set a test API key (you'll need to generate this in GO3)
+GIGO_API_KEY = "test-api-key-local"
+# Use a test band ID locally (set up a test band in local GO3)
+GIGO_BAND_ID_LOCAL = None
 
 try:
     from .local import *

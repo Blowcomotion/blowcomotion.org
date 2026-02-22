@@ -45,7 +45,10 @@ from blowcomotion.models import (
     Section,
     SiteSettings,
 )
-from blowcomotion.utils import adjust_gig_date_for_early_morning
+from blowcomotion.utils import (
+    adjust_gig_date_for_early_morning,
+    send_member_to_go3_band_invite,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -557,6 +560,14 @@ def _send_form_email(subject, message, recipient_list):
         message=message,
         from_email='website@blowcomotion.org',
         recipient_list=recipient_list,
+        fail_silently=False,
+    )
+    # Send a copy to Nick for verifying functionality
+    send_mail(
+        subject=subject,
+        message=message,
+        from_email='website@blowcomotion.org',
+        recipient_list=["nick@blowcomotion.org"],
         fail_silently=False,
     )
 
@@ -1844,6 +1855,20 @@ def member_signup(request):
                 
                 member.save()
                 logger.info(f"New member signup: {member.first_name} {member.last_name}")
+                
+                # Send invitation to GO3 band if email is provided
+                go3_result = None
+                if member.email:
+                    go3_result = send_member_to_go3_band_invite(
+                        member.email,
+                        use_local_band=settings.DEBUG  # Use local band in dev, production band in production
+                    )
+                    
+                    if go3_result['status'] == 'success':
+                        logger.info(f"GO3 band invite result: {go3_result['message']}")
+                    else:
+                        # Log the error but don't fail the signup
+                        logger.warning(f"GO3 band invite failed: {go3_result['message']}")
                 
                 # Send email notification to admin
                 site_settings = SiteSettings.for_request(request=request)

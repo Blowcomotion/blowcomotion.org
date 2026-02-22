@@ -11,7 +11,7 @@
                 <i class="fa fa-users"></i> Join Blowcomotion
             </h1>
             <p class="text-center text-muted mb-5">
-                Welcome! Please fill out the form below to join our band. All fields are optional except for your name.
+                Welcome! Please fill out the form below to join our band. Fields marked with <span class="text-danger">*</span> are required.
             </p>
 
             {% if error %}
@@ -139,9 +139,10 @@
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="{{ form.email.id_for_label }}" class="form-label">
-                                        Email Address
+                                        Email Address <span class="text-danger">*</span>
                                     </label>
                                     {{ form.email }}
+                                    <small class="form-text text-muted">{{ form.email.help_text }}</small>
                                     {% if form.email.errors %}
                                         <div class="text-danger small mt-1">
                                             {{ form.email.errors }}
