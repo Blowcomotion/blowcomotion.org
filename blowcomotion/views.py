@@ -1933,9 +1933,9 @@ Name: {member.first_name} {member.last_name}"""
                 if member.email:
                     confirmation_message = f"""Hello {member.first_name},
 
-Thank you for signing up with Blowcomotion! We've received your information and will review your application soon.
+Thank you for signing up with Blowcomotion! You've been added to our band.
 
-We'll be in touch with next steps about joining the band.
+Please check your email, look for an email from "superuser@gig-o-matic.com" and complete the registration process there.
 
 Start Wearing Purple,
 Blowcomotion"""
@@ -1943,7 +1943,7 @@ Blowcomotion"""
                     _send_form_email(
                         subject='Welcome to Blowcomotion - Application Received',
                         message=confirmation_message,
-                        recipient_list=[member.email]
+                        recipient_list=[member.email, "info@blowcomotion.com"]
                     )
                 
                 context['message'] = 'Thank you for signing up! We have received your information and will be in touch soon.'
