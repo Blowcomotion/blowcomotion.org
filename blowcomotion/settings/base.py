@@ -213,4 +213,10 @@ WAGTAILIMAGES_IMAGE_MODEL = 'blowcomotion.CustomImage'
 GIGO_API_URL = "http://localhost:8000/api"
 GIGO_API_KEY = None
 
+# GO3 Band Invitation Settings
+# Band ID for Blowcomotion in GO3 - set in dev.py for local testing, and should be set in production.py or local.py for production
+GIGO_BAND_ID = None
+# Local test band ID (set in dev.py for testing)
+GIGO_BAND_ID_LOCAL = None
+
 WAGTAILADMIN_BASE_URL = 'http://localhost:8000'
