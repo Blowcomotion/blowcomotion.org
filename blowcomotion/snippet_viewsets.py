@@ -154,6 +154,7 @@ class MemberViewSet(SnippetViewSet):
         "last_name",
         "preferred_name",
         "gigomatic_username",
+        "gigomatic_id",
         "primary_instrument",
         MultipleChooserPanel("additional_instruments", chooser_field_name="instrument", 
                            help_text="Select any additional instruments this member plays"),
