@@ -511,6 +511,8 @@ class Member(ClusterableModel, index.Indexed):
         last_seen: DateField
         separation_date: DateField
         email: EmailField
+        gigomatic_username: CharField
+        gigomatic_id: IntegerField
         phone: CharField
         address: CharField
         city: CharField
@@ -581,6 +583,11 @@ class Member(ClusterableModel, index.Indexed):
         blank=True,
         null=True,
         help_text="Username used on Gig-O-Matic for this member",
+    )
+    gigomatic_id = models.IntegerField(
+        blank=True,
+        null=True,
+        help_text="ID used on Gig-O-Matic for this member",
     )
     phone = models.CharField(max_length=255, blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
