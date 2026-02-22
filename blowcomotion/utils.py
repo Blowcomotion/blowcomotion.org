@@ -111,8 +111,10 @@ def send_member_to_go3_band_invite(email, use_local_band=False):
             - 'in_band': If True, member is already in the band
             - 'invalid': If True, email is invalid
             
-    Raises:
-        ValueError: If GO3 settings are not properly configured
+    Notes:
+        If GO3 settings are not properly configured, this function does not raise an
+        exception. Instead, it returns a dict with ``status`` set to ``'error'`` and
+        an explanatory ``message`` describing the misconfiguration.
     """
     # Determine which settings to use
     api_url = getattr(settings, 'GIGO_API_URL', None)
@@ -206,9 +208,10 @@ def send_member_to_go3_band_invite(email, use_local_band=False):
         }
     except requests.exceptions.HTTPError as e:
         logger.error(f"HTTP error sending GO3 band invite for {email}: {e}")
+        status_code = getattr(e.response, 'status_code', 'unknown')
         return {
             'status': 'error',
-            'message': f'HTTP error from GO3: {e.response.status_code}',
+            'message': f'HTTP error from GO3: {status_code}',
             'data': None
         }
     except Exception as e:

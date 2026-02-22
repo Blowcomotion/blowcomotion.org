@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 
 from wagtail.models import Site
 
-from django.conf import settings
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 

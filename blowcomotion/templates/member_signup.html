@@ -142,7 +142,7 @@
                                         Email Address <span class="text-danger">*</span>
                                     </label>
                                     {{ form.email }}
-                                    <small class="form-text text-muted">{{ form.email.help_text|safe }}</small>
+                                    <small class="form-text text-muted">{{ form.email.help_text }}</small>
                                     {% if form.email.errors %}
                                         <div class="text-danger small mt-1">
                                             {{ form.email.errors }}
