@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from wagtail.models import Site
 
+from django.conf import settings
 from django.core import mail
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -111,7 +112,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         
         email = mail.outbox[0]
         self.assertEqual(email.subject, 'Monthly Birthday Summary - September 2025')
-        self.assertEqual(email.from_email, 'website@blowcomotion.org')
+        self.assertEqual(email.from_email, settings.FROM_EMAIL)
         self.assertEqual(email.to, ['test1@example.com', 'test2@example.com'])
         
         # Check email content

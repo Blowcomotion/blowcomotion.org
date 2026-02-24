@@ -2,6 +2,7 @@ import datetime
 
 from wagtail.models import Site
 
+from django.conf import settings
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
 
@@ -33,7 +34,7 @@ class Command(BaseCommand):
             send_mail(
                 subject,
                 message,
-                'website@blowcomotion.org',
+                settings.FROM_EMAIL,
                 recipients,
                 fail_silently=False,
             )

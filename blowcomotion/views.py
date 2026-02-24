@@ -558,7 +558,7 @@ def _send_form_email(subject, message, recipient_list):
     send_mail(
         subject=subject,
         message=message,
-        from_email='website@blowcomotion.org',
+        from_email=settings.FROM_EMAIL,
         recipient_list=recipient_list,
         fail_silently=False,
     )
@@ -568,7 +568,7 @@ def _send_form_email(subject, message, recipient_list):
         send_mail(
             subject=subject,
             message=message,
-            from_email='website@blowcomotion.org',
+            from_email=settings.FROM_EMAIL,
             recipient_list=[extra_email],
             fail_silently=False,
         )

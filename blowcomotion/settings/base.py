@@ -219,4 +219,8 @@ GIGO_BAND_ID = None
 # Local test band ID (set in dev.py for testing)
 GIGO_BAND_ID_LOCAL = None
 
+# Email settings
+# FROM_EMAIL should be set in dev.py for development and local.py in production
+FROM_EMAIL = None
+
 WAGTAILADMIN_BASE_URL = 'http://localhost:8000'

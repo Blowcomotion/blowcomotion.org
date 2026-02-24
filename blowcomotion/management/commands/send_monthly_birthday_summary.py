@@ -20,6 +20,7 @@ from datetime import date
 
 from wagtail.models import Site
 
+from django.conf import settings
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import render_to_string
@@ -186,7 +187,7 @@ class Command(BaseCommand):
                     subject=subject,
                     message=text_content,
                     html_message=html_content,
-                    from_email='website@blowcomotion.org',
+                    from_email=settings.FROM_EMAIL,
                     recipient_list=recipient_list,
                     fail_silently=False,
                 )
