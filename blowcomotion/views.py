@@ -562,14 +562,16 @@ def _send_form_email(subject, message, recipient_list):
         recipient_list=recipient_list,
         fail_silently=False,
     )
-    # Send a copy to Nick for verifying functionality
-    send_mail(
-        subject=subject,
-        message=message,
-        from_email='website@blowcomotion.org',
-        recipient_list=["nick@blowcomotion.org"],
-        fail_silently=False,
-    )
+    # Send a copy for verifying functionality
+    extra_email = settings.FORM_TEST_EMAIL if hasattr(settings, 'FORM_TEST_EMAIL') else None
+    if extra_email:
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email='website@blowcomotion.org',
+            recipient_list=[extra_email],
+            fail_silently=False,
+        )
 
 
 def _create_email_message(form_type, name, email, **kwargs):
