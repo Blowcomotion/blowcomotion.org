@@ -1469,47 +1469,10 @@ def inactive_members(request):
             try:
                 member = Member.objects.get(id=member_id, is_active=False)
                 member.is_active = True
-                member.save(update_fields=['is_active'])
-                
-                # Try to toggle member back to regular (non-occasional) in GO3
-                gigo_message = None
-                try:
-                    gigo_id = member.get_gigo_id()
-                    if gigo_id:
-                        # Determine which band ID to use
-                        if settings.DEBUG:
-                            band_id = getattr(settings, 'GIGO_BAND_ID_LOCAL', None)
-                        else:
-                            band_id = getattr(settings, 'GIGO_BAND_ID', None)
-                        
-                        if band_id:
-                            # Toggle member from occasional back to regular in GO3
-                            endpoint = f"/bands/{band_id}/members/{gigo_id}/occasional"
-                            response = make_gigo_api_request(endpoint, method='PATCH')
-                            
-                            if response and 'is_occasional' in response:
-                                # Check if member is now regular (not occasional)
-                                if not response['is_occasional']:
-                                    # Successfully marked as regular
-                                    gigo_message = 'Also marked as regular member in Gig-O-Matic'
-                                else:
-                                    # Member was already regular, so toggle made them occasional
-                                    # Toggle again to make them regular
-                                    response2 = make_gigo_api_request(endpoint, method='PATCH')
-                                    if response2 and not response2.get('is_occasional'):
-                                        gigo_message = 'Also marked as regular member in Gig-O-Matic'
-                                    else:
-                                        gigo_message = 'Warning: Could not update status in Gig-O-Matic'
-                            else:
-                                gigo_message = 'Warning: Could not connect to Gig-O-Matic'
-                except Exception as e:
-                    logger.warning(f"Error updating GO3 status for member {member.full_name}: {e}")
-                    gigo_message = 'Warning: Could not update Gig-O-Matic status'
+                member.save()
                 
                 # Return success message for HTMX requests
                 success_message = f'Successfully reactivated {member.first_name} {member.last_name}'
-                if gigo_message:
-                    success_message += f'. {gigo_message}'
                 
                 context = {
                     'message': success_message,

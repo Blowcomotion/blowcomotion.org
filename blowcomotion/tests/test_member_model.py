@@ -224,3 +224,142 @@ class MemberGetGigoIdTests(TestCase):
         # gigomatic_id should be saved, but first_name should not
         self.assertEqual(member.gigomatic_id, 999)
         self.assertEqual(member.first_name, 'Henry')  # Not 'Hank'
+
+
+class MemberSaveMethodTests(TestCase):
+    """Test cases for Member.save() method with GO3 integration"""
+
+    def setUp(self):
+        """Set up test data"""
+        self.brass_section = Section.objects.create(name='Brass')
+        self.trumpet = Instrument.objects.create(name='Trumpet', section=self.brass_section)
+
+    @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
+    @patch('blowcomotion.views.make_gigo_api_request')
+    def test_save_deactivating_member_updates_id_and_syncs_to_occasional(self, mock_api):
+        """Test that deactivating updates member ID/username and marks them as occasional in GO3"""
+        member = Member.objects.create(
+            first_name='John',
+            last_name='Doe',
+            email='john@example.com',
+            primary_instrument=self.trumpet,
+            gigomatic_id=123,
+            gigomatic_username='old_username',
+            is_active=True
+        )
+        
+        mock_api.side_effect = [
+            {'member_id': 999, 'email': 'john@example.com', 'username': 'johndoe'},
+            {'is_occasional': True, 'member_id': 999, 'band_id': 1}
+        ]
+        
+        member.is_active = False
+        member.save()
+        
+        member.refresh_from_db()
+        self.assertEqual(member.gigomatic_id, 999)
+        self.assertEqual(member.gigomatic_username, 'johndoe')
+        self.assertFalse(member.is_active)
+        
+        self.assertEqual(mock_api.call_count, 2)
+        verify_call = mock_api.call_args_list[0]
+        self.assertIn('/members/query?email=john@example.com', verify_call[0][0])
+        toggle_call = mock_api.call_args_list[1]
+        self.assertIn('/bands/1/members/999/occasional', toggle_call[0][0])
+        self.assertEqual(toggle_call[1]['method'], 'PATCH')
+
+    @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
+    @patch('blowcomotion.views.make_gigo_api_request')
+    def test_save_activating_member_updates_id_and_syncs_to_regular(self, mock_api):
+        """Test that activating updates member ID/username and marks them as regular in GO3"""
+        member = Member.objects.create(
+            first_name='Jane',
+            last_name='Smith',
+            email='jane@example.com',
+            primary_instrument=self.trumpet,
+            gigomatic_id=456,
+            gigomatic_username='old_username',
+            is_active=False
+        )
+        
+        mock_api.side_effect = [
+            {'member_id': 789, 'email': 'jane@example.com', 'username': 'janesmith'},
+            {'is_occasional': False, 'member_id': 789, 'band_id': 1}
+        ]
+        
+        member.is_active = True
+        member.save()
+        
+        member.refresh_from_db()
+        self.assertEqual(member.gigomatic_id, 789)
+        self.assertEqual(member.gigomatic_username, 'janesmith')
+        self.assertTrue(member.is_active)
+        
+        self.assertEqual(mock_api.call_count, 2)
+        toggle_call = mock_api.call_args_list[1]
+        self.assertIn('/bands/1/members/789/occasional', toggle_call[0][0])
+        self.assertEqual(toggle_call[1]['method'], 'PATCH')
+
+    @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
+    @patch('blowcomotion.views.make_gigo_api_request')
+    def test_save_toggle_verification_retries_on_wrong_state(self, mock_api):
+        """Test that save toggles again if first toggle returns wrong state"""
+        member = Member.objects.create(
+            first_name='Bob',
+            last_name='Jones',
+            email='bob@example.com',
+            primary_instrument=self.trumpet,
+            gigomatic_id=789,
+            gigomatic_username='bobjones',
+            is_active=True
+        )
+        
+        mock_api.side_effect = [
+            {'member_id': 789, 'email': 'bob@example.com', 'username': 'bobjones'},
+            {'is_occasional': False, 'member_id': 789, 'band_id': 1},
+            {'is_occasional': True, 'member_id': 789, 'band_id': 1}
+        ]
+        
+        member.is_active = False
+        member.save()
+        
+        self.assertEqual(mock_api.call_count, 3)
+
+    @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
+    @patch('blowcomotion.views.make_gigo_api_request')
+    def test_save_without_is_active_change_doesnt_call_api(self, mock_api):
+        """Test that save doesn't call API when is_active doesn't change"""
+        member = Member.objects.create(
+            first_name='David',
+            last_name='Lee',
+            email='david@example.com',
+            primary_instrument=self.trumpet,
+            gigomatic_id=222,
+            is_active=True
+        )
+        
+        member.first_name = 'Dave'
+        member.save()
+        
+        mock_api.assert_not_called()
+
+    @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
+    @patch('blowcomotion.views.make_gigo_api_request')
+    def test_save_handles_api_errors_gracefully(self, mock_api):
+        """Test that save doesn't fail when GO3 API errors occur"""
+        member = Member.objects.create(
+            first_name='Alice',
+            last_name='Brown',
+            email='alice@example.com',
+            primary_instrument=self.trumpet,
+            gigomatic_id=111,
+            is_active=True
+        )
+        
+        mock_api.side_effect = Exception('Connection timeout')
+        
+        member.is_active = False
+        member.save()
+        
+        member.refresh_from_db()
+        self.assertFalse(member.is_active)

@@ -729,6 +729,112 @@ class Member(ClusterableModel, index.Indexed):
             logger.error(f"Error querying GO3 API for member {self.email}: {e}")
             return None
     
+    def save(self, *args, **kwargs):
+        """
+        Override save to sync is_active status with Gig-O-Matic's is_occasional field.
+        When is_active changes:
+        - False (inactive) → occasional=True in GO3
+        - True (active) → occasional=False in GO3
+        """
+        import logging
+
+        from django.conf import settings
+
+        from blowcomotion.views import make_gigo_api_request
+        
+        logger = logging.getLogger(__name__)
+        
+        # Track if is_active changed
+        is_active_changed = False
+        old_is_active = None
+        
+        if self.pk:
+            try:
+                old_instance = Member.objects.get(pk=self.pk)
+                old_is_active = old_instance.is_active
+                is_active_changed = old_is_active != self.is_active
+            except Member.DoesNotExist:
+                pass
+        
+        # Call parent save first
+        super().save(*args, **kwargs)
+        
+        # If is_active changed, sync with GO3
+        if is_active_changed:
+            try:
+                # First verify member info by querying the member endpoint
+                if self.email and (settings.GIGO_API_URL and settings.GIGO_API_KEY):
+                    try:
+                        endpoint = f"/members/query?email={self.email}"
+                        member_data = make_gigo_api_request(endpoint)
+                        
+                        if member_data and 'member_id' in member_data:
+                            # Track what needs updating
+                            update_fields = []
+                            
+                            # Update gigo_id if different or not set
+                            if self.gigomatic_id != member_data['member_id']:
+                                logger.info(f"Updating gigo_id for {self.full_name}: {self.gigomatic_id} → {member_data['member_id']}")
+                                self.gigomatic_id = member_data['member_id']
+                                update_fields.append('gigomatic_id')
+                            
+                            # Update username if different or not set
+                            if member_data.get('username') and self.gigomatic_username != member_data['username']:
+                                logger.info(f"Updating gigomatic_username for {self.full_name}: {self.gigomatic_username} → {member_data['username']}")
+                                self.gigomatic_username = member_data['username']
+                                update_fields.append('gigomatic_username')
+                            
+                            # Save updated fields if they changed
+                            if update_fields:
+                                super().save(update_fields=update_fields)
+                        else:
+                            logger.warning(f"Could not verify member info from GO3 for {self.email}")
+                    except Exception as e:
+                        logger.warning(f"Error verifying member info from GO3: {e}")
+                
+                # Now proceed with status sync
+                gigo_id = self.gigomatic_id or self.get_gigo_id()
+                if gigo_id:
+                    # Determine which band ID to use
+                    if settings.DEBUG:
+                        band_id = getattr(settings, 'GIGO_BAND_ID_LOCAL', None)
+                    else:
+                        band_id = getattr(settings, 'GIGO_BAND_ID', None)
+                    
+                    if band_id:
+                        # Determine desired occasional status based on is_active
+                        # inactive member (is_active=False) should be occasional (is_occasional=True)
+                        # active member (is_active=True) should be regular (is_occasional=False)
+                        desired_occasional = not self.is_active
+                        
+                        # Toggle member status in GO3
+                        endpoint = f"/bands/{band_id}/members/{gigo_id}/occasional"
+                        response = make_gigo_api_request(endpoint, method='PATCH')
+                        
+                        if response and 'is_occasional' in response:
+                            # Check if the result matches what we want
+                            if response['is_occasional'] == desired_occasional:
+                                # Success
+                                status = "occasional" if desired_occasional else "regular"
+                                logger.info(f"Synced member {self.full_name} to {status} in GO3")
+                            else:
+                                # Toggle didn't result in desired state, toggle again
+                                response2 = make_gigo_api_request(endpoint, method='PATCH')
+                                if response2 and response2.get('is_occasional') == desired_occasional:
+                                    status = "occasional" if desired_occasional else "regular"
+                                    logger.info(f"Synced member {self.full_name} to {status} in GO3 (after second toggle)")
+                                else:
+                                    logger.warning(f"Could not sync member {self.full_name} status to GO3")
+                        else:
+                            logger.warning(f"Could not sync member {self.full_name} status to GO3 - invalid response")
+                    else:
+                        logger.debug(f"GIGO_BAND_ID not configured, skipping GO3 sync for {self.full_name}")
+                else:
+                    logger.debug(f"No Gig-O-Matic ID found for member {self.full_name}, skipping GO3 sync")
+            except Exception as e:
+                # Log error but don't fail the save
+                logger.error(f"Error syncing member {self.full_name} status to GO3: {e}")
+    
     def __str__(self):
         return f"\"{self.preferred_name}\" {self.first_name} {self.last_name}" if self.preferred_name else f"{self.first_name} {self.last_name}"
 
