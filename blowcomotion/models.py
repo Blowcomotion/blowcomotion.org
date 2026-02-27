@@ -736,6 +736,17 @@ class Member(ClusterableModel, index.Indexed):
         When is_active changes:
         - False (inactive) → occasional=True in GO3
         - True (active) → occasional=False in GO3
+        
+        Args:
+            sync_go3 (bool): Whether to sync with GO3 API. Set to False for internal
+                            updates that don't need GO3 synchronization (default: True)
+        
+        Performance Note:
+            GO3 member verification is only performed when needed:
+            - When email changes
+            - When is_active changes
+            - When gigomatic_id or gigomatic_username are missing
+            This avoids unnecessary API calls on high-frequency updates like attendance.
         """
         import logging
         from urllib.parse import quote
@@ -746,57 +757,70 @@ class Member(ClusterableModel, index.Indexed):
         
         logger = logging.getLogger(__name__)
         
-        # Track if is_active changed
+        # Extract sync_go3 kwarg (defaults to True for backward compatibility)
+        sync_go3 = kwargs.pop('sync_go3', True)
+        
+        # Track changes that require GO3 sync
         is_active_changed = False
+        email_changed = False
         old_is_active = None
+        old_email = None
         
         if self.pk:
             try:
                 old_instance = Member.objects.get(pk=self.pk)
                 old_is_active = old_instance.is_active
+                old_email = old_instance.email
                 is_active_changed = old_is_active != self.is_active
+                email_changed = old_email != self.email
             except Member.DoesNotExist:
                 pass
         
         # Call parent save first
         super().save(*args, **kwargs)
         
-        # Always verify and sync member info from GO3
-        try:
-            if self.email and (settings.GIGO_API_URL and settings.GIGO_API_KEY):
-                try:
-                    endpoint = f"/members/query?email={quote(self.email)}"
-                    member_data = make_gigo_api_request(endpoint)
+        # Only query GO3 when sync_go3=True AND one of these conditions is met:
+        # 1. gigomatic_id or gigomatic_username is missing
+        # 2. Email changed
+        # 3. is_active changed
+        should_verify_member = (
+            sync_go3 and 
+            self.email and 
+            (settings.GIGO_API_URL and settings.GIGO_API_KEY) and
+            (not self.gigomatic_id or not self.gigomatic_username or email_changed or is_active_changed)
+        )
+        
+        if should_verify_member:
+            try:
+                endpoint = f"/members/query?email={quote(self.email)}"
+                member_data = make_gigo_api_request(endpoint)
+                
+                if member_data and 'member_id' in member_data:
+                    # Track what needs updating
+                    update_fields = []
                     
-                    if member_data and 'member_id' in member_data:
-                        # Track what needs updating
-                        update_fields = []
-                        
-                        # Update gigo_id if different or not set
-                        if self.gigomatic_id != member_data['member_id']:
-                            logger.info(f"Updating gigo_id for {self.full_name}: {self.gigomatic_id} → {member_data['member_id']}")
-                            self.gigomatic_id = member_data['member_id']
-                            update_fields.append('gigomatic_id')
-                        
-                        # Update username if different or not set
-                        if member_data.get('username') and self.gigomatic_username != member_data['username']:
-                            logger.info(f"Updating gigomatic_username for {self.full_name}: {self.gigomatic_username} → {member_data['username']}")
-                            self.gigomatic_username = member_data['username']
-                            update_fields.append('gigomatic_username')
-                        
-                        # Save updated fields if they changed
-                        if update_fields:
-                            super().save(update_fields=update_fields)
-                    else:
-                        logger.warning(f"Could not verify member info from GO3 for {self.email}")
-                except Exception as e:
-                    logger.warning(f"Error verifying member info from GO3: {e}")
-        except Exception as e:
-            # Log error but don't fail the save
-            logger.error(f"Error verifying member {self.full_name} info from GO3: {e}")
+                    # Update gigo_id if different or not set
+                    if self.gigomatic_id != member_data['member_id']:
+                        logger.info(f"Updating gigo_id for {self.full_name}: {self.gigomatic_id} → {member_data['member_id']}")
+                        self.gigomatic_id = member_data['member_id']
+                        update_fields.append('gigomatic_id')
+                    
+                    # Update username if different or not set
+                    if member_data.get('username') and self.gigomatic_username != member_data['username']:
+                        logger.info(f"Updating gigomatic_username for {self.full_name}: {self.gigomatic_username} → {member_data['username']}")
+                        self.gigomatic_username = member_data['username']
+                        update_fields.append('gigomatic_username')
+                    
+                    # Save updated fields if they changed
+                    if update_fields:
+                        super().save(update_fields=update_fields)
+                else:
+                    logger.warning(f"Could not verify member info from GO3 for {self.email}")
+            except Exception as e:
+                logger.warning(f"Error verifying member info from GO3: {e}")
         
         # If is_active changed, sync status with GO3
-        if is_active_changed:
+        if is_active_changed and sync_go3:
             try:
                 # Get gigo_id (should be updated from verification above)
                 gigo_id = self.gigomatic_id or self.get_gigo_id()
