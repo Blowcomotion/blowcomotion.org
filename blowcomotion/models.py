@@ -720,7 +720,7 @@ class Member(ClusterableModel, index.Indexed):
             if response and 'member_id' in response:
                 # Cache the member ID
                 self.gigomatic_id = response['member_id']
-                self.save(update_fields=['gigomatic_id'])
+                self.save(update_fields=['gigomatic_id'], sync_go3=False)
                 logger.info(f"Fetched and cached GO3 member ID {self.gigomatic_id} for {self.email}")
                 return self.gigomatic_id
             else:
@@ -760,6 +760,9 @@ class Member(ClusterableModel, index.Indexed):
         # Extract sync_go3 kwarg (defaults to True for backward compatibility)
         sync_go3 = kwargs.pop('sync_go3', True)
         
+        # Extract update_fields to check if specific fields are being updated
+        update_fields = kwargs.get('update_fields')
+        
         # Track changes that require GO3 sync
         is_active_changed = False
         email_changed = False
@@ -771,8 +774,14 @@ class Member(ClusterableModel, index.Indexed):
                 old_instance = Member.objects.get(pk=self.pk)
                 old_is_active = old_instance.is_active
                 old_email = old_instance.email
-                is_active_changed = old_is_active != self.is_active
-                email_changed = old_email != self.email
+                
+                # Only consider fields changed if:
+                # 1. The value actually differs AND
+                # 2. update_fields is None (full save) OR the field is in update_fields
+                if old_is_active != self.is_active:
+                    is_active_changed = update_fields is None or 'is_active' in update_fields
+                if old_email != self.email:
+                    email_changed = update_fields is None or 'email' in update_fields
             except Member.DoesNotExist:
                 pass
         
@@ -821,6 +830,11 @@ class Member(ClusterableModel, index.Indexed):
         
         # If is_active changed, sync status with GO3
         if is_active_changed and sync_go3:
+            # Check if API is configured before attempting status sync
+            if not (settings.GIGO_API_URL and settings.GIGO_API_KEY):
+                logger.debug(f"GO3 API not configured, skipping status sync for {self.full_name}")
+                return
+            
             try:
                 # Get gigo_id (should be updated from verification above)
                 gigo_id = self.gigomatic_id or self.get_gigo_id()

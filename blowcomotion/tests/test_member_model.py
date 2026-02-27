@@ -364,7 +364,8 @@ class MemberSaveMethodTests(TestCase):
     @patch('blowcomotion.utils.make_gigo_api_request')
     def test_save_syncs_id_and_username_when_missing(self, mock_api):
         """Test that save syncs ID and username from GO3 when they're missing"""
-        member = Member.objects.create(
+        # Create member instance without saving
+        member = Member(
             first_name='Emily',
             last_name='Chen',
             email='emily@example.com',
@@ -373,11 +374,13 @@ class MemberSaveMethodTests(TestCase):
             gigomatic_username=None,  # Missing username
             is_active=True
         )
+        # Save with sync_go3=False to skip GO3 sync during creation
+        member.save(sync_go3=False)
         
-        # Reset mock to ignore the creation save() call
+        # Reset mock to clear any potential calls
         mock_api.reset_mock()
         
-        # Mock member query response
+        # Set mock response for the test save
         mock_api.return_value = {
             'member_id': 999,
             'email': 'emily@example.com',
@@ -421,6 +424,7 @@ class MemberSaveMethodTests(TestCase):
         
         member.refresh_from_db()
         self.assertFalse(member.is_active)
+
     @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
     @patch('blowcomotion.utils.make_gigo_api_request')
     def test_save_syncs_when_email_changes(self, mock_api):
@@ -458,15 +462,18 @@ class MemberSaveMethodTests(TestCase):
     @patch('blowcomotion.utils.make_gigo_api_request')
     def test_save_respects_sync_go3_false(self, mock_api):
         """Test that save doesn't sync with GO3 when sync_go3=False"""
-        member = Member.objects.create(
+        # Create member instance without saving
+        member = Member(
             first_name='Grace',
             last_name='Wilson',
             email='grace@example.com',
             primary_instrument=self.trumpet,
             is_active=True
         )
+        # Save with sync_go3=False to skip GO3 sync during creation
+        member.save(sync_go3=False)
         
-        # Reset mock to ignore the creation save() call
+        # Reset mock to clear any potential calls
         mock_api.reset_mock()
         
         # Change is_active (which normally triggers sync)
@@ -475,3 +482,64 @@ class MemberSaveMethodTests(TestCase):
         
         # Should NOT call GO3 API because sync_go3=False
         self.assertEqual(mock_api.call_count, 0)
+
+    @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
+    @patch('blowcomotion.utils.make_gigo_api_request')
+    def test_save_ignores_mutated_fields_not_in_update_fields(self, mock_api):
+        """Test that save doesn't sync when field is mutated but excluded from update_fields"""
+        member = Member.objects.create(
+            first_name='Henry',
+            last_name='Taylor',
+            email='henry@example.com',
+            primary_instrument=self.trumpet,
+            gigomatic_id=777,
+            gigomatic_username='henry_t',
+            is_active=True
+        )
+        
+        # Reset mock to ignore the creation save() call
+        mock_api.reset_mock()
+        
+        # Mutate is_active in memory but don't include it in update_fields
+        member.is_active = False
+        member.save(update_fields=['first_name'])
+        
+        # Should NOT call GO3 API because is_active wasn't in update_fields
+        self.assertEqual(mock_api.call_count, 0)
+        
+        # Verify database still has old value
+        member.refresh_from_db()
+        self.assertTrue(member.is_active)
+        
+    @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
+    @patch('blowcomotion.utils.make_gigo_api_request')
+    def test_save_syncs_when_field_in_update_fields(self, mock_api):
+        """Test that save DOES sync when field is mutated and included in update_fields"""
+        member = Member.objects.create(
+            first_name='Iris',
+            last_name='White',
+            email='iris@example.com',
+            primary_instrument=self.trumpet,
+            gigomatic_id=888,
+            gigomatic_username='iris_w',
+            is_active=True
+        )
+        
+        # Reset mock to ignore the creation save() call
+        mock_api.reset_mock()
+        
+        mock_api.side_effect = [
+            {'member_id': 888, 'email': 'iris@example.com', 'username': 'iris_w'},
+            {'is_occasional': True, 'member_id': 888, 'band_id': 1}
+        ]
+        
+        # Mutate is_active and include it in update_fields
+        member.is_active = False
+        member.save(update_fields=['is_active'])
+        
+        # Should call GO3 API because is_active was in update_fields
+        self.assertEqual(mock_api.call_count, 2)
+        
+        # Verify database has new value
+        member.refresh_from_db()
+        self.assertFalse(member.is_active)
