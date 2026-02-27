@@ -2,9 +2,8 @@
 Tests for Member model methods.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-from django.conf import settings
 from django.test import TestCase, override_settings
 
 from blowcomotion.models import Instrument, Member, Section
