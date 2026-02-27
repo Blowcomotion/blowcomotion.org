@@ -759,40 +759,44 @@ class Member(ClusterableModel, index.Indexed):
         # Call parent save first
         super().save(*args, **kwargs)
         
-        # If is_active changed, sync with GO3
+        # Always verify and sync member info from GO3
+        try:
+            if self.email and (settings.GIGO_API_URL and settings.GIGO_API_KEY):
+                try:
+                    endpoint = f"/members/query?email={self.email}"
+                    member_data = make_gigo_api_request(endpoint)
+                    
+                    if member_data and 'member_id' in member_data:
+                        # Track what needs updating
+                        update_fields = []
+                        
+                        # Update gigo_id if different or not set
+                        if self.gigomatic_id != member_data['member_id']:
+                            logger.info(f"Updating gigo_id for {self.full_name}: {self.gigomatic_id} → {member_data['member_id']}")
+                            self.gigomatic_id = member_data['member_id']
+                            update_fields.append('gigomatic_id')
+                        
+                        # Update username if different or not set
+                        if member_data.get('username') and self.gigomatic_username != member_data['username']:
+                            logger.info(f"Updating gigomatic_username for {self.full_name}: {self.gigomatic_username} → {member_data['username']}")
+                            self.gigomatic_username = member_data['username']
+                            update_fields.append('gigomatic_username')
+                        
+                        # Save updated fields if they changed
+                        if update_fields:
+                            super().save(update_fields=update_fields)
+                    else:
+                        logger.warning(f"Could not verify member info from GO3 for {self.email}")
+                except Exception as e:
+                    logger.warning(f"Error verifying member info from GO3: {e}")
+        except Exception as e:
+            # Log error but don't fail the save
+            logger.error(f"Error verifying member {self.full_name} info from GO3: {e}")
+        
+        # If is_active changed, sync status with GO3
         if is_active_changed:
             try:
-                # First verify member info by querying the member endpoint
-                if self.email and (settings.GIGO_API_URL and settings.GIGO_API_KEY):
-                    try:
-                        endpoint = f"/members/query?email={self.email}"
-                        member_data = make_gigo_api_request(endpoint)
-                        
-                        if member_data and 'member_id' in member_data:
-                            # Track what needs updating
-                            update_fields = []
-                            
-                            # Update gigo_id if different or not set
-                            if self.gigomatic_id != member_data['member_id']:
-                                logger.info(f"Updating gigo_id for {self.full_name}: {self.gigomatic_id} → {member_data['member_id']}")
-                                self.gigomatic_id = member_data['member_id']
-                                update_fields.append('gigomatic_id')
-                            
-                            # Update username if different or not set
-                            if member_data.get('username') and self.gigomatic_username != member_data['username']:
-                                logger.info(f"Updating gigomatic_username for {self.full_name}: {self.gigomatic_username} → {member_data['username']}")
-                                self.gigomatic_username = member_data['username']
-                                update_fields.append('gigomatic_username')
-                            
-                            # Save updated fields if they changed
-                            if update_fields:
-                                super().save(update_fields=update_fields)
-                        else:
-                            logger.warning(f"Could not verify member info from GO3 for {self.email}")
-                    except Exception as e:
-                        logger.warning(f"Error verifying member info from GO3: {e}")
-                
-                # Now proceed with status sync
+                # Get gigo_id (should be updated from verification above)
                 gigo_id = self.gigomatic_id or self.get_gigo_id()
                 if gigo_id:
                     # Determine which band ID to use

@@ -106,6 +106,7 @@ class MemberGetGigoIdTests(TestCase):
             email='charlie@example.com',
             primary_instrument=self.trumpet
         )
+        mock_api.reset_mock()  # Reset after creation save
         
         result = member.get_gigo_id()
         
@@ -128,6 +129,7 @@ class MemberGetGigoIdTests(TestCase):
             email='david@example.com',
             primary_instrument=self.trumpet
         )
+        mock_api.reset_mock()  # Reset after creation save
         
         result = member.get_gigo_id()
         
@@ -248,6 +250,9 @@ class MemberSaveMethodTests(TestCase):
             is_active=True
         )
         
+        # Reset mock to ignore the creation save() call
+        mock_api.reset_mock()
+        
         mock_api.side_effect = [
             {'member_id': 999, 'email': 'john@example.com', 'username': 'johndoe'},
             {'is_occasional': True, 'member_id': 999, 'band_id': 1}
@@ -282,6 +287,9 @@ class MemberSaveMethodTests(TestCase):
             is_active=False
         )
         
+        # Reset mock to ignore the creation save() call
+        mock_api.reset_mock()
+        
         mock_api.side_effect = [
             {'member_id': 789, 'email': 'jane@example.com', 'username': 'janesmith'},
             {'is_occasional': False, 'member_id': 789, 'band_id': 1}
@@ -314,6 +322,9 @@ class MemberSaveMethodTests(TestCase):
             is_active=True
         )
         
+        # Reset mock to ignore the creation save() call
+        mock_api.reset_mock()
+        
         mock_api.side_effect = [
             {'member_id': 789, 'email': 'bob@example.com', 'username': 'bobjones'},
             {'is_occasional': False, 'member_id': 789, 'band_id': 1},
@@ -327,21 +338,75 @@ class MemberSaveMethodTests(TestCase):
 
     @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
     @patch('blowcomotion.utils.make_gigo_api_request')
-    def test_save_without_is_active_change_doesnt_call_api(self, mock_api):
-        """Test that save doesn't call API when is_active doesn't change"""
+    def test_save_without_is_active_change_doesnt_toggle_status(self, mock_api):
+        """Test that save syncs ID/username but doesn't toggle status when is_active doesn't change"""
         member = Member.objects.create(
             first_name='David',
             last_name='Lee',
             email='david@example.com',
             primary_instrument=self.trumpet,
             gigomatic_id=222,
+            gigomatic_username='davidlee',
             is_active=True
         )
+        
+        # Reset mock to ignore the creation save() call
+        mock_api.reset_mock()
+        
+        # Mock only the member query response (no toggle)
+        mock_api.return_value = {
+            'member_id': 222,
+            'email': 'david@example.com',
+            'username': 'davidlee'
+        }
         
         member.first_name = 'Dave'
         member.save()
         
-        mock_api.assert_not_called()
+        # Should call member query API once for ID/username sync
+        self.assertEqual(mock_api.call_count, 1)
+        # Verify it was the member query endpoint, not the toggle endpoint
+        call_args = mock_api.call_args_list[0]
+        self.assertIn('/members/query?email=david@example.com', call_args[0][0])
+        self.assertNotIn('occasional', call_args[0][0])
+
+    @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
+    @patch('blowcomotion.utils.make_gigo_api_request')
+    def test_save_syncs_id_and_username_even_without_is_active_change(self, mock_api):
+        """Test that save always syncs ID and username from GO3"""
+        member = Member.objects.create(
+            first_name='Emily',
+            last_name='Chen',
+            email='emily@example.com',
+            primary_instrument=self.trumpet,
+            gigomatic_id=100,
+            gigomatic_username='old_emily',
+            is_active=True
+        )
+        
+        # Reset mock to ignore the creation save() call
+        mock_api.reset_mock()
+        
+        # Mock member query response with updated values
+        mock_api.return_value = {
+            'member_id': 999,
+            'email': 'emily@example.com',
+            'username': 'emily_chen'
+        }
+        
+        # Change something other than is_active
+        member.first_name = 'Em'
+        member.save()
+        
+        # Verify ID and username were updated
+        member.refresh_from_db()
+        self.assertEqual(member.gigomatic_id, 999)
+        self.assertEqual(member.gigomatic_username, 'emily_chen')
+        
+        # Should only call member query API (not toggle)
+        self.assertEqual(mock_api.call_count, 1)
+        call_args = mock_api.call_args_list[0]
+        self.assertIn('/members/query?email=emily@example.com', call_args[0][0])
 
     @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
     @patch('blowcomotion.utils.make_gigo_api_request')
@@ -355,6 +420,9 @@ class MemberSaveMethodTests(TestCase):
             gigomatic_id=111,
             is_active=True
         )
+        
+        # Reset mock to ignore the creation save() call
+        mock_api.reset_mock()
         
         mock_api.side_effect = Exception('Connection timeout')
         
