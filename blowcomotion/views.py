@@ -47,6 +47,7 @@ from blowcomotion.models import (
 )
 from blowcomotion.utils import (
     adjust_gig_date_for_early_morning,
+    make_gigo_api_request,
     send_member_to_go3_band_invite,
 )
 
@@ -259,52 +260,6 @@ def instrument_library_quick_rent(request):
     }
 
     return render(request, 'instrument_library/manage.html', context)
-
-def make_gigo_api_request(endpoint, timeout=10, retries=0, method='GET', data=None):
-    """
-    Helper function to make requests to the Gig-O-Matic API with proper error handling.
-    
-    Args:
-        endpoint: The API endpoint (e.g., '/gigs' or '/gigs/{id}')
-        timeout: Request timeout in seconds (default: 10)
-        retries: Number of retry attempts (default: 2)
-        method: HTTP method - 'GET', 'POST', 'PATCH', 'PUT', 'DELETE' (default: 'GET')
-        data: JSON data to send with POST/PATCH/PUT requests (default: None)
-        
-    Returns:
-        dict: Response JSON data if successful, None if failed
-    """
-    url = f"{settings.GIGO_API_URL}{endpoint}"
-    headers = {"X-API-KEY": settings.GIGO_API_KEY}
-    
-    for attempt in range(retries + 1):
-        try:
-            if method.upper() == 'GET':
-                response = requests.get(url, headers=headers, timeout=timeout)
-            elif method.upper() == 'POST':
-                response = requests.post(url, json=data, headers=headers, timeout=timeout)
-            elif method.upper() == 'PATCH':
-                response = requests.patch(url, json=data, headers=headers, timeout=timeout)
-            elif method.upper() == 'PUT':
-                response = requests.put(url, json=data, headers=headers, timeout=timeout)
-            elif method.upper() == 'DELETE':
-                response = requests.delete(url, headers=headers, timeout=timeout)
-            else:
-                logger.error("Unsupported HTTP method: %s", method)
-                return None
-                
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            if attempt < retries:
-                logger.info("API request attempt %d failed for %s, retrying: %s", attempt + 1, endpoint, e)
-                continue
-            else:
-                logger.warning("All API request attempts failed for %s: %s", endpoint, e, exc_info=True)
-                return None
-        except Exception as e:
-            logger.error("Unexpected error making API request to %s: %s", endpoint, e, exc_info=True)
-            return None
 
 
 def get_birthday(year, month, day):

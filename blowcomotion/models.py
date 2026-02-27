@@ -702,7 +702,7 @@ class Member(ClusterableModel, index.Indexed):
 
         from django.conf import settings
 
-        from blowcomotion.views import make_gigo_api_request
+        from blowcomotion.utils import make_gigo_api_request
         
         logger = logging.getLogger(__name__)
         
@@ -740,7 +740,7 @@ class Member(ClusterableModel, index.Indexed):
 
         from django.conf import settings
 
-        from blowcomotion.views import make_gigo_api_request
+        from blowcomotion.utils import make_gigo_api_request
         
         logger = logging.getLogger(__name__)
         
