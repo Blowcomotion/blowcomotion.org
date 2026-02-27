@@ -822,7 +822,13 @@ class Member(ClusterableModel, index.Indexed):
                     
                     # Save updated fields if they changed
                     if update_fields:
-                        super().save(update_fields=update_fields)
+                        extra_save_kwargs = {
+                            key: value
+                            for key, value in kwargs.items()
+                            if key in ("using", "force_insert", "force_update")
+                        }
+                        extra_save_kwargs["update_fields"] = update_fields
+                        super().save(**extra_save_kwargs)
                 else:
                     logger.warning(f"Could not verify member info from GO3 for {self.email}")
             except Exception as e:
