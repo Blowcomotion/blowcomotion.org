@@ -1424,7 +1424,7 @@ def inactive_members(request):
             try:
                 member = Member.objects.get(id=member_id, is_active=False)
                 member.is_active = True
-                member.save()
+                member.save(update_fields=['is_active'])
                 
                 # Return success message for HTMX requests
                 success_message = f'Successfully reactivated {member.first_name} {member.last_name}'
