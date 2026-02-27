@@ -1630,3 +1630,221 @@ class InactiveMembersViewTests(TestCase):
         # Check success message
         self.assertContains(response, "Successfully reactivated")
         self.assertContains(response, "Inactive Member1")
+    
+    @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
+    @patch('blowcomotion.views.make_gigo_api_request')
+    def test_reactivate_member_with_go3_integration(self, mock_api):
+        """Test reactivation with successful GO3 API integration"""
+        # Setup member with GO3 ID
+        self.inactive_member1.gigomatic_id = 123
+        self.inactive_member1.save()
+        
+        # Mock successful toggle (returns false, meaning member is now regular)
+        mock_api.return_value = {
+            'is_occasional': False,
+            'member_id': 123,
+            'band_id': 1
+        }
+        
+        response = self.client.post(
+            reverse('inactive-members'),
+            data={'member_id': self.inactive_member1.id}
+        )
+        
+        # Member should be reactivated
+        self.inactive_member1.refresh_from_db()
+        self.assertTrue(self.inactive_member1.is_active)
+        
+        # Check success message includes GO3 update
+        self.assertContains(response, "Successfully reactivated")
+        self.assertContains(response, "regular member in Gig-O-Matic")
+    
+    @override_settings(DEBUG=False, GIGO_BAND_ID='456', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
+    @patch('blowcomotion.views.make_gigo_api_request')
+    def test_reactivate_uses_correct_band_id(self, mock_api):
+        """Test reactivation uses correct band ID from settings"""
+        self.inactive_member1.gigomatic_id = 123
+        self.inactive_member1.save()
+        
+        mock_api.return_value = {
+            'is_occasional': False,
+            'member_id': 123,
+            'band_id': 456
+        }
+        
+        response = self.client.post(
+            reverse('inactive-members'),
+            data={'member_id': self.inactive_member1.id}
+        )
+        
+        # Verify API was called with correct endpoint
+        mock_api.assert_called()
+        call_args = mock_api.call_args_list[-1]
+        self.assertIn('/bands/456/members/123/occasional', call_args[0][0])
+        self.assertEqual(call_args[1]['method'], 'PATCH')
+    
+    @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
+    @patch('blowcomotion.views.make_gigo_api_request')
+    def test_reactivate_toggle_verification(self, mock_api):
+        """Test reactivation toggles twice if member was already regular on GO3"""
+        self.inactive_member1.gigomatic_id = 123
+        self.inactive_member1.save()
+        
+        # First toggle returns True (member was regular, now occasional)
+        # Second toggle returns False (member was occasional, now regular)
+        mock_api.side_effect = [
+            {'is_occasional': True, 'member_id': 123, 'band_id': 1},
+            {'is_occasional': False, 'member_id': 123, 'band_id': 1}
+        ]
+        
+        response = self.client.post(
+            reverse('inactive-members'),
+            data={'member_id': self.inactive_member1.id}
+        )
+        
+        # Member should still be reactivated locally
+        self.inactive_member1.refresh_from_db()
+        self.assertTrue(self.inactive_member1.is_active)
+        
+        # Verify API was called twice
+        self.assertEqual(mock_api.call_count, 2)
+        
+        # Check success message
+        self.assertContains(response, "Successfully reactivated")
+        self.assertContains(response, "regular member in Gig-O-Matic")
+    
+    @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
+    @patch('blowcomotion.views.make_gigo_api_request')
+    def test_reactivate_handles_go3_error(self, mock_api):
+        """Test reactivation handles GO3 API errors gracefully"""
+        self.inactive_member1.gigomatic_id = 123
+        self.inactive_member1.save()
+        
+        # Mock API error
+        mock_api.side_effect = Exception('Connection timeout')
+        
+        response = self.client.post(
+            reverse('inactive-members'),
+            data={'member_id': self.inactive_member1.id}
+        )
+        
+        # Member should still be reactivated locally
+        self.inactive_member1.refresh_from_db()
+        self.assertTrue(self.inactive_member1.is_active)
+        
+        # Check warning message about GO3 failure
+        self.assertContains(response, "Successfully reactivated")
+        self.assertContains(response, "Warning: Could not update Gig-O-Matic")
+    
+    @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
+    @patch('blowcomotion.views.make_gigo_api_request')
+    def test_reactivate_handles_malformed_go3_response(self, mock_api):
+        """Test reactivation handles malformed GO3 API response"""
+        self.inactive_member1.gigomatic_id = 123
+        self.inactive_member1.save()
+        
+        # Mock malformed response (missing is_occasional field)
+        mock_api.return_value = {'member_id': 123}
+        
+        response = self.client.post(
+            reverse('inactive-members'),
+            data={'member_id': self.inactive_member1.id}
+        )
+        
+        # Member should still be reactivated locally
+        self.inactive_member1.refresh_from_db()
+        self.assertTrue(self.inactive_member1.is_active)
+        
+        # Check warning message
+        self.assertContains(response, "Successfully reactivated")
+        self.assertContains(response, "Warning: Could not connect to Gig-O-Matic")
+    
+    @patch('blowcomotion.models.Member.get_gigo_id')
+    @patch('blowcomotion.views.make_gigo_api_request')
+    def test_reactivate_queries_gigo_id_if_not_cached(self, mock_api, mock_get_id):
+        """Test reactivation queries GO3 for member ID if not cached"""
+        # Member without gigomatic_id
+        mock_get_id.return_value = '789'
+        mock_api.return_value = {
+            'is_occasional': False,
+            'member_id': '789',
+            'band_id': '1'
+        }
+        
+        response = self.client.post(
+            reverse('inactive-members'),
+            data={'member_id': self.inactive_member1.id}
+        )
+        
+        # Verify get_gigo_id was called
+        mock_get_id.assert_called_once()
+        
+        # Member should be reactivated
+        self.inactive_member1.refresh_from_db()
+        self.assertTrue(self.inactive_member1.is_active)
+    
+    def test_reactivate_nonexistent_member(self):
+        """Test reactivating a non-existent member returns error"""
+        response = self.client.post(
+            reverse('inactive-members'),
+            data={'member_id': 99999}
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Member not found or already active")
+    
+    def test_reactivate_already_active_member(self):
+        """Test reactivating an already active member returns error"""
+        response = self.client.post(
+            reverse('inactive-members'),
+            data={'member_id': self.active_member.id}
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Member not found or already active")
+    
+    @patch('blowcomotion.views.make_gigo_api_request')
+    def test_reactivate_without_gigo_id(self, mock_api):
+        """Test reactivation works without GO3 ID"""
+        # Member without gigomatic_id and without email
+        self.inactive_member1.gigomatic_id = None
+        self.inactive_member1.email = ''
+        self.inactive_member1.save()
+        
+        response = self.client.post(
+            reverse('inactive-members'),
+            data={'member_id': self.inactive_member1.id}
+        )
+        
+        # Member should still be reactivated locally
+        self.inactive_member1.refresh_from_db()
+        self.assertTrue(self.inactive_member1.is_active)
+        
+        # API should not be called (no GO3 ID available)
+        mock_api.assert_not_called()
+        
+        # Success message without GO3 update
+        self.assertContains(response, "Successfully reactivated")
+        self.assertNotContains(response, "Gig-O-Matic")
+    
+    @patch('blowcomotion.views.make_gigo_api_request')
+    @override_settings(DEBUG=True, GIGO_BAND_ID_LOCAL='local-123')
+    def test_reactivate_uses_local_band_id_in_debug(self, mock_api):
+        """Test reactivation uses GIGO_BAND_ID_LOCAL when DEBUG=True"""
+        self.inactive_member1.gigomatic_id = '123'
+        self.inactive_member1.save()
+        
+        mock_api.return_value = {
+            'is_occasional': False,
+            'member_id': '123',
+            'band_id': 'local-123'
+        }
+        
+        response = self.client.post(
+            reverse('inactive-members'),
+            data={'member_id': self.inactive_member1.id}
+        )
+        
+        # Verify API was called with local band ID
+        call_args = mock_api.call_args_list[-1]
+        self.assertIn('/bands/local-123/members/123/occasional', call_args[0][0])

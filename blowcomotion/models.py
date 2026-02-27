@@ -683,6 +683,52 @@ class Member(ClusterableModel, index.Indexed):
             return f"{self.preferred_name} {self.last_name}"
         return f"{self.first_name} {self.last_name}"
 
+    def get_gigo_id(self):
+        """
+        Get the Gig-O-Matic member ID for this member.
+        If gigomatic_id is not set, query the GO3 API by email to fetch it.
+        Returns the member ID or None if not found.
+        """
+        # Return cached value if already set
+        if self.gigomatic_id:
+            return self.gigomatic_id
+        
+        # Check if we have an email to query with
+        if not self.email:
+            return None
+        
+        # Import here to avoid circular imports
+        import logging
+
+        from django.conf import settings
+
+        from blowcomotion.views import make_gigo_api_request
+        
+        logger = logging.getLogger(__name__)
+        
+        # Check if API is configured
+        if not settings.GIGO_API_URL or not settings.GIGO_API_KEY:
+            logger.warning(f"GO3 API not configured, cannot query member ID for {self.email}")
+            return None
+        
+        # Query the member by email
+        try:
+            endpoint = f"/members/query?email={self.email}"
+            response = make_gigo_api_request(endpoint)
+            
+            if response and 'member_id' in response:
+                # Cache the member ID
+                self.gigomatic_id = response['member_id']
+                self.save(update_fields=['gigomatic_id'])
+                logger.info(f"Fetched and cached GO3 member ID {self.gigomatic_id} for {self.email}")
+                return self.gigomatic_id
+            else:
+                logger.warning(f"Could not find GO3 member ID for {self.email}")
+                return None
+        except Exception as e:
+            logger.error(f"Error querying GO3 API for member {self.email}: {e}")
+            return None
+    
     def __str__(self):
         return f"\"{self.preferred_name}\" {self.first_name} {self.last_name}" if self.preferred_name else f"{self.first_name} {self.last_name}"
 

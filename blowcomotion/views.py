@@ -260,7 +260,7 @@ def instrument_library_quick_rent(request):
 
     return render(request, 'instrument_library/manage.html', context)
 
-def make_gigo_api_request(endpoint, timeout=10, retries=2):
+def make_gigo_api_request(endpoint, timeout=10, retries=0, method='GET', data=None):
     """
     Helper function to make requests to the Gig-O-Matic API with proper error handling.
     
@@ -268,6 +268,8 @@ def make_gigo_api_request(endpoint, timeout=10, retries=2):
         endpoint: The API endpoint (e.g., '/gigs' or '/gigs/{id}')
         timeout: Request timeout in seconds (default: 10)
         retries: Number of retry attempts (default: 2)
+        method: HTTP method - 'GET', 'POST', 'PATCH', 'PUT', 'DELETE' (default: 'GET')
+        data: JSON data to send with POST/PATCH/PUT requests (default: None)
         
     Returns:
         dict: Response JSON data if successful, None if failed
@@ -277,7 +279,20 @@ def make_gigo_api_request(endpoint, timeout=10, retries=2):
     
     for attempt in range(retries + 1):
         try:
-            response = requests.get(url, headers=headers, timeout=timeout)
+            if method.upper() == 'GET':
+                response = requests.get(url, headers=headers, timeout=timeout)
+            elif method.upper() == 'POST':
+                response = requests.post(url, json=data, headers=headers, timeout=timeout)
+            elif method.upper() == 'PATCH':
+                response = requests.patch(url, json=data, headers=headers, timeout=timeout)
+            elif method.upper() == 'PUT':
+                response = requests.put(url, json=data, headers=headers, timeout=timeout)
+            elif method.upper() == 'DELETE':
+                response = requests.delete(url, headers=headers, timeout=timeout)
+            else:
+                logger.error("Unsupported HTTP method: %s", method)
+                return None
+                
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -1456,9 +1471,48 @@ def inactive_members(request):
                 member.is_active = True
                 member.save(update_fields=['is_active'])
                 
+                # Try to toggle member back to regular (non-occasional) in GO3
+                gigo_message = None
+                try:
+                    gigo_id = member.get_gigo_id()
+                    if gigo_id:
+                        # Determine which band ID to use
+                        if settings.DEBUG:
+                            band_id = getattr(settings, 'GIGO_BAND_ID_LOCAL', None)
+                        else:
+                            band_id = getattr(settings, 'GIGO_BAND_ID', None)
+                        
+                        if band_id:
+                            # Toggle member from occasional back to regular in GO3
+                            endpoint = f"/bands/{band_id}/members/{gigo_id}/occasional"
+                            response = make_gigo_api_request(endpoint, method='PATCH')
+                            
+                            if response and 'is_occasional' in response:
+                                # Check if member is now regular (not occasional)
+                                if not response['is_occasional']:
+                                    # Successfully marked as regular
+                                    gigo_message = 'Also marked as regular member in Gig-O-Matic'
+                                else:
+                                    # Member was already regular, so toggle made them occasional
+                                    # Toggle again to make them regular
+                                    response2 = make_gigo_api_request(endpoint, method='PATCH')
+                                    if response2 and not response2.get('is_occasional'):
+                                        gigo_message = 'Also marked as regular member in Gig-O-Matic'
+                                    else:
+                                        gigo_message = 'Warning: Could not update status in Gig-O-Matic'
+                            else:
+                                gigo_message = 'Warning: Could not connect to Gig-O-Matic'
+                except Exception as e:
+                    logger.warning(f"Error updating GO3 status for member {member.full_name}: {e}")
+                    gigo_message = 'Warning: Could not update Gig-O-Matic status'
+                
                 # Return success message for HTMX requests
+                success_message = f'Successfully reactivated {member.first_name} {member.last_name}'
+                if gigo_message:
+                    success_message += f'. {gigo_message}'
+                
                 context = {
-                    'message': f'Successfully reactivated {member.first_name} {member.last_name}',
+                    'message': success_message,
                     'reactivated_member': member,
                     'sections': Section.objects.all().order_by('name')  # Add sections for navigation
                 }
