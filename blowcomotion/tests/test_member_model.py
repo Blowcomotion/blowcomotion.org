@@ -88,7 +88,7 @@ class MemberGetGigoIdTests(TestCase):
         result = member.get_gigo_id()
         
         self.assertEqual(result, 456)
-        mock_api.assert_called_once_with('/members/query?email=alice@example.com')
+        mock_api.assert_called_once_with('/members/query?email=alice%40example.com')
         
         # Verify value was cached in database
         member.refresh_from_db()
@@ -268,7 +268,7 @@ class MemberSaveMethodTests(TestCase):
         
         self.assertEqual(mock_api.call_count, 2)
         verify_call = mock_api.call_args_list[0]
-        self.assertIn('/members/query?email=john@example.com', verify_call[0][0])
+        self.assertIn('/members/query?email=john%40example.com', verify_call[0][0])
         toggle_call = mock_api.call_args_list[1]
         self.assertIn('/bands/1/members/999/occasional', toggle_call[0][0])
         self.assertEqual(toggle_call[1]['method'], 'PATCH')
@@ -367,7 +367,7 @@ class MemberSaveMethodTests(TestCase):
         self.assertEqual(mock_api.call_count, 1)
         # Verify it was the member query endpoint, not the toggle endpoint
         call_args = mock_api.call_args_list[0]
-        self.assertIn('/members/query?email=david@example.com', call_args[0][0])
+        self.assertIn('/members/query?email=david%40example.com', call_args[0][0])
         self.assertNotIn('occasional', call_args[0][0])
 
     @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
@@ -406,7 +406,7 @@ class MemberSaveMethodTests(TestCase):
         # Should only call member query API (not toggle)
         self.assertEqual(mock_api.call_count, 1)
         call_args = mock_api.call_args_list[0]
-        self.assertIn('/members/query?email=emily@example.com', call_args[0][0])
+        self.assertIn('/members/query?email=emily%40example.com', call_args[0][0])
 
     @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
     @patch('blowcomotion.utils.make_gigo_api_request')

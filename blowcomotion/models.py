@@ -699,6 +699,7 @@ class Member(ClusterableModel, index.Indexed):
         
         # Import here to avoid circular imports
         import logging
+        from urllib.parse import quote
 
         from django.conf import settings
 
@@ -713,7 +714,7 @@ class Member(ClusterableModel, index.Indexed):
         
         # Query the member by email
         try:
-            endpoint = f"/members/query?email={self.email}"
+            endpoint = f"/members/query?email={quote(self.email)}"
             response = make_gigo_api_request(endpoint)
             
             if response and 'member_id' in response:
@@ -737,6 +738,7 @@ class Member(ClusterableModel, index.Indexed):
         - True (active) → occasional=False in GO3
         """
         import logging
+        from urllib.parse import quote
 
         from django.conf import settings
 
@@ -763,7 +765,7 @@ class Member(ClusterableModel, index.Indexed):
         try:
             if self.email and (settings.GIGO_API_URL and settings.GIGO_API_KEY):
                 try:
-                    endpoint = f"/members/query?email={self.email}"
+                    endpoint = f"/members/query?email={quote(self.email)}"
                     member_data = make_gigo_api_request(endpoint)
                     
                     if member_data and 'member_id' in member_data:
