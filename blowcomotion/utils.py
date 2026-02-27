@@ -271,7 +271,7 @@ def make_gigo_api_request(endpoint, timeout=10, retries=0, method='GET', data=No
             # Try to parse JSON, return empty dict for non-JSON responses
             try:
                 return response.json()
-            except (ValueError, requests.exceptions.JSONDecodeError):
+            except ValueError:
                 logger.warning("Non-JSON response from %s: %s", endpoint, response.text[:100])
                 return {}
                 
