@@ -1503,24 +1503,31 @@ class GigsEndpointTests(TestCase):
         self.assertIn('gigs', data)
         self.assertEqual(len(data['gigs']), 0)
 
+    @override_settings(GIGO_API_URL='http://test-api', GIGO_API_KEY='test-key')
     def test_attendance_capture_with_gig_selection(self):
         """Test attendance capture with gig selection"""
         # Create test data
         section = Section.objects.create(name="Test Section")
         instrument = Instrument.objects.create(name="Test Instrument", section=section)
-        member = Member.objects.create(
-            first_name="Test",
-            last_name="Member",
-            email="test@example.com",
-            is_active=True,
-            join_date=date.today() - timedelta(days=30)
-        )
-        MemberInstrument.objects.create(member=member, instrument=instrument)
         
         attendance_date = date.today()
         
-        # Use the exact URL that the actual gig API call uses
+        # Patch requests.get for both member creation and gig API call
         with patch('requests.get') as mock_get:
+            # Create member without triggering GO3 sync
+            member = Member(
+                first_name="Test",
+                last_name="Member",
+                email="test@example.com",
+                is_active=True,
+                join_date=date.today() - timedelta(days=30)
+            )
+            member.save(sync_go3=False)
+            MemberInstrument.objects.create(member=member, instrument=instrument)
+            
+            # Reset mock after member creation to only count subsequent API calls
+            mock_get.reset_mock()
+            
             # Mock the individual gig API call that happens during attendance submission
             mock_response = mock_get.return_value
             mock_response.status_code = 200
@@ -1544,10 +1551,11 @@ class GigsEndpointTests(TestCase):
             
             self.assertEqual(response.status_code, 200)
             
-            # Verify the API was called to get gig details
-            mock_get.assert_called_once()
-            call_url = mock_get.call_args[0][0]
-            self.assertIn('/gigs/123', call_url)
+            # Verify the gig API was called to get gig details
+            # Note: There will be additional API calls for member queries during attendance capture
+            call_urls = [call[0][0] for call in mock_get.call_args_list]
+            self.assertTrue(any('/gigs/123' in url for url in call_urls), 
+                          f"Expected gig API call to /gigs/123 but got: {call_urls}")
             
             # Check attendance record was created with gig title
             attendance_record = AttendanceRecord.objects.get(
@@ -1630,3 +1638,23 @@ class InactiveMembersViewTests(TestCase):
         # Check success message
         self.assertContains(response, "Successfully reactivated")
         self.assertContains(response, "Inactive Member1")
+    
+    def test_reactivate_nonexistent_member(self):
+        """Test reactivating a non-existent member returns error"""
+        response = self.client.post(
+            reverse('inactive-members'),
+            data={'member_id': 99999}
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Member not found or already active")
+    
+    def test_reactivate_already_active_member(self):
+        """Test reactivating an already active member returns error"""
+        response = self.client.post(
+            reverse('inactive-members'),
+            data={'member_id': self.active_member.id}
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Member not found or already active")

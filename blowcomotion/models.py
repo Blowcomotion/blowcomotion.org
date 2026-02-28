@@ -683,6 +683,221 @@ class Member(ClusterableModel, index.Indexed):
             return f"{self.preferred_name} {self.last_name}"
         return f"{self.first_name} {self.last_name}"
 
+    def get_gigo_id(self):
+        """
+        Get the Gig-O-Matic member ID for this member.
+        If gigomatic_id is not set, query the GO3 API by email to fetch it.
+        Returns the member ID or None if not found.
+        """
+        # Return cached value if already set
+        if self.gigomatic_id:
+            return self.gigomatic_id
+        
+        # Check if we have an email to query with
+        if not self.email:
+            return None
+        
+        # Import here to avoid circular imports
+        import logging
+        from urllib.parse import quote
+
+        from django.conf import settings
+
+        from blowcomotion.utils import make_gigo_api_request
+        
+        logger = logging.getLogger(__name__)
+        
+        # Check if API is configured
+        if not settings.GIGO_API_URL or not settings.GIGO_API_KEY:
+            logger.warning(f"GO3 API not configured, cannot query member ID for {self.email}")
+            return None
+        
+        # Query the member by email
+        try:
+            endpoint = f"/members/query?email={quote(self.email)}"
+            response = make_gigo_api_request(endpoint)
+            
+            if response and 'member_id' in response:
+                # Cache the member ID
+                self.gigomatic_id = response['member_id']
+                self.save(update_fields=['gigomatic_id'], sync_go3=False)
+                logger.info(f"Fetched and cached GO3 member ID {self.gigomatic_id} for {self.email}")
+                return self.gigomatic_id
+            else:
+                logger.warning(f"Could not find GO3 member ID for {self.email}")
+                return None
+        except Exception as e:
+            logger.error(f"Error querying GO3 API for member {self.email}: {e}")
+            return None
+    
+    def save(self, *args, **kwargs):
+        """
+        Override save to sync is_active status with Gig-O-Matic's is_occasional field.
+        When is_active changes:
+        - False (inactive) → occasional=True in GO3
+        - True (active) → occasional=False in GO3
+        
+        Args:
+            sync_go3 (bool): Whether to sync with GO3 API. Set to False for internal
+                            updates that don't need GO3 synchronization (default: True)
+        
+        Performance Note:
+            GO3 member verification is only performed when needed:
+            - When email changes
+            - When is_active changes
+            - When gigomatic_id or gigomatic_username are missing
+            This avoids unnecessary API calls on high-frequency updates like attendance.
+        """
+        import logging
+        from urllib.parse import quote
+
+        from django.conf import settings
+
+        from blowcomotion.utils import make_gigo_api_request
+        
+        logger = logging.getLogger(__name__)
+        
+        # Extract sync_go3 kwarg (defaults to True for backward compatibility)
+        sync_go3 = kwargs.pop('sync_go3', True)
+        
+        # Extract update_fields to check if specific fields are being updated
+        update_fields = kwargs.get('update_fields')
+        
+        # Determine if this save operation can affect fields relevant for GO3 sync
+        sync_relevant_fields = (
+            update_fields is None
+            or 'email' in update_fields
+            or 'is_active' in update_fields
+        )
+        
+        # Track changes that require GO3 sync
+        is_active_changed = False
+        email_changed = False
+        old_is_active = None
+        old_email = None
+        
+        # Check if GO3 is configured to short-circuit unnecessary work
+        is_go3_configured = (settings.GIGO_API_URL and settings.GIGO_API_KEY)
+        
+        # Only fetch the old instance when GO3 sync is enabled, configured, and relevant fields may change
+        if self.pk and sync_go3 and is_go3_configured and sync_relevant_fields:
+            try:
+                old_instance = Member.objects.get(pk=self.pk)
+                old_is_active = old_instance.is_active
+                old_email = old_instance.email
+                
+                # Values are considered changed only when they actually differ
+                if old_is_active != self.is_active:
+                    is_active_changed = True
+                if old_email != self.email:
+                    email_changed = True
+            except Member.DoesNotExist:
+                pass
+        
+
+        # Call parent save first
+        super().save(*args, **kwargs)
+        
+        # Only query GO3 when sync_go3=True AND sync_relevant_fields=True AND one of these conditions is met:
+        # 1. gigomatic_id or gigomatic_username is missing
+        # 2. Email changed
+        # 3. is_active changed
+        # This prevents unrelated field updates (e.g., update_fields=['renting']) from triggering API calls
+        should_verify_member = (
+            sync_go3 and 
+            self.email and 
+            is_go3_configured and
+            sync_relevant_fields and
+            (not self.gigomatic_id or not self.gigomatic_username or email_changed or is_active_changed)
+        )
+        
+        if should_verify_member:
+            try:
+                endpoint = f"/members/query?email={quote(self.email)}"
+                member_data = make_gigo_api_request(endpoint)
+                
+                if member_data and 'member_id' in member_data:
+                    # Track what needs updating
+                    update_fields = []
+                    
+                    # Update gigo_id if different or not set
+                    if self.gigomatic_id != member_data['member_id']:
+                        logger.info(f"Updating gigo_id for {self.full_name}: {self.gigomatic_id} → {member_data['member_id']}")
+                        self.gigomatic_id = member_data['member_id']
+                        update_fields.append('gigomatic_id')
+                    
+                    # Update username if different or not set
+                    if member_data.get('username') and self.gigomatic_username != member_data['username']:
+                        logger.info(f"Updating gigomatic_username for {self.full_name}: {self.gigomatic_username} → {member_data['username']}")
+                        self.gigomatic_username = member_data['username']
+                        update_fields.append('gigomatic_username')
+                    
+                    # Save updated fields if they changed
+                    if update_fields:
+                        # When using update_fields, we cannot use force_insert/force_update
+                        extra_save_kwargs = {
+                            key: value
+                            for key, value in kwargs.items()
+                            if key in ("using",)
+                        }
+                        extra_save_kwargs["update_fields"] = update_fields
+                        super().save(**extra_save_kwargs)
+                else:
+                    logger.warning(f"Could not verify member info from GO3 for {self.email}")
+            except Exception as e:
+                logger.warning(f"Error verifying member info from GO3: {e}")
+        
+        # If is_active changed, sync status with GO3
+        if is_active_changed and sync_go3:
+            # Check if API is configured before attempting status sync
+            if not is_go3_configured:
+                logger.debug(f"GO3 API not configured, skipping status sync for {self.full_name}")
+                return
+            
+            try:
+                # Get gigo_id (should be updated from verification above)
+                gigo_id = self.gigomatic_id or self.get_gigo_id()
+                if gigo_id:
+                    # Determine which band ID to use
+                    if settings.DEBUG:
+                        band_id = getattr(settings, 'GIGO_BAND_ID_LOCAL', None)
+                    else:
+                        band_id = getattr(settings, 'GIGO_BAND_ID', None)
+                    
+                    if band_id:
+                        # Determine desired occasional status based on is_active
+                        # inactive member (is_active=False) should be occasional (is_occasional=True)
+                        # active member (is_active=True) should be regular (is_occasional=False)
+                        desired_occasional = not self.is_active
+                        
+                        # Toggle member status in GO3
+                        endpoint = f"/bands/{band_id}/members/{gigo_id}/occasional"
+                        response = make_gigo_api_request(endpoint, method='PATCH')
+                        
+                        if response and 'is_occasional' in response:
+                            # Check if the result matches what we want
+                            if response['is_occasional'] == desired_occasional:
+                                # Success
+                                status = "occasional" if desired_occasional else "regular"
+                                logger.info(f"Synced member {self.full_name} to {status} in GO3")
+                            else:
+                                # Toggle didn't result in desired state, toggle again
+                                response2 = make_gigo_api_request(endpoint, method='PATCH')
+                                if response2 and response2.get('is_occasional') == desired_occasional:
+                                    status = "occasional" if desired_occasional else "regular"
+                                    logger.info(f"Synced member {self.full_name} to {status} in GO3 (after second toggle)")
+                                else:
+                                    logger.warning(f"Could not sync member {self.full_name} status to GO3")
+                        else:
+                            logger.warning(f"Could not sync member {self.full_name} status to GO3 - invalid response")
+                    else:
+                        logger.debug(f"GIGO_BAND_ID not configured, skipping GO3 sync for {self.full_name}")
+                else:
+                    logger.debug(f"No Gig-O-Matic ID found for member {self.full_name}, skipping GO3 sync")
+            except Exception as e:
+                # Log error but don't fail the save
+                logger.error(f"Error syncing member {self.full_name} status to GO3: {e}")
+    
     def __str__(self):
         return f"\"{self.preferred_name}\" {self.first_name} {self.last_name}" if self.preferred_name else f"{self.first_name} {self.last_name}"
 
