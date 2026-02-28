@@ -763,25 +763,31 @@ class Member(ClusterableModel, index.Indexed):
         # Extract update_fields to check if specific fields are being updated
         update_fields = kwargs.get('update_fields')
         
+        # Determine if this save operation can affect fields relevant for GO3 sync
+        sync_relevant_fields = (
+            update_fields is None
+            or 'email' in update_fields
+            or 'is_active' in update_fields
+        )
+        
         # Track changes that require GO3 sync
         is_active_changed = False
         email_changed = False
         old_is_active = None
         old_email = None
         
-        if self.pk:
+        # Only fetch the old instance when GO3 sync is enabled and relevant fields may change
+        if self.pk and sync_go3 and sync_relevant_fields:
             try:
                 old_instance = Member.objects.get(pk=self.pk)
                 old_is_active = old_instance.is_active
                 old_email = old_instance.email
                 
-                # Only consider fields changed if:
-                # 1. The value actually differs AND
-                # 2. update_fields is None (full save) OR the field is in update_fields
+                # Values are considered changed only when they actually differ
                 if old_is_active != self.is_active:
-                    is_active_changed = update_fields is None or 'is_active' in update_fields
+                    is_active_changed = True
                 if old_email != self.email:
-                    email_changed = update_fields is None or 'email' in update_fields
+                    email_changed = True
             except Member.DoesNotExist:
                 pass
         
