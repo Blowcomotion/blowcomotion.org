@@ -791,9 +791,7 @@ class Member(ClusterableModel, index.Indexed):
             except Member.DoesNotExist:
                 pass
         
-        # Capture whether this is a new instance before Django assigns a primary key
-        is_new = self.pk is None
-        
+
         # Call parent save first
         super().save(*args, **kwargs)
         

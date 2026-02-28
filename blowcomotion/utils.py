@@ -248,15 +248,20 @@ def make_gigo_api_request(endpoint, timeout=10, retries=0, method='GET', data=No
     
     for attempt in range(retries + 1):
         try:
-            if method.upper() == 'GET':
+            method_upper = method.upper()
+            request_kwargs = {"headers": headers, "timeout": timeout}
+            if data is not None and method_upper in {"POST", "PATCH", "PUT"}:
+                request_kwargs["json"] = data
+
+            if method_upper == 'GET':
                 response = requests.get(url, headers=headers, timeout=timeout)
-            elif method.upper() == 'POST':
-                response = requests.post(url, json=data, headers=headers, timeout=timeout)
-            elif method.upper() == 'PATCH':
-                response = requests.patch(url, json=data, headers=headers, timeout=timeout)
-            elif method.upper() == 'PUT':
-                response = requests.put(url, json=data, headers=headers, timeout=timeout)
-            elif method.upper() == 'DELETE':
+            elif method_upper == 'POST':
+                response = requests.post(url, **request_kwargs)
+            elif method_upper == 'PATCH':
+                response = requests.patch(url, **request_kwargs)
+            elif method_upper == 'PUT':
+                response = requests.put(url, **request_kwargs)
+            elif method_upper == 'DELETE':
                 response = requests.delete(url, headers=headers, timeout=timeout)
             else:
                 logger.error("Unsupported HTTP method: %s", method)
