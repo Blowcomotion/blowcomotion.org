@@ -243,8 +243,19 @@ def make_gigo_api_request(endpoint, timeout=10, retries=0, method='GET', data=No
         settings. It will retry failed requests up to the specified number of times.
         Handles empty response bodies (common for DELETE operations) and non-JSON responses gracefully.
     """
-    url = f"{settings.GIGO_API_URL}{endpoint}"
-    headers = {"X-API-KEY": settings.GIGO_API_KEY}
+    api_url = getattr(settings, "GIGO_API_URL", None)
+    api_key = getattr(settings, "GIGO_API_KEY", None)
+
+    if not api_url or not api_key:
+        logger.warning(
+            "GigoGig API settings are not configured (GIGO_API_URL or GIGO_API_KEY missing); "
+            "skipping API request to endpoint %s",
+            endpoint,
+        )
+        return None
+
+    url = f"{api_url}{endpoint}"
+    headers = {"X-API-KEY": api_key}
     
     for attempt in range(retries + 1):
         try:
