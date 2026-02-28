@@ -76,12 +76,13 @@ class MemberGetGigoIdTests(TestCase):
             'username': 'alice'
         }
         
-        member = Member.objects.create(
+        member = Member(
             first_name='Alice',
             last_name='Johnson',
             email='alice@example.com',
             primary_instrument=self.trumpet
         )
+        member.save(sync_go3=False)
         
         # First call should query API
         result = member.get_gigo_id()
@@ -99,13 +100,13 @@ class MemberGetGigoIdTests(TestCase):
         """Test that get_gigo_id returns None when member is not found in API"""
         mock_api.return_value = {}  # Empty response, member not found
         
-        member = Member.objects.create(
+        member = Member(
             first_name='Charlie',
             last_name='Brown',
             email='charlie@example.com',
             primary_instrument=self.trumpet
         )
-        mock_api.reset_mock()  # Reset after creation save
+        member.save(sync_go3=False)
         
         result = member.get_gigo_id()
         
@@ -122,13 +123,13 @@ class MemberGetGigoIdTests(TestCase):
         """Test that get_gigo_id handles API errors gracefully"""
         mock_api.side_effect = Exception('Connection timeout')
         
-        member = Member.objects.create(
+        member = Member(
             first_name='David',
             last_name='Lee',
             email='david@example.com',
             primary_instrument=self.trumpet
         )
-        mock_api.reset_mock()  # Reset after creation save
+        member.save(sync_go3=False)
         
         result = member.get_gigo_id()
         
@@ -141,12 +142,13 @@ class MemberGetGigoIdTests(TestCase):
         """Test that get_gigo_id handles malformed API responses"""
         mock_api.return_value = {'wrong_key': 'value'}  # Missing member_id key
         
-        member = Member.objects.create(
+        member = Member(
             first_name='Eve',
             last_name='Wilson',
             email='eve@example.com',
             primary_instrument=self.trumpet
         )
+        member.save(sync_go3=False)
         
         result = member.get_gigo_id()
         
@@ -162,12 +164,13 @@ class MemberGetGigoIdTests(TestCase):
             'username': 'frank'
         }
         
-        member = Member.objects.create(
+        member = Member(
             first_name='Frank',
             last_name='Miller',
             email='frank@example.com',
             primary_instrument=self.trumpet
         )
+        member.save(sync_go3=False)
         
         # First call
         result1 = member.get_gigo_id()
@@ -185,12 +188,13 @@ class MemberGetGigoIdTests(TestCase):
         """Test that get_gigo_id handles None response from API"""
         mock_api.return_value = None
         
-        member = Member.objects.create(
+        member = Member(
             first_name='Grace',
             last_name='Taylor',
             email='grace@example.com',
             primary_instrument=self.trumpet
         )
+        member.save(sync_go3=False)
         
         result = member.get_gigo_id()
         
@@ -206,12 +210,13 @@ class MemberGetGigoIdTests(TestCase):
             'username': 'henry'
         }
         
-        member = Member.objects.create(
+        member = Member(
             first_name='Henry',
             last_name='Anderson',
             email='henry@example.com',
             primary_instrument=self.trumpet
         )
+        member.save(sync_go3=False)
         
         # Modify member but don't save
         member.first_name = 'Hank'

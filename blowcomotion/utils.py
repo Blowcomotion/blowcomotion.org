@@ -235,7 +235,7 @@ def make_gigo_api_request(endpoint, timeout=10, retries=0, method='GET', data=No
         data (dict): JSON data to send with POST/PATCH/PUT requests (default: None)
         
     Returns:
-        dict or None: Response JSON data if successful, empty dict {} for responses with
+        dict or None: Response JSON data if successful, None for responses with
                      no content (e.g., 204 No Content) or non-JSON responses, None if request failed
         
     Notes:
@@ -266,14 +266,14 @@ def make_gigo_api_request(endpoint, timeout=10, retries=0, method='GET', data=No
             
             # Handle responses with no content (e.g., 204 No Content)
             if response.status_code == 204 or not response.content:
-                return {}
+                return None
             
-            # Try to parse JSON, return empty dict for non-JSON responses
+            # Try to parse JSON, return None for non-JSON responses
             try:
                 return response.json()
             except ValueError:
                 logger.warning("Non-JSON response from %s: %s", endpoint, response.text[:100])
-                return {}
+                return None
                 
         except requests.exceptions.RequestException as e:
             if attempt < retries:

@@ -798,18 +798,14 @@ class Member(ClusterableModel, index.Indexed):
         super().save(*args, **kwargs)
         
         # Only query GO3 when sync_go3=True AND one of these conditions is met:
-        # 1. New member with missing gigomatic_id or gigomatic_username
+        # 1. gigomatic_id or gigomatic_username is missing
         # 2. Email changed
         # 3. is_active changed
         should_verify_member = (
-            sync_go3
-            and self.email
-            and (settings.GIGO_API_URL and settings.GIGO_API_KEY)
-            and (
-                (is_new and (not self.gigomatic_id or not self.gigomatic_username))
-                or email_changed
-                or is_active_changed
-            )
+            sync_go3 and 
+            self.email and 
+            (settings.GIGO_API_URL and settings.GIGO_API_KEY) and
+            (not self.gigomatic_id or not self.gigomatic_username or email_changed or is_active_changed)
         )
         
         if should_verify_member:
