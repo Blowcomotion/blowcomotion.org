@@ -822,10 +822,11 @@ class Member(ClusterableModel, index.Indexed):
                     
                     # Save updated fields if they changed
                     if update_fields:
+                        # When using update_fields, we cannot use force_insert/force_update
                         extra_save_kwargs = {
                             key: value
                             for key, value in kwargs.items()
-                            if key in ("using", "force_insert", "force_update")
+                            if key in ("using",)
                         }
                         extra_save_kwargs["update_fields"] = update_fields
                         super().save(**extra_save_kwargs)

@@ -12,11 +12,12 @@ from django.conf import settings
 from django.core import mail
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from blowcomotion.models import Instrument, Member, Section, SiteSettings
 
 
+@override_settings(FROM_EMAIL='test@example.com')
 class SendMonthlyBirthdaySummaryTests(TestCase):
     """Test cases for the send_monthly_birthday_summary management command"""
 
