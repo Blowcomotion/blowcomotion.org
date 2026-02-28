@@ -1503,6 +1503,7 @@ class GigsEndpointTests(TestCase):
         self.assertIn('gigs', data)
         self.assertEqual(len(data['gigs']), 0)
 
+    @override_settings(GIGO_API_URL='http://test-api', GIGO_API_KEY='test-key')
     def test_attendance_capture_with_gig_selection(self):
         """Test attendance capture with gig selection"""
         # Create test data
@@ -1513,14 +1514,15 @@ class GigsEndpointTests(TestCase):
         
         # Patch requests.get for both member creation and gig API call
         with patch('requests.get') as mock_get:
-            # Create member (this will trigger member query API call)
-            member = Member.objects.create(
+            # Create member without triggering GO3 sync
+            member = Member(
                 first_name="Test",
                 last_name="Member",
                 email="test@example.com",
                 is_active=True,
                 join_date=date.today() - timedelta(days=30)
             )
+            member.save(sync_go3=False)
             MemberInstrument.objects.create(member=member, instrument=instrument)
             
             # Reset mock after member creation to only count subsequent API calls
