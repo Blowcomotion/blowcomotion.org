@@ -798,14 +798,16 @@ class Member(ClusterableModel, index.Indexed):
         # Call parent save first
         super().save(*args, **kwargs)
         
-        # Only query GO3 when sync_go3=True AND one of these conditions is met:
+        # Only query GO3 when sync_go3=True AND sync_relevant_fields=True AND one of these conditions is met:
         # 1. gigomatic_id or gigomatic_username is missing
         # 2. Email changed
         # 3. is_active changed
+        # This prevents unrelated field updates (e.g., update_fields=['renting']) from triggering API calls
         should_verify_member = (
             sync_go3 and 
             self.email and 
             is_go3_configured and
+            sync_relevant_fields and
             (not self.gigomatic_id or not self.gigomatic_username or email_changed or is_active_changed)
         )
         
