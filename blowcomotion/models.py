@@ -776,8 +776,11 @@ class Member(ClusterableModel, index.Indexed):
         old_is_active = None
         old_email = None
         
-        # Only fetch the old instance when GO3 sync is enabled and relevant fields may change
-        if self.pk and sync_go3 and sync_relevant_fields:
+        # Check if GO3 is configured to short-circuit unnecessary work
+        is_go3_configured = (settings.GIGO_API_URL and settings.GIGO_API_KEY)
+        
+        # Only fetch the old instance when GO3 sync is enabled, configured, and relevant fields may change
+        if self.pk and sync_go3 and is_go3_configured and sync_relevant_fields:
             try:
                 old_instance = Member.objects.get(pk=self.pk)
                 old_is_active = old_instance.is_active
@@ -802,7 +805,7 @@ class Member(ClusterableModel, index.Indexed):
         should_verify_member = (
             sync_go3 and 
             self.email and 
-            (settings.GIGO_API_URL and settings.GIGO_API_KEY) and
+            is_go3_configured and
             (not self.gigomatic_id or not self.gigomatic_username or email_changed or is_active_changed)
         )
         
@@ -845,7 +848,7 @@ class Member(ClusterableModel, index.Indexed):
         # If is_active changed, sync status with GO3
         if is_active_changed and sync_go3:
             # Check if API is configured before attempting status sync
-            if not (settings.GIGO_API_URL and settings.GIGO_API_KEY):
+            if not is_go3_configured:
                 logger.debug(f"GO3 API not configured, skipping status sync for {self.full_name}")
                 return
             
