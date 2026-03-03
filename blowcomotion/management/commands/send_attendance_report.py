@@ -6,7 +6,7 @@ from wagtail.models import Site
 from django.conf import settings
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
-from django.db.models import Count, Q
+from django.db.models import Count
 
 from blowcomotion.models import AttendanceRecord, Member, Section, SiteSettings
 
@@ -68,10 +68,11 @@ class Command(BaseCommand):
         cutoff_date = datetime.date.today() - datetime.timedelta(days=cleanup_days)
         
         # Query members who haven't been seen since cutoff date
-        cleaned_up_members = Member.objects.filter(
+        # Materialize the queryset before iterating to avoid re-query after saves
+        cleaned_up_members = list(Member.objects.filter(
             last_seen__lt=cutoff_date,
             is_active=True
-        ).order_by('-last_seen')
+        ).order_by('-last_seen'))
         
         if not dry_run:
             for member in cleaned_up_members:
@@ -86,12 +87,13 @@ class Command(BaseCommand):
                     self.style.NOTICE(f'  [Dry Run] Would mark member {member.full_name} as inactive (last seen: {member.last_seen}).')
                 )
         
-        return list(cleaned_up_members)
+        return cleaned_up_members
 
     def _calculate_metrics(self):
         """Calculate attendance metrics for the past 7 days."""
         end_date = datetime.date.today()
-        start_date = end_date - datetime.timedelta(days=7)
+        # Use days=6 for an inclusive 7-day window (today through 6 days ago)
+        start_date = end_date - datetime.timedelta(days=6)
         
         metrics = {
             'start_date': start_date,
@@ -139,26 +141,35 @@ class Command(BaseCommand):
             reactivated_date__lte=end_date
         )
         
-        # Get most attended members (top 5)
-        member_attendance_counts = (
+        # Get most attended members (top 5) with proper ordering
+        # Use annotation on Member model to get consistent ordering by attendance count
+        most_attended_ids = list(
             metrics['attendance_records']
             .filter(member__isnull=False)
             .values('member')
             .annotate(count=Count('id'))
             .order_by('-count')[:5]
         )
-        most_attended_ids = [item['member'] for item in member_attendance_counts]
-        metrics['most_attended_members'] = Member.objects.filter(id__in=most_attended_ids).order_by(
-            '-attendance_records__date'
-        )[:5]
+        # Preserve the order by creating the list in count order
+        id_to_count = {item['member']: item['count'] for item in most_attended_ids}
+        members = {m.id: m for m in Member.objects.filter(id__in=id_to_count.keys())}
+        metrics['most_attended_members'] = [members[item['member']] for item in most_attended_ids if item['member'] in members]
+        metrics['most_attended_counts'] = id_to_count
         
-        # Calculate turnout % per section
+        # Calculate turnout % per section with optimized queries
+        # Get active member counts per section in one query
+        section_active_counts = dict(
+            Member.objects.filter(
+                is_active=True,
+                primary_instrument__section__isnull=False
+            ).values('primary_instrument__section').annotate(
+                count=Count('id')
+            ).values_list('primary_instrument__section', 'count')
+        )
+        
         section_turnout = {}
         for section in Section.objects.all():
-            active_in_section = Member.objects.filter(
-                is_active=True,
-                primary_instrument__section=section
-            ).count()
+            active_in_section = section_active_counts.get(section.id, 0)
             
             if active_in_section > 0:
                 attended_in_section = len(section_attendance.get(section, {}).get('members', set()))
@@ -192,7 +203,8 @@ class Command(BaseCommand):
         
         # Cleaned up members (marked as inactive)
         if metrics.get('cleaned_up_members'):
-            message.append("MEMBERS MARKED INACTIVE (no attendance for 90+ days):")
+            cleanup_days = metrics.get('cleanup_days', 90)
+            message.append(f"MEMBERS MARKED INACTIVE (no attendance for {cleanup_days}+ days):")
             message.append("-" * 40)
             for member in metrics['cleaned_up_members']:
                 message.append(f"  • {member.full_name} (last seen: {member.last_seen})")
@@ -240,10 +252,8 @@ class Command(BaseCommand):
         if metrics['most_attended_members']:
             message.append("TOP 5 MOST ATTENDED:")
             message.append("-" * 40)
-            member_attendance_counts = {}
-            for record in metrics['attendance_records'].filter(member__isnull=False):
-                member_id = record.member_id
-                member_attendance_counts[member_id] = member_attendance_counts.get(member_id, 0) + 1
+            # Use pre-computed counts from metrics
+            member_attendance_counts = metrics.get('most_attended_counts', {})
             
             for i, member in enumerate(metrics['most_attended_members'], 1):
                 count = member_attendance_counts.get(member.id, 0)
@@ -284,6 +294,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Calculating attendance metrics...'))
         metrics = self._calculate_metrics()
         metrics['cleaned_up_members'] = cleaned_up_members
+        metrics['cleanup_days'] = site_settings.attendance_cleanup_days
         
         # Format report
         self.stdout.write(self.style.SUCCESS('Formatting report...'))
@@ -294,9 +305,11 @@ class Command(BaseCommand):
         if recipients:
             subject = f'Weekly Attendance Report - {metrics["end_date"]}'
             try:
-                recipients_list = [r.strip() for r in recipients.split(',')]
+                # Support comma or newline-separated recipients, strip whitespace, filter empty strings
+                import re
+                recipients_list = [r.strip() for r in re.split(r'[,\n]', recipients) if r.strip()]
             except AttributeError:
-                recipients_list = [recipients]
+                recipients_list = [recipients] if recipients else []
             
             self.stdout.write(self.style.SUCCESS('Sending attendance report...'))
             self._send_mail(subject, message, recipients_list, dry_run=options['dry_run'])

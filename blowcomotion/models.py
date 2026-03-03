@@ -796,7 +796,8 @@ class Member(ClusterableModel, index.Indexed):
                 pass
         else:
             # Even if sync_go3=False, check for reactivation to set reactivated_date
-            if self.pk:
+            # Only fetch if is_active could be changing (avoid needless DB query)
+            if self.pk and (update_fields is None or 'is_active' in update_fields):
                 try:
                     old_instance = Member.objects.get(pk=self.pk)
                     old_is_active = old_instance.is_active

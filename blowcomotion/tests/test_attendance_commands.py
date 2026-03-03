@@ -4,8 +4,7 @@ from io import StringIO
 from wagtail.models import Site
 
 from django.core.management import call_command
-from django.test import TestCase
-from django.utils.timezone import now
+from django.test import TestCase, override_settings
 
 from blowcomotion.models import (
     AttendanceRecord,
@@ -25,7 +24,7 @@ class CleanupAttendanceRosterCommandTest(TestCase):
     def setUp(self):
         """Set up test data."""
         # Create a site and settings
-        self.site = Site.objects.get_or_create(is_default_site=True)[0]
+        self.site = Site.objects.get(is_default_site=True)
         self.settings = SiteSettings.for_site(self.site)
         self.settings.attendance_cleanup_days = 90
         self.settings.save()
@@ -92,7 +91,7 @@ class SendAttendanceReportCommandTest(TestCase):
     def setUp(self):
         """Set up test data."""
         # Create a site and settings
-        self.site = Site.objects.get_or_create(is_default_site=True)[0]
+        self.site = Site.objects.get(is_default_site=True)
         self.settings = SiteSettings.for_site(self.site)
         self.settings.attendance_report_notification_recipients = "test@example.com"
         self.settings.save()
@@ -234,3 +233,19 @@ class SendAttendanceReportCommandTest(TestCase):
         output = out.getvalue()
         self.assertIn("[Dry Run]", output)
         self.assertIn("Would send email", output)
+
+    @override_settings(FROM_EMAIL="noreply@example.com")
+    def test_report_sends_email_without_dry_run(self):
+        """Test that the report actually sends an email when not in dry-run mode."""
+        from django.core import mail
+
+        out = StringIO()
+        call_command("send_attendance_report", f"--day-to-run={TODAY_WEEKDAY}", stdout=out)
+
+        # Verify email was sent
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertIn("Weekly Attendance Report", email.subject)
+        self.assertEqual(email.to, ["test@example.com"])
+        self.assertIn("Attendance Report", email.body)
+        self.assertIn("TOTAL ATTENDANCE", email.body)
