@@ -149,11 +149,11 @@ class SiteSettings(BaseSiteSetting):
         default=90,
         help_text="Number of days since last seeing a member to automatically mark them inactive when cleaning attendance records for the attendance system.",
     )
-    attendance_cleanup_notification_recipients = models.CharField(
+    attendance_report_notification_recipients = models.CharField(
         max_length=1024,
         blank=True,
         null=True,
-        help_text="Comma-separated list of email addresses to receive attendance cleanup notifications",
+        help_text="Comma-separated list of email addresses to receive attendance report notifications",
     )
     member_signup_notification_recipients = models.CharField(
         max_length=1024,
@@ -185,7 +185,7 @@ class SiteSettings(BaseSiteSetting):
             FieldPanel('donate_form_email_recipients'),
             FieldPanel('birthday_summary_email_recipients'),
             FieldPanel('instrument_rental_notification_recipients'),
-            FieldPanel('attendance_cleanup_notification_recipients'),
+            FieldPanel('attendance_report_notification_recipients'),
             FieldPanel('member_signup_notification_recipients'),
         ], heading="Form Email Recipients"),
         
@@ -577,6 +577,7 @@ class Member(ClusterableModel, index.Indexed):
     )
     last_seen = models.DateField(blank=True, null=True, help_text="This field auto-populates whenever attendance is taken.")
     separation_date = models.DateField(blank=True, null=True, help_text="Date of separation from the organization.")
+    reactivated_date = models.DateField(blank=True, null=True, help_text="Date when the member was reactivated (is_active changed to True).")
     email = models.EmailField(blank=True, null=True)
     gigomatic_username = models.CharField(
         max_length=255,
@@ -793,7 +794,20 @@ class Member(ClusterableModel, index.Indexed):
                     email_changed = True
             except Member.DoesNotExist:
                 pass
+        else:
+            # Even if sync_go3=False, check for reactivation to set reactivated_date
+            if self.pk:
+                try:
+                    old_instance = Member.objects.get(pk=self.pk)
+                    old_is_active = old_instance.is_active
+                    if old_is_active != self.is_active:
+                        is_active_changed = True
+                except Member.DoesNotExist:
+                    pass
         
+        # Set reactivated_date if transitioning from inactive to active
+        if is_active_changed and old_is_active is not None and not old_is_active and self.is_active:
+            self.reactivated_date = datetime.date.today()
 
         # Call parent save first
         super().save(*args, **kwargs)

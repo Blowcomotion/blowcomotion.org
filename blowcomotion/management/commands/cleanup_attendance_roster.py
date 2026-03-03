@@ -2,8 +2,6 @@ import datetime
 
 from wagtail.models import Site
 
-from django.conf import settings
-from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
 
 from blowcomotion.models import Member, SiteSettings
@@ -16,7 +14,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--dry-run',
             action='store_true',
-            help='Simulate the cleanup without making any changes or sending emails.',
+            help='Simulate the cleanup without making any changes.',
         )
         parser.add_argument(
             '--day-to-run',
@@ -24,25 +22,6 @@ class Command(BaseCommand):
             choices=range(7),
             help='Day of the week to run the command (0=Monday, 6=Sunday)',
         )
-
-    def _send_mail(self, subject, message, recipients, dry_run):
-        if dry_run:
-            self.stdout.write(
-                self.style.NOTICE(f'[Dry Run] Would send email to {recipients}:\nSubject: {subject}\nMessage:\n{message}')
-            )
-        else:
-            send_mail(
-                subject,
-                message,
-                settings.FROM_EMAIL,
-                recipients,
-                fail_silently=False,
-            )
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f'✅ Notification email sent to {len(recipients)} recipient(s)'
-                )
-            )
 
     def _get_site_settings(self):
         try:
@@ -112,18 +91,3 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.SUCCESS('No members to mark as inactive.')
             )
-
-        # Send notification email
-        recipients = site_settings.attendance_cleanup_notification_recipients
-        if recipients:
-            subject = 'Attendance Cleanup Report'
-            message = f'Marked {inactive_members.count()} members as inactive based on attendance records.'
-            if inactive_members:
-                message += '\n\nInactive Members:\n'
-            try:
-                recipients = recipients.split(',')
-            except AttributeError:
-                recipients = [recipients]
-            for member in inactive_members:
-                message += f'- {member.primary_instrument}: {member.full_name} (Last seen: {member.last_seen})\n'
-            self._send_mail(subject, message, recipients, dry_run=options['dry_run'])
