@@ -78,7 +78,8 @@ class CleanupAttendanceRosterCommandTest(TestCase):
         """Test that command skips execution if not on the correct day."""
         out = StringIO()
         # Command should skip if not on specified day (use a different day)
-        call_command("cleanup_attendance_roster", "--day-to-run=5", stdout=out)  # Saturday
+        different_day = (TODAY_WEEKDAY + 1) % 7
+        call_command("cleanup_attendance_roster", f"--day-to-run={different_day}", stdout=out)
         
         # Command should have exited early
         output = out.getvalue()
@@ -220,7 +221,8 @@ class SendAttendanceReportCommandTest(TestCase):
     def test_report_respects_day_to_run(self):
         """Test that command skips execution if not on the correct day."""
         out = StringIO()
-        call_command("send_attendance_report", "--day-to-run=5", stdout=out)  # Saturday
+        different_day = (TODAY_WEEKDAY + 1) % 7
+        call_command("send_attendance_report", f"--day-to-run={different_day}", stdout=out)
 
         output = out.getvalue()
         self.assertIn("only", output)  # Should mention day restriction
