@@ -111,7 +111,13 @@ class Command(BaseCommand):
             'attendance_records': AttendanceRecord.objects.filter(
                 date__gte=start_date,
                 date__lte=end_date
-            ).select_related('member', 'member__primary_instrument', 'member__primary_instrument__section'),
+            ).select_related(
+                'member',
+                'member__primary_instrument',
+                'member__primary_instrument__section',
+                'played_instrument',
+                'played_instrument__section'
+            ),
         }
         
         # Get all unique members who attended in past week
@@ -126,8 +132,14 @@ class Command(BaseCommand):
         # Calculate attendance by section
         section_attendance = defaultdict(lambda: {'count': 0, 'members': set()})
         for record in metrics['attendance_records'].filter(member__isnull=False):
-            if record.member.primary_instrument and record.member.primary_instrument.section:
+            # Use played_instrument.section when available, fall back to primary_instrument.section
+            section = None
+            if record.played_instrument and record.played_instrument.section:
+                section = record.played_instrument.section
+            elif record.member.primary_instrument and record.member.primary_instrument.section:
                 section = record.member.primary_instrument.section
+            
+            if section:
                 section_attendance[section]['count'] += 1
                 section_attendance[section]['members'].add(record.member_id)
         
