@@ -1825,6 +1825,7 @@ def member_signup(request):
                     is_active=True,
                     instructor=False,
                     board_member=False,
+                    join_date=date.today()
                 )
                 
                 member.save()
