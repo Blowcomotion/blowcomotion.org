@@ -199,16 +199,6 @@ class SendAttendanceReportCommandTest(TestCase):
         output = out.getvalue()
         self.assertIn("GUEST ATTENDANCE", output)
 
-    def test_most_attended_members_in_report(self):
-        """Test that most attended members are listed."""
-        out = StringIO()
-        call_command("send_attendance_report", "--dry-run", f"--day-to-run={TODAY_WEEKDAY}", stdout=out)
-
-        output = out.getvalue()
-        self.assertIn("TOP 5 MOST ATTENDED", output)
-        # member1 has 3 attendances, should be listed
-        self.assertIn("John", output)
-
     def test_turnout_percentage_in_report(self):
         """Test that turnout percentages are calculated."""
         out = StringIO()

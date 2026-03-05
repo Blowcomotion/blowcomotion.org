@@ -270,18 +270,6 @@ class Command(BaseCommand):
                 message.append(f"  • {member.full_name} ({member.primary_instrument.name if member.primary_instrument else 'No instrument'})")
             message.append("")
         
-        # Most attended members
-        if metrics['most_attended_members']:
-            message.append("TOP 5 MOST ATTENDED:")
-            message.append("-" * 40)
-            # Use pre-computed counts from metrics
-            member_attendance_counts = metrics.get('most_attended_counts', {})
-            
-            for i, member in enumerate(metrics['most_attended_members'], 1):
-                count = member_attendance_counts.get(member.id, 0)
-                message.append(f"  {i}. {member.full_name} - {count} attendance(s)")
-            message.append("")
-        
         message.append("=" * 60)
         message.append("End of report")
         
