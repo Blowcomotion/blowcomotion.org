@@ -241,3 +241,29 @@ class SendAttendanceReportCommandTest(TestCase):
         self.assertEqual(email.to, ["test@example.com"])
         self.assertIn("Attendance Report", email.body)
         self.assertIn("TOTAL ATTENDANCE", email.body)
+
+    def test_inactive_members_show_instrument(self):
+        """Test that inactive members in the report display their instrument."""
+        # Create an old member that should be marked inactive
+        old_member = Member.objects.create(
+            first_name="Inactive",
+            last_name="Player",
+            primary_instrument=self.instrument1,
+            is_active=True,
+            last_seen=datetime.date.today() - datetime.timedelta(days=100),
+        )
+
+        out = StringIO()
+        call_command("send_attendance_report", "--dry-run", f"--day-to-run={TODAY_WEEKDAY}", stdout=out)
+
+        output = out.getvalue()
+        
+        # Check that inactive members section appears
+        self.assertIn("MEMBERS MARKED INACTIVE", output)
+        
+        # Check that the member name and instrument are both in the report
+        self.assertIn("Inactive Player", output)
+        self.assertIn("Clarinet", output)
+        
+        # Check that the format includes the dash separator between name and instrument
+        self.assertIn("Inactive Player - Clarinet", output)

@@ -229,7 +229,8 @@ class Command(BaseCommand):
             message.append(f"MEMBERS MARKED INACTIVE (no attendance for {cleanup_days}+ days):")
             message.append("-" * 40)
             for member in metrics['cleaned_up_members']:
-                message.append(f"  • {member.full_name} (last seen: {member.last_seen})")
+                instrument = member.primary_instrument.name if member.primary_instrument else 'No instrument'
+                message.append(f"  • {member.full_name} - {instrument} (last seen: {member.last_seen})")
             message.append("")
         
         # Attendance by section
