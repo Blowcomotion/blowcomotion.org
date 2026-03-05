@@ -47,6 +47,16 @@ class Command(BaseCommand):
                     f'✅ Attendance report sent to {len(recipients)} recipient(s)'
                 )
             )
+            # Send a copy for verifying functionality
+            extra_email = settings.FORM_TEST_EMAIL if hasattr(settings, 'FORM_TEST_EMAIL') else None
+            if extra_email:
+                send_mail(
+                    subject,
+                    message,
+                    settings.FROM_EMAIL,
+                    [extra_email],
+                    fail_silently=False,
+                )
 
     def _get_site_settings(self):
         """Retrieve site settings."""
@@ -286,6 +296,29 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR('SiteSettings could not be loaded. Exiting.'))
             return
 
+        # Parse and validate email recipients before performing any database modifications
+        recipients = site_settings.attendance_report_notification_recipients
+        recipients_list = []
+        if recipients:
+            try:
+                # Support comma or newline-separated recipients, strip whitespace, filter empty strings
+                import re
+                recipients_list = [r.strip() for r in re.split(r'[,\n]', recipients) if r.strip()]
+            except AttributeError:
+                recipients_list = [recipients] if recipients else []
+        
+        # Exit early if no recipients configured (unless in dry-run mode)
+        if not recipients_list:
+            if options['dry_run']:
+                self.stdout.write(
+                    self.style.WARNING('No email recipients configured in Site Settings. Continuing in dry-run mode.')
+                )
+            else:
+                self.stdout.write(
+                    self.style.ERROR('No email recipients configured in Site Settings. Exiting to avoid unintended database modifications.')
+                )
+                return
+
         # Run cleanup of inactive members
         self.stdout.write(self.style.SUCCESS('Running attendance cleanup...'))
         cleaned_up_members = self._cleanup_inactive_members(site_settings, dry_run=options['dry_run'])
@@ -301,19 +334,6 @@ class Command(BaseCommand):
         message = self._format_report_message(metrics)
         
         # Send email
-        recipients = site_settings.attendance_report_notification_recipients
-        if recipients:
-            subject = f'Weekly Attendance Report - {metrics["end_date"]}'
-            try:
-                # Support comma or newline-separated recipients, strip whitespace, filter empty strings
-                import re
-                recipients_list = [r.strip() for r in re.split(r'[,\n]', recipients) if r.strip()]
-            except AttributeError:
-                recipients_list = [recipients] if recipients else []
-            
-            self.stdout.write(self.style.SUCCESS('Sending attendance report...'))
-            self._send_mail(subject, message, recipients_list, dry_run=options['dry_run'])
-        else:
-            self.stdout.write(
-                self.style.WARNING('No email recipients configured in Site Settings.')
-            )
+        subject = f'Weekly Attendance Report - {metrics["end_date"]}'
+        self.stdout.write(self.style.SUCCESS('Sending attendance report...'))
+        self._send_mail(subject, message, recipients_list, dry_run=options['dry_run'])
