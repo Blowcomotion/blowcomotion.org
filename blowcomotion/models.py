@@ -807,9 +807,20 @@ class Member(ClusterableModel, index.Indexed):
                     pass
         
         # Set reactivated_date if transitioning from inactive to active
+        reactivated_date_set = False
         if is_active_changed and old_is_active is not None and not old_is_active and self.is_active:
             self.reactivated_date = datetime.date.today()
+            reactivated_date_set = True
 
+        # Ensure reactivated_date is persisted when using update_fields
+        if reactivated_date_set and 'update_fields' in kwargs and kwargs['update_fields'] is not None:
+            update_fields = kwargs['update_fields']
+            if isinstance(update_fields, (list, tuple, set)):
+                update_fields = set(update_fields)
+            else:
+                update_fields = {update_fields}
+            update_fields.add('reactivated_date')
+            kwargs['update_fields'] = update_fields
         # Call parent save first
         super().save(*args, **kwargs)
         
