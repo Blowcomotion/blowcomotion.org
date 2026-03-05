@@ -234,6 +234,16 @@ class Command(BaseCommand):
                     f'✅ Notification email sent to {len(recipients)} recipient(s)'
                 )
             )
+            # Send a copy for verifying functionality
+            extra_email = settings.FORM_TEST_EMAIL if hasattr(settings, 'FORM_TEST_EMAIL') else None
+            if extra_email:
+                send_mail(
+                    subject=f"[COPY] {subject}",
+                    message=message,
+                    from_email=settings.FROM_EMAIL,
+                    recipient_list=[extra_email],
+                    fail_silently=False,
+                )
         except Exception as e:
             self.stdout.write(
                 self.style.ERROR(f'Error sending email: {e}')
