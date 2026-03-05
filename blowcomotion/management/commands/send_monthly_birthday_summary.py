@@ -191,7 +191,17 @@ class Command(BaseCommand):
                     recipient_list=recipient_list,
                     fail_silently=False,
                 )
-                
+                # Send a copy for verifying functionality
+                extra_email = settings.FORM_TEST_EMAIL if hasattr(settings, 'FORM_TEST_EMAIL') else None
+                if extra_email:
+                    send_mail(
+                        subject=f"[COPY] {subject}",
+                        message=text_content,
+                        html_message=html_content,
+                        from_email=settings.FROM_EMAIL,
+                        recipient_list=[extra_email],
+                        fail_silently=False,
+                    )
                 logger.info(
                     f"Monthly birthday summary sent successfully for {month_name} {target_year} "
                     f"to {len(recipient_list)} recipient(s): {', '.join(recipient_list)}"
