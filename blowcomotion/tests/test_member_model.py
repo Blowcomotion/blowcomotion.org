@@ -547,3 +547,224 @@ class MemberSaveMethodTests(TestCase):
         # Verify database has new value
         member.refresh_from_db()
         self.assertFalse(member.is_active)
+
+
+class MemberReactivatedDateTests(TestCase):
+    """Test cases for Member.reactivated_date auto-population on inactive→active transitions"""
+
+    def setUp(self):
+        """Set up test data"""
+        self.brass_section = Section.objects.create(name='Brass')
+        self.trumpet = Instrument.objects.create(name='Trumpet', section=self.brass_section)
+
+    @patch('blowcomotion.utils.make_gigo_api_request')
+    def test_reactivated_date_set_on_inactive_to_active_transition(self, mock_api):
+        """Test that reactivated_date is set when member transitions from inactive to active"""
+        import datetime
+
+        # Create inactive member
+        member = Member(
+            first_name='John',
+            last_name='Doe',
+            email='john@example.com',
+            primary_instrument=self.trumpet,
+            is_active=False
+        )
+        member.save(sync_go3=False)
+        
+        # Verify reactivated_date is not set for inactive member
+        self.assertIsNone(member.reactivated_date)
+        
+        # Activate the member
+        member.is_active = True
+        member.save(sync_go3=False)
+        
+        # Verify reactivated_date was set to today
+        member.refresh_from_db()
+        self.assertIsNotNone(member.reactivated_date)
+        self.assertEqual(member.reactivated_date, datetime.date.today())
+
+    @patch('blowcomotion.utils.make_gigo_api_request')
+    def test_reactivated_date_not_set_on_active_to_inactive_transition(self, mock_api):
+        """Test that reactivated_date is NOT set when member transitions from active to inactive"""
+        # Create active member
+        member = Member(
+            first_name='Jane',
+            last_name='Smith',
+            email='jane@example.com',
+            primary_instrument=self.trumpet,
+            is_active=True
+        )
+        member.save(sync_go3=False)
+        
+        # Verify reactivated_date is not set
+        self.assertIsNone(member.reactivated_date)
+        
+        # Deactivate the member
+        member.is_active = False
+        member.save(sync_go3=False)
+        
+        # Verify reactivated_date is still None
+        member.refresh_from_db()
+        self.assertIsNone(member.reactivated_date)
+
+    @patch('blowcomotion.utils.make_gigo_api_request')
+    def test_reactivated_date_not_set_when_member_remains_active(self, mock_api):
+        """Test that reactivated_date is NOT set when member remains active"""
+        import datetime
+
+        # Create active member with a previous reactivated_date
+        previous_date = datetime.date(2025, 1, 15)
+        member = Member(
+            first_name='Bob',
+            last_name='Jones',
+            email='bob@example.com',
+            primary_instrument=self.trumpet,
+            is_active=True,
+            reactivated_date=previous_date
+        )
+        member.save(sync_go3=False)
+        
+        # Update another field while remaining active
+        member.first_name = 'Robert'
+        member.save(sync_go3=False)
+        
+        # Verify reactivated_date didn't change
+        member.refresh_from_db()
+        self.assertEqual(member.reactivated_date, previous_date)
+
+    @patch('blowcomotion.utils.make_gigo_api_request')
+    def test_reactivated_date_persisted_with_update_fields_list(self, mock_api):
+        """Test that reactivated_date is persisted when using update_fields as a list"""
+        import datetime
+
+        # Create inactive member
+        member = Member.objects.create(
+            first_name='Alice',
+            last_name='Brown',
+            email='alice@example.com',
+            primary_instrument=self.trumpet,
+            is_active=False
+        )
+        
+        # Activate member with update_fields as a list
+        member.is_active = True
+        member.save(update_fields=['is_active'], sync_go3=False)
+        
+        # Verify reactivated_date was persisted
+        member.refresh_from_db()
+        self.assertTrue(member.is_active)
+        self.assertIsNotNone(member.reactivated_date)
+        self.assertEqual(member.reactivated_date, datetime.date.today())
+
+    @patch('blowcomotion.utils.make_gigo_api_request')
+    def test_reactivated_date_persisted_with_update_fields_tuple(self, mock_api):
+        """Test that reactivated_date is persisted when using update_fields as a tuple"""
+        import datetime
+
+        # Create inactive member
+        member = Member.objects.create(
+            first_name='Charlie',
+            last_name='Wilson',
+            email='charlie@example.com',
+            primary_instrument=self.trumpet,
+            is_active=False
+        )
+        
+        # Activate member with update_fields as a tuple
+        member.is_active = True
+        member.save(update_fields=('is_active', 'email'), sync_go3=False)
+        
+        # Verify reactivated_date was persisted
+        member.refresh_from_db()
+        self.assertTrue(member.is_active)
+        self.assertIsNotNone(member.reactivated_date)
+        self.assertEqual(member.reactivated_date, datetime.date.today())
+
+    @patch('blowcomotion.utils.make_gigo_api_request')
+    def test_reactivated_date_persisted_with_update_fields_set(self, mock_api):
+        """Test that reactivated_date is persisted when using update_fields as a set"""
+        import datetime
+
+        # Create inactive member
+        member = Member.objects.create(
+            first_name='David',
+            last_name='Lee',
+            email='david@example.com',
+            primary_instrument=self.trumpet,
+            is_active=False
+        )
+        
+        # Activate member with update_fields as a set
+        member.is_active = True
+        member.save(update_fields={'is_active', 'first_name'}, sync_go3=False)
+        
+        # Verify reactivated_date was persisted
+        member.refresh_from_db()
+        self.assertTrue(member.is_active)
+        self.assertIsNotNone(member.reactivated_date)
+        self.assertEqual(member.reactivated_date, datetime.date.today())
+
+    @patch('blowcomotion.utils.make_gigo_api_request')
+    def test_reactivated_date_not_changed_when_already_active(self, mock_api):
+        """Test that reactivated_date doesn't change when saving an already-active member"""
+        import datetime
+
+        # Create active member with a previous reactivated_date
+        old_date = datetime.date(2025, 6, 1)
+        member = Member.objects.create(
+            first_name='Eve',
+            last_name='Taylor',
+            email='eve@example.com',
+            primary_instrument=self.trumpet,
+            is_active=True,
+            reactivated_date=old_date
+        )
+        
+        # Save with update_fields, but is_active stays True
+        member.first_name = 'Evelyn'
+        member.save(update_fields=['first_name', 'is_active'], sync_go3=False)
+        
+        # Verify reactivated_date didn't change
+        member.refresh_from_db()
+        self.assertEqual(member.reactivated_date, old_date)
+
+    @patch('blowcomotion.utils.make_gigo_api_request')
+    def test_reactivated_date_not_set_when_creating_active_member(self, mock_api):
+        """Test that reactivated_date is NOT set when creating a new active member"""
+        # Create a new active member
+        member = Member.objects.create(
+            first_name='Frank',
+            last_name='Miller',
+            email='frank@example.com',
+            primary_instrument=self.trumpet,
+            is_active=True
+        )
+        
+        # Verify reactivated_date is None (not set on initial creation)
+        member.refresh_from_db()
+        self.assertIsNone(member.reactivated_date)
+
+    @patch('blowcomotion.utils.make_gigo_api_request')
+    def test_reactivated_date_persisted_without_update_fields(self, mock_api):
+        """Test that reactivated_date is persisted in a normal save (without update_fields)"""
+        import datetime
+
+        # Create inactive member
+        member = Member.objects.create(
+            first_name='Grace',
+            last_name='Chen',
+            email='grace@example.com',
+            primary_instrument=self.trumpet,
+            is_active=False
+        )
+        
+        # Activate member with normal save (no update_fields)
+        member.is_active = True
+        member.save(sync_go3=False)
+        
+        # Verify reactivated_date was persisted
+        member.refresh_from_db()
+        self.assertTrue(member.is_active)
+        self.assertIsNotNone(member.reactivated_date)
+        self.assertEqual(member.reactivated_date, datetime.date.today())
