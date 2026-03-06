@@ -79,17 +79,21 @@
 
             // Song list click delegation
             this.elements.songList.addEventListener('click', (e) => {
-                const songItem = e.target.closest('.selector-item');
-                if (songItem) {
-                    this.selectSong(songItem);
-                }
-                
-                // Handle play button click
+                // Handle play button click first to avoid also triggering selectSong
                 const playBtn = e.target.closest('.song-play-btn');
                 if (playBtn) {
                     e.stopPropagation();
                     const songItem = playBtn.closest('.selector-item');
-                    this.playSong(songItem);
+                    if (songItem) {
+                        this.playSong(songItem);
+                    }
+                    return;
+                }
+
+                // Handle song item selection
+                const songItem = e.target.closest('.selector-item');
+                if (songItem) {
+                    this.selectSong(songItem);
                 }
             });
 
