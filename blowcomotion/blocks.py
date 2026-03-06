@@ -484,6 +484,36 @@ class JukeBoxBlock(blocks.StructBlock):
         
 
 
+class ChartLibraryBlock(blocks.StructBlock):
+    """Block for browsing and searching charts with audio playback."""
+    
+    title = blocks.CharBlock(
+        required=False,
+        help_text="Optional title displayed above the chart library.",
+    )
+    description = blocks.RichTextBlock(
+        required=False,
+        help_text="Optional description text displayed below the title.",
+    )
+    show_search = blocks.BooleanBlock(
+        default=True,
+        required=False,
+        help_text="Show a search box to filter songs by title.",
+    )
+    placeholder_text = blocks.CharBlock(
+        required=False,
+        default="Search for a song...",
+        help_text="Placeholder text for the search input.",
+    )
+
+    class Meta:
+        icon = "bi-file-earmark-music"
+        template = "blocks/chart_library_block.html"
+        label = "Chart Library"
+        label_format = "Chart Library: {title}"
+        help_text = "A searchable interface for browsing charts with audio playback. Songs without charts are automatically filtered out."
+
+
 class ImageBlock(blocks.StructBlock):
     image = ImageChooserBlock()
     url = blocks.URLBlock(required=False, help_text="Optional: Link the image to a URL (e.g. merch page)")

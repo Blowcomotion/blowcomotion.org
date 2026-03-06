@@ -1006,6 +1006,7 @@ class BlankCanvasPage(BasePage):
             ("image", blowcomotion_blocks.ImageBlock()),
             ("join_band_form", blowcomotion_blocks.JoinBandFormBlock(group="Forms")),
             ("jukebox", blowcomotion_blocks.JukeBoxBlock()),
+            ("chart_library", blowcomotion_blocks.ChartLibraryBlock()),
             ("multi_image_banner", blowcomotion_blocks.MultiImageBannerBlock()),
             ("patreon_button", blowcomotion_blocks.PatreonButton()),
             ("paypal_donate_button", blowcomotion_blocks.PayPalDonateButton()),
