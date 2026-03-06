@@ -7,10 +7,10 @@ Provides JSON endpoints for:
 - Listing chart parts for a song+instrument combination
 """
 
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Exists, OuterRef
 from django.http import JsonResponse
 
-from blowcomotion.models import Chart, Instrument, Section, Song
+from blowcomotion.models import Chart, Instrument, Song
 
 
 def songs_with_charts(request):
