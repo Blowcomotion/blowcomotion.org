@@ -146,7 +146,7 @@ class MemberViewSet(SnippetViewSet):
     menu_label = 'Members'
     menu_name = 'members'
     menu_icon = 'group'
-    list_display = ["first_name", "last_name", "last_seen", UpdatedAtColumn()]
+    list_display = ["first_name", "last_name", "last_seen", "is_active", "join_date", "primary_instrument", UpdatedAtColumn()]
     list_filter = ["primary_instrument", "instructor", "board_member", "is_active", "renting"]
     # search_fields = ("first_name", "last_name", "preferred_name", "gigomatic_username", "bio")
     panels = [
