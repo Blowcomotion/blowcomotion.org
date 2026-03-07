@@ -31,6 +31,10 @@ def songs_with_charts(request):
     
     songs = Song.objects.filter(
         active=True
+    ).select_related(
+        'recording'
+    ).prefetch_related(
+        'videos'
     ).annotate(
         has_charts=Exists(has_chart_with_pdf)
     ).filter(
@@ -42,10 +46,17 @@ def songs_with_charts(request):
     
     data = []
     for song in songs:
+        # Collect videos relation
+        videos = []
+        for video in song.videos.all():
+            videos.append({'url': video.url, 'title': video.title})
+        
         song_data = {
             'id': song.id,
             'title': song.title,
             'has_recording': bool(song.recording and song.recording.file),
+            'has_video': len(videos) > 0,
+            'videos': videos,
         }
         if song.recording and song.recording.file:
             song_data['recording_url'] = song.recording.file.url

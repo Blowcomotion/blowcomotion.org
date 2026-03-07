@@ -79,8 +79,21 @@
 
             // Song list click delegation
             this.elements.songList.addEventListener('click', (e) => {
-                // Handle play button click first to avoid also triggering selectSong
-                const playBtn = e.target.closest('.song-play-btn');
+                // Handle video dropdown toggle
+                const dropdownToggle = e.target.closest('.video-dropdown-toggle');
+                if (dropdownToggle) {
+                    e.stopPropagation();
+                    const dropdown = dropdownToggle.closest('.video-dropdown');
+                    // Close other dropdowns
+                    this.elements.songList.querySelectorAll('.video-dropdown.open').forEach(d => {
+                        if (d !== dropdown) d.classList.remove('open');
+                    });
+                    dropdown.classList.toggle('open');
+                    return;
+                }
+                
+                // Handle play button click
+                const playBtn = e.target.closest('.song-play-btn:not(.video-dropdown-toggle)');
                 if (playBtn) {
                     e.stopPropagation();
                     const songItem = playBtn.closest('.selector-item');
@@ -94,6 +107,15 @@
                 const songItem = e.target.closest('.selector-item');
                 if (songItem) {
                     this.selectSong(songItem);
+                }
+            });
+
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.video-dropdown')) {
+                    this.elements.songList.querySelectorAll('.video-dropdown.open').forEach(d => {
+                        d.classList.remove('open');
+                    });
                 }
             });
 
@@ -144,13 +166,37 @@
                      data-song-id="${song.id}"
                      data-song-title="${this.escapeHtml(song.title)}"
                      data-has-recording="${song.has_recording}"
-                     data-recording-url="${song.recording_url || ''}">
+                     data-recording-url="${song.recording_url || ''}"
+                     data-has-video="${song.has_video}"
+                     data-videos='${JSON.stringify(song.videos || [])}'>
                     <span class="selector-item-text">${this.escapeHtml(song.title)}</span>
-                    ${song.has_recording ? `
-                        <button class="song-play-btn" title="Play recording" aria-label="Play ${this.escapeHtml(song.title)}">
-                            <i class="fa fa-play-circle"></i>
-                        </button>
-                    ` : ''}
+                    <span class="song-media-buttons">
+                        ${song.has_recording ? `
+                            <button class="song-play-btn" title="Play recording" aria-label="Play ${this.escapeHtml(song.title)}">
+                                <i class="fa fa-play-circle"></i>
+                            </button>
+                        ` : ''}
+                        ${song.has_video && song.videos.length === 1 ? `
+                            <a href="${song.videos[0].url}" class="song-video-btn" target="_blank" rel="noopener" title="${song.videos[0].title || 'Watch video'}" aria-label="Watch ${this.escapeHtml(song.title)} video">
+                                <i class="fa fa-youtube-play"></i>
+                            </a>
+                        ` : ''}
+                        ${song.has_video && song.videos.length > 1 ? `
+                            <div class="video-dropdown">
+                                <button class="song-video-btn video-dropdown-toggle" title="Watch videos" aria-label="Watch ${this.escapeHtml(song.title)} videos">
+                                    <i class="fa fa-youtube-play"></i>
+                                    <span class="video-count">${song.videos.length}</span>
+                                </button>
+                                <div class="video-dropdown-menu">
+                                    ${song.videos.map((v, i) => `
+                                        <a href="${v.url}" class="video-dropdown-item" target="_blank" rel="noopener">
+                                            <i class="fa fa-play"></i> ${v.title || 'Video ' + (i + 1)}
+                                        </a>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </span>
                 </div>
             `).join('');
 
@@ -333,6 +379,30 @@
             this.elements.audioElement.src = recordingUrl;
             this.elements.nowPlayingTitle.textContent = songTitle;
             
+            // Update video links visibility
+            const videoLinksContainer = this.elements.audioPlayer.querySelector('.video-links');
+            let videos = [];
+            try {
+                videos = JSON.parse(songItem.dataset.videos || '[]');
+            } catch (e) {
+                videos = [];
+            }
+            
+            if (videoLinksContainer) {
+                if (videos.length > 0) {
+                    const linksHtml = videos.map((v, i) => 
+                        `<a href="${v.url}" class="video-link" target="_blank" rel="noopener" title="${v.title || 'Watch Video'}">
+                            <i class="fa fa-youtube-play"></i>${videos.length > 1 ? ' ' + (v.title || 'Video ' + (i + 1)) : ''}
+                        </a>`
+                    ).join('');
+                    videoLinksContainer.innerHTML = linksHtml;
+                    videoLinksContainer.style.display = 'flex';
+                } else {
+                    videoLinksContainer.innerHTML = '';
+                    videoLinksContainer.style.display = 'none';
+                }
+            }
+
             // Show audio player and play
             this.elements.audioPlayer.style.display = 'block';
             this.elements.audioElement.play().catch(err => {

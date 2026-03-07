@@ -53,7 +53,6 @@
 /* Selector Lists */
 .selector-list {
     max-height: 250px;
-    overflow-y: auto;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     background: #fff;
@@ -131,6 +130,120 @@
 
 .song-play-btn.playing {
     color: #28a745;
+}
+
+/* Media Buttons Container */
+.song-media-buttons {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+/* Video Button */
+.song-video-btn {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    color: #c00;
+    font-size: 20px;
+    line-height: 1;
+    text-decoration: none;
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.song-video-btn:hover {
+    color: #ff0000;
+    transform: scale(1.1);
+}
+
+/* Video link in audio player header */
+.audio-player-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.audio-player-header .video-links {
+    display: flex;
+    gap: 12px;
+    margin-left: auto;
+    flex-wrap: wrap;
+}
+
+.audio-player-header .video-link {
+    color: #c00;
+    font-size: 14px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.15s ease;
+}
+
+.audio-player-header .video-link:hover {
+    color: #ff0000;
+}
+
+/* Video Dropdown */
+.video-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.video-dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.video-count {
+    font-size: 10px;
+    background: #c00;
+    color: white;
+    border-radius: 50%;
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: -4px;
+    margin-top: -8px;
+}
+
+.video-dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 180px;
+    z-index: 100;
+    padding: 4px 0;
+}
+
+.video-dropdown.open .video-dropdown-menu {
+    display: block;
+}
+
+.video-dropdown-item {
+    display: block;
+    padding: 8px 12px;
+    color: #333;
+    text-decoration: none;
+    font-size: 13px;
+    transition: background-color 0.15s ease;
+}
+
+.video-dropdown-item:hover {
+    background-color: #f5f5f5;
+    color: #c00;
+}
+
+.video-dropdown-item i {
+    margin-right: 6px;
+    color: #c00;
 }
 
 /* Loading State */

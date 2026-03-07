@@ -37,14 +37,8 @@ class SongViewSet(SnippetViewSet):
     list_display = ['title', 'composer', 'style', UpdatedAtColumn()]
     panels = [
         'title',
-        FieldRowPanel(
-            [
-                'music_video_url',
-                MediaChooserPanel('recording', help_text="Select the media file for this song.", media_type='audio'),
-            ],
-            heading="Media",
-            help_text="Select the music video and recording for this song.",
-        ),
+        MediaChooserPanel('recording', help_text="Select the audio recording for this song.", media_type='audio'),
+        InlinePanel('videos', label="Source Videos", help_text="Add YouTube or other video links for reference performances."),
         'time_signature',
         FieldRowPanel(
             [
