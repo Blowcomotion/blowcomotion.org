@@ -15,7 +15,7 @@ class ChartViewSet(SnippetViewSet):
     menu_label = 'Charts'
     menu_name = 'charts'
     menu_icon = 'doc-full-inverse'
-    list_display = ['instrument', 'song', UpdatedAtColumn()]
+    list_display = ['__str__', UpdatedAtColumn()]
     panels = [
         'song',
         'pdf',

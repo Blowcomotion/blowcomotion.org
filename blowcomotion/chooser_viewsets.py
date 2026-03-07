@@ -29,7 +29,6 @@ class ChartChooserViewset(ChooserViewSet):
         "song",
         "pdf",
         "instrument",
-        "is_part_uploaded",
         "part",
     ]
 

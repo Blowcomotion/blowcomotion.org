@@ -238,7 +238,7 @@ class Chart(models.Model):
     pdf = models.ForeignKey(
         get_document_model(),
         null=True,
-        blank=True,
+        blank=False,
         on_delete=models.SET_NULL,
         related_name="+",
     )
@@ -249,10 +249,9 @@ class Chart(models.Model):
         help_text=" e.g. '2nd Trombone' If left blank, instrument name will be used.",
     )
     instrument = models.ForeignKey("blowcomotion.Instrument", on_delete=models.CASCADE)
-    is_part_uploaded = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.song.title} - {self.instrument.name} - {self.part}"
+        return f"{self.song.title} - {self.instrument.name} - {self.part}" if self.part else f"{self.song.title} - {self.instrument.name}"
 
 
 class SongConductor(Orderable):
