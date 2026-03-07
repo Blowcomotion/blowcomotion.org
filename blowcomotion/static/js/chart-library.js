@@ -449,7 +449,10 @@
         escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
-            return div.innerHTML;
+            const escaped = div.innerHTML;
+            return escaped
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
     }
 
