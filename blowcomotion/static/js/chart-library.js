@@ -36,7 +36,8 @@
             this.state = {
                 selectedSong: null,
                 selectedInstrument: null,
-                selectedChart: null
+                selectedChart: null,
+                currentlyPlayingUrl: null
             };
 
             // Cache DOM elements
@@ -228,6 +229,7 @@
             };
             this.state.selectedInstrument = null;
             this.state.selectedChart = null;
+            this.state.currentlyPlayingUrl = null;
 
             // Reset downstream selections
             this.elements.partSection.style.display = 'none';
@@ -382,7 +384,32 @@
 
             if (!recordingUrl) return;
 
-            // Update audio element
+            const playBtn = songItem.querySelector('.song-play-btn');
+            const isCurrentSong = this.state.currentlyPlayingUrl === recordingUrl;
+            const isPlaying = !this.elements.audioElement.paused;
+
+            // Toggle play/pause if clicking the current song
+            if (isCurrentSong) {
+                if (isPlaying) {
+                    this.elements.audioElement.pause();
+                    if (playBtn) {
+                        playBtn.classList.remove('playing');
+                        playBtn.querySelector('i').className = 'fa fa-play-circle';
+                    }
+                } else {
+                    this.elements.audioElement.play().catch(err => {
+                        console.error('Error playing audio:', err);
+                    });
+                    if (playBtn) {
+                        playBtn.classList.add('playing');
+                        playBtn.querySelector('i').className = 'fa fa-pause-circle';
+                    }
+                }
+                return;
+            }
+
+            // Different song - load and play
+            this.state.currentlyPlayingUrl = recordingUrl;
             this.elements.audioElement.src = recordingUrl;
             this.elements.nowPlayingTitle.textContent = songTitle;
             
@@ -425,7 +452,6 @@
                 btn.querySelector('i').className = 'fa fa-play-circle';
             });
             
-            const playBtn = songItem.querySelector('.song-play-btn');
             if (playBtn) {
                 playBtn.classList.add('playing');
                 playBtn.querySelector('i').className = 'fa fa-pause-circle';
