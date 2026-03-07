@@ -52,7 +52,6 @@
 
 /* Selector Lists */
 .selector-list {
-    max-height: 250px;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     background: #fff;
@@ -294,8 +293,6 @@
 
 /* Chart Display Area */
 .chart-display-area {
-    position: sticky;
-    top: 20px;
     background: #fff;
     border: 1px solid #e0e0e0;
     border-radius: 12px;
@@ -342,27 +339,5 @@
         top: 0;
         margin-top: 24px;
     }
-
-    .selector-list {
-        max-height: 200px;
-    }
 }
 
-/* Custom Scrollbar for selector lists */
-.selector-list::-webkit-scrollbar {
-    width: 6px;
-}
-
-.selector-list::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-}
-
-.selector-list::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 3px;
-}
-
-.selector-list::-webkit-scrollbar-thumb:hover {
-    background: #aaa;
-}
