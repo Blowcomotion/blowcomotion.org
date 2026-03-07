@@ -46,8 +46,6 @@
                 songList: container.querySelector('.song-list'),
                 instrumentSection: container.querySelector('.instrument-section'),
                 instrumentList: container.querySelector('.instrument-list'),
-                partSection: container.querySelector('.part-section'),
-                partList: container.querySelector('.part-list'),
                 audioPlayer: container.querySelector('.chart-audio-player'),
                 audioElement: container.querySelector('.chart-audio-element'),
                 nowPlayingTitle: container.querySelector('.now-playing-title')
@@ -117,27 +115,14 @@
 
             // Instrument list click delegation
             this.elements.instrumentList.addEventListener('click', (e) => {
-                // Don't select instrument if clicking the PDF button
+                // Don't select if clicking the PDF button
                 if (e.target.closest('.chart-pdf-btn')) {
                     return;
                 }
                 
-                const instrumentItem = e.target.closest('.selector-item');
+                const instrumentItem = e.target.closest('.selector-item:not(.part-item)');
                 if (instrumentItem) {
                     this.selectInstrument(instrumentItem);
-                }
-            });
-
-            // Part list click delegation
-            this.elements.partList.addEventListener('click', (e) => {
-                // Don't select part if clicking the PDF button
-                if (e.target.closest('.chart-pdf-btn')) {
-                    return;
-                }
-                
-                const partItem = e.target.closest('.selector-item');
-                if (partItem) {
-                    this.selectPart(partItem);
                 }
             });
         }
@@ -236,9 +221,11 @@
             this.state.selectedChart = null;
             this.state.currentlyPlayingUrl = null;
 
-            // Reset downstream selections
-            this.elements.partSection.style.display = 'none';
-            this.elements.partList.innerHTML = '';
+            // Reset downstream selections - remove any expanded parts
+            this.elements.instrumentList.querySelectorAll('.part-item').forEach(part => part.remove());
+            this.elements.instrumentList.querySelectorAll('.selector-item').forEach(item => {
+                item.classList.remove('active', 'expanded');
+            });
 
             // Load instruments for this song
             this.showLoading(this.elements.instrumentList);
@@ -265,16 +252,22 @@
                 <div class="section-group">
                     <div class="section-header">${this.escapeHtml(section.name)}</div>
                     ${section.instruments.map(instrument => {
+                        const chartsJson = JSON.stringify(instrument.charts || []).replace(/"/g, '&quot;');
                         const hasSingleChart = instrument.charts && instrument.charts.length === 1;
+                        const hasMultipleCharts = instrument.charts && instrument.charts.length > 1;
                         const pdfUrl = hasSingleChart ? instrument.charts[0].pdf_url : '';
                         
                         return `
-                        <div class="selector-item"
+                        <div class="selector-item instrument-item"
                              role="option"
                              data-instrument-id="${instrument.id}"
                              data-instrument-name="${this.escapeHtml(instrument.name)}"
-                             data-has-multiple="${instrument.charts && instrument.charts.length > 1}">
-                            <span class="selector-item-text">${this.escapeHtml(instrument.name)}</span>
+                             data-has-multiple="${hasMultipleCharts}"
+                             data-charts="${chartsJson}">
+                            <span class="selector-item-text">
+                                ${hasMultipleCharts ? '<i class="fa fa-chevron-right expand-icon"></i> ' : ''}
+                                ${this.escapeHtml(instrument.name)}
+                            </span>
                             ${pdfUrl ? `
                                 <a href="${pdfUrl}" class="btn btn-sm btn-primary chart-pdf-btn" target="_blank" rel="noopener" title="Open Chart PDF">
                                     <i class="fa fa-file-pdf-o"></i>
@@ -297,69 +290,74 @@
                 return; // Single part instruments handled by direct PDF button
             }
 
-            // Update UI state
-            this.elements.instrumentList.querySelectorAll('.selector-item').forEach(item => {
-                item.classList.remove('active');
-                item.setAttribute('aria-selected', 'false');
-            });
-            instrumentItem.classList.add('active');
-            instrumentItem.setAttribute('aria-selected', 'true');
-
-            // Update state
-            this.state.selectedInstrument = {
-                id: instrumentItem.dataset.instrumentId,
-                name: instrumentItem.dataset.instrumentName
-            };
-
-            // Load and display parts for this song+instrument
-            try {
-                const response = await fetch(
-                    `/charts/parts/${this.state.selectedSong.id}/${this.state.selectedInstrument.id}/`
-                );
-                const data = await response.json();
-                
-                if (data.charts.length > 1) {
-                    // Show part selector with PDF buttons
-                    this.elements.partSection.style.display = 'block';
-                    this.renderPartList(data.charts);
-                } else {
-                    this.elements.partSection.style.display = 'none';
+            // Check if already expanded
+            const isExpanded = instrumentItem.classList.contains('expanded');
+            
+            // Collapse all other instruments and remove their parts
+            this.elements.instrumentList.querySelectorAll('.selector-item.expanded').forEach(item => {
+                if (item !== instrumentItem) {
+                    item.classList.remove('expanded');
+                    const expandIcon = item.querySelector('.expand-icon');
+                    if (expandIcon) expandIcon.className = 'fa fa-chevron-right expand-icon';
+                    // Remove parts after this instrument
+                    let next = item.nextElementSibling;
+                    while (next && next.classList.contains('part-item')) {
+                        const toRemove = next;
+                        next = next.nextElementSibling;
+                        toRemove.remove();
+                    }
                 }
-            } catch (error) {
-                console.error('Error loading charts:', error);
-                this.elements.partSection.style.display = 'none';
+            });
+
+            if (isExpanded) {
+                // Collapse this instrument
+                instrumentItem.classList.remove('expanded');
+                const expandIcon = instrumentItem.querySelector('.expand-icon');
+                if (expandIcon) expandIcon.className = 'fa fa-chevron-right expand-icon';
+                // Remove parts
+                let next = instrumentItem.nextElementSibling;
+                while (next && next.classList.contains('part-item')) {
+                    const toRemove = next;
+                    next = next.nextElementSibling;
+                    toRemove.remove();
+                }
+            } else {
+                // Expand this instrument
+                instrumentItem.classList.add('expanded');
+                const expandIcon = instrumentItem.querySelector('.expand-icon');
+                if (expandIcon) expandIcon.className = 'fa fa-chevron-down expand-icon';
+                
+                // Get charts from data attribute
+                try {
+                    const charts = JSON.parse(instrumentItem.dataset.charts || '[]');
+                    
+                    if (charts.length > 0) {
+                        // Create part items
+                        const partsHtml = charts.map(chart => `
+                            <div class="selector-item part-item"
+                                 role="option"
+                                 data-chart-id="${chart.id}"
+                                 data-part-name="${this.escapeHtml(chart.part)}">
+                                <span class="selector-item-text">${this.escapeHtml(chart.part)}</span>
+                                ${chart.pdf_url ? `
+                                    <a href="${chart.pdf_url}" class="btn btn-sm btn-primary chart-pdf-btn" target="_blank" rel="noopener" title="Open Chart PDF">
+                                        <i class="fa fa-file-pdf-o"></i>
+                                        Open Chart PDF
+                                    </a>
+                                ` : ''}
+                            </div>
+                        `).join('');
+                        
+                        // Insert parts after the instrument
+                        instrumentItem.insertAdjacentHTML('afterend', partsHtml);
+                    }
+                } catch (error) {
+                    console.error('Error parsing charts:', error);
+                }
             }
         }
 
-        renderPartList(charts) {
-            const html = charts.map(chart => `
-                <div class="selector-item"
-                     role="option"
-                     data-chart-id="${chart.id}"
-                     data-part-name="${this.escapeHtml(chart.part)}">
-                    <span class="selector-item-text">${this.escapeHtml(chart.part)}</span>
-                    ${chart.pdf_url ? `
-                        <a href="${chart.pdf_url}" class="btn btn-sm btn-primary chart-pdf-btn" target="_blank" rel="noopener" title="Open Chart PDF">
-                            <i class="fa fa-file-pdf-o"></i>
-                            Open Chart PDF
-                        </a>
-                    ` : ''}
-                </div>
-            `).join('');
 
-            this.elements.partList.innerHTML = html;
-        }
-
-        selectPart(partItem) {
-            // Parts now have direct PDF buttons, no need to select
-            // Just update visual state for accessibility
-            this.elements.partList.querySelectorAll('.selector-item').forEach(item => {
-                item.classList.remove('active');
-                item.setAttribute('aria-selected', 'false');
-            });
-            partItem.classList.add('active');
-            partItem.setAttribute('aria-selected', 'true');
-        }
 
         playSong(songItem) {
             const recordingUrl = songItem.dataset.recordingUrl;

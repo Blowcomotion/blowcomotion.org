@@ -110,6 +110,35 @@
     color: #333;
 }
 
+/* Expand Icon for Multi-Part Instruments */
+.expand-icon {
+    font-size: 10px;
+    margin-right: 8px;
+    color: #999;
+    transition: transform 0.2s ease;
+}
+
+.selector-item.expanded .expand-icon {
+    transform: rotate(0deg);
+}
+
+/* Part Items (nested under instruments) */
+.selector-item.part-item {
+    padding-left: 40px;
+    background-color: #fafafa;
+    font-size: 14px;
+    border-left: 3px solid #e0e0e0;
+}
+
+.selector-item.part-item:hover {
+    background-color: #f0f0f0;
+}
+
+.selector-item.part-item .selector-item-text {
+    font-size: 14px;
+    color: #555;
+}
+
 /* Play Button */
 .song-play-btn {
     background: none;
