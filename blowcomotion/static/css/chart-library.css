@@ -1,0 +1,413 @@
+/**
+ * Chart Library Block Styles
+ */
+
+.chart-library-block {
+    padding: 60px 0;
+}
+
+.chart-library-block .section-title h2 {
+    margin-bottom: 30px;
+}
+
+.chart-library-description {
+    margin-bottom: 20px;
+    color: #666;
+}
+
+/* Search Input */
+.chart-search-container {
+    position: relative;
+}
+
+.chart-search-input {
+    padding: 12px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: border-color 0.2s ease;
+}
+
+.chart-search-input:focus {
+    border-color: #5b1a76;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(91, 26, 118, 0.15);
+}
+
+/* Selector Sections */
+.chart-selector-section {
+    margin-bottom: 24px;
+}
+
+.selector-header {
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #666;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+/* Selector Lists */
+.selector-list {
+    max-height: 250px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #fff;
+}
+
+/* Section Groups (for instruments grouped by section) */
+.section-group {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.section-group:last-child {
+    border-bottom: none;
+}
+
+.section-header {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #999;
+    padding: 10px 16px 6px;
+    background: #fafafa;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+/* Selector Items */
+.selector-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.selector-item:last-child {
+    border-bottom: none;
+}
+
+.selector-item:hover {
+    background-color: #f8f9fa;
+}
+
+.selector-item.active {
+    background-color: #f3e8f9;
+    border-left: 3px solid #5b1a76;
+    padding-left: 13px;
+}
+
+.selector-item-text {
+    flex: 1;
+    font-size: 15px;
+    color: #333;
+}
+
+/* Play Button */
+.song-play-btn {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    color: #666;
+    font-size: 20px;
+    line-height: 1;
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.song-play-btn:hover {
+    color: #5b1a76;
+    transform: scale(1.1);
+}
+
+.song-play-btn.playing {
+    color: #28a745;
+}
+
+/* Media Buttons Container */
+.song-media-buttons {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+/* Video Button */
+.song-video-btn {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    color: #c00;
+    font-size: 20px;
+    line-height: 1;
+    text-decoration: none;
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.song-video-btn:hover {
+    color: #ff0000;
+    transform: scale(1.1);
+}
+
+/* Video link in audio player header */
+.audio-player-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.audio-player-header .video-links {
+    display: flex;
+    gap: 12px;
+    margin-left: auto;
+    flex-wrap: wrap;
+}
+
+.audio-player-header .video-link {
+    color: #c00;
+    font-size: 14px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.15s ease;
+}
+
+.audio-player-header .video-link:hover {
+    color: #ff0000;
+}
+
+/* Video Dropdown */
+.video-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.video-dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.video-count {
+    font-size: 10px;
+    background: #c00;
+    color: white;
+    border-radius: 50%;
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: -4px;
+    margin-top: -8px;
+}
+
+.video-dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 180px;
+    z-index: 100;
+    padding: 4px 0;
+}
+
+.video-dropdown.open .video-dropdown-menu {
+    display: block;
+}
+
+.video-dropdown-item {
+    display: block;
+    padding: 8px 12px;
+    color: #333;
+    text-decoration: none;
+    font-size: 13px;
+    transition: background-color 0.15s ease;
+}
+
+.video-dropdown-item:hover {
+    background-color: #f5f5f5;
+    color: #c00;
+}
+
+.video-dropdown-item i {
+    margin-right: 6px;
+    color: #c00;
+}
+
+/* Loading State */
+.selector-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 24px;
+    color: #666;
+    font-size: 14px;
+}
+
+.selector-empty,
+.selector-error {
+    padding: 24px;
+    text-align: center;
+    color: #999;
+    font-size: 14px;
+}
+
+.selector-error {
+    color: #dc3545;
+}
+
+/* Chart Display Area */
+.chart-display-area {
+    position: sticky;
+    top: 20px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 24px;
+    min-height: 300px;
+}
+
+/* Audio Player */
+.chart-audio-player {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.audio-player-header {
+    margin-bottom: 12px;
+}
+
+.now-playing-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #999;
+    margin-right: 8px;
+}
+
+.now-playing-title {
+    font-weight: 600;
+    color: #333;
+}
+
+.chart-audio-element {
+    width: 100%;
+    border-radius: 8px;
+}
+
+/* Chart Placeholder */
+.chart-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    color: #999;
+    text-align: center;
+}
+
+.chart-placeholder-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.chart-placeholder p {
+    margin: 0;
+    font-size: 15px;
+}
+
+/* Chart Details */
+.chart-details {
+    text-align: center;
+}
+
+.chart-info {
+    margin-bottom: 24px;
+}
+
+.chart-song-title {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.chart-instrument-part {
+    font-size: 16px;
+    margin-bottom: 0;
+}
+
+.chart-pdf-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.chart-pdf-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(91, 26, 118, 0.25);
+}
+
+.chart-pdf-link i {
+    font-size: 20px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 767px) {
+    .chart-library-block {
+        padding: 40px 0;
+    }
+
+    .chart-display-area {
+        position: relative;
+        top: 0;
+        margin-top: 24px;
+    }
+
+    .selector-list {
+        max-height: 200px;
+    }
+
+    .chart-song-title {
+        font-size: 20px;
+    }
+}
+
+/* Custom Scrollbar for selector lists */
+.selector-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.selector-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.selector-list::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+
+.selector-list::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+}

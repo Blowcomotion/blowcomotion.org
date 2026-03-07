@@ -265,6 +265,26 @@ class SongSoloist(Orderable):
     member = models.ForeignKey("blowcomotion.Member", on_delete=models.CASCADE)
 
 
+class SongVideo(Orderable):
+    """Video URLs for a song (e.g., YouTube links to source performances)."""
+    song = ParentalKey("blowcomotion.Song", related_name="videos")
+    url = models.URLField(help_text="URL to video (YouTube, Vimeo, etc.)")
+    title = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Optional title/description for this video (e.g., 'Original by Rebirth Brass Band')"
+    )
+
+    panels = [
+        FieldPanel("url"),
+        FieldPanel("title"),
+    ]
+
+    def __str__(self):
+        return f"{self.song.title} - {self.title or self.url}"
+
+
 time_signature_choices = [
     ("4/4", "4/4"),
     ("3/4", "3/4"),
@@ -321,7 +341,6 @@ class Song(ClusterableModel, index.Indexed):
     arranger = models.CharField(max_length=255, blank=True, null=True)
     form = models.TextField(blank=True, null=True, help_text="e.g. 'Intro, Verse, Chorus, Bridge, Outro or AABA'")
     description = models.TextField(blank=True, null=True)
-    music_video_url = models.URLField(blank=True, null=True)
     recording = models.ForeignKey(
         "wagtailmedia.Media",
         null=True,
@@ -347,7 +366,6 @@ class Song(ClusterableModel, index.Indexed):
         index.SearchField("composer"),
         index.SearchField("description"),
         index.SearchField("style"),
-        index.SearchField("music_video_url"),
         index.SearchField("recording"),
         index.SearchField("form"),
         index.SearchField("tempo"),
@@ -995,6 +1013,7 @@ class BlankCanvasPage(BasePage):
             ("accordion_list", blowcomotion_blocks.AccordionListBlock()),
             ("booking_form", blowcomotion_blocks.BookingFormBlock(group="Forms")),
             ("button", blowcomotion_blocks.ButtonBlock()),
+            ("chart_library", blowcomotion_blocks.ChartLibraryBlock()),
             ("column_layout", blowcomotion_blocks.ColumnLayoutBlock()),
             ("contact_form", blowcomotion_blocks.ContactFormBlock(group="Forms")),
             ("countdown", blowcomotion_blocks.CountdownBlock()),

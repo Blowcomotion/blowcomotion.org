@@ -50,7 +50,6 @@ class SongChooserViewset(ChooserViewSet):
         "arranger",
         "form",
         "description",
-        "music_video_url",
         "source_band",
         "active",
     ]
