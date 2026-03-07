@@ -366,7 +366,6 @@ class Song(ClusterableModel, index.Indexed):
         index.SearchField("composer"),
         index.SearchField("description"),
         index.SearchField("style"),
-        index.SearchField("music_video_url"),
         index.SearchField("recording"),
         index.SearchField("form"),
         index.SearchField("tempo"),
