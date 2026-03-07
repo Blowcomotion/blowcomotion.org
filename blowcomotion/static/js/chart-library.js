@@ -160,7 +160,13 @@
                 return;
             }
 
-            const html = songs.map(song => `
+            const html = songs.map(song => {
+                // Serialize video data and escape for double-quote attribute context
+                // This escaping allows JSON.parse to work correctly after dataset retrieval
+                const videosJson = JSON.stringify(song.videos || [])
+                    .replace(/"/g, '&quot;')  // Escape double quotes for attribute safety
+
+                return `
                 <div class="selector-item" 
                      role="option"
                      data-song-id="${song.id}"
@@ -168,7 +174,7 @@
                      data-has-recording="${song.has_recording}"
                      data-recording-url="${song.recording_url || ''}"
                      data-has-video="${song.has_video}"
-                     data-videos='${JSON.stringify(song.videos || [])}'>
+                     data-videos="${videosJson}">
                     <span class="selector-item-text">${this.escapeHtml(song.title)}</span>
                     <span class="song-media-buttons">
                         ${song.has_recording ? `
@@ -177,7 +183,7 @@
                             </button>
                         ` : ''}
                         ${song.has_video && song.videos.length === 1 ? `
-                            <a href="${song.videos[0].url}" class="song-video-btn" target="_blank" rel="noopener" title="${song.videos[0].title || 'Watch video'}" aria-label="Watch ${this.escapeHtml(song.title)} video">
+                            <a href="${this.escapeHtml(song.videos[0].url)}" class="song-video-btn" target="_blank" rel="noopener" title="${this.escapeHtml(song.videos[0].title || 'Watch video')}" aria-label="Watch ${this.escapeHtml(song.title)} video">
                                 <i class="fa fa-youtube-play"></i>
                             </a>
                         ` : ''}
@@ -189,8 +195,8 @@
                                 </button>
                                 <div class="video-dropdown-menu">
                                     ${song.videos.map((v, i) => `
-                                        <a href="${v.url}" class="video-dropdown-item" target="_blank" rel="noopener">
-                                            <i class="fa fa-play"></i> ${v.title || 'Video ' + (i + 1)}
+                                        <a href="${this.escapeHtml(v.url)}" class="video-dropdown-item" target="_blank" rel="noopener">
+                                            <i class="fa fa-play"></i> ${this.escapeHtml(v.title || 'Video ' + (i + 1))}
                                         </a>
                                     `).join('')}
                                 </div>
@@ -198,7 +204,8 @@
                         ` : ''}
                     </span>
                 </div>
-            `).join('');
+            `;
+            }).join('');
 
             this.elements.songList.innerHTML = html;
         }
@@ -390,11 +397,14 @@
             
             if (videoLinksContainer) {
                 if (videos.length > 0) {
-                    const linksHtml = videos.map((v, i) => 
-                        `<a href="${v.url}" class="video-link" target="_blank" rel="noopener" title="${v.title || 'Watch Video'}">
-                            <i class="fa fa-youtube-play"></i>${videos.length > 1 ? ' ' + (v.title || 'Video ' + (i + 1)) : ''}
-                        </a>`
-                    ).join('');
+                    const linksHtml = videos.map((v, i) => {
+                        const videoUrl = this.escapeHtml(v.url);
+                        const videoTitle = this.escapeHtml(v.title || 'Video ' + (i + 1));
+                        const displayLabel = videos.length > 1 ? ' ' + videoTitle : '';
+                        return `<a href="${videoUrl}" class="video-link" target="_blank" rel="noopener" title="${videoTitle}">
+                            <i class="fa fa-youtube-play"></i>${displayLabel}
+                        </a>`;
+                    }).join('');
                     videoLinksContainer.innerHTML = linksHtml;
                     videoLinksContainer.style.display = 'flex';
                 } else {
