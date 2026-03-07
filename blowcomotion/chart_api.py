@@ -87,7 +87,7 @@ def instruments_for_song(request, song_id):
         pk__in=instrument_ids
     ).select_related('section').order_by('section__name', 'name')
     
-    # Group by section
+    # Group by section and include chart data
     sections_data = {}
     for instrument in instruments:
         section_name = instrument.section.name if instrument.section else 'Other'
@@ -100,9 +100,27 @@ def instruments_for_song(request, song_id):
                 'instruments': []
             }
         
+        # Get charts for this instrument and song
+        charts = Chart.objects.filter(
+            song=song,
+            instrument=instrument,
+            pdf__isnull=False
+        ).select_related('pdf').order_by('part')
+        
+        charts_data = []
+        for chart in charts:
+            part_name = chart.part if chart.part else instrument.name
+            charts_data.append({
+                'id': chart.id,
+                'part': part_name,
+                'pdf_url': chart.pdf.url if chart.pdf else None,
+                'pdf_title': chart.pdf.title if chart.pdf else None,
+            })
+        
         sections_data[section_id]['instruments'].append({
             'id': instrument.id,
             'name': instrument.name,
+            'charts': charts_data,
         })
     
     # Convert to list sorted by section name

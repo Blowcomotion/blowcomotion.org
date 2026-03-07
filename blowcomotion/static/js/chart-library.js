@@ -122,6 +122,11 @@
 
             // Instrument list click delegation
             this.elements.instrumentList.addEventListener('click', (e) => {
+                // Don't select instrument if clicking the PDF button
+                if (e.target.closest('.chart-pdf-btn')) {
+                    return;
+                }
+                
                 const instrumentItem = e.target.closest('.selector-item');
                 if (instrumentItem) {
                     this.selectInstrument(instrumentItem);
@@ -260,14 +265,27 @@
             const html = sections.map(section => `
                 <div class="section-group">
                     <div class="section-header">${this.escapeHtml(section.name)}</div>
-                    ${section.instruments.map(instrument => `
+                    ${section.instruments.map(instrument => {
+                        const chartsJson = JSON.stringify(instrument.charts || []).replace(/"/g, '&quot;');
+                        const hasSingleChart = instrument.charts && instrument.charts.length === 1;
+                        const pdfUrl = hasSingleChart ? instrument.charts[0].pdf_url : '';
+                        
+                        return `
                         <div class="selector-item"
                              role="option"
                              data-instrument-id="${instrument.id}"
-                             data-instrument-name="${this.escapeHtml(instrument.name)}">
+                             data-instrument-name="${this.escapeHtml(instrument.name)}"
+                             data-charts="${chartsJson}">
                             <span class="selector-item-text">${this.escapeHtml(instrument.name)}</span>
+                            ${pdfUrl ? `
+                                <a href="${pdfUrl}" class="btn btn-sm btn-primary chart-pdf-btn" target="_blank" rel="noopener" title="Open Chart PDF">
+                                    <i class="fa fa-file-pdf-o"></i>
+                                    Open Chart PDF
+                                </a>
+                            ` : ''}
                         </div>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </div>
             `).join('');
 

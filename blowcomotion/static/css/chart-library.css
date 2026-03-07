@@ -246,6 +246,29 @@
     color: #c00;
 }
 
+/* Chart PDF Button in Instrument List */
+.chart-pdf-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.chart-pdf-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(91, 26, 118, 0.25);
+}
+
+.chart-pdf-btn i {
+    font-size: 14px;
+}
+
 /* Loading State */
 .selector-loading {
     display: flex;
