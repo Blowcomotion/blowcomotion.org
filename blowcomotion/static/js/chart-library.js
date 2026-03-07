@@ -172,7 +172,7 @@
                      data-song-id="${song.id}"
                      data-song-title="${this.escapeHtml(song.title)}"
                      data-has-recording="${song.has_recording}"
-                     data-recording-url="${song.recording_url || ''}"
+                     data-recording-url="${this.escapeHtml(song.recording_url || '')}"
                      data-has-video="${song.has_video}"
                      data-videos="${videosJson}">
                     <span class="selector-item-text">${this.escapeHtml(song.title)}</span>
