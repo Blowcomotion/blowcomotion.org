@@ -300,7 +300,6 @@
     border: 1px solid #e0e0e0;
     border-radius: 12px;
     padding: 24px;
-    min-height: 300px;
 }
 
 /* Audio Player */
@@ -332,69 +331,6 @@
     border-radius: 8px;
 }
 
-/* Chart Placeholder */
-.chart-placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 200px;
-    color: #999;
-    text-align: center;
-}
-
-.chart-placeholder-icon {
-    font-size: 48px;
-    margin-bottom: 16px;
-    opacity: 0.5;
-}
-
-.chart-placeholder p {
-    margin: 0;
-    font-size: 15px;
-}
-
-/* Chart Details */
-.chart-details {
-    text-align: center;
-}
-
-.chart-info {
-    margin-bottom: 24px;
-}
-
-.chart-song-title {
-    font-size: 24px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: #333;
-}
-
-.chart-instrument-part {
-    font-size: 16px;
-    margin-bottom: 0;
-}
-
-.chart-pdf-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 24px;
-    font-size: 16px;
-    font-weight: 500;
-    border-radius: 8px;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.chart-pdf-link:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(91, 26, 118, 0.25);
-}
-
-.chart-pdf-link i {
-    font-size: 20px;
-}
-
 /* Responsive Adjustments */
 @media (max-width: 767px) {
     .chart-library-block {
@@ -409,10 +345,6 @@
 
     .selector-list {
         max-height: 200px;
-    }
-
-    .chart-song-title {
-        font-size: 20px;
     }
 }
 

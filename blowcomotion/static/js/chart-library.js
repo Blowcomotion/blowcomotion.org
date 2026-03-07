@@ -50,12 +50,7 @@
                 partList: container.querySelector('.part-list'),
                 audioPlayer: container.querySelector('.chart-audio-player'),
                 audioElement: container.querySelector('.chart-audio-element'),
-                nowPlayingTitle: container.querySelector('.now-playing-title'),
-                chartPlaceholder: container.querySelector('.chart-placeholder'),
-                chartDetails: container.querySelector('.chart-details'),
-                chartSongTitle: container.querySelector('.chart-song-title'),
-                chartInstrumentPart: container.querySelector('.chart-instrument-part'),
-                chartPdfLink: container.querySelector('.chart-pdf-link')
+                nowPlayingTitle: container.querySelector('.now-playing-title')
             };
 
             this.init();
@@ -135,6 +130,11 @@
 
             // Part list click delegation
             this.elements.partList.addEventListener('click', (e) => {
+                // Don't select part if clicking the PDF button
+                if (e.target.closest('.chart-pdf-btn')) {
+                    return;
+                }
+                
                 const partItem = e.target.closest('.selector-item');
                 if (partItem) {
                     this.selectPart(partItem);
@@ -239,7 +239,6 @@
             // Reset downstream selections
             this.elements.partSection.style.display = 'none';
             this.elements.partList.innerHTML = '';
-            this.hideChartDetails();
 
             // Load instruments for this song
             this.showLoading(this.elements.instrumentList);
@@ -266,7 +265,6 @@
                 <div class="section-group">
                     <div class="section-header">${this.escapeHtml(section.name)}</div>
                     ${section.instruments.map(instrument => {
-                        const chartsJson = JSON.stringify(instrument.charts || []).replace(/"/g, '&quot;');
                         const hasSingleChart = instrument.charts && instrument.charts.length === 1;
                         const pdfUrl = hasSingleChart ? instrument.charts[0].pdf_url : '';
                         
@@ -275,7 +273,7 @@
                              role="option"
                              data-instrument-id="${instrument.id}"
                              data-instrument-name="${this.escapeHtml(instrument.name)}"
-                             data-charts="${chartsJson}">
+                             data-has-multiple="${instrument.charts && instrument.charts.length > 1}">
                             <span class="selector-item-text">${this.escapeHtml(instrument.name)}</span>
                             ${pdfUrl ? `
                                 <a href="${pdfUrl}" class="btn btn-sm btn-primary chart-pdf-btn" target="_blank" rel="noopener" title="Open Chart PDF">
@@ -293,6 +291,12 @@
         }
 
         async selectInstrument(instrumentItem) {
+            // Only handle instruments with multiple parts
+            const hasMultipleParts = instrumentItem.dataset.hasMultiple === 'true';
+            if (!hasMultipleParts) {
+                return; // Single part instruments handled by direct PDF button
+            }
+
             // Update UI state
             this.elements.instrumentList.querySelectorAll('.selector-item').forEach(item => {
                 item.classList.remove('active');
@@ -306,27 +310,20 @@
                 id: instrumentItem.dataset.instrumentId,
                 name: instrumentItem.dataset.instrumentName
             };
-            this.state.selectedChart = null;
 
-            // Load charts for this song+instrument
+            // Load and display parts for this song+instrument
             try {
                 const response = await fetch(
                     `/charts/parts/${this.state.selectedSong.id}/${this.state.selectedInstrument.id}/`
                 );
                 const data = await response.json();
                 
-                if (data.charts.length === 1) {
-                    // Auto-select if only one part
-                    this.elements.partSection.style.display = 'none';
-                    this.displayChart(data.charts[0]);
-                } else if (data.charts.length > 1) {
-                    // Show part selector
+                if (data.charts.length > 1) {
+                    // Show part selector with PDF buttons
                     this.elements.partSection.style.display = 'block';
                     this.renderPartList(data.charts);
-                    this.hideChartDetails();
                 } else {
                     this.elements.partSection.style.display = 'none';
-                    this.hideChartDetails();
                 }
             } catch (error) {
                 console.error('Error loading charts:', error);
@@ -339,10 +336,14 @@
                 <div class="selector-item"
                      role="option"
                      data-chart-id="${chart.id}"
-                     data-part-name="${this.escapeHtml(chart.part)}"
-                     data-pdf-url="${chart.pdf_url || ''}"
-                     data-pdf-title="${this.escapeHtml(chart.pdf_title || '')}">
+                     data-part-name="${this.escapeHtml(chart.part)}">
                     <span class="selector-item-text">${this.escapeHtml(chart.part)}</span>
+                    ${chart.pdf_url ? `
+                        <a href="${chart.pdf_url}" class="btn btn-sm btn-primary chart-pdf-btn" target="_blank" rel="noopener" title="Open Chart PDF">
+                            <i class="fa fa-file-pdf-o"></i>
+                            Open Chart PDF
+                        </a>
+                    ` : ''}
                 </div>
             `).join('');
 
@@ -350,50 +351,14 @@
         }
 
         selectPart(partItem) {
-            // Update UI state
+            // Parts now have direct PDF buttons, no need to select
+            // Just update visual state for accessibility
             this.elements.partList.querySelectorAll('.selector-item').forEach(item => {
                 item.classList.remove('active');
                 item.setAttribute('aria-selected', 'false');
             });
             partItem.classList.add('active');
             partItem.setAttribute('aria-selected', 'true');
-
-            // Display the chart
-            this.displayChart({
-                id: partItem.dataset.chartId,
-                part: partItem.dataset.partName,
-                pdf_url: partItem.dataset.pdfUrl,
-                pdf_title: partItem.dataset.pdfTitle
-            });
-        }
-
-        displayChart(chart) {
-            this.state.selectedChart = chart;
-
-            // Update chart display
-            this.elements.chartSongTitle.textContent = this.state.selectedSong.title;
-            
-            const partText = this.state.selectedInstrument.name;
-            const fullPartText = chart.part !== this.state.selectedInstrument.name 
-                ? `${partText} - ${chart.part}`
-                : partText;
-            this.elements.chartInstrumentPart.textContent = fullPartText;
-
-            if (chart.pdf_url) {
-                this.elements.chartPdfLink.href = chart.pdf_url;
-                this.elements.chartPdfLink.style.display = 'inline-block';
-            } else {
-                this.elements.chartPdfLink.style.display = 'none';
-            }
-
-            // Show chart details, hide placeholder
-            this.elements.chartPlaceholder.style.display = 'none';
-            this.elements.chartDetails.style.display = 'block';
-        }
-
-        hideChartDetails() {
-            this.elements.chartPlaceholder.style.display = 'flex';
-            this.elements.chartDetails.style.display = 'none';
         }
 
         playSong(songItem) {
