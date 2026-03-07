@@ -200,6 +200,55 @@ ol {
   width: 100%;
 }
 
+/* Bootstrap button overrides - use purple theme */
+.btn-primary {
+  background-color: $primary-color;
+  border-color: $primary-color;
+  
+  &:hover {
+    background-color: $blowco-darker-purple;
+    border-color: $blowco-darker-purple;
+  }
+  
+  &:focus,
+  &.focus {
+    background-color: $blowco-darker-purple;
+    border-color: $blowco-darker-purple;
+    box-shadow: 0 0 0 0.2rem rgba(91, 26, 118, 0.5);
+  }
+  
+  &:disabled,
+  &.disabled {
+    background-color: $primary-color;
+    border-color: $primary-color;
+  }
+  
+  &:not(:disabled):not(.disabled).active,
+  &:not(:disabled):not(.disabled):active,
+  .show > &.dropdown-toggle {
+    background-color: $blowco-darker-purple;
+    border-color: $blowco-darker-purple;
+  }
+}
+
+.btn-outline-primary {
+  color: $primary-color;
+  border-color: $primary-color;
+  
+  &:hover {
+    background-color: $primary-color;
+    border-color: $primary-color;
+    color: $white-color;
+  }
+  
+  &:focus,
+  &.focus {
+    color: $primary-color;
+    border-color: $primary-color;
+    box-shadow: 0 0 0 0.2rem rgba(91, 26, 118, 0.5);
+  }
+}
+
 /* Preloder */
 #preloder {
   position: fixed;

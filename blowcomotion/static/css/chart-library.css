@@ -29,9 +29,9 @@
 }
 
 .chart-search-input:focus {
-    border-color: #007bff;
+    border-color: #5b1a76;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+    box-shadow: 0 0 0 3px rgba(91, 26, 118, 0.15);
 }
 
 /* Selector Sections */
@@ -100,8 +100,8 @@
 }
 
 .selector-item.active {
-    background-color: #e7f1ff;
-    border-left: 3px solid #007bff;
+    background-color: #f3e8f9;
+    border-left: 3px solid #5b1a76;
     padding-left: 13px;
 }
 
@@ -124,7 +124,7 @@
 }
 
 .song-play-btn:hover {
-    color: #007bff;
+    color: #5b1a76;
     transform: scale(1.1);
 }
 
@@ -365,7 +365,7 @@
 
 .chart-pdf-link:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.25);
+    box-shadow: 0 4px 12px rgba(91, 26, 118, 0.25);
 }
 
 .chart-pdf-link i {
