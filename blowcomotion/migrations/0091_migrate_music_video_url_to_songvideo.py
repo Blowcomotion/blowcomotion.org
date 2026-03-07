@@ -32,19 +32,35 @@ def migrate_video_urls(apps, schema_editor):
 
 def reverse_migration(apps, schema_editor):
     """
-    Reverse the migration by deleting SongVideo entries that were created from music_video_url.
-    Note: This only deletes SongVideo entries with no title (those created from the old field).
-    SongVideo entries with titles (manually added) are preserved.
+    Reverse the migration by restoring music_video_url from SongVideo entries,
+    then deleting the SongVideo entries that were created from music_video_url.
+
+    Note: This only affects SongVideo entries with no title (those created from
+    the old field). SongVideo entries with titles (manually added) are preserved.
     """
+    Song = apps.get_model('blowcomotion', 'Song')
     SongVideo = apps.get_model('blowcomotion', 'SongVideo')
-    
-    # Delete SongVideo entries that have no title (these were auto-migrated)
-    deleted_count, _ = SongVideo.objects.filter(title__isnull=True).delete()
-    
-    if deleted_count > 0:
-        print(f"\n⟲ Rolled back {deleted_count} auto-migrated SongVideo entries")
 
+    # First, restore the music_video_url field from auto-migrated SongVideo entries.
+    restored_count = 0
+    auto_migrated_videos = SongVideo.objects.filter(title__isnull=True).select_related("song")
 
+    for song_video in auto_migrated_videos:
+        song = song_video.song
+        # Avoid overwriting any non-empty value that may have been set after migration.
+        if getattr(song, "music_video_url", None) in (None, "") and song_video.url:
+            song.music_video_url = song_video.url
+            song.save(update_fields=["music_video_url"])
+            restored_count += 1
+
+    # Now delete SongVideo entries that have no title (these were auto-migrated).
+    deleted_count, _ = auto_migrated_videos.delete()
+
+    if restored_count > 0 or deleted_count > 0:
+        print(
+            f"\n⟲ Rolled back migration: restored URLs for {restored_count} songs "
+            f"and deleted {deleted_count} auto-migrated SongVideo entries"
+        )
 class Migration(migrations.Migration):
 
     dependencies = [
