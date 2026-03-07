@@ -484,6 +484,7 @@ class Instrument(models.Model, index.Indexed):
     )
 
     search_fields = [
+        index.AutocompleteField("name"),
         index.SearchField("name"),
         index.SearchField("description"),
     ]
