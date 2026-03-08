@@ -682,12 +682,11 @@ def dump_data(request):
 
         # Replace all latest_revision and live_revision fields with null to avoid issues when loading data into a different database
         for item in data:
-            if item['model'] == 'wagtailcore.page':
-                if 'fields' in item:
-                    if 'latest_revision' in item['fields']:
-                        item['fields']['latest_revision'] = None
-                    if 'live_revision' in item['fields']:
-                        item['fields']['live_revision'] = None
+            if 'fields' in item:
+                if 'latest_revision' in item['fields']:
+                    item['fields']['latest_revision'] = None
+                if 'live_revision' in item['fields']:
+                    item['fields']['live_revision'] = None
 
         logger.info(f"Data dump completed successfully by user {request.user.username}")
         # Return the data as a JSON response with pretty formatting
