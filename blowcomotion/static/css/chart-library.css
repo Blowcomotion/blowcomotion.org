@@ -77,6 +77,28 @@
     position: sticky;
     top: 0;
     z-index: 1;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease;
+}
+
+.section-header:hover {
+    background-color: #f0f0f0;
+}
+
+.section-header .section-expand-icon {
+    font-size: 10px;
+    margin-right: 8px;
+    color: #999;
+    transition: transform 0.2s ease;
+}
+
+.section-group.collapsed .section-header .section-expand-icon {
+    transform: rotate(-90deg);
+}
+
+.section-group.collapsed .section-instruments {
+    display: none;
 }
 
 /* Selector Items */

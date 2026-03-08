@@ -115,6 +115,13 @@
 
             // Instrument list click delegation
             this.elements.instrumentList.addEventListener('click', (e) => {
+                // Handle section header toggle
+                const sectionHeader = e.target.closest('.section-header');
+                if (sectionHeader) {
+                    this.toggleSection(sectionHeader);
+                    return;
+                }
+                
                 // Don't select if clicking the PDF button
                 if (e.target.closest('.chart-pdf-btn')) {
                     return;
@@ -249,8 +256,12 @@
             }
 
             const html = sections.map(section => `
-                <div class="section-group">
-                    <div class="section-header">${this.escapeHtml(section.name)}</div>
+                <div class="section-group collapsed">
+                    <div class="section-header">
+                        <i class="fa fa-chevron-down section-expand-icon"></i>
+                        ${this.escapeHtml(section.name)}
+                    </div>
+                    <div class="section-instruments">
                     ${section.instruments.map(instrument => {
                         const chartsJson = JSON.stringify(instrument.charts || []).replace(/"/g, '&quot;');
                         const hasSingleChart = instrument.charts && instrument.charts.length === 1;
@@ -277,6 +288,7 @@
                         </div>
                         `;
                     }).join('')}
+                    </div>
                 </div>
             `).join('');
 
@@ -357,7 +369,12 @@
             }
         }
 
-
+        toggleSection(sectionHeader) {
+            const sectionGroup = sectionHeader.closest('.section-group');
+            if (sectionGroup) {
+                sectionGroup.classList.toggle('collapsed');
+            }
+        }
 
         playSong(songItem) {
             const recordingUrl = songItem.dataset.recordingUrl;
