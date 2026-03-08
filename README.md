@@ -160,16 +160,7 @@ This ensures that all Python code follows consistent import formatting standards
     cd blowcomotion.org
     ```
 
-- Clean up the JSON so `live_revision` and `latest_revision` values are `null`
-
-    Using VS Code:
-
-    1. Open the JSON file and select the Search button.
-    2. Enable regex search by clicking the `.*` toggle in the search bar.
-    3. Search for `"live_revision":.*` and replace it with `"live_revision": null,`.
-    4. Repeat for `"latest_revision":.*`, replacing it with `"latest_revision": null,`.
-
-- Import the cleaned data into the local database
+- Import the data into the local database
 
     ```bash
     python manage.py loaddata <path_to_json_file>
