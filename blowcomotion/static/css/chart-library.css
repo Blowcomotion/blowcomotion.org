@@ -37,6 +37,8 @@
 /* Selector Sections */
 .chart-selector-section {
     margin-bottom: 24px;
+    max-height: 400px;
+    overflow-y: auto;
 }
 
 .selector-header {
