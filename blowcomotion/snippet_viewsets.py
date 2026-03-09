@@ -37,7 +37,7 @@ class SongViewSet(SnippetViewSet):
     menu_name = 'songs'
     menu_icon = 'music'
     search_fields = ['title', 'composer', 'style']
-    list_display = ['title', 'composer', 'style', 'active', UpdatedAtColumn()]
+    list_display = ['title', 'tempo', 'composer', 'style', 'active', UpdatedAtColumn()]
     list_filter = ['style', 'composer', 'active']
     panels = [
         'title',
