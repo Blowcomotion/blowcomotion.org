@@ -250,6 +250,12 @@ class Chart(models.Model):
     )
     instrument = models.ForeignKey("blowcomotion.Instrument", on_delete=models.CASCADE)
 
+    # Index song and instrument fields for searchability in the chart library
+    search_fields = [
+        index.SearchField("song__title", partial_match=True, boost=2),
+        index.SearchField("instrument__name", partial_match=True),
+    ]
+
     def __str__(self):
         return f"{self.song.title} - {self.instrument.name} - {self.part}" if self.part else f"{self.song.title} - {self.instrument.name}"
 

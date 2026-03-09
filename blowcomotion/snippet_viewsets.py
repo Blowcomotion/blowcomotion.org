@@ -15,7 +15,9 @@ class ChartViewSet(SnippetViewSet):
     menu_label = 'Charts'
     menu_name = 'charts'
     menu_icon = 'doc-full-inverse'
+    search_fields = ['song__title', 'instrument__name']
     list_display = ['__str__', UpdatedAtColumn()]
+    list_filter = ['song', 'instrument']
     panels = [
         'song',
         'pdf',
@@ -34,7 +36,9 @@ class SongViewSet(SnippetViewSet):
     menu_label = 'Songs'
     menu_name = 'songs'
     menu_icon = 'music'
-    list_display = ['title', 'composer', 'style', UpdatedAtColumn()]
+    search_fields = ['title', 'composer', 'style']
+    list_display = ['title', 'composer', 'style', 'active', UpdatedAtColumn()]
+    list_filter = ['style', 'composer', 'active']
     panels = [
         'title',
         MediaChooserPanel('recording', help_text="Select the audio recording for this song.", media_type='audio'),
