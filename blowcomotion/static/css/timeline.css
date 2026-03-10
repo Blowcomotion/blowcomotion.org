@@ -20,7 +20,6 @@
   position: relative;
   background-color: inherit;
   width: 50%;
-  margin-bottom: -200px;
 }
 
 /* The circles on the timeline */
@@ -51,6 +50,8 @@
 .right-2 {
   padding: 0px 0px 20px 40px;
   left: 50%;
+  margin-top: -200px;
+  margin-bottom: -50px;
 }
 
 /* Add arrows to the left container (pointing right) */
@@ -81,6 +82,41 @@
 .right-2::after {
   left: -14px;
 }
+
+  .timeline-content {
+    position: relative;
+    max-height: none;
+    overflow: visible;
+    transition: max-height 0.3s ease;
+  }
+  .timeline-content.collapsed {
+    max-height: 100px;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .timeline-gradient {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0), #fff);
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .card {
+    background: #fff;
+  }
+  .card-body {
+    position: relative;
+  }
+  .collapse {
+    display: block !important;
+    visibility: visible;
+  }
+  .collapsing {
+    height: auto !important;
+  }
 
 /* Media queries - Responsive timeline on screens less than 600px wide */
 @media screen and (max-width: 600px) {
@@ -117,5 +153,7 @@
   /* Make all right containers behave like the left ones */
   .right-2 {
     left: 0%;
+    margin-top: 0px;
+    margin-bottom: 0px;
   }
 }
