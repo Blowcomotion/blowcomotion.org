@@ -104,10 +104,10 @@
     pointer-events: none;
     transition: opacity 0.3s ease;
   }
-  .card {
+  .main-timeline-2 .card {
     background: #fff;
   }
-  .card-body {
+  .main-timeline-2 .card-body {
     position: relative;
   }
   .main-timeline-2 .collapse {
