@@ -110,11 +110,11 @@
   .card-body {
     position: relative;
   }
-  .collapse {
+  .main-timeline-2 .collapse {
     display: block !important;
     visibility: visible;
   }
-  .collapsing {
+  .main-timeline-2 .collapsing {
     height: auto !important;
   }
 
