@@ -104,6 +104,18 @@
   pointer-events: none;
   transition: opacity 0.3s ease;
 }
+.timeline-expand-hint {
+  text-align: center;
+  padding: 8px 0;
+  font-size: 0.875rem;
+  color: #666;
+  display: none;
+  cursor: pointer;
+  font-style: italic;
+}
+.timeline-content.collapsed ~ .timeline-expand-hint {
+  display: block;
+}
 .main-timeline-2 .card {
   background: #fff;
 }

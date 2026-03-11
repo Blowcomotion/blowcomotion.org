@@ -23,6 +23,7 @@
               <div class="mb-0">{{ item.description|richtext }}</div>
             </div>
             <div class="timeline-gradient {% if forloop.first %}d-none{% endif %}" id="gradient-{{ value.id }}-{{ forloop.counter }}"></div>
+            <div class="timeline-expand-hint {% if forloop.first %}d-none{% endif %}" data-target="#collapse-{{ value.id }}-{{ forloop.counter }}">Click to expand</div>
           </div>
         </div>
       </div>
@@ -38,14 +39,17 @@
       var content = $(target);
       var gradientId = target.replace('collapse-', 'gradient-');
       var gradient = $(gradientId);
+      var hint = gradient.siblings('.timeline-expand-hint');
       
       if (content.hasClass('collapsed')) {
         content.removeClass('collapsed');
         gradient.addClass('d-none');
+        hint.addClass('d-none');
         $(this).attr('aria-expanded', 'true');
       } else {
         content.addClass('collapsed');
         gradient.removeClass('d-none');
+        hint.removeClass('d-none');
         $(this).attr('aria-expanded', 'false');
       }
     });
@@ -54,6 +58,14 @@
     $('.timeline-content.collapsed').on('click', function(e) {
       var contentId = $(this).attr('id');
       var button = $('[data-target="#' + contentId + '"]').first();
+      button.trigger('click');
+    });
+    
+    // Make hint text clickable to expand
+    $('.timeline-expand-hint').on('click', function(e) {
+      e.preventDefault();
+      var target = $(this).data('target');
+      var button = $('[data-target="' + target + '"]').first();
       button.trigger('click');
     });
     
