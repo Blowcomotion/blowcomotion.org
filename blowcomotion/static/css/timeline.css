@@ -41,7 +41,7 @@
 }
 
 /* create stagger effect on timeline items */
-.timeline-2:not(:first-child) {
+.timeline-2:not(:first-child):not(:last-child) {
   margin-top: -200px;
   margin-bottom: -50px;
 }
@@ -88,15 +88,6 @@
 /* Fix the circle for containers on the right side */
 .right-2::after {
   left: -14px;
-}
-.popover{
-  top: -30px !important;
-}
-.popover .arrow{
-  display: none;
-}
-.popover-body{
-  font-weight: 500;
 }
 
 .timeline-content {
