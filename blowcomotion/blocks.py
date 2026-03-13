@@ -675,15 +675,39 @@ class ColumnLayoutBlock(blocks.StreamBlock):
 
 
 class MenuItemBlock(blocks.StructBlock):
-    page = blocks.PageChooserBlock()
+    page = blocks.PageChooserBlock(required=False)
     label = blocks.CharBlock(required=False)
+
+    def clean(self, value):
+        from wagtail.blocks.struct_block import StructBlockValidationError
+
+        from django.core.exceptions import ValidationError
+        
+        cleaned_data = super().clean(value)
+        if not cleaned_data.get('page') and not cleaned_data.get('label'):
+            raise StructBlockValidationError({
+                'page': ValidationError("Menu item must have either a page or a label.")
+            })
+        return cleaned_data
     
 
 
 class MenuItem(blocks.StructBlock):
-    page = blocks.PageChooserBlock()
+    page = blocks.PageChooserBlock(required=False)
     label = blocks.CharBlock(required=False)
     submenus = blocks.ListBlock(MenuItemBlock, required=False, collapsed=True)
+
+    def clean(self, value):
+        from wagtail.blocks.struct_block import StructBlockValidationError
+
+        from django.core.exceptions import ValidationError
+        
+        cleaned_data = super().clean(value)
+        if not cleaned_data.get('page') and not cleaned_data.get('label'):
+            raise StructBlockValidationError({
+                'page': ValidationError("Menu item must have either a page or a label.")
+            })
+        return cleaned_data
 
 
 class UpcomingPublicGigs(blocks.StructBlock):
