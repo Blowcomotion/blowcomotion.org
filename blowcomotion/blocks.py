@@ -526,7 +526,7 @@ class QuoteBlock(blocks.StructBlock):
         template = "blocks/quote_block.html"
         label = "Quote Block"
         label_format = "Quote: {author}"
-        help_text = "A block for displaying a quote with optional author and title."
+        help_text = "A block for displaying a quote with optional author."
 
 
 class ImageBlock(blocks.StructBlock):
