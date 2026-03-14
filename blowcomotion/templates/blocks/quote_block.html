@@ -1,0 +1,17 @@
+{% load wagtailcore_tags %}
+<div class="quote-block container py-5 h-100">
+    <div class="row d-flex justify-content-center align-items-center h-100">
+        <div class="col col-lg-10 col-xl-8">
+        <figure class="note">
+            <blockquote class="blockquote">
+            {{ value.quote_text|richtext }}
+            </blockquote>
+            {% if value.author %}
+                <figcaption class="blockquote-footer mb-0">
+                {{ value.author }}
+                </figcaption>
+            {% endif %}
+        </figure>
+        </div>
+    </div>
+</div>

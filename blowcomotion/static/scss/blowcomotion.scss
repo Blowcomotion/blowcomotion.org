@@ -145,3 +145,28 @@ hr {
         margin-bottom: 0;
     }
 }
+
+.quote-block {
+    .note {
+        padding: 10px;
+        border-left: 6px solid $blowco-purple;
+        border-radius: 5px;
+        
+
+        .blockquote::before {
+            content: "\275D";
+            font-size: 4em;
+            line-height: 0.1em;
+            margin-right: 20px;
+            margin-top: 18px;
+            margin-bottom: 1px;
+            vertical-align: -0.4em;
+            opacity: 0.5;
+            float: left;
+        }
+
+        .blockquote-footer {
+            font-size: large;
+        }
+    }
+}

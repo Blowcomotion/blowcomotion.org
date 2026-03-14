@@ -249,6 +249,11 @@ ol {
   }
 }
 
+/* Bootstrap background color overrides */
+.bg-primary {
+  background-color: $blowco-purple !important;
+}
+
 /* Preloder */
 #preloder {
   position: fixed;

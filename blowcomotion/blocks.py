@@ -514,6 +514,21 @@ class ChartLibraryBlock(blocks.StructBlock):
         help_text = "A searchable interface for browsing charts with audio playback. Songs without charts are automatically filtered out."
 
 
+class QuoteBlock(blocks.StructBlock):
+    quote_text = blocks.RichTextBlock()
+    author = blocks.CharBlock(
+        required=False,
+        help_text="Enter the author of the quote."
+    )
+
+    class Meta:
+        icon = "openquote"
+        template = "blocks/quote_block.html"
+        label = "Quote Block"
+        label_format = "Quote: {author}"
+        help_text = "A block for displaying a quote with optional author."
+
+
 class ImageBlock(blocks.StructBlock):
     image = ImageChooserBlock()
     url = blocks.URLBlock(required=False, help_text="Optional: Link the image to a URL (e.g. merch page)")
