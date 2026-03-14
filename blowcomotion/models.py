@@ -1042,6 +1042,7 @@ class BlankCanvasPage(BasePage):
             ("timeline", blowcomotion_blocks.TimelineBlock()),
             ("upcoming_events", blowcomotion_blocks.UpcomingPublicGigs()),
             ("venmo_donate_button", blowcomotion_blocks.VenmoDonateButton()),
+            ("quote", blowcomotion_blocks.QuoteBlock()),
         ],
         block_counts={
             "hero": {"max_num": 1},

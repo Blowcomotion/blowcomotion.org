@@ -145,3 +145,20 @@ hr {
         margin-bottom: 0;
     }
 }
+
+.quote-block {
+    .note {
+        padding: 10px;
+        border-left: 6px solid $blowco-purple;
+        border-radius: 5px;
+        background-color: $blowco-highlight;
+        
+        * {
+            color: $white-color;
+        }
+
+        .blockquote-footer {
+            font-size: large;
+        }
+    }
+}
