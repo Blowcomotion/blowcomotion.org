@@ -846,6 +846,11 @@ class TimelineItemBlock(blocks.StructBlock):
         required=False,
         help_text="Enter the description for this timeline item."
     )
+    short_text = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Check if there are 5 or fewer lines of text. This removes accordion functionality and shows all text by default, which is better for short descriptions."
+    )
 
     class Meta:
         icon = "date"
@@ -853,15 +858,15 @@ class TimelineItemBlock(blocks.StructBlock):
 
 
 class TimelineBlock(blocks.StructBlock):
-    timeline_items = blocks.ListBlock(
-        TimelineItemBlock(),
-        help_text="Add timeline items. They will alternate between left and right automatically.",
-        min_num=1,
-    )
     background_color = blocks.CharBlock(
         required=False,
         default="#F0F2F5",
         help_text="Enter the background color for the timeline section (e.g. #F0F2F5 or rgb(240, 242, 245))."
+    )
+    timeline_items = blocks.ListBlock(
+        TimelineItemBlock(),
+        help_text="Add timeline items. They will alternate between left and right automatically.",
+        min_num=1,
     )
 
     class Meta:

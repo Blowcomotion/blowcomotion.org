@@ -16,6 +16,24 @@
     <div class="main-timeline-2">
       {% for item in value.timeline_items %}
       <div class="d-flex timeline-2 {% if forloop.counter|divisibleby:2 %}right-2{% else %}left-2 justify-content-end{% endif %}">
+        {% if item.short_text %}
+          <div class="card">
+            {% if item.image %}
+              <div>
+                {% image item.image width-500 class="card-img-top img-fluid" %}
+              </div>
+            {% endif %}
+            <div class="card-header p-4 border-0">
+              <h4 class="font-weight-bold mb-2">{{ item.title }}</h4>
+              {% if item.date %}
+                <p class="text-muted mb-0"><i class="far fa-clock" aria-hidden="true"></i> {{ item.date }}</p>
+              {% endif %}
+            </div>
+            <div class="short-text p-4 pt-0">
+              <div class="mb-0">{{ item.description|richtext }}</div>
+            </div>
+          </div>
+        {% else %}
         <div class="card">
           {% if item.image %}
             <div class="cursor-pointer" data-toggle="collapse" data-target="#collapse-{{ value.id }}-{{ forloop.counter }}" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="collapse-{{ value.id }}-{{ forloop.counter }}" style="cursor: pointer;">
@@ -38,6 +56,7 @@
             <div class="timeline-expand-hint {% if forloop.first %}d-none{% endif %}" data-target="#collapse-{{ value.id }}-{{ forloop.counter }}">Click to expand</div>
           </div>
         </div>
+        {% endif %}
       </div>
       {% endfor %}
     </div>

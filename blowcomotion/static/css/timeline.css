@@ -46,6 +46,15 @@
   margin-bottom: -50px;
 }
 
+.short-text {
+    max-height: 200px;
+
+  .mb-0 p {
+    margin-bottom: 0 !important;
+  }
+
+}
+
 /* Place the container to the left */
 .left-2 {
   padding: 0px 40px 20px 0px;
@@ -101,6 +110,7 @@
   overflow: hidden;
   cursor: pointer;
 }
+
 .timeline-gradient {
   position: absolute;
   bottom: 0;
