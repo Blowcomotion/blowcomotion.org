@@ -54,6 +54,16 @@
         </div>
     {% endif %}
 
+    {# Sticky content - renders above main body content and sticks to top after scrolling past #}
+    {% if page.sticky_content %}
+        <div class="sticky-content-wrapper py-2">
+            {% for block in page.sticky_content %}
+                {% include_block block %}
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {# Main body content #}
     {% for block in page.body %}
         {% include_block block %}
     {% endfor %}

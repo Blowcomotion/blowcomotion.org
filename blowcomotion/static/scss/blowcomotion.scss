@@ -170,3 +170,12 @@ hr {
         }
     }
 }
+
+// Sticky content wrapper - sticks to top after scrolling past
+.sticky-content-wrapper {
+    position: sticky;
+    top: 0;
+    z-index: 100; // High z-index to stay above most content but below modals
+    background: $white-color;
+    width: 100%;
+}

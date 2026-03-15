@@ -1014,6 +1014,20 @@ class BasePage(Page):
 
 class BlankCanvasPage(BasePage):
     template = "pages/blank_canvas_page.html"
+    sticky_content = StreamField(
+        [
+            ("column_layout", blowcomotion_blocks.ColumnLayoutBlock()),
+            ("hero", blowcomotion_blocks.HeroBlock()),
+            ("horizontal_rule", blowcomotion_blocks.HorizontalRuleBlock()),
+            ("image", blowcomotion_blocks.ImageBlock()),
+            ("rich_text", blowcomotion_blocks.AlignableRichtextBlock()),
+            ("adjustable_spacer", blowcomotion_blocks.AdjustableSpacerBlock()),
+            ("quote", blowcomotion_blocks.QuoteBlock()),
+        ],
+        blank=True,
+        null=True,
+        help_text="Content in this field will be fixed at the top of the page, above the main body content. Ideal for hero sections or important announcements that should always be visible."
+    )
     body = StreamField(
         [
             ("accordion_list", blowcomotion_blocks.AccordionListBlock()),
@@ -1052,6 +1066,7 @@ class BlankCanvasPage(BasePage):
     )
 
     content_panels = Page.content_panels + [
+        "sticky_content",
         "body",
     ]
 
@@ -1074,6 +1089,7 @@ class BlankCanvasPage(BasePage):
         else:
             context["hero_header"] = False
             context["bottom_countdown"] = False
+            context["include_quote_css"] = False
             
         return context
     
