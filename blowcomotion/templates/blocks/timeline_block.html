@@ -1,17 +1,29 @@
 {% load wagtailcore_tags wagtailimages_tags %}
+<style>
+  /* styles added to page instead of timeline.css for page-specific functionality */
+  .popover{
+  top: -30px !important;
+  }
+  .popover .arrow{
+    display: none;
+  }
+  .popover-body{
+    font-weight: 500;
+  }
+</style>
 <section style="background-color: {{ value.background_color|default:'#F0F2F5' }};">
   <div class="container-fluid py-5">
     <div class="main-timeline-2">
       {% for item in value.timeline_items %}
-      <div class="timeline-2 {% if forloop.counter|divisibleby:2 %}right-2{% else %}left-2{% endif %}">
+      <div class="d-flex timeline-2 {% if forloop.counter|divisibleby:2 %}right-2{% else %}left-2 justify-content-end{% endif %}">
         <div class="card">
           {% if item.image %}
             <div class="cursor-pointer" data-toggle="collapse" data-target="#collapse-{{ value.id }}-{{ forloop.counter }}" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="collapse-{{ value.id }}-{{ forloop.counter }}" style="cursor: pointer;">
-              {% image item.image original class="card-img-top img-fluid" %}
+              {% image item.image width-500 class="card-img-top img-fluid" %}
             </div>
           {% endif %}
-          <div class="card-header p-0 border-0">
-            <button class="btn btn-link w-100 text-left text-decoration-none text-dark p-4" type="button" data-toggle="collapse" data-target="#collapse-{{ value.id }}-{{ forloop.counter }}" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="collapse-{{ value.id }}-{{ forloop.counter }}">
+          <div class="timeline-popover card-header p-0 border-0" rel="popover" data-placement="bottom" data-content="Click to expand/collapse details" data-trigger="hover">
+            <button class="btn btn-link w-100 text-left text-decoration-none text-dark p-4" type="button" data-toggle="collapse" data-target="#collapse-{{ value.id }}-{{ forloop.counter }}" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="collapse-{{ value.id }}-{{ forloop.counter }}" >
               <h4 class="font-weight-bold mb-2">{{ item.title }}</h4>
               {% if item.date %}
                 <p class="text-muted mb-0"><i class="far fa-clock" aria-hidden="true"></i> {{ item.date }}</p>
@@ -33,6 +45,7 @@
 </section>
 <script>
   $(document).ready(function() {
+    $('.timeline-popover').popover();
     $('[data-toggle="collapse"]').on('click', function(e) {
       e.preventDefault();
       var target = $(this).data('target');

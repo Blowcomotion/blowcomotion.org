@@ -30,7 +30,7 @@
   height: 25px;
   right: -11px;
   background-color: #5b1a76;
-  top: 15px;
+  top: 75px;
   border-radius: 50%;
   z-index: 1;
 }
@@ -40,42 +40,49 @@
   margin-bottom: 0;
 }
 
+/* create stagger effect on timeline items */
+.timeline-2:not(:first-child):not(:last-child) {
+  margin-top: -200px;
+  margin-bottom: -50px;
+}
+
 /* Place the container to the left */
 .left-2 {
   padding: 0px 40px 20px 0px;
   left: 0;
+}
+.left-2 .card{
+  justify-content: flex-end;
 }
 
 /* Place the container to the right */
 .right-2 {
   padding: 0px 0px 20px 40px;
   left: 50%;
-  margin-top: -200px;
-  margin-bottom: -50px;
 }
 
 /* Add arrows to the left container (pointing right) */
 .left-2::before {
   content: " ";
   position: absolute;
-  top: 18px;
+  top: 78px;
   z-index: 1;
-  right: 30px;
-  border: medium solid white;
-  border-width: 10px 0 10px 10px;
-  border-color: transparent transparent transparent white;
+  right: 1px;
+  border: medium solid #5b1a76;
+  border-width: 10px 0 10px 40px;
+  border-color: transparent transparent transparent #5b1a76;
 }
 
 /* Add arrows to the right container (pointing left) */
 .right-2::before {
   content: " ";
   position: absolute;
-  top: 18px;
+  top: 78px;
   z-index: 1;
-  left: 30px;
-  border: medium solid white;
-  border-width: 10px 10px 10px 0;
-  border-color: transparent white transparent transparent;
+  left: -1px;
+  border: medium solid #5b1a76;
+  border-width: 10px 40px 10px 0px;
+  border-color: transparent #5b1a76 transparent transparent;
 }
 
 /* Fix the circle for containers on the right side */
@@ -118,6 +125,7 @@
 }
 .main-timeline-2 .card {
   background: #fff;
+  max-width: 500px;
 }
 .main-timeline-2 .card-body {
   position: relative;
@@ -135,14 +143,16 @@
     width: 100%;
     padding-left: 70px;
     padding-right: 25px;
+    margin-top: 0px !important;
+    margin-bottom: 0px !important;
   }
 
   /* Make sure that all arrows are pointing leftwards */
   .timeline-2::before {
-    left: 60px;
-    border: medium solid white;
-    border-width: 10px 10px 10px 0;
-    border-color: transparent white transparent transparent;
+    left: 31px;
+    border: medium solid #5b1a76;
+    border-width: 10px 40px 10px 0px;
+    border-color: transparent #5b1a76 transparent transparent;
   }
 
   /* Make sure all circles are at the same spot */
@@ -158,7 +168,5 @@
   /* Make all right containers behave like the left ones */
   .right-2 {
     left: 0%;
-    margin-top: 0px;
-    margin-bottom: 0px;
   }
 }
