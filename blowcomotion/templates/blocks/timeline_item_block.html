@@ -12,7 +12,7 @@
       <button class="btn btn-link w-100 text-left text-decoration-none text-dark p-4" type="button" data-toggle="collapse" data-target="#collapse-{{ value.id }}-{{ forloop.counter }}" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="collapse-{{ value.id }}-{{ forloop.counter }}" >
         <h4 class="font-weight-bold mb-2">{{ item.title }}{% if item.has_longtext %} (has long text){% endif %}</h4>
         {% if item.date %}
-        <p class="text-muted mb-0"><i class="far fa-clock" aria-hidden="true"></i> {{ item.date }}</p>
+        <small class="text-muted text-sm mb-0"><i class="far fa-clock" aria-hidden="true"></i> {{ item.date }}</small>
         {% endif %}
       </button>
     </div>
@@ -34,7 +34,7 @@
       <div class="card-header p-4 border-0">
         <h4 class="font-weight-bold mb-2">{{ item.title }}</h4>
         {% if item.date %}
-          <h4 class="text-muted mb-0"><i class="far fa-clock" aria-hidden="true"></i> {{ item.date }}</h4>
+          <small class="text-muted text-sm mb-0"><i class="far fa-clock" aria-hidden="true"></i> {{ item.date }}</small>
         {% endif %}
       </div>
       <div class="card-body p-4 pt-0">
