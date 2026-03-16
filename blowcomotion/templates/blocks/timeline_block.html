@@ -7,16 +7,17 @@
       <div class="d-flex timeline-2 {% if forloop.counter|divisibleby:2 %}right-2{% else %}left-2 justify-content-end{% endif %}">
         {% if item.has_longtext or item.line_count > 2 %}
         <div class="card">
+          long text? {{ item.has_longtext }} - line count {{ item.line_count   }}
           {% if item.image %}
-            <div class="cursor-pointer" data-toggle="collapse" data-target="#collapse-{{ value.id }}-{{ forloop.counter }}" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="collapse-{{ value.id }}-{{ forloop.counter }}" style="cursor: pointer;">
-              {% image item.image width-500 class="card-img-top img-fluid" %}
-            </div>
+          <div class="cursor-pointer" data-toggle="collapse" data-target="#collapse-{{ value.id }}-{{ forloop.counter }}" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="collapse-{{ value.id }}-{{ forloop.counter }}" style="cursor: pointer;">
+            {% image item.image width-500 class="card-img-top img-fluid" %}
+          </div>
           {% endif %}
           <div class="card-header p-0 border-0">
             <button class="btn btn-link w-100 text-left text-decoration-none text-dark p-4" type="button" data-toggle="collapse" data-target="#collapse-{{ value.id }}-{{ forloop.counter }}" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="collapse-{{ value.id }}-{{ forloop.counter }}" >
               <h4 class="font-weight-bold mb-2">{{ item.title }}{% if item.has_longtext %} (has long text){% endif %}</h4>
               {% if item.date %}
-                <p class="text-muted mb-0"><i class="far fa-clock" aria-hidden="true"></i> {{ item.date }}</p>
+              <p class="text-muted mb-0"><i class="far fa-clock" aria-hidden="true"></i> {{ item.date }}</p>
               {% endif %}
             </button>
           </div>
@@ -29,8 +30,9 @@
           </div>
         </div>
         {% else %}
-          <div class="card">
-            {% if item.image %}
+        <div class="card">
+          long text? {{ item.has_longtext }} - line count {{ item.line_count   }}
+          {% if item.image %}
               <div>
                 {% image item.image width-500 class="card-img-top img-fluid" %}
               </div>

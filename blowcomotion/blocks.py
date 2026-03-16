@@ -1,6 +1,7 @@
 import datetime
 import time
 from datetime import timedelta, tzinfo
+import logging
 
 import requests
 from wagtail import blocks
@@ -17,6 +18,7 @@ from blowcomotion.chooser_blocks import (
 )
 from blowcomotion.utils import adjust_gig_date_for_early_morning
 
+logger = logging.getLogger(__name__)
 
 class HeroBlock(blocks.StructBlock):
     image = ImageChooserBlock()
@@ -828,26 +830,6 @@ class CountdownBlock(blocks.StructBlock):
         template = "blocks/countdown_block.html"
         label_format = "Countdown to {countdown_date}"
 
-# In blowcomotion/blocks.py
-
-class TimelineItemValue(blocks.StructValue):
-
-    def has_longtext(self):
-        """Check if description contains longtext"""
-        description = self.get('description')
-        if description:
-            text = str(description)
-            return len(text) > 300
-        return False
-    
-    def line_count(self):
-        """Estimate number of lines in description"""
-        description = self.get('description')
-        if description:
-            text = str(description)
-            p_count = text.lower().count('<p')
-            return p_count
-        return 0
     
 class TimelineItemBlock(blocks.StructBlock):
     image = ImageChooserBlock(
@@ -867,10 +849,33 @@ class TimelineItemBlock(blocks.StructBlock):
         help_text="Enter the description for this timeline item."
     )
 
+    def get_context(self, value, parent_context=None):
+        context = super().get_context(value, parent_context)
+        
+        # Calculate has_longtext and line_count
+        description = value['description']
+        logger.info(f"TimelineItemBlock.get_context() called for item: {value.get('title', 'No Title')}")
+        
+        if description:
+            text = str(description)
+            has_longtext = len(text) > 250
+            p_count = 7
+            
+            logger.info(f"  Description text length: {len(text)}, has long text: {has_longtext}")
+            logger.info(f"  Paragraphs: {p_count}")
+            
+            context['has_longtext'] = has_longtext
+            context['line_count'] = p_count
+        else:
+            logger.info(f"  No description found")
+            context['has_longtext'] = False
+            context['line_count'] = 0
+        
+        return context
+
     class Meta:
         icon = "date"
         label_format = "{title} - {date}"
-        value_class = TimelineItemValue
 
 class TimelineBlock(blocks.StructBlock):
     background_color = blocks.CharBlock(
