@@ -47,12 +47,11 @@
 }
 
 .short-text {
-    max-height: 200px;
+  max-height: 200px;
+}
 
-  .mb-0 p {
-    margin-bottom: 0 !important;
-  }
-
+.short-text .mb-0 p {
+  margin-bottom: 0 !important;
 }
 
 /* Place the container to the left */
