@@ -12,7 +12,7 @@
   top: 0;
   bottom: 0;
   left: 50%;
-  margin-left: -3px;
+  margin-left: -1.5px;
 }
 
 /* Container around content */
@@ -28,7 +28,7 @@
   position: absolute;
   width: 25px;
   height: 25px;
-  right: -11px;
+  right: -12.5px;
   background-color: #5b1a76;
   top: 75px;
   border-radius: 50%;
@@ -61,12 +61,16 @@
 }
 .left-2 .card{
   justify-content: flex-end;
+  border: 0px !important;
 }
 
 /* Place the container to the right */
 .right-2 {
   padding: 0px 0px 20px 40px;
   left: 50%;
+}
+.right-2 .card{
+  border: 0px !important;
 }
 
 /* Add arrows to the left container (pointing right) */
@@ -75,7 +79,7 @@
   position: absolute;
   top: 78px;
   z-index: 1;
-  right: 1px;
+  right: 0;
   border: medium solid #5b1a76;
   border-width: 10px 0 10px 40px;
   border-color: transparent transparent transparent #5b1a76;
@@ -87,7 +91,7 @@
   position: absolute;
   top: 78px;
   z-index: 1;
-  left: -1px;
+  left: 0;
   border: medium solid #5b1a76;
   border-width: 10px 40px 10px 0px;
   border-color: transparent #5b1a76 transparent transparent;
@@ -95,7 +99,7 @@
 
 /* Fix the circle for containers on the right side */
 .right-2::after {
-  left: -14px;
+  left: -12.5px;
 }
 
 .timeline-content {

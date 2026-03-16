@@ -828,7 +828,27 @@ class CountdownBlock(blocks.StructBlock):
         template = "blocks/countdown_block.html"
         label_format = "Countdown to {countdown_date}"
 
+# In blowcomotion/blocks.py
 
+class TimelineItemValue(blocks.StructValue):
+
+    def has_longtext(self):
+        """Check if description contains longtext"""
+        description = self.get('description')
+        if description:
+            text = str(description)
+            return len(text) > 300
+        return False
+    
+    def line_count(self):
+        """Estimate number of lines in description"""
+        description = self.get('description')
+        if description:
+            text = str(description)
+            p_count = text.lower().count('<p')
+            return p_count
+        return 0
+    
 class TimelineItemBlock(blocks.StructBlock):
     image = ImageChooserBlock(
         required=False,
@@ -846,16 +866,11 @@ class TimelineItemBlock(blocks.StructBlock):
         required=False,
         help_text="Enter the description for this timeline item."
     )
-    short_text = blocks.BooleanBlock(
-        required=False,
-        default=False,
-        help_text="Check if there are 5 or fewer lines of text. This removes accordion functionality and shows all text by default, which is better for short descriptions."
-    )
 
     class Meta:
         icon = "date"
         label_format = "{title} - {date}"
-
+        value_class = TimelineItemValue
 
 class TimelineBlock(blocks.StructBlock):
     background_color = blocks.CharBlock(
