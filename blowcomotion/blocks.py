@@ -1,7 +1,7 @@
 import datetime
 import time
-from datetime import timedelta, tzinfo
 import logging
+from datetime import timedelta, tzinfo
 
 import requests
 from wagtail import blocks
@@ -852,29 +852,23 @@ class TimelineItemBlock(blocks.StructBlock):
     def get_context(self, value, parent_context=None):
         context = super().get_context(value, parent_context)
         
-        # Calculate has_longtext and line_count
-        description = value['description']
-        logger.info(f"TimelineItemBlock.get_context() called for item: {value.get('title', 'No Title')}")
-        
+        description = value["description"]
         if description:
             text = str(description)
-            has_longtext = len(text) > 250
-            p_count = 7
+            has_longtext = len(text) > 310
+            p_count = text.lower().count("<p")
             
-            logger.info(f"  Description text length: {len(text)}, has long text: {has_longtext}")
-            logger.info(f"  Paragraphs: {p_count}")
-            
-            context['has_longtext'] = has_longtext
-            context['line_count'] = p_count
+            context["has_longtext"] = has_longtext
+            context["line_count"] = p_count
         else:
-            logger.info(f"  No description found")
-            context['has_longtext'] = False
-            context['line_count'] = 0
+            context["has_longtext"] = False
+            context["line_count"] = 0
         
         return context
 
     class Meta:
         icon = "date"
+        template = "blocks/timeline_item_block.html"
         label_format = "{title} - {date}"
 
 class TimelineBlock(blocks.StructBlock):
