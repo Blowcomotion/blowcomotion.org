@@ -4,11 +4,11 @@ from datetime import date, datetime
 
 from django.core.management.base import BaseCommand
 
-from blowcomotion.models import Instrument
+from blowcomotion.models import Instrument, LibraryInstrument
 
 
 class Command(BaseCommand):
-    help = "Export all instruments and their fields to a CSV file."
+    help = "Export instruments and their fields to a CSV file."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -20,55 +20,126 @@ class Command(BaseCommand):
         parser.add_argument(
             "--include-extra",
             action="store_true",
-            help="Include human-readable helper columns such as section name.",
+            help="Include human-readable helper columns.",
+        )
+        parser.add_argument(
+            "--filter",
+            dest="filter_type",
+            default="all",
+            choices=["all", "rented"],
+            help="Filter type: 'all' for all instruments, 'rented' for rented library instruments (default: all)",
         )
 
     def handle(self, *args, **options):
         output_path = options["output_path"]
         include_extra = options["include_extra"]
+        filter_type = options["filter_type"]
 
         directory = os.path.dirname(os.path.abspath(output_path)) or "."
         os.makedirs(directory, exist_ok=True)
 
-        instruments = Instrument.objects.select_related("section", "image").order_by("section__name", "name")
-        
-        if not instruments.exists():
-            self.stdout.write(self.style.WARNING("No instruments found to export."))
-            return
+        if filter_type == "rented":
+            # Export rented library instruments
+            instruments = LibraryInstrument.objects.filter(
+                status=LibraryInstrument.STATUS_RENTED
+            ).select_related("instrument", "member").order_by("instrument__name", "serial_number")
+            
+            if not instruments.exists():
+                self.stdout.write(self.style.WARNING("No rented instruments found to export."))
+                return
 
-        fields = Instrument._meta.concrete_fields
-        field_names = [field.attname for field in fields]
+            fields = LibraryInstrument._meta.concrete_fields
+            field_names = [field.attname for field in fields]
 
-        extra_headers = []
-        if include_extra:
-            extra_headers.extend([
-                "section_name",
-                "image_title",
-            ])
+            extra_headers = []
+            if include_extra:
+                extra_headers.extend([
+                    "instrument_name",
+                    "member_full_name",
+                    "member_email",
+                    "member_phone",
+                    "needs_review",
+                    "renter_inactive",
+                ])
 
-        with open(output_path, "w", newline="", encoding="utf-8") as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(field_names + extra_headers)
+            with open(output_path, "w", newline="", encoding="utf-8") as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(field_names + extra_headers)
 
-            for instrument in instruments:
-                row = [self._serialize(getattr(instrument, field.attname)) for field in fields]
+                for lib_instrument in instruments:
+                    row = [self._serialize(getattr(lib_instrument, field.attname)) for field in fields]
 
-                if include_extra:
-                    section_name = instrument.section.name if instrument.section else ""
-                    image_title = instrument.image.title if instrument.image else ""
-                    
-                    row.extend([
-                        section_name,
-                        image_title,
-                    ])
+                    if include_extra:
+                        instrument_name = lib_instrument.instrument_name
+                        member_full_name = (
+                            lib_instrument.member.full_name if lib_instrument.member else ""
+                        )
+                        member_email = (
+                            lib_instrument.member.email if lib_instrument.member else ""
+                        )
+                        member_phone = (
+                            lib_instrument.member.phone if lib_instrument.member else ""
+                        )
+                        needs_review = "YES" if lib_instrument.needs_review else "NO"
+                        renter_inactive = "YES" if lib_instrument.renter_inactive else "NO"
+                        
+                        row.extend([
+                            instrument_name,
+                            member_full_name,
+                            member_email,
+                            member_phone,
+                            needs_review,
+                            renter_inactive,
+                        ])
 
-                writer.writerow(row)
+                    writer.writerow(row)
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Export complete. {instruments.count()} instruments written to {output_path}"
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Export complete. {instruments.count()} rented instruments written to {output_path}"
+                )
             )
-        )
+        else:
+            # Export all instrument types
+            instruments = Instrument.objects.select_related("section", "image").order_by("section__name", "name")
+            
+            if not instruments.exists():
+                self.stdout.write(self.style.WARNING("No instruments found to export."))
+                return
+
+            fields = Instrument._meta.concrete_fields
+            field_names = [field.attname for field in fields]
+
+            extra_headers = []
+            if include_extra:
+                extra_headers.extend([
+                    "section_name",
+                    "image_title",
+                ])
+
+            with open(output_path, "w", newline="", encoding="utf-8") as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(field_names + extra_headers)
+
+                for instrument in instruments:
+                    row = [self._serialize(getattr(instrument, field.attname)) for field in fields]
+
+                    if include_extra:
+                        section_name = instrument.section.name if instrument.section else ""
+                        image_title = instrument.image.title if instrument.image else ""
+                        
+                        row.extend([
+                            section_name,
+                            image_title,
+                        ])
+
+                    writer.writerow(row)
+
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Export complete. {instruments.count()} instruments written to {output_path}"
+                )
+            )
 
     def _serialize(self, value):
         if value is None:

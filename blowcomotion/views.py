@@ -807,9 +807,10 @@ def export_rented_instruments_csv(request):
             include_extra,
         )
         call_command(
-            'export_rented_instruments_to_csv',
+            'export_instruments_to_csv',
             output=temp_path,
             include_extra=include_extra,
+            filter_type='rented',
             stdout=StringIO(),
         )
 
