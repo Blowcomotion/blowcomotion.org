@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 import os
+import sys
 import django
+
+# Add project root to Python path
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
 
 # Setup Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'blowcomotion.settings.dev')
@@ -9,14 +14,17 @@ django.setup()
 from blowcomotion.models import Section, Member, Instrument, MemberInstrument
 from datetime import date
 
-print("Sections available:")
+# Create or get sections (same as in create_instrument_library_data.py)
+print("Creating/verifying sections...")
+high_brass, _ = Section.objects.get_or_create(name="High Brass")
+low_brass, _ = Section.objects.get_or_create(name="Low Brass")
+woodwinds, _ = Section.objects.get_or_create(name="Woodwinds")
+percussion, _ = Section.objects.get_or_create(name="Percussion")
+
+print("\nSections available:")
 sections = Section.objects.all().order_by('name')
 for section in sections:
     print(f"- {section.name} (ID: {section.id})")
-
-if not sections:
-    print("No sections found in database!")
-    exit(1)
 
 # Define test member pools for different sections
 test_member_pools = {
@@ -41,6 +49,10 @@ test_member_pools = {
         {"first_name": "Brian", "last_name": "Jackson", "email": "brian.j@email.com"},
         {"first_name": "Rachel", "last_name": "White", "email": "rachel.w@email.com"},
         {"first_name": "Daniel", "last_name": "Harris", "email": "daniel.h@email.com"},
+        {"first_name": "Jessica", "last_name": "Martinez", "email": "jessica.m@email.com"},
+        {"first_name": "Ryan", "last_name": "Moore", "email": "ryan.m@email.com"},
+        {"first_name": "Samantha", "last_name": "Lee", "email": "samantha.l@email.com"},
+        {"first_name": "Brandon", "last_name": "Scott", "email": "brandon.s@email.com"},
     ],
     "Percussion": [
         {"first_name": "Marcus", "last_name": "Clark", "email": "marcus.c@email.com"},
@@ -117,12 +129,20 @@ for section, members in section_members_created.items():
         for i, member in enumerate(members):
             # Rotate through available instruments
             instrument = section_instruments[i % len(section_instruments)]
+            
+            # Set primary instrument if not already set
+            if not member.primary_instrument:
+                member.primary_instrument = instrument
+                member.save()
+                print(f"Set primary instrument: {instrument.name} for {member.first_name} {member.last_name}")
+            
+            # Also add as additional instrument relationship (if different from primary)
             member_instrument, created = MemberInstrument.objects.get_or_create(
                 member=member,
                 instrument=instrument,
             )
             if created:
-                print(f"Assigned {instrument.name} to {member.first_name} {member.last_name}")
+                print(f"Added additional instrument {instrument.name} to {member.first_name} {member.last_name}")
             else:
                 print(f"{member.first_name} {member.last_name} already has {instrument.name}")
     else:
