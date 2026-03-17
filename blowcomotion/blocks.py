@@ -1,5 +1,6 @@
 import datetime
 import time
+import logging
 from datetime import timedelta, tzinfo
 
 import requests
@@ -17,6 +18,7 @@ from blowcomotion.chooser_blocks import (
 )
 from blowcomotion.utils import adjust_gig_date_for_early_morning
 
+logger = logging.getLogger(__name__)
 
 class HeroBlock(blocks.StructBlock):
     image = ImageChooserBlock()
@@ -867,7 +869,7 @@ class CountdownBlock(blocks.StructBlock):
         template = "blocks/countdown_block.html"
         label_format = "Countdown to {countdown_date}"
 
-
+    
 class TimelineItemBlock(blocks.StructBlock):
     image = ImageChooserBlock(
         required=False,
@@ -886,21 +888,38 @@ class TimelineItemBlock(blocks.StructBlock):
         help_text="Enter the description for this timeline item."
     )
 
+    def get_context(self, value, parent_context=None):
+        context = super().get_context(value, parent_context)
+        
+        description = value["description"]
+        if description:
+            text = str(description)
+            has_longtext = len(text) > 310
+            p_count = text.lower().count("<p")
+            
+            context["has_longtext"] = has_longtext
+            context["line_count"] = p_count
+        else:
+            context["has_longtext"] = False
+            context["line_count"] = 0
+        
+        return context
+
     class Meta:
         icon = "date"
+        template = "blocks/timeline_item_block.html"
         label_format = "{title} - {date}"
 
-
 class TimelineBlock(blocks.StructBlock):
-    timeline_items = blocks.ListBlock(
-        TimelineItemBlock(),
-        help_text="Add timeline items. They will alternate between left and right automatically.",
-        min_num=1,
-    )
     background_color = blocks.CharBlock(
         required=False,
         default="#F0F2F5",
         help_text="Enter the background color for the timeline section (e.g. #F0F2F5 or rgb(240, 242, 245))."
+    )
+    timeline_items = blocks.ListBlock(
+        TimelineItemBlock(),
+        help_text="Add timeline items. They will alternate between left and right automatically.",
+        min_num=1,
     )
 
     class Meta:
