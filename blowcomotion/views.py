@@ -790,48 +790,68 @@ def export_attendance_csv(request):
             logger.warning("Temporary file %s could not be removed after attendance export", temp_path)
 
 
-def export_rented_instruments_csv(request):
-    if not request.user.is_superuser:
-        logger.warning("Unauthorized access attempt to export rented instruments by user %s", request.user.username)
-        return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
+def _export_csv_via_command(request, *, command_name, filename_prefix, log_label=None, **command_kwargs):
+    """
+    Helper to export data to CSV via a Django management command.
 
-    include_extra = True
+    Handles temp file creation, logging, command invocation, response construction,
+    and temp file cleanup. Returns an HttpResponse on success or a JsonResponse
+    with error details on failure.
+    """
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
     temp_path = temp_file.name
     temp_file.close()
 
+    include_extra = command_kwargs.get("include_extra")
+    label = log_label or command_name
+
     try:
         logger.info(
-            "Starting rented instruments export by user %s (include_extra=%s)",
+            "Starting %s export by user %s (include_extra=%s)",
+            label,
             request.user.username,
             include_extra,
         )
         call_command(
-            'export_instruments_to_csv',
+            command_name,
             output=temp_path,
-            include_extra=include_extra,
-            filter_type='rented',
             stdout=StringIO(),
+            **command_kwargs,
         )
-
     except Exception as e:
-        logger.error("Error during rented instruments export by user %s: %s", request.user.username, str(e))
+        logger.error("Error during %s export by user %s: %s", label, request.user.username, str(e))
         return JsonResponse({'error': str(e)}, status=500)
     else:
         with open(temp_path, 'rb') as csv_file:
             csv_data = csv_file.read()
 
         timestamp = timezone.now().strftime('%Y%m%d-%H%M%S')
-        filename = f'rented_instruments_export_{timestamp}.csv'
+        filename = f'{filename_prefix}_{timestamp}.csv'
         response = HttpResponse(csv_data, content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        logger.info("Rented instruments export completed successfully by user %s", request.user.username)
+        logger.info("%s export completed successfully by user %s", label, request.user.username)
         return response
     finally:
         try:
             os.remove(temp_path)
         except OSError:
-            logger.warning("Temporary file %s could not be removed after rented instruments export", temp_path)
+            logger.warning("Temporary file %s could not be removed after %s export", temp_path, label)
+
+
+def export_rented_instruments_csv(request):
+    if not request.user.is_superuser:
+        logger.warning("Unauthorized access attempt to export rented instruments by user %s", request.user.username)
+        return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
+
+    include_extra = True
+    return _export_csv_via_command(
+        request,
+        command_name='export_instruments_to_csv',
+        filename_prefix='rented_instruments_export',
+        log_label='rented instruments',
+        include_extra=include_extra,
+        filter_type='rented',
+    )
 
 
 def export_instruments_csv(request):
@@ -840,41 +860,13 @@ def export_instruments_csv(request):
         return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
 
     include_extra = True
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
-    temp_path = temp_file.name
-    temp_file.close()
-
-    try:
-        logger.info(
-            "Starting instruments export by user %s (include_extra=%s)",
-            request.user.username,
-            include_extra,
-        )
-        call_command(
-            'export_instruments_to_csv',
-            output=temp_path,
-            include_extra=include_extra,
-            stdout=StringIO(),
-        )
-
-    except Exception as e:
-        logger.error("Error during instruments export by user %s: %s", request.user.username, str(e))
-        return JsonResponse({'error': str(e)}, status=500)
-    else:
-        with open(temp_path, 'rb') as csv_file:
-            csv_data = csv_file.read()
-
-        timestamp = timezone.now().strftime('%Y%m%d-%H%M%S')
-        filename = f'instruments_export_{timestamp}.csv'
-        response = HttpResponse(csv_data, content_type='text/csv')
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        logger.info("Instruments export completed successfully by user %s", request.user.username)
-        return response
-    finally:
-        try:
-            os.remove(temp_path)
-        except OSError:
-            logger.warning("Temporary file %s could not be removed after instruments export", temp_path)
+    return _export_csv_via_command(
+        request,
+        command_name='export_instruments_to_csv',
+        filename_prefix='instruments_export',
+        log_label='instruments',
+        include_extra=include_extra,
+    )
 
 
 def process_form(request):
