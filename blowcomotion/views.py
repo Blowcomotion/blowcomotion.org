@@ -655,7 +655,14 @@ def _process_member_signup(request, form_data):
             board_member=False,
             join_date=date.today()
         )
-        
+        try:
+            member.full_clean()
+        except Exception as e:
+            logger.error(f"Validation error creating member: {str(e)}")
+            return {
+                'error': f'Error validating member data: {str(e)}',
+                'template': 'forms/error.html'
+            }
         member.save()
         logger.info(f"New member signup: {member.first_name} {member.last_name}")
         
