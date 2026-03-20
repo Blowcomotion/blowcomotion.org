@@ -513,6 +513,7 @@ def _get_form_recipients(site_settings, form_type):
         'booking_form': site_settings.booking_form_email_recipients,
         'feedback_form': site_settings.feedback_form_email_recipients,
         'donate_form': site_settings.donate_form_email_recipients,
+        'member_signup_form': site_settings.member_signup_notification_recipients,
     }
     return recipient_mapping.get(form_type)
 
@@ -600,6 +601,171 @@ def _get_success_message(form_type):
         'feedback_form': "Feedback form submitted successfully! Thank you for your feedback.",
     }
     return messages.get(form_type, "Form submitted successfully!")
+
+
+def _process_member_signup(request, form_data):
+    """
+    Process member signup submission with member creation and GO3 integration.
+    
+    Args:
+        request: The HTTP request object
+        form_data: Dictionary containing form submission data
+        
+    Returns:
+        Dictionary with 'message' and 'template' on success, or 'error' and 'template' on failure
+    """
+    site_settings = SiteSettings.for_request(request=request)
+    recipients = site_settings.member_signup_notification_recipients
+    
+    logger.info(f"Processing member signup submission by user {request.user.username}")
+    
+    try:
+        # Convert primary_instrument string to Instrument object if provided
+        primary_instrument = None
+        if form_data.get('primary_instrument'):
+            instrument_name = form_data['primary_instrument'].strip()
+            # Try to find existing instrument (case-insensitive)
+            try:
+                primary_instrument = Instrument.objects.get(name__iexact=instrument_name)
+            except Instrument.DoesNotExist:
+                # If instrument doesn't exist, create it
+                primary_instrument = Instrument.objects.create(name=instrument_name)
+                logger.info(f"Created new instrument: {instrument_name}")
+        
+        # Create new member from form data
+        member = Member(
+            first_name=form_data['first_name'],
+            last_name=form_data['last_name'],
+            preferred_name=form_data.get('preferred_name') or None,
+            primary_instrument=primary_instrument,
+            birth_month=int(form_data['birth_month']) if form_data.get('birth_month') else None,
+            birth_day=int(form_data['birth_day']) if form_data.get('birth_day') else None,
+            birth_year=int(form_data['birth_year']) if form_data.get('birth_year') else None,
+            email=form_data.get('email') or None,
+            phone=form_data.get('phone') or None,
+            address=form_data.get('address') or None,
+            city=form_data.get('city') or None,
+            state=form_data.get('state') or None,
+            zip_code=form_data.get('zip_code') or None,
+            country=form_data.get('country') or None,
+            emergency_contact=form_data.get('emergency_contact') or None,
+            inspired_by=form_data.get('inspired_by') or None,
+            is_active=True,
+            instructor=False,
+            board_member=False,
+            join_date=date.today()
+        )
+        
+        member.save()
+        logger.info(f"New member signup: {member.first_name} {member.last_name}")
+        
+        # Send invitation to GO3 band if email is provided
+        if member.email:
+            try:
+                go3_result = send_member_to_go3_band_invite(
+                    member.email,
+                    use_local_band=settings.DEBUG  # Use local band in dev, production band in production
+                )
+                
+                if go3_result['status'] == 'success':
+                    logger.info(f"GO3 band invite result: {go3_result['message']}")
+                else:
+                    # Log the error but don't fail the signup
+                    logger.warning(f"GO3 band invite failed: {go3_result['message']}")
+            except Exception as e:
+                # Log the error but don't fail the signup
+                logger.warning(f"Error sending GO3 band invite: {str(e)}")
+        
+        # Send email notification to admin
+        if recipients:
+            try:
+                recipient_list = [email.strip() for email in recipients.split(',')]
+                
+                # Build email message
+                email_message = f"""New Member Signup
+
+A new member has signed up through the website:
+
+Name: {member.first_name} {member.last_name}"""
+                
+                if member.preferred_name:
+                    email_message += f"\nPreferred Name: {member.preferred_name}"
+                
+                if primary_instrument:
+                    email_message += f"\nInstrument: {primary_instrument.name}"
+                
+                if member.birthday_display:
+                    email_message += f"\nBirthday: {member.birthday_display}"
+                
+                if member.email:
+                    email_message += f"\nEmail: {member.email}"
+                
+                if member.phone:
+                    email_message += f"\nPhone: {member.phone}"
+                
+                if member.address:
+                    address_parts = [member.address]
+                    if member.city:
+                        address_parts.append(member.city)
+                    if member.state:
+                        address_parts.append(member.state)
+                    if member.zip_code:
+                        address_parts.append(member.zip_code)
+                    if member.country:
+                        address_parts.append(member.country)
+                    email_message += f"\nAddress: {', '.join(address_parts)}"
+                
+                if member.emergency_contact:
+                    email_message += f"\nEmergency Contact: {member.emergency_contact}"
+                
+                if member.inspired_by:
+                    email_message += f"\n\nWhat inspired them to join:\n{member.inspired_by}"
+                
+                email_message += "\n\nStart Wearing Purple,\nBlowcomotion Website"
+                
+                _send_form_email(
+                    subject='New Member Signup',
+                    message=email_message,
+                    recipient_list=recipient_list
+                )
+                logger.info(f"Member signup notification email sent for {member.first_name} {member.last_name}")
+            except Exception as e:
+                logger.error(f"Error sending admin notification email: {str(e)}")
+        else:
+            logger.warning("No member signup notification recipients configured in site settings.")
+        
+        # Send confirmation email to new member if they provided an email
+        if member.email:
+            try:
+                confirmation_message = f"""Hello {member.first_name},
+
+Thank you for signing up with Blowcomotion! You've been added to our band.
+
+Please check your email, look for an email from "superuser@gig-o-matic.com" and complete the registration process there.
+
+Start Wearing Purple,
+Blowcomotion"""
+                
+                _send_form_email(
+                    subject='Welcome to Blowcomotion - Application Received',
+                    message=confirmation_message,
+                    recipient_list=[member.email, "info@blowcomotion.com"]
+                )
+                logger.info(f"Confirmation email sent to {member.email}")
+            except Exception as e:
+                logger.error(f"Error sending confirmation email: {str(e)}")
+        
+        return {
+            'message': 'Thank you for signing up! We have received your information and will be in touch soon. Please check your email for next steps.',
+            'template': 'forms/post_process.html'
+        }
+        
+    except Exception as e:
+        logger.error(f"Error processing member signup: {str(e)}", exc_info=True)
+        return {
+            'error': f'Error processing signup: {str(e)}',
+            'template': 'forms/error.html'
+        }
 
 
 def _process_form_submission(request, form_type, form_data, submission_model):
@@ -859,6 +1025,29 @@ def process_form(request):
                     'message': req.POST.get('message'),
                     'submitted_from_page': req.POST.get('page_url'),
                 }
+            },
+            'member_signup_form': {
+                'required_fields': ['first_name', 'last_name', 'email'],
+                'model': None,  # Member signup doesn't use submission model
+                'field_mapping': lambda req: {
+                    'first_name': req.POST.get('first_name'),
+                    'last_name': req.POST.get('last_name'),
+                    'preferred_name': req.POST.get('preferred_name'),
+                    'primary_instrument': req.POST.get('primary_instrument'),
+                    'birth_month': req.POST.get('birth_month'),
+                    'birth_day': req.POST.get('birth_day'),
+                    'birth_year': req.POST.get('birth_year'),
+                    'email': req.POST.get('email'),
+                    'phone': req.POST.get('phone'),
+                    'address': req.POST.get('address'),
+                    'city': req.POST.get('city'),
+                    'state': req.POST.get('state'),
+                    'zip_code': req.POST.get('zip_code'),
+                    'country': req.POST.get('country'),
+                    'emergency_contact': req.POST.get('emergency_contact'),
+                    'inspired_by': req.POST.get('inspired_by'),
+                    'newsletter_opt_in': req.POST.get('newsletter', False) == 'yes',
+                }
             }
         }
         
@@ -874,7 +1063,26 @@ def process_form(request):
                 context['error'] = f'Required fields are missing: {", ".join(missing_fields)}.'
                 return render(request, 'forms/error.html', context)
             
-            # Process the form
+            # Special handling for member signup form (creates Member instead of submission)
+            if form_type == 'member_signup_form':
+                # Validate birthday if provided
+                if form_data.get('birth_day') and form_data.get('birth_month'):
+                    from blowcomotion.utils import validate_birthday
+                    try:
+                        validate_birthday(
+                            int(form_data['birth_day']) if form_data['birth_day'] else None,
+                            int(form_data['birth_month']) if form_data['birth_month'] else None
+                        )
+                    except Exception as e:
+                        logger.warning(f"Birthday validation failed for member signup: {str(e)}")
+                        context['error'] = f'Invalid birthday: {str(e)}'
+                        return render(request, 'forms/error.html', context)
+                
+                result = _process_member_signup(request, form_data)
+                context.update({k: v for k, v in result.items() if k in ['message', 'error']})
+                return render(request, result['template'], context)
+            
+            # Process the form using standard submission model
             result = _process_form_submission(request, form_type, form_data, config['model'])
             context.update({k: v for k, v in result.items() if k in ['message', 'error']})
             return render(request, result['template'], context)
@@ -1787,164 +1995,3 @@ def gigs_for_date(request):
         date_param = request.GET.get('date', 'unknown')
         logger.error("Unexpected error in gigs_for_date for date %s: %s", date_param, e, exc_info=True)
         return JsonResponse({'error': f'Error fetching gigs: {str(e)}'}, status=500)
-
-
-def member_signup(request):
-    """
-    Handles new member signups by processing the MemberSignupForm, creating a Member instance,
-    and sending notification emails to administrators.
-
-    Parameters:
-        request (HttpRequest): The HTTP request object, expected to be a GET or POST.
-
-    Returns:
-        HttpResponse: Renders the signup form on GET or after successful signup.
-        JsonResponse: May return error details in case of form validation or other errors.
-
-    Exceptions:
-        Handles form validation errors, database errors, and email sending errors internally.
-        Unexpected exceptions are logged and may result in a 500 error response.
-    """
-    context = {}
-    
-    if request.method == 'POST':
-        form = MemberSignupForm(request.POST)
-        
-        if form.is_valid():
-            try:
-                # Create new member from form data
-                member = Member(
-                    first_name=form.cleaned_data['first_name'],
-                    last_name=form.cleaned_data['last_name'],
-                    preferred_name=form.cleaned_data.get('preferred_name') or None,
-                    primary_instrument=form.cleaned_data.get('primary_instrument'),
-                    birth_month=int(form.cleaned_data['birth_month']) if form.cleaned_data.get('birth_month') else None,
-                    birth_day=form.cleaned_data.get('birth_day'),
-                    birth_year=form.cleaned_data.get('birth_year'),
-                    email=form.cleaned_data.get('email') or None,
-                    phone=form.cleaned_data.get('phone') or None,
-                    address=form.cleaned_data.get('address') or None,
-                    city=form.cleaned_data.get('city') or None,
-                    state=form.cleaned_data.get('state') or None,
-                    zip_code=form.cleaned_data.get('zip_code') or None,
-                    country=form.cleaned_data.get('country') or None,
-                    emergency_contact=form.cleaned_data.get('emergency_contact') or None,
-                    inspired_by=form.cleaned_data.get('inspired_by') or None,
-                    is_active=True,
-                    instructor=False,
-                    board_member=False,
-                    join_date=date.today()
-                )
-                
-                member.save()
-                logger.info(f"New member signup: {member.first_name} {member.last_name}")
-                
-                # Send invitation to GO3 band if email is provided
-                go3_result = None
-                if member.email:
-                    go3_result = send_member_to_go3_band_invite(
-                        member.email,
-                        use_local_band=settings.DEBUG  # Use local band in dev, production band in production
-                    )
-                    
-                    if go3_result['status'] == 'success':
-                        logger.info(f"GO3 band invite result: {go3_result['message']}")
-                    else:
-                        # Log the error but don't fail the signup
-                        logger.warning(f"GO3 band invite failed: {go3_result['message']}")
-                
-                # Send email notification to admin
-                site_settings = SiteSettings.for_request(request=request)
-                recipients = site_settings.member_signup_notification_recipients
-                
-                if recipients:
-                    recipient_list = [email.strip() for email in recipients.split(',')]
-                    
-                    # Build email message
-                    email_message = f"""New Member Signup
-
-A new member has signed up through the website:
-
-Name: {member.first_name} {member.last_name}"""
-                    
-                    if member.preferred_name:
-                        email_message += f"\nPreferred Name: {member.preferred_name}"
-                    
-                    # Show selected instrument
-                    if form.cleaned_data.get('primary_instrument'):
-                        email_message += f"\nInstrument: {form.cleaned_data['primary_instrument']}"
-                    
-                    if member.birthday_display:
-                        email_message += f"\nBirthday: {member.birthday_display}"
-                    
-                    if member.email:
-                        email_message += f"\nEmail: {member.email}"
-                    
-                    if member.phone:
-                        email_message += f"\nPhone: {member.phone}"
-                    
-                    if member.address:
-                        address_parts = [member.address]
-                        if member.city:
-                            address_parts.append(member.city)
-                        if member.state:
-                            address_parts.append(member.state)
-                        if member.zip_code:
-                            address_parts.append(member.zip_code)
-                        if member.country:
-                            address_parts.append(member.country)
-                        email_message += f"\nAddress: {', '.join(address_parts)}"
-                    
-                    if member.emergency_contact:
-                        email_message += f"\nEmergency Contact: {member.emergency_contact}"
-                    
-                    if member.inspired_by:
-                        email_message += f"\n\nWhat inspired them to join:\n{member.inspired_by}"
-                    
-                    email_message += "\n\nStart Wearing Purple,\nBlowcomotion Website"
-                    
-                    _send_form_email(
-                        subject='New Member Signup',
-                        message=email_message,
-                        recipient_list=recipient_list
-                    )
-                    logger.info(f"Member signup notification email sent for {member.first_name} {member.last_name}")
-                else:
-                    logger.warning("No member signup notification recipients configured in site settings.")
-                
-                # Send confirmation email to new member if they provided an email
-                if member.email:
-                    confirmation_message = f"""Hello {member.first_name},
-
-Thank you for signing up with Blowcomotion! You've been added to our band.
-
-Please check your email, look for an email from "superuser@gig-o-matic.com" and complete the registration process there.
-
-Start Wearing Purple,
-Blowcomotion"""
-                    
-                    _send_form_email(
-                        subject='Welcome to Blowcomotion - Application Received',
-                        message=confirmation_message,
-                        recipient_list=[member.email, "info@blowcomotion.com"]
-                    )
-                
-                context['message'] = 'Thank you for signing up! We have received your information and will be in touch soon.'
-                return render(request, 'member_signup_success.html', context)
-                
-            except Exception as e:
-                logger.error(f"Error processing member signup: {str(e)}", exc_info=True)
-                context['error'] = f'Error processing signup: {str(e)}'
-                context['form'] = form
-                return render(request, 'member_signup.html', context)
-        else:
-            # Form validation errors
-            context['form'] = form
-            context['error'] = 'Please correct the errors below.'
-            return render(request, 'member_signup.html', context)
-    
-    else:
-        # GET request - display empty form
-        form = MemberSignupForm()
-        context['form'] = form
-        return render(request, 'member_signup.html', context)
