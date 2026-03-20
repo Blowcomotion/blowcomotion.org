@@ -1,0 +1,30 @@
+/* Member Signup Form Styles */
+
+.member-signup-form .card {
+    border-radius: 10px;
+}
+
+.member-signup-form .form-label {
+    font-weight: 500;
+}
+
+.member-signup-form .text-danger {
+    color: #dc3545 !important;
+}
+
+.member-signup-form .site-btn {
+    transition: all 0.3s ease;
+}
+
+.member-signup-form .site-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.member-signup-form .border-bottom {
+    border-color: #dee2e6 !important;
+}
+
+.member-signup-form h4 i {
+    margin-right: 0.5rem;
+}
