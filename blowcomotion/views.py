@@ -1072,13 +1072,15 @@ def process_form(request):
             
             # Special handling for member signup form (creates Member instead of submission)
             if form_type == 'member_signup_form':
-                # Validate birthday if provided
-                if form_data.get('birth_day') and form_data.get('birth_month'):
+                # Validate birthday if birth_day is provided (birth_month is optional)
+                if form_data.get('birth_day'):
                     from blowcomotion.utils import validate_birthday
                     try:
+                        birth_day_raw = form_data.get('birth_day')
+                        birth_month_raw = form_data.get('birth_month')
                         validate_birthday(
-                            int(form_data['birth_day']) if form_data['birth_day'] else None,
-                            int(form_data['birth_month']) if form_data['birth_month'] else None
+                            int(birth_day_raw),
+                            int(birth_month_raw) if birth_month_raw else None,
                         )
                     except Exception as e:
                         logger.warning(f"Birthday validation failed for member signup: {str(e)}")
