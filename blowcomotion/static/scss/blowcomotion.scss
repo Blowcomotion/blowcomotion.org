@@ -175,7 +175,7 @@ hr {
 .sticky-content-wrapper {
     position: sticky;
     top: 0;
-    z-index: 100; // High z-index to stay above most content but below modals
+    z-index: 8; // High z-index to stay above most content but below modals
     background: $white-color;
     width: 100%;
 }
