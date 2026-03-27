@@ -262,13 +262,15 @@ class MemberSignupGO3IntegrationTests(TestCase):
         }
         
         form_data = {
+            'form_type': 'member_signup_form',
+            'best_color': 'purple',
             'first_name': 'John',
             'last_name': 'Doe',
             'email': 'john@example.com',
-            'primary_instrument': self.instrument.pk
+            'primary_instrument': self.instrument.name
         }
         
-        response = self.client.post(reverse('member-signup'), form_data)
+        response = self.client.post(reverse('process-form'), form_data)
         
         # Verify the member was created
         member = Member.objects.get(email='john@example.com')
@@ -286,20 +288,22 @@ class MemberSignupGO3IntegrationTests(TestCase):
     def test_signup_without_email_fails_validation(self):
         """Test that signup requires email field (needed for GO3 invite)"""
         form_data = {
+            'form_type': 'member_signup_form',
+            'best_color': 'purple',
             'first_name': 'Jane',
             'last_name': 'Doe',
-            'primary_instrument': self.instrument.pk
+            'primary_instrument': self.instrument.name
         }
         
         # Submit form without email
-        response = self.client.post(reverse('member-signup'), form_data)
+        response = self.client.post(reverse('process-form'), form_data)
         
         # Since email is required and not provided, member should not be created
         self.assertFalse(Member.objects.filter(first_name='Jane').exists())
         
-        # Response should not redirect (form re-rendered with errors)
+        # Response should show error message about missing required field
         self.assertEqual(response.status_code, 200)
-        self.assertIn('This field is required', response.content.decode())
+        self.assertIn('Required fields are missing: email', response.content.decode())
 
     @override_settings(
         GIGO_API_URL="http://localhost:8001/api",
@@ -318,13 +322,15 @@ class MemberSignupGO3IntegrationTests(TestCase):
         }
         
         form_data = {
+            'form_type': 'member_signup_form',
+            'best_color': 'purple',
             'first_name': 'Bob',
             'last_name': 'Smith',
             'email': 'bob@example.com',
-            'primary_instrument': self.instrument.pk
+            'primary_instrument': self.instrument.name
         }
         
-        response = self.client.post(reverse('member-signup'), form_data)
+        response = self.client.post(reverse('process-form'), form_data)
         
         # Verify the member was created despite GO3 failure
         member = Member.objects.get(email='bob@example.com')
@@ -352,13 +358,15 @@ class MemberSignupGO3IntegrationTests(TestCase):
         }
         
         form_data = {
+            'form_type': 'member_signup_form',
+            'best_color': 'purple',
             'first_name': 'Alice',
             'last_name': 'Johnson',
             'email': 'alice@example.com',
-            'primary_instrument': self.instrument.pk
+            'primary_instrument': self.instrument.name
         }
         
-        response = self.client.post(reverse('member-signup'), form_data)
+        response = self.client.post(reverse('process-form'), form_data)
         
         # Verify GO3 was called with use_local_band=False (production mode)
         mock_go3_invite.assert_called_once_with('alice@example.com', use_local_band=False)
@@ -384,14 +392,16 @@ class MemberSignupGO3IntegrationTests(TestCase):
         }
         
         form_data = {
+            'form_type': 'member_signup_form',
+            'best_color': 'purple',
             'first_name': 'Charlie',
             'last_name': 'Brown',
             'email': 'charlie@example.com',
-            'primary_instrument': self.instrument.pk,
+            'primary_instrument': self.instrument.name,
             'phone': '555-1234'
         }
         
-        response = self.client.post(reverse('member-signup'), form_data)
+        response = self.client.post(reverse('process-form'), form_data)
         
         # Verify emails were sent
         self.assertEqual(mock_email.call_count, 2)  # One to admin, one to member

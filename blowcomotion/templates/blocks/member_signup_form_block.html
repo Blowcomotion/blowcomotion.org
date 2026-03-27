@@ -1,0 +1,252 @@
+{% load wagtailcore_tags static %}
+<link rel="stylesheet" href="{% static 'css/member-signup-form.css' %}">
+
+<div class="container py-5 member-signup-form">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            {% if value.title %}
+            <h1 class="text-center mb-4">
+                <i class="fa fa-users"></i> {{ value.title }}
+            </h1>
+            {% else %}
+            <h1 class="text-center mb-4">
+                <i class="fa fa-users"></i> Join Blowcomotion
+            </h1>
+            {% endif %}
+            
+            {% if value.description %}
+            <div class="text-center text-muted mb-5">
+                {{ value.description|richtext }}
+            </div>
+            {% else %}
+            <p class="text-center text-muted mb-5">
+                Welcome! Please fill out the form below to join our band. Fields marked with <span class="text-danger">*</span> are required.
+            </p>
+            {% endif %}
+
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form hx-post="{% url 'process-form' %}" name="member-signup-form">
+                        {% csrf_token %}
+                        <input type="text" class="best-color" name="best_color" value="" style="display:none;">
+                        <input type="hidden" name="form_type" value="member_signup_form">
+
+                        <!-- Personal Information Section -->
+                        <div class="mb-4">
+                            <h4 class="border-bottom pb-2 mb-3">
+                                <i class="fa fa-user"></i> Personal Information
+                            </h4>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="first_name" class="form-label">
+                                        First Name <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="first_name" name="first_name" required>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="last_name" class="form-label">
+                                        Last Name <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="last_name" name="last_name" required>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="preferred_name" class="form-label">
+                                    Preferred Name
+                                </label>
+                                <input type="text" class="form-control" id="preferred_name" name="preferred_name">
+                                <small class="form-text text-muted">Name you prefer to be called (optional)</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="primary_instrument" class="form-label">
+                                    Instrument
+                                </label>
+                                <select class="form-control" id="primary_instrument" name="primary_instrument">
+                                    <option value="">Select your instrument</option>
+                                    {% for instrument in instruments %}
+                                    <option value="{{ instrument.name }}">{{ instrument.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">Select the instrument you play (optional)</small>
+                            </div>
+                        </div>
+
+                        <!-- Birthday Section -->
+                        <div class="mb-4">
+                            <h4 class="border-bottom pb-2 mb-3">
+                                <i class="fa fa-birthday-cake"></i> Birthday
+                            </h4>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="birth_month" class="form-label">
+                                        Birth Month
+                                    </label>
+                                    <select class="form-control" id="birth_month" name="birth_month">
+                                        <option value="">Month</option>
+                                        <option value="1">January</option>
+                                        <option value="2">February</option>
+                                        <option value="3">March</option>
+                                        <option value="4">April</option>
+                                        <option value="5">May</option>
+                                        <option value="6">June</option>
+                                        <option value="7">July</option>
+                                        <option value="8">August</option>
+                                        <option value="9">September</option>
+                                        <option value="10">October</option>
+                                        <option value="11">November</option>
+                                        <option value="12">December</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <label for="birth_day" class="form-label">
+                                        Birth Day
+                                    </label>
+                                    <input type="number" class="form-control" id="birth_day" name="birth_day" min="1" max="31">
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <label for="birth_year" class="form-label">
+                                        Birth Year
+                                    </label>
+                                    <input type="number" class="form-control" id="birth_year" name="birth_year" min="1900" max="{% now 'Y' %}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact Information Section -->
+                        <div class="mb-4">
+                            <h4 class="border-bottom pb-2 mb-3">
+                                <i class="fa fa-envelope"></i> Contact Information
+                            </h4>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="email" class="form-label">
+                                        Email Address <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="email" class="form-control" id="email" name="email" required>
+                                    <small class="form-text text-muted">Required for gig-o-matic invitation</small>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="phone" class="form-label">
+                                        Phone Number
+                                    </label>
+                                    <input type="text" class="form-control" id="phone" name="phone">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Address Section -->
+                        <div class="mb-4">
+                            <h4 class="border-bottom pb-2 mb-3">
+                                <i class="fa fa-home"></i> Address
+                            </h4>
+                            
+                            <div class="mb-3">
+                                <label for="address" class="form-label">
+                                    Street Address
+                                </label>
+                                <input type="text" class="form-control" id="address" name="address">
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="city" class="form-label">
+                                        City
+                                    </label>
+                                    <input type="text" class="form-control" id="city" name="city">
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="state" class="form-label">
+                                        State
+                                    </label>
+                                    <input type="text" class="form-control" id="state" name="state">
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="zip_code" class="form-label">
+                                        ZIP Code
+                                    </label>
+                                    <input type="text" class="form-control" id="zip_code" name="zip_code">
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="country" class="form-label">
+                                        Country
+                                    </label>
+                                    <input type="text" class="form-control" id="country" name="country" value="USA">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Emergency Contact Section -->
+                        <div class="mb-4">
+                            <h4 class="border-bottom pb-2 mb-3">
+                                <i class="fa fa-phone"></i> Emergency Contact
+                            </h4>
+                            
+                            <div class="mb-3">
+                                <label for="emergency_contact" class="form-label">
+                                    Emergency Contact
+                                </label>
+                                <textarea class="form-control" id="emergency_contact" name="emergency_contact" rows="2"></textarea>
+                                <small class="form-text text-muted">Name and phone number of emergency contact</small>
+                            </div>
+                        </div>
+
+                        <!-- Inspiration Section -->
+                        <div class="mb-4">
+                            <h4 class="border-bottom pb-2 mb-3">
+                                <i class="fa fa-lightbulb-o"></i> Your Story
+                            </h4>
+                            
+                            <div class="mb-3">
+                                <label for="inspired_by" class="form-label">
+                                    What inspired you to join?
+                                </label>
+                                <textarea class="form-control" id="inspired_by" name="inspired_by" rows="3"></textarea>
+                                <small class="form-text text-muted">Share what event or person inspired you to join Blowcomotion</small>
+                            </div>
+                        </div>
+
+                        {% if value.newsletter_opt_in %}
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="newsletter" name="newsletter" value="yes">
+                                <label class="form-check-label" for="newsletter">
+                                    Opt-in to receive our newsletter
+                                </label>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Submit Button -->
+                        <div class="text-center">
+                            <button type="submit" class="site-btn btn-lg px-5">
+                                <i class="fa fa-paper-plane"></i> {{ value.button_text|default:"Submit Application" }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <p class="text-muted">
+                    <small>
+                        <i class="fa fa-lock"></i> Your information is secure and will only be used for band management purposes.
+                    </small>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1044,6 +1044,7 @@ class BlankCanvasPage(BasePage):
             ("horizontal_rule", blowcomotion_blocks.HorizontalRuleBlock()),
             ("image", blowcomotion_blocks.ImageBlock()),
             ("join_band_form", blowcomotion_blocks.JoinBandFormBlock(group="Forms")),
+            ("member_signup_form", blowcomotion_blocks.MemberSignupFormBlock(group="Forms")),
             ("jukebox", blowcomotion_blocks.JukeBoxBlock()),
             ("multi_image_banner", blowcomotion_blocks.MultiImageBannerBlock()),
             ("patreon_button", blowcomotion_blocks.PatreonButton()),

@@ -1,6 +1,6 @@
 import datetime
-import time
 import logging
+import time
 from datetime import timedelta, tzinfo
 
 import requests
@@ -282,6 +282,39 @@ class DonateFormBlock(blocks.StructBlock):
         template = "blocks/donate_form_block.html"
         label_format = "Donate Form: {title}"
         help_text = "This donate form block displays a form for people interested in making donations. Submissions are sent to the email address specified in the settings. Submissions are also saved to the admin."
+
+
+class MemberSignupFormBlock(blocks.StructBlock):
+    title = blocks.CharBlock(
+        required=False,
+        help_text="Enter the title for the member signup form.",
+    )
+    description = blocks.RichTextBlock(
+        required=False,
+        help_text="Enter the description for the member signup form.",
+    )
+    button_text = blocks.CharBlock(
+        required=False,
+        default="Submit Application",
+        help_text="Enter the text for the button.",
+    )
+    newsletter_opt_in = blocks.BooleanBlock(
+        required=False,
+        help_text="Include an opt-in checkbox for the newsletter.",
+    )
+
+    def get_context(self, value, parent_context=None):
+        context = super().get_context(value, parent_context=parent_context)
+        # Import here to avoid circular imports
+        from blowcomotion.models import Instrument
+        context['instruments'] = Instrument.objects.all().order_by('name')
+        return context
+
+    class Meta:
+        icon = "group"
+        template = "blocks/member_signup_form_block.html"
+        label_format = "Member Signup Form: {title}"
+        help_text = "This member signup form block displays a form for new members to sign up. Submissions create Member records and send notification emails."
 
 
 class PayPalDonateButton(blocks.StructBlock):
