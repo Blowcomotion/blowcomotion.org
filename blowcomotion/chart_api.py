@@ -13,6 +13,122 @@ from django.http import JsonResponse
 from blowcomotion.models import Chart, Instrument, Song
 
 
+def instruments_with_charts(request):
+    """
+    GET /charts/instruments/
+    
+    Returns all instruments that have at least one chart with a PDF uploaded,
+    grouped by section. This is the entry point for the instrument-first flow.
+    """
+    # Get distinct instrument IDs that have charts with PDFs
+    instrument_ids = Chart.objects.filter(
+        pdf__isnull=False
+    ).values_list('instrument_id', flat=True).distinct()
+    
+    instruments = Instrument.objects.filter(
+        pk__in=instrument_ids
+    ).select_related('section').order_by('section__name', 'name')
+    
+    # Group by section
+    sections_data = {}
+    for instrument in instruments:
+        section_name = instrument.section.name if instrument.section else 'Other'
+        section_id = instrument.section.id if instrument.section else 0
+        
+        if section_id not in sections_data:
+            sections_data[section_id] = {
+                'id': section_id,
+                'name': section_name,
+                'instruments': []
+            }
+        
+        sections_data[section_id]['instruments'].append({
+            'id': instrument.id,
+            'name': instrument.name,
+        })
+    
+    # Convert to list sorted by section name
+    sections_list = sorted(sections_data.values(), key=lambda x: x['name'])
+    
+    return JsonResponse({'sections': sections_list})
+
+
+def songs_for_instrument(request, instrument_id):
+    """
+    GET /charts/songs/<instrument_id>/
+    GET /charts/songs/<instrument_id>/?search=<query>
+    
+    Returns songs that have charts for the given instrument.
+    Each song includes its chart parts inline to avoid an extra API call.
+    """
+    try:
+        instrument = Instrument.objects.get(pk=instrument_id)
+    except Instrument.DoesNotExist:
+        return JsonResponse({'error': 'Instrument not found'}, status=404)
+    
+    search_query = request.GET.get('search', '').strip()
+    
+    # Get songs that have charts for this instrument
+    song_ids = Chart.objects.filter(
+        instrument=instrument,
+        pdf__isnull=False
+    ).values_list('song_id', flat=True).distinct()
+    
+    songs = Song.objects.filter(
+        pk__in=song_ids,
+        active=True
+    ).select_related(
+        'recording'
+    ).prefetch_related(
+        'videos'
+    ).order_by('title')
+    
+    if search_query:
+        songs = songs.filter(title__icontains=search_query)
+    
+    data = []
+    for song in songs:
+        # Collect videos
+        videos = []
+        for video in song.videos.all():
+            videos.append({'url': video.url, 'title': video.title})
+        
+        # Get charts for this song+instrument combination
+        charts = Chart.objects.filter(
+            song=song,
+            instrument=instrument,
+            pdf__isnull=False
+        ).select_related('pdf').order_by('part')
+        
+        charts_data = []
+        for chart in charts:
+            part_name = chart.part if chart.part else instrument.name
+            charts_data.append({
+                'id': chart.id,
+                'part': part_name,
+                'pdf_url': chart.pdf.url if chart.pdf else None,
+                'pdf_title': chart.pdf.title if chart.pdf else None,
+            })
+        
+        song_data = {
+            'id': song.id,
+            'title': song.title,
+            'has_recording': bool(song.recording and song.recording.file),
+            'has_video': len(videos) > 0,
+            'videos': videos,
+            'charts': charts_data,
+        }
+        if song.recording and song.recording.file:
+            song_data['recording_url'] = song.recording.file.url
+        data.append(song_data)
+    
+    return JsonResponse({
+        'instrument_id': instrument.id,
+        'instrument_name': instrument.name,
+        'songs': data
+    })
+
+
 def songs_with_charts(request):
     """
     GET /charts/songs/

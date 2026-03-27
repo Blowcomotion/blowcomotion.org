@@ -134,21 +134,20 @@
     color: #333;
 }
 
-/* Expand Icon for Multi-Part Instruments */
+/* Expand Icon for Multi-Part Songs */
 .expand-icon {
-    font-size: 10px;
-    margin-right: 8px;
+    font-size: 12px;
     color: #999;
     transition: transform 0.2s ease;
+    cursor: pointer;
 }
 
 .selector-item.expanded .expand-icon {
-    transform: rotate(0deg);
+    transform: rotate(90deg);
 }
 
-/* Part Items (nested under instruments) */
+/* Part Items (nested under songs) */
 .selector-item.part-item {
-    padding-left: 40px;
     background-color: #fafafa;
     font-size: 14px;
     border-left: 3px solid #e0e0e0;
@@ -161,6 +160,10 @@
 .selector-item.part-item .selector-item-text {
     font-size: 14px;
     color: #555;
+}
+
+.selector-item.part-item .song-media-icons {
+    visibility: hidden;
 }
 
 /* Play Button */
@@ -184,11 +187,35 @@
     color: #28a745;
 }
 
-/* Media Buttons Container */
-.song-media-buttons {
+/* Media Icons Container - Fixed width for alignment */
+.song-media-icons {
     display: flex;
-    gap: 4px;
+    flex-shrink: 0;
+    width: 64px;
+    margin-right: 7px;
+}
+
+.media-icon-slot {
+    width: 32px;
+    display: flex;
     align-items: center;
+    justify-content: center;
+}
+
+/* Song Actions Container - Right side */
+.song-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* Song item text - takes remaining space */
+.selector-item.song-item .selector-item-text,
+.selector-item.part-item .selector-item-text {
+    flex: 1;
+    min-width: 0;
 }
 
 /* Video Button */
@@ -245,10 +272,14 @@
     display: flex;
     align-items: center;
     gap: 2px;
+    position: relative;
 }
 
 .video-count {
-    font-size: 10px;
+    position: absolute;
+    top: -1px;
+    right: 1px;
+    font-size: 9px;
     background: #c00;
     color: white;
     border-radius: 50%;
@@ -257,14 +288,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-left: -4px;
-    margin-top: -8px;
 }
 
 .video-dropdown-menu {
     display: none;
     position: absolute;
-    right: 0;
     top: 100%;
     background: white;
     border: 1px solid #e0e0e0;

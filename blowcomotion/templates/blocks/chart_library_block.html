@@ -23,11 +23,27 @@
         {% endif %}
         
         <div class="row">
-            <!-- Left Column: Selectors -->
+            <!-- Left Column: Instrument Selectors -->
             <div class="col-lg-5 col-md-6">
                 <div class="chart-library-selectors">
+                    <!-- Instrument List -->
+                    <div class="chart-selector-section">
+                        <h5 class="selector-header">Instruments</h5>
+                        <div class="instrument-list selector-list" role="listbox" aria-label="Select an instrument">
+                            <div class="selector-loading">
+                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                                Loading instruments...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column: Song List and Chart Display -->
+            <div class="col-lg-7 col-md-6">
+                <div class="chart-display-area">
                     {% if value.show_search %}
-                    <div class="chart-search-container mb-3">
+                    <div class="chart-search-container mb-3" style="display: none;">
                         <input type="text" 
                                class="form-control chart-search-input" 
                                placeholder="{{ value.placeholder_text|default:'Search for a song...' }}"
@@ -35,26 +51,10 @@
                     </div>
                     {% endif %}
                     
-                    <!-- Song List -->
-                    <div class="chart-selector-section">
+                    <!-- Song List (hidden until instrument selected) -->
+                    <div class="chart-selector-section song-section" style="display: none;">
                         <h5 class="selector-header">Songs</h5>
                         <div class="song-list selector-list" role="listbox" aria-label="Select a song">
-                            <div class="selector-loading">
-                                <span class="spinner-border spinner-border-sm" role="status"></span>
-                                Loading songs...
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Right Column: Chart Display -->
-            <div class="col-lg-7 col-md-6">
-                <div class="chart-display-area">
-                    <!-- Instrument List (hidden until song selected) -->
-                    <div class="chart-selector-section instrument-section" style="display: none;">
-                        <h5 class="selector-header">Instruments</h5>
-                        <div class="instrument-list selector-list" role="listbox" aria-label="Select an instrument">
                         </div>
                     </div>
                     
