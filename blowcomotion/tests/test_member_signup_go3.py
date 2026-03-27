@@ -267,7 +267,7 @@ class MemberSignupGO3IntegrationTests(TestCase):
             'first_name': 'John',
             'last_name': 'Doe',
             'email': 'john@example.com',
-            'primary_instrument': self.instrument.pk
+            'primary_instrument': self.instrument.name
         }
         
         response = self.client.post(reverse('process-form'), form_data)
@@ -292,7 +292,7 @@ class MemberSignupGO3IntegrationTests(TestCase):
             'best_color': 'purple',
             'first_name': 'Jane',
             'last_name': 'Doe',
-            'primary_instrument': self.instrument.pk
+            'primary_instrument': self.instrument.name
         }
         
         # Submit form without email
@@ -327,7 +327,7 @@ class MemberSignupGO3IntegrationTests(TestCase):
             'first_name': 'Bob',
             'last_name': 'Smith',
             'email': 'bob@example.com',
-            'primary_instrument': self.instrument.pk
+            'primary_instrument': self.instrument.name
         }
         
         response = self.client.post(reverse('process-form'), form_data)
@@ -363,7 +363,7 @@ class MemberSignupGO3IntegrationTests(TestCase):
             'first_name': 'Alice',
             'last_name': 'Johnson',
             'email': 'alice@example.com',
-            'primary_instrument': self.instrument.pk
+            'primary_instrument': self.instrument.name
         }
         
         response = self.client.post(reverse('process-form'), form_data)
@@ -397,7 +397,7 @@ class MemberSignupGO3IntegrationTests(TestCase):
             'first_name': 'Charlie',
             'last_name': 'Brown',
             'email': 'charlie@example.com',
-            'primary_instrument': self.instrument.pk,
+            'primary_instrument': self.instrument.name,
             'phone': '555-1234'
         }
         
