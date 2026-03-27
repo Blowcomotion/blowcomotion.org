@@ -216,7 +216,7 @@ class LibraryInstrumentViewSet(SnippetViewSet):
     menu_label = 'Library Instruments'
     menu_name = 'library_instruments'
     menu_icon = 'french-horn'
-    list_display = ['instrument', 'serial_number', 'status', 'member', 'rental_date', 'review_date_6_month', 'review_date_12_month', UpdatedAtColumn()]
+    list_display = ['instrument', 'serial_number', 'status', 'member', 'member__last_seen', 'rental_date', 'review_date_6_month', 'review_date_12_month', UpdatedAtColumn()]
     list_filter = ['status', 'instrument', 'patreon_active', 'live']
     search_fields = ('instrument__name', 'serial_number', 'member__first_name', 'member__last_name', 'comments')
     panels = [
