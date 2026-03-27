@@ -1162,6 +1162,22 @@ class WikiPage(BlankCanvasPage):
         return self.title
 
 
+class InstrumentStorageLocation(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    street_address = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=255, blank=True, null=True)
+    state = models.CharField(max_length=255, blank=True, null=True)
+    zip_code = models.CharField(max_length=20, blank=True, null=True)
+    country = models.CharField(max_length=255, blank=True, null=True)
+    phone_number = models.CharField(max_length=50, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
 class LibraryInstrument(DraftStateMixin, RevisionMixin, LockableMixin, ClusterableModel, index.Indexed):
     """Track each physical instrument in the Blowcomotion inventory."""
 
@@ -1231,6 +1247,14 @@ class LibraryInstrument(DraftStateMixin, RevisionMixin, LockableMixin, Clusterab
         blank=True,
         validators=[MinValueValidator(0)],
         help_text="Monthly Patreon support amount",
+    )
+    storage_location = models.ForeignKey(
+        "blowcomotion.InstrumentStorageLocation",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="stored_instruments",
+        help_text="Physical storage location for this instrument (e.g. organization locker). Leave blank if stored with member.",
     )
     comments = models.TextField(
         blank=True,
