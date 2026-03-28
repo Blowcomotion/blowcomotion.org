@@ -216,8 +216,8 @@ class LibraryInstrumentViewSet(SnippetViewSet):
     menu_label = 'Library Instruments'
     menu_name = 'library_instruments'
     menu_icon = 'french-horn'
-    list_display = ['instrument', 'serial_number', 'status', 'member', 'member__last_seen', 'rental_date', 'review_date_6_month', 'review_date_12_month', UpdatedAtColumn()]
-    list_filter = ['status', 'instrument', 'patreon_active', 'live']
+    list_display = ['instrument', 'serial_number', 'status', 'storage_location', 'member', 'member__last_seen', 'rental_date', 'review_date_6_month', 'review_date_12_month', UpdatedAtColumn()]
+    list_filter = ['status', 'instrument', 'storage_location', 'patreon_active', 'live']
     search_fields = ('instrument__name', 'serial_number', 'member__first_name', 'member__last_name', 'comments')
     panels = [
         MultiFieldPanel([
@@ -225,6 +225,7 @@ class LibraryInstrumentViewSet(SnippetViewSet):
             'status',
             'serial_number',
             'member',
+            'storage_location',
         ], heading="Basic Information"),
         MultiFieldPanel([
             FieldRowPanel([
@@ -278,8 +279,42 @@ class InstrumentHistoryLogViewSet(SnippetViewSet):
         super().__init__(*args, **kwargs)
 
 
+class InstrumentStorageLocationViewSet(SnippetViewSet):
+    model = None
+    menu_label = 'Storage Locations'
+    menu_name = 'storage_locations'
+    menu_icon = 'home'
+    list_display = ['name', 'city', 'state', 'phone_number', UpdatedAtColumn()]
+    list_filter = ['city', 'state']
+    search_fields = ('name', 'description', 'street_address', 'city', 'state', 'notes')
+    panels = [
+        'name',
+        'description',
+        MultiFieldPanel([
+            'street_address',
+            FieldRowPanel([
+                'city',
+                'state',
+                'zip_code',
+            ]),
+            'country',
+        ], heading="Address"),
+        MultiFieldPanel([
+            'phone_number',
+            'email',
+        ], heading="Contact Information"),
+        'notes',
+    ]
+    ordering = ['name']
+
+    def __init__(self, *args, **kwargs):
+        from .models import InstrumentStorageLocation
+        self.model = InstrumentStorageLocation
+        super().__init__(*args, **kwargs)
+
+
 class BandViewSetGroup(SnippetViewSetGroup):
-    items = (EventViewSet, SectionViewSet, InstrumentViewSet, MemberViewSet, SongViewSet, ChartViewSet, AttendanceRecordViewSet, LibraryInstrumentViewSet, InstrumentHistoryLogViewSet)
+    items = (EventViewSet, SectionViewSet, InstrumentViewSet, MemberViewSet, SongViewSet, ChartViewSet, AttendanceRecordViewSet, LibraryInstrumentViewSet, InstrumentHistoryLogViewSet, InstrumentStorageLocationViewSet)
     menu_icon = 'drum'
     menu_label = 'Band Stuff'
     menu_name = 'band'
