@@ -493,6 +493,7 @@ class Instrument(models.Model, index.Indexed):
         index.AutocompleteField("name"),
         index.SearchField("name"),
         index.SearchField("description"),
+        index.SearchField("section__name"),
     ]
 
     def __str__(self):
