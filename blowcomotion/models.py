@@ -1290,6 +1290,12 @@ class LibraryInstrument(DraftStateMixin, RevisionMixin, LockableMixin, Clusterab
         super().clean()
         if self.status == self.STATUS_RENTED and not self.member:
             raise ValidationError({"member": "Rented instruments must be assigned to a member."})
+        # XOR member or storage_location must be set (can't have both or neither)
+        if self.member and self.storage_location:
+            raise ValidationError("An instrument cannot be stored with a member and in a storage location at the same time. Please choose one or the other.")
+        if not self.member and not self.storage_location:
+            raise ValidationError("An instrument must be stored with a member or in a storage location. Please choose one.")
+
 
     def save(self, *args, **kwargs):
         is_new = self.pk is None
