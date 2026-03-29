@@ -35,7 +35,6 @@
             this.container = container;
             this.state = {
                 selectedInstrument: null,
-                selectedSong: null,
                 currentlyPlayingUrl: null
             };
 
@@ -187,7 +186,6 @@
                 id: instrumentItem.dataset.instrumentId,
                 name: instrumentItem.dataset.instrumentName
             };
-            this.state.selectedSong = null;
             this.state.currentlyPlayingUrl = null;
 
             // Reset search

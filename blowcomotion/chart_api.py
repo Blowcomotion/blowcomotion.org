@@ -7,7 +7,7 @@ Provides JSON endpoints for:
 - Listing chart parts for a song+instrument combination
 """
 
-from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef, Prefetch
 from django.http import JsonResponse
 
 from blowcomotion.models import Chart, Instrument, Song
@@ -20,9 +20,10 @@ def instruments_with_charts(request):
     Returns all instruments that have at least one chart with a PDF uploaded,
     grouped by section. This is the entry point for the instrument-first flow.
     """
-    # Get distinct instrument IDs that have charts with PDFs
+    # Get distinct instrument IDs that have charts with PDFs for active songs
     instrument_ids = Chart.objects.filter(
-        pdf__isnull=False
+        pdf__isnull=False,
+        song__active=True
     ).values_list('instrument_id', flat=True).distinct()
     
     instruments = Instrument.objects.filter(
@@ -74,13 +75,24 @@ def songs_for_instrument(request, instrument_id):
         pdf__isnull=False
     ).values_list('song_id', flat=True).distinct()
     
+    # Prefetch charts for this instrument to avoid N+1 queries
+    charts_prefetch = Prefetch(
+        'charts',
+        queryset=Chart.objects.filter(
+            instrument=instrument,
+            pdf__isnull=False
+        ).select_related('pdf').order_by('part'),
+        to_attr='instrument_charts'
+    )
+    
     songs = Song.objects.filter(
         pk__in=song_ids,
         active=True
     ).select_related(
         'recording'
     ).prefetch_related(
-        'videos'
+        'videos',
+        charts_prefetch
     ).order_by('title')
     
     if search_query:
@@ -93,15 +105,9 @@ def songs_for_instrument(request, instrument_id):
         for video in song.videos.all():
             videos.append({'url': video.url, 'title': video.title})
         
-        # Get charts for this song+instrument combination
-        charts = Chart.objects.filter(
-            song=song,
-            instrument=instrument,
-            pdf__isnull=False
-        ).select_related('pdf').order_by('part')
-        
+        # Use prefetched charts to avoid N+1 queries
         charts_data = []
-        for chart in charts:
+        for chart in song.instrument_charts:
             part_name = chart.part if chart.part else instrument.name
             charts_data.append({
                 'id': chart.id,
