@@ -29,6 +29,9 @@ urlpatterns = [
     path("birthdays/", blowcomotion_views.birthdays, name="birthdays"),
     
     # Chart Library API
+    path("charts/instruments/", chart_api.instruments_with_charts, name="chart-instruments-list"),
+    path("charts/songs/<int:instrument_id>/", chart_api.songs_for_instrument, name="chart-songs-for-instrument"),
+    # Legacy endpoints (kept for backwards compatibility)
     path("charts/songs/", chart_api.songs_with_charts, name="chart-songs"),
     path("charts/instruments/<int:song_id>/", chart_api.instruments_for_song, name="chart-instruments"),
     path("charts/parts/<int:song_id>/<int:instrument_id>/", chart_api.charts_for_song_instrument, name="chart-parts"),
