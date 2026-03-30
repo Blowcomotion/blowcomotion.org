@@ -10,6 +10,8 @@ from blowcomotion.views import (
     dump_data,
     export_attendance_csv,
     export_members_csv,
+    export_instruments_csv,
+    export_rented_instruments_csv,
     instrument_library_available,
     instrument_library_needs_repair,
     instrument_library_quick_rent,
@@ -40,7 +42,21 @@ def register_admin_urls():
     return [
         path("dump_data/", dump_data, name="dump_data"),
         path("export_members/", export_members_csv, name="export_members"),
-        path("export_attendance/", export_attendance_csv, name="export_attendance"),
+        path(
+            "export_instruments/", 
+            export_instruments_csv, 
+            name="export_instruments"
+        ),
+        path(
+            "export_rented_instruments/", 
+            export_rented_instruments_csv, 
+            name="export_rented_instruments"
+        ),
+        path(
+            "export_attendance/", 
+            export_attendance_csv, 
+            name="export_attendance"
+        ),
         path(
             "instrument-library/rented/",
             instrument_library_rented,
@@ -73,6 +89,8 @@ def register_management_menu_item():
         MenuItem('Dump Data', reverse('dump_data'), icon_name='download'),
         MenuItem('Export Members CSV', reverse('export_members'), icon_name='table'),
         MenuItem('Export Attendance CSV', reverse('export_attendance'), icon_name='calendar'),
+        MenuItem('Export Instruments CSV', reverse('export_instruments'), icon_name='table'),
+        MenuItem('Export Rented Instruments CSV', reverse('export_rented_instruments'), icon_name='table'),
         MenuItem('Library: Rented', reverse('instrument_library_rented'), icon_name='french-horn'),
         MenuItem('Library: Available', reverse('instrument_library_available'), icon_name='french-horn'),
         MenuItem('Library: Maintenance', reverse('instrument_library_needs_repair'), icon_name='warning'),
