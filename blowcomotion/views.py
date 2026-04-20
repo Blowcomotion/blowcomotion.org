@@ -62,7 +62,7 @@ BIRTHDAY_RANGE_DAYS = 30
 def instrument_library_rented(request):
     instruments = (
         LibraryInstrument.objects.filter(status=LibraryInstrument.STATUS_RENTED)
-        .select_related('instrument', 'member')
+        .select_related('instrument', 'member', 'storage_location')
         .order_by('instrument__name', 'serial_number')
     )
     return render(
@@ -78,7 +78,7 @@ def instrument_library_rented(request):
 def instrument_library_available(request):
     instruments = (
         LibraryInstrument.objects.filter(status=LibraryInstrument.STATUS_AVAILABLE)
-        .select_related('instrument', 'member')
+        .select_related('instrument', 'member', 'storage_location')
         .order_by('instrument__name', 'serial_number')
     )
     return render(
@@ -99,7 +99,7 @@ def instrument_library_needs_repair(request):
                 LibraryInstrument.STATUS_OUT_FOR_REPAIR,
             ]
         )
-        .select_related('instrument', 'member')
+        .select_related('instrument', 'member', 'storage_location')
         .order_by('instrument__name', 'serial_number')
     )
     return render(
