@@ -16,7 +16,7 @@ from blowcomotion.chooser_blocks import (
     GigoGigChooserBlock,
     SongChooserBlock,
 )
-from blowcomotion.utils import adjust_gig_date_for_early_morning
+from blowcomotion.utils import convert_utc_gig_to_central
 
 logger = logging.getLogger(__name__)
 
@@ -776,35 +776,20 @@ class UpcomingPublicGigs(blocks.StructBlock):
                         headers={"X-API-KEY": settings.GIGO_API_KEY},
                     )
                 context['gigs'] = [gig for gig in r.json()['gigs'] if gig['gig_status'].lower() == 'confirmed' and gig['band'].lower() == 'blowcomotion' and gig["date"] >= datetime.date.today().isoformat() and gig['is_private'] == False and gig["hide_from_calendar"] == False and gig["is_archived"] == False and gig["is_in_trash"] == False]
-                localtime = time.localtime()
                 validated_gigs = []
                 for gig in context['gigs']:
-                    # Adjust gig date for early morning times using shared helper function
-                    adjusted_date_str = adjust_gig_date_for_early_morning(gig)
+                    # Convert UTC time to Central timezone (CST/CDT), keep API date as-is
+                    date_str, local_datetime = convert_utc_gig_to_central(gig)
                     
-                    # Parse and validate adjusted date; skip if invalid
+                    # Parse and validate the date; skip if invalid
                     try:
-                        parsed_date = datetime.datetime.strptime(adjusted_date_str, "%Y-%m-%d")
+                        parsed_date = datetime.datetime.strptime(date_str, "%Y-%m-%d")
                     except (ValueError, TypeError):  # includes missing or malformed date
                         continue
 
-                    # Prefer set_time; fallback to call_time if set_time is missing/blank/whitespace
-                    set_time = gig.get('set_time')
-                    if isinstance(set_time, str):
-                        set_time = set_time.strip()
-                    raw_time = set_time if set_time else gig.get('call_time')
-                    if isinstance(raw_time, str):
-                        raw_time = raw_time.strip()
-                    parsed_time = None
-                    if raw_time:
-                        try:
-                            parsed_time = datetime.datetime.strptime(raw_time, "%H:%M").replace(tzinfo=datetime.timezone.utc)
-                            parsed_time = parsed_time + timedelta(hours=localtime.tm_isdst)
-                        except (ValueError, TypeError):
-                            parsed_time = None
-
-                    gig['date'] = parsed_date  # overwrite with datetime object for downstream usage
-                    gig['set_time'] = parsed_time
+                    # Use the API date with Central Time for display
+                    gig['date'] = parsed_date  # date as datetime object for sorting
+                    gig['set_time'] = local_datetime  # timezone-aware datetime in Central Time
                     validated_gigs.append(gig)
 
                 validated_gigs.sort(key=lambda gig: gig['date'])

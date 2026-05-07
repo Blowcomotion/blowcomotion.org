@@ -3,6 +3,7 @@ Utility functions for the Blowcomotion application.
 """
 import logging
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -12,21 +13,26 @@ from django.core.exceptions import ValidationError
 logger = logging.getLogger(__name__)
 
 
-def adjust_gig_date_for_early_morning(gig):
+def convert_utc_gig_to_central(gig):
     """
-    Adjust gig date if the time is very early morning (before 6 AM).
-    This handles cases where events that happen late at night are stored with
-    the next day's date and a post-midnight time.
+    Convert a gig's UTC date/time to US/Central timezone (handles CST/CDT automatically).
+    
+    For display purposes, we use the API's date field but convert the time to local timezone.
+    This ensures that events are displayed on the date they're scheduled, even if timezone
+    conversion would technically put them on a different day.
     
     Args:
         gig: Dictionary containing gig data with 'date', 'set_time', and/or 'call_time' fields
+             Times are assumed to be in UTC.
         
     Returns:
-        str: Adjusted date string in YYYY-MM-DD format
+        tuple: (date_str, local_datetime_obj) where:
+               - date_str: Date string from API (YYYY-MM-DD format)
+               - local_datetime_obj: timezone-aware datetime object in Central Time (or None if no time available)
     """
     gig_date = gig.get('date', '')
     if not gig_date:
-        return gig_date
+        return gig_date, None
     
     # Prefer set_time; fallback to call_time
     set_time = gig.get('set_time', '').strip() if isinstance(gig.get('set_time'), str) else ''
@@ -35,18 +41,22 @@ def adjust_gig_date_for_early_morning(gig):
     
     if time_str:
         try:
-            # Parse the time
-            time_obj = datetime.strptime(time_str, "%H:%M")
-            # If time is before 6 AM, subtract one day from the date
-            if time_obj.hour < 6:
-                date_obj = datetime.strptime(gig_date, "%Y-%m-%d")
-                adjusted_date = date_obj - timedelta(days=1)
-                return adjusted_date.strftime("%Y-%m-%d")
-        except (ValueError, TypeError):
-            # If parsing fails, return original date
+            # Combine UTC date and time into a full datetime
+            utc_datetime = datetime.strptime(f"{gig_date} {time_str}", "%Y-%m-%d %H:%M")
+            utc_datetime = utc_datetime.replace(tzinfo=ZoneInfo("UTC"))
+            
+            # Convert to US/Central timezone (auto-handles CST/CDT based on date)
+            central_datetime = utc_datetime.astimezone(ZoneInfo("America/Chicago"))
+            
+            # Use the API's date field as-is (don't adjust based on timezone conversion)
+            # This keeps events on their scheduled date regardless of timezone differences
+            return gig_date, central_datetime
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Failed to parse gig date/time: {gig_date} {time_str} - {e}")
+            # If parsing fails, return original date with no time
             pass
     
-    return gig_date
+    return gig_date, None
 
 
 def validate_birthday(birth_day, birth_month):

@@ -46,7 +46,7 @@ from blowcomotion.models import (
     SiteSettings,
 )
 from blowcomotion.utils import (
-    adjust_gig_date_for_early_morning,
+    convert_utc_gig_to_central,
     make_gigo_api_request,
     send_member_to_go3_band_invite,
 )
@@ -1561,16 +1561,16 @@ def attendance_capture(request, section_slug=None):
         if gigs_data and gigs_data.get("gigs"):
             # Filter gigs for the specific date
             for gig_item in gigs_data["gigs"]:
-                # Adjust gig date for early morning times
-                adjusted_date = adjust_gig_date_for_early_morning(gig_item)
+                # Convert UTC time to Central timezone, keep API date
+                gig_date_str, _ = convert_utc_gig_to_central(gig_item)
                 
-                if (adjusted_date == date_str and 
+                if (gig_date_str == date_str and 
                     gig_item.get("gig_status", "").lower() == "confirmed" and 
                     gig_item.get("band", "").lower() == "blowcomotion"):
                     gig_choices.append({
                         'id': gig_item.get('id'),
                         'title': gig_item.get('title', 'Untitled Gig'),
-                        'date': adjusted_date,  # Use adjusted date for display
+                        'date': gig_date_str,  # API date with times converted to Central
                     })
         
         # Cache the result for 10 minutes
@@ -1975,17 +1975,17 @@ def gigs_for_date(request):
             # Filter gigs for the specific date and other criteria
             logger.info(f"Processing {len(gigs_data.get('gigs', []))} total gigs from API")
             for gig in gigs_data["gigs"]:
-                # Adjust gig date for early morning times
-                adjusted_date = adjust_gig_date_for_early_morning(gig)
+                # Convert UTC time to Central timezone, keep API date
+                gig_date_str, _ = convert_utc_gig_to_central(gig)
                 
-                if (adjusted_date == date_str and 
+                if (gig_date_str == date_str and 
                     gig.get("gig_status", "").lower() == "confirmed" and 
                     gig.get("band", "").lower() == "blowcomotion"):
                     logger.info(f"Found matching gig: {gig.get('title')} (ID: {gig.get('id')}) for {date_str}")
                     filtered_gigs.append({
                         'id': gig.get('id'),
                         'title': gig.get('title', 'Untitled Gig'),
-                        'date': adjusted_date,  # Use adjusted date for display
+                        'date': gig_date_str,  # API date with times converted to Central
                         'address': gig.get('address', '')
                     })
         
