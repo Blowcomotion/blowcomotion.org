@@ -17,7 +17,7 @@
       </button>
     </div>
     <div class="card-body p-4 pt-0">
-      <div id="collapse-{{ value.id }}-{{ forloop.counter }}" class="timeline-content collapsed" data-collapsed="true">
+      <div id="collapse-{{ value.id }}-{{ forloop.counter }}" class="timeline-content collapsed {% if forloop.first %}first{% endif %}" data-collapsed="true">
         <div class="mb-0">{{ item.description|richtext }}</div>
       </div>
       <div class="timeline-gradient" id="gradient-{{ value.id }}-{{ forloop.counter }}"></div>

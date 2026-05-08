@@ -113,6 +113,11 @@
   overflow: hidden;
   cursor: pointer;
 }
+.timeline-content.collapsed.first {
+  max-height: 150px;
+  overflow: hidden;
+  cursor: pointer;
+}
 
 .timeline-gradient {
   position: absolute;
