@@ -641,51 +641,44 @@ class VideoFeedBlock(blocks.StructBlock):
         help_text="Number of columns for the video carousel (Note: currently set to 4 in carousel config)."
     )
 
-    def _extract_embed_url(self, embed_value):
+    def _get_embed_data(self, embed_value):
         """
-        Extract the embed URL from an EmbedValue.
-        Tries to parse iframe src from HTML, or constructs URL from the source.
+        Fetch embed data once per video to avoid N+1 queries.
+        Returns both the embed URL and metadata from a single embed fetch.
         """
         import re
         
-        if not embed_value:
-            return None
-        
-        # Try to extract iframe src from embed HTML
-        if hasattr(embed_value, 'html') and embed_value.html:
-            iframe_match = re.search(r'<iframe[^>]+src="([^"]+)"', embed_value.html)
-            if iframe_match:
-                return iframe_match.group(1)
-        
-        # Fallback: construct embed URL from source URL
-        if hasattr(embed_value, 'url') and embed_value.url:
-            url = embed_value.url
-            # YouTube
-            if "youtube.com/watch?v=" in url:
-                video_id = url.split("watch?v=")[-1].split("&")[0]
-                return f"https://www.youtube.com/embed/{video_id}"
-            elif "youtu.be/" in url:
-                video_id = url.split("youtu.be/")[-1].split("?")[0]
-                return f"https://www.youtube.com/embed/{video_id}"
-            # Vimeo
-            elif "vimeo.com/" in url:
-                video_id = url.split("vimeo.com/")[-1].split("?")[0]
-                return f"https://player.vimeo.com/video/{video_id}"
-        
-        return None
-
-    def _get_embed_data(self, embed_value):
-        """
-        Fetch the Embed model to get thumbnail_url and title.
-        EmbedValue only exposes url and html, so we need to fetch the full embed.
-        """
         if not embed_value or not hasattr(embed_value, 'url') or not embed_value.url:
             return None
         
         try:
             from wagtail.embeds import embeds
             embed = embeds.get_embed(embed_value.url)
+            
+            # Extract iframe src from embed HTML
+            embed_url = None
+            if hasattr(embed, 'html') and embed.html:
+                iframe_match = re.search(r'<iframe[^>]+src="([^"]+)"', embed.html)
+                if iframe_match:
+                    embed_url = iframe_match.group(1)
+            
+            # Fallback: construct embed URL from source URL
+            if not embed_url:
+                url = embed_value.url
+                # YouTube
+                if "youtube.com/watch?v=" in url:
+                    video_id = url.split("watch?v=")[-1].split("&")[0]
+                    embed_url = f"https://www.youtube.com/embed/{video_id}"
+                elif "youtu.be/" in url:
+                    video_id = url.split("youtu.be/")[-1].split("?")[0]
+                    embed_url = f"https://www.youtube.com/embed/{video_id}"
+                # Vimeo
+                elif "vimeo.com/" in url:
+                    video_id = url.split("vimeo.com/")[-1].split("?")[0]
+                    embed_url = f"https://player.vimeo.com/video/{video_id}"
+            
             return {
+                'embed_url': embed_url,
                 'thumbnail_url': embed.thumbnail_url,
                 'title': embed.title,
                 'author_name': embed.author_name,
@@ -698,19 +691,18 @@ class VideoFeedBlock(blocks.StructBlock):
         context = super().get_context(value, parent_context)
         
         # Filter out videos that don't have a valid embed and add embed URLs
+        # Fetch embed data once per video to avoid N+1 queries
         valid_videos = []
         for v in value.get('videos', []):
             if v.get('video'):
-                embed_url = self._extract_embed_url(v['video'])
-                if embed_url:
-                    # Fetch the full embed data for thumbnail and title
-                    embed_data = self._get_embed_data(v['video']) or {}
-                    
+                # Single embed fetch per video returns both URL and metadata
+                embed_data = self._get_embed_data(v['video'])
+                if embed_data and embed_data.get('embed_url'):
                     # Create a new dict with the video data plus embed_url and embed metadata
                     video_data = {
                         'video': v['video'],
                         'overrides': v.get('overrides', {}),
-                        'embed_url': embed_url,
+                        'embed_url': embed_data['embed_url'],
                         'thumbnail_url': embed_data.get('thumbnail_url', ''),
                         'title': embed_data.get('title', ''),
                     }

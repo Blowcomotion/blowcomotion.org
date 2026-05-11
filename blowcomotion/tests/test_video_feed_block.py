@@ -2,7 +2,7 @@
 Tests for VideoFeedBlock and related blocks.
 """
 
-from unittest.mock import Mock, PropertyMock
+from unittest.mock import Mock, PropertyMock, patch
 
 from wagtail.embeds.embeds import get_embed
 from wagtail.embeds.exceptions import EmbedException
@@ -105,24 +105,46 @@ class VideoFeedBlockContextTests(TestCase):
     """Test cases for VideoFeedBlock.get_context() method"""
 
     def _create_mock_embed(self, url='https://www.youtube.com/watch?v=test', title='Test Video'):
-        """Helper to create a mock embed value"""
+        """Helper to create a mock embed value that will work with _get_embed_data()"""
+        # Create the EmbedValue that gets passed to _get_embed_data
+        mock_embed_value = Mock()
+        mock_embed_value.url = url
+        
+        # Create the Embed object that embeds.get_embed() will return
         mock_embed = Mock()
         mock_embed.url = url
         mock_embed.title = title
         mock_embed.thumbnail_url = 'https://example.com/thumb.jpg'
-        mock_embed.html = '<iframe src="test"></iframe>'
-        return mock_embed
+        mock_embed.html = '<iframe src="https://www.youtube.com/embed/test" frameborder="0"></iframe>'
+        
+        return mock_embed_value, mock_embed
 
-    def test_filters_out_videos_without_embed(self):
+    @patch('wagtail.embeds.embeds.get_embed')
+    def test_filters_out_videos_without_embed(self, mock_get_embed):
         """Test that videos without valid embed are filtered out"""
         block = VideoFeedBlock()
+        
+        # Create two valid embeds
+        embed1_value, embed1 = self._create_mock_embed()
+        embed2_value, embed2 = self._create_mock_embed(url='https://vimeo.com/123')
+        embed2.html = '<iframe src="https://player.vimeo.com/video/123" frameborder="0"></iframe>'
+        
+        # Setup mock to return different embeds based on URL
+        def get_embed_side_effect(url):
+            if 'youtube' in url:
+                return embed1
+            elif 'vimeo' in url:
+                return embed2
+            return None
+        
+        mock_get_embed.side_effect = get_embed_side_effect
         
         value = {
             'title': 'My Videos',
             'videos': [
-                {'video': self._create_mock_embed(), 'overrides': {}},
+                {'video': embed1_value, 'overrides': {}},
                 {'video': None, 'overrides': {}},  # Invalid - should be filtered
-                {'video': self._create_mock_embed(url='https://vimeo.com/123'), 'overrides': {}},
+                {'video': embed2_value, 'overrides': {}},
             ],
             'show_featured': False,
             'grid_columns': '3',
@@ -136,13 +158,22 @@ class VideoFeedBlockContextTests(TestCase):
         # Check that embed_url was added
         self.assertIn('embed_url', context['grid_videos'][0])
 
-    def test_separates_featured_video_when_enabled(self):
+    @patch('wagtail.embeds.embeds.get_embed')
+    def test_separates_featured_video_when_enabled(self, mock_get_embed):
         """Test that first video becomes featured when show_featured is True"""
         block = VideoFeedBlock()
         
-        first_video = {'video': self._create_mock_embed(title='Featured'), 'overrides': {}}
-        second_video = {'video': self._create_mock_embed(title='Grid 1'), 'overrides': {}}
-        third_video = {'video': self._create_mock_embed(title='Grid 2'), 'overrides': {}}
+        # Create mock embeds
+        first_value, first_embed = self._create_mock_embed(title='Featured')
+        second_value, second_embed = self._create_mock_embed(title='Grid 1')
+        third_value, third_embed = self._create_mock_embed(title='Grid 2')
+        
+        # Mock get_embed to return appropriate embeds
+        mock_get_embed.side_effect = [first_embed, second_embed, third_embed]
+        
+        first_video = {'video': first_value, 'overrides': {}}
+        second_video = {'video': second_value, 'overrides': {}}
+        third_video = {'video': third_value, 'overrides': {}}
         
         value = {
             'title': 'My Videos',
@@ -156,21 +187,26 @@ class VideoFeedBlockContextTests(TestCase):
         # First video should be featured
         self.assertIsNotNone(context['featured_video'])
         self.assertIn('embed_url', context['featured_video'])
-        self.assertEqual(context['featured_video']['video'].title, 'Featured')
+        self.assertEqual(context['featured_video']['title'], 'Featured')
         # Remaining videos should be in grid
         self.assertEqual(len(context['grid_videos']), 2)
-        self.assertEqual(context['grid_videos'][0]['video'].title, 'Grid 1')
-        self.assertEqual(context['grid_videos'][1]['video'].title, 'Grid 2')
+        self.assertEqual(context['grid_videos'][0]['title'], 'Grid 1')
+        self.assertEqual(context['grid_videos'][1]['title'], 'Grid 2')
         # All grid videos should have embed_url
         for video in context['grid_videos']:
             self.assertIn('embed_url', video)
 
-    def test_all_videos_in_grid_when_featured_disabled(self):
+    @patch('wagtail.embeds.embeds.get_embed')
+    def test_all_videos_in_grid_when_featured_disabled(self, mock_get_embed):
         """Test that all videos go to grid when show_featured is False"""
         block = VideoFeedBlock()
         
+        # Create mock embeds
+        embeds = [self._create_mock_embed(title=f'Video {i}') for i in range(3)]
+        mock_get_embed.side_effect = [embed[1] for embed in embeds]
+        
         videos = [
-            {'video': self._create_mock_embed(title=f'Video {i}'), 'overrides': {}}
+            {'video': embeds[i][0], 'overrides': {}}
             for i in range(3)
         ]
         
@@ -204,11 +240,15 @@ class VideoFeedBlockContextTests(TestCase):
         self.assertIsNone(context['featured_video'])
         self.assertEqual(len(context['grid_videos']), 0)
 
-    def test_handles_single_video_with_featured_enabled(self):
+    @patch('wagtail.embeds.embeds.get_embed')
+    def test_handles_single_video_with_featured_enabled(self, mock_get_embed):
         """Test that single video becomes featured, leaving empty grid"""
         block = VideoFeedBlock()
         
-        single_video = {'video': self._create_mock_embed(), 'overrides': {}}
+        embed_value, embed = self._create_mock_embed()
+        mock_get_embed.return_value = embed
+        
+        single_video = {'video': embed_value, 'overrides': {}}
         
         value = {
             'title': 'My Videos',
@@ -288,69 +328,110 @@ class VideoFeedBlockMetaTests(TestCase):
 
 
 class VideoFeedBlockEmbedUrlTests(TestCase):
-    """Tests for _extract_embed_url method"""
+    """Tests for _get_embed_data method"""
     
     def _create_mock_embed_with_html(self, url, html):
         """Helper to create a mock EmbedValue with custom HTML"""
+        mock_embed_value = Mock()
+        mock_embed_value.url = url
+        
+        # Mock the actual Embed object returned by embeds.get_embed()
         mock_embed = Mock()
-        mock_embed.url = url
         mock_embed.html = html
-        return mock_embed
+        mock_embed.thumbnail_url = 'https://example.com/thumb.jpg'
+        mock_embed.title = 'Test Video'
+        mock_embed.author_name = 'Test Author'
+        mock_embed.provider_name = 'Test Provider'
+        
+        return mock_embed_value, mock_embed
     
-    def test_extracts_youtube_embed_url_from_html(self):
+    @patch('wagtail.embeds.embeds.get_embed')
+    def test_extracts_youtube_embed_url_from_html(self, mock_get_embed):
         """Test extracting YouTube embed URL from iframe HTML"""
         block = VideoFeedBlock()
-        mock_embed = self._create_mock_embed_with_html(
+        mock_embed_value, mock_embed = self._create_mock_embed_with_html(
             url='https://www.youtube.com/watch?v=abc123',
             html='<iframe src="https://www.youtube.com/embed/abc123" frameborder="0" allowfullscreen></iframe>'
         )
+        mock_get_embed.return_value = mock_embed
         
-        result = block._extract_embed_url(mock_embed)
-        self.assertEqual(result, 'https://www.youtube.com/embed/abc123')
+        result = block._get_embed_data(mock_embed_value)
+        self.assertIsNotNone(result)
+        self.assertEqual(result['embed_url'], 'https://www.youtube.com/embed/abc123')
     
-    def test_extracts_vimeo_embed_url_from_html(self):
+    @patch('wagtail.embeds.embeds.get_embed')
+    def test_extracts_vimeo_embed_url_from_html(self, mock_get_embed):
         """Test extracting Vimeo embed URL from iframe HTML"""
         block = VideoFeedBlock()
-        mock_embed = self._create_mock_embed_with_html(
+        mock_embed_value, mock_embed = self._create_mock_embed_with_html(
             url='https://vimeo.com/123456',
             html='<iframe src="https://player.vimeo.com/video/123456" frameborder="0" allowfullscreen></iframe>'
         )
+        mock_get_embed.return_value = mock_embed
         
-        result = block._extract_embed_url(mock_embed)
-        self.assertEqual(result, 'https://player.vimeo.com/video/123456')
+        result = block._get_embed_data(mock_embed_value)
+        self.assertIsNotNone(result)
+        self.assertEqual(result['embed_url'], 'https://player.vimeo.com/video/123456')
     
-    def test_constructs_youtube_watch_url(self):
-        """Test constructing embed URL from YouTube watch URL"""
+    @patch('wagtail.embeds.embeds.get_embed')
+    def test_constructs_youtube_watch_url(self, mock_get_embed):
+        """Test constructing embed URL from YouTube watch URL when HTML parsing fails"""
         block = VideoFeedBlock()
-        mock_embed = Mock()
-        mock_embed.url = 'https://www.youtube.com/watch?v=xyz789'
-        mock_embed.html = ''  # Empty HTML to force URL construction
+        mock_embed_value = Mock()
+        mock_embed_value.url = 'https://www.youtube.com/watch?v=xyz789'
         
-        result = block._extract_embed_url(mock_embed)
-        self.assertEqual(result, 'https://www.youtube.com/embed/xyz789')
+        mock_embed = Mock()
+        mock_embed.html = ''  # Empty HTML to force URL construction
+        mock_embed.thumbnail_url = 'https://example.com/thumb.jpg'
+        mock_embed.title = 'Test Video'
+        mock_embed.author_name = 'Test Author'
+        mock_embed.provider_name = 'YouTube'
+        mock_get_embed.return_value = mock_embed
+        
+        result = block._get_embed_data(mock_embed_value)
+        self.assertIsNotNone(result)
+        self.assertEqual(result['embed_url'], 'https://www.youtube.com/embed/xyz789')
     
-    def test_constructs_youtube_short_url(self):
+    @patch('wagtail.embeds.embeds.get_embed')
+    def test_constructs_youtube_short_url(self, mock_get_embed):
         """Test constructing embed URL from youtu.be short URL"""
         block = VideoFeedBlock()
-        mock_embed = Mock()
-        mock_embed.url = 'https://youtu.be/short123'
-        mock_embed.html = ''
+        mock_embed_value = Mock()
+        mock_embed_value.url = 'https://youtu.be/short123'
         
-        result = block._extract_embed_url(mock_embed)
-        self.assertEqual(result, 'https://www.youtube.com/embed/short123')
+        mock_embed = Mock()
+        mock_embed.html = ''
+        mock_embed.thumbnail_url = 'https://example.com/thumb.jpg'
+        mock_embed.title = 'Test Video'
+        mock_embed.author_name = 'Test Author'
+        mock_embed.provider_name = 'YouTube'
+        mock_get_embed.return_value = mock_embed
+        
+        result = block._get_embed_data(mock_embed_value)
+        self.assertIsNotNone(result)
+        self.assertEqual(result['embed_url'], 'https://www.youtube.com/embed/short123')
     
-    def test_constructs_vimeo_url(self):
+    @patch('wagtail.embeds.embeds.get_embed')
+    def test_constructs_vimeo_url(self, mock_get_embed):
         """Test constructing embed URL from Vimeo URL"""
         block = VideoFeedBlock()
-        mock_embed = Mock()
-        mock_embed.url = 'https://vimeo.com/987654'
-        mock_embed.html = ''
+        mock_embed_value = Mock()
+        mock_embed_value.url = 'https://vimeo.com/987654'
         
-        result = block._extract_embed_url(mock_embed)
-        self.assertEqual(result, 'https://player.vimeo.com/video/987654')
+        mock_embed = Mock()
+        mock_embed.html = ''
+        mock_embed.thumbnail_url = 'https://example.com/thumb.jpg'
+        mock_embed.title = 'Test Video'
+        mock_embed.author_name = 'Test Author'
+        mock_embed.provider_name = 'Vimeo'
+        mock_get_embed.return_value = mock_embed
+        
+        result = block._get_embed_data(mock_embed_value)
+        self.assertIsNotNone(result)
+        self.assertEqual(result['embed_url'], 'https://player.vimeo.com/video/987654')
     
     def test_returns_none_for_invalid_embed(self):
         """Test that None is returned for None embed"""
         block = VideoFeedBlock()
-        result = block._extract_embed_url(None)
+        result = block._get_embed_data(None)
         self.assertIsNone(result)
