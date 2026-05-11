@@ -5,6 +5,7 @@ from datetime import timedelta, tzinfo
 
 import requests
 from wagtail import blocks
+from wagtail.embeds.blocks import EmbedBlock
 from wagtail.images.blocks import ImageChooserBlock
 
 from django.conf import settings
@@ -574,6 +575,175 @@ class ImageBlock(blocks.StructBlock):
         label_format = "Image: {image}"
 
 
+class VideoItemOverridesBlock(blocks.StructBlock):
+    """Collapsed group of optional override fields for video items."""
+    title_override = blocks.CharBlock(
+        required=False,
+        help_text="Optional: Override the video title from the embed."
+    )
+    thumbnail_override = ImageChooserBlock(
+        required=False,
+        help_text="Optional: Use a custom thumbnail instead of the video's thumbnail."
+    )
+    description = blocks.CharBlock(
+        required=False,
+        max_length=500,
+        help_text="Optional: Add a description or caption for this video."
+    )
+
+    class Meta:
+        form_classname = "collapsed"
+        label = "Optional Overrides"
+
+
+class VideoItemBlock(blocks.StructBlock):
+    """Individual video item with embed URL and optional overrides."""
+    video = EmbedBlock(
+        required=False,
+        help_text="Enter a video URL (YouTube, Vimeo, etc.). The video will be embedded automatically."
+    )
+    overrides = VideoItemOverridesBlock(
+        required=False,
+        help_text="Optional: Override video title, thumbnail, or add a description."
+    )
+
+    class Meta:
+        icon = "media"
+        label = "Video"
+
+
+class VideoFeedBlock(blocks.StructBlock):
+    """Block for displaying a grid of embedded videos with optional featured video."""
+    title = blocks.CharBlock(
+        required=False,
+        help_text="Main title for the video section (e.g., 'Latest Videos')."
+    )
+    subtitle = blocks.CharBlock(
+        required=False,
+        help_text="Subtitle text displayed above the title (e.g., 'YouTube Feed')."
+    )
+    videos = blocks.ListBlock(
+        VideoItemBlock(),
+        help_text="Add videos to display. The first video can be featured (shown large) if enabled below."
+    )
+    show_featured = blocks.BooleanBlock(
+        required=False,
+        default=True,
+        help_text="Show the first video as a large featured video above the grid."
+    )
+    grid_columns = blocks.ChoiceBlock(
+        choices=[
+            ("2", "2 Columns"),
+            ("3", "3 Columns"),
+            ("4", "4 Columns"),
+        ],
+        default="4",
+        help_text="Number of columns for the video carousel (Note: currently set to 4 in carousel config)."
+    )
+
+    def _extract_embed_url(self, embed_value):
+        """
+        Extract the embed URL from an EmbedValue.
+        Tries to parse iframe src from HTML, or constructs URL from the source.
+        """
+        import re
+        
+        if not embed_value:
+            return None
+        
+        # Try to extract iframe src from embed HTML
+        if hasattr(embed_value, 'html') and embed_value.html:
+            iframe_match = re.search(r'<iframe[^>]+src="([^"]+)"', embed_value.html)
+            if iframe_match:
+                return iframe_match.group(1)
+        
+        # Fallback: construct embed URL from source URL
+        if hasattr(embed_value, 'url') and embed_value.url:
+            url = embed_value.url
+            # YouTube
+            if "youtube.com/watch?v=" in url:
+                video_id = url.split("watch?v=")[-1].split("&")[0]
+                return f"https://www.youtube.com/embed/{video_id}"
+            elif "youtu.be/" in url:
+                video_id = url.split("youtu.be/")[-1].split("?")[0]
+                return f"https://www.youtube.com/embed/{video_id}"
+            # Vimeo
+            elif "vimeo.com/" in url:
+                video_id = url.split("vimeo.com/")[-1].split("?")[0]
+                return f"https://player.vimeo.com/video/{video_id}"
+        
+        return None
+
+    def _get_embed_data(self, embed_value):
+        """
+        Fetch the Embed model to get thumbnail_url and title.
+        EmbedValue only exposes url and html, so we need to fetch the full embed.
+        """
+        if not embed_value or not hasattr(embed_value, 'url') or not embed_value.url:
+            return None
+        
+        try:
+            from wagtail.embeds import embeds
+            embed = embeds.get_embed(embed_value.url)
+            return {
+                'thumbnail_url': embed.thumbnail_url,
+                'title': embed.title,
+                'author_name': embed.author_name,
+                'provider_name': embed.provider_name,
+            }
+        except Exception:
+            return None
+
+    def get_context(self, value, parent_context=None):
+        context = super().get_context(value, parent_context)
+        
+        # Filter out videos that don't have a valid embed and add embed URLs
+        valid_videos = []
+        for v in value.get('videos', []):
+            if v.get('video'):
+                embed_url = self._extract_embed_url(v['video'])
+                if embed_url:
+                    # Fetch the full embed data for thumbnail and title
+                    embed_data = self._get_embed_data(v['video']) or {}
+                    
+                    # Create a new dict with the video data plus embed_url and embed metadata
+                    video_data = {
+                        'video': v['video'],
+                        'overrides': v.get('overrides', {}),
+                        'embed_url': embed_url,
+                        'thumbnail_url': embed_data.get('thumbnail_url', ''),
+                        'title': embed_data.get('title', ''),
+                    }
+                    valid_videos.append(video_data)
+        
+        # Separate featured video from grid videos
+        featured_video = None
+        grid_videos = valid_videos
+        
+        if value.get('show_featured') and valid_videos:
+            featured_video = valid_videos[0]
+            grid_videos = valid_videos[1:]
+        
+        # Calculate Bootstrap column class based on grid_columns
+        columns = int(value.get('grid_columns', 4))
+        col_class = f"col-lg-{12 // columns}"
+        
+        context.update({
+            'featured_video': featured_video,
+            'grid_videos': grid_videos,
+            'col_class': col_class,
+        })
+        
+        return context
+
+    class Meta:
+        icon = "bi-play-circle"
+        template = "blocks/video_feed_block.html"
+        label = "Video Feed"
+        label_format = "Video Feed: {title}"
+        help_text = "Display a collection of embedded videos with optional featured video and grid layout."
+
+
 class ColumnContentBlock(blocks.StreamBlock):
     accordion_list = AccordionListBlock()
     booking_form = BookingFormBlock(group="Forms")
@@ -590,6 +760,7 @@ class ColumnContentBlock(blocks.StreamBlock):
     venmo_donate_button = VenmoDonateButton()
     square_donate_button = SquareDonateButton()
     patreon_button = PatreonButton()
+    video_feed = VideoFeedBlock()
 
     class Meta:
         template = "blocks/column_content_block.html"

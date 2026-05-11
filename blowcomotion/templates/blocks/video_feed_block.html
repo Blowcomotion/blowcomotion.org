@@ -1,0 +1,108 @@
+{% load wagtailcore_tags wagtailimages_tags static %}
+
+<link rel="stylesheet" href="{% static 'css/video-feed.css' %}">
+
+{% if featured_video or grid_videos %}
+<section class="video-feed-block my-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                {% if value.subtitle or value.title %}
+                <div class="section-title text-center mb-4">
+                    {% if value.subtitle %}
+                    <h2 class="text-uppercase text-muted">{{ value.subtitle }}</h2>
+                    {% endif %}
+                    {% if value.title %}
+                    <h1>{{ value.title }}</h1>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {# Featured Large Video #}
+                {% if featured_video %}
+                <div class="video-feed__featured mb-5">
+                    <div class="video-feed__featured-item video-popup-trigger" data-video-url="{{ featured_video.embed_url }}">
+                        {% if featured_video.overrides.thumbnail_override %}
+                            {% image featured_video.overrides.thumbnail_override fill-1200x675 as thumb %}
+                            <img src="{{ thumb.url }}" alt="{{ featured_video.overrides.title_override|default:featured_video.title }}" class="img-fluid w-100">
+                        {% elif featured_video.thumbnail_url %}
+                            <img src="{{ featured_video.thumbnail_url }}" alt="{{ featured_video.overrides.title_override|default:featured_video.title }}" class="img-fluid w-100">
+                        {% else %}
+                            <div class="video-feed__thumbnail-placeholder bg-dark" style="padding-top: 56.25%;"></div>
+                        {% endif %}
+                        <a href="#" class="play-btn video-popup-trigger" data-video-url="{{ featured_video.embed_url }}"><i class="fa fa-play"></i></a>
+                        {% if featured_video.overrides.title_override or featured_video.title or featured_video.overrides.description %}
+                        <div class="video-feed__featured-text">
+                            {% if featured_video.overrides.title_override or featured_video.title %}
+                            <h4>{{ featured_video.overrides.title_override|default:featured_video.title }}</h4>
+                            {% endif %}
+                            {% if featured_video.overrides.description %}
+                            <ul>
+                                <li>{{ featured_video.overrides.description }}</li>
+                            </ul>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {# Video Grid - Using Owl Carousel for sliding behavior #}
+                {% if grid_videos %}
+                <div class="video-feed__grid">
+                    <div class="videos__slider owl-carousel">
+                        {% for video in grid_videos %}
+                        <div class="col-lg-3">
+                            <div class="video-feed__item">
+                                <div class="video-feed__item-pic video-popup-trigger" data-video-url="{{ video.embed_url }}">
+                                    {% if video.overrides.thumbnail_override %}
+                                        {% image video.overrides.thumbnail_override fill-600x338 as thumb %}
+                                        <img src="{{ thumb.url }}" alt="{{ video.overrides.title_override|default:video.title }}" class="img-fluid w-100">
+                                    {% elif video.thumbnail_url %}
+                                        <img src="{{ video.thumbnail_url }}" alt="{{ video.overrides.title_override|default:video.title }}" class="img-fluid w-100">
+                                    {% else %}
+                                        <div class="video-feed__thumbnail-placeholder bg-dark" style="padding-top: 56.25%;"></div>
+                                    {% endif %}
+                                    <a href="#" class="play-btn video-popup-trigger" data-video-url="{{ video.embed_url }}"><i class="fa fa-play"></i></a>
+                                </div>
+                                {% if video.overrides.title_override or video.title or video.overrides.description %}
+                                <div class="video-feed__item-text">
+                                    {% if video.overrides.title_override or video.title %}
+                                    <h5>{{ video.overrides.title_override|default:video.title }}</h5>
+                                    {% endif %}
+                                    {% if video.overrides.description %}
+                                    <ul>
+                                        <li>{{ video.overrides.description }}</li>
+                                    </ul>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+{# Bootstrap Modal for Video Playback - uses same structure as HeroBlock #}
+<div class="modal fade" id="videoModal" tabindex="-1" role="dialog" aria-labelledby="videoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-0">
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="embed-responsive embed-responsive-16by9">
+                    <iframe id="videoIframe" class="embed-responsive-item" src="" title="Video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

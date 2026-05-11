@@ -1,0 +1,203 @@
+/* Video Feed Styles - Based on Djoz Template */
+
+/* Featured Large Video */
+.video-feed__featured-item {
+    height: 585px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 30px;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+.video-feed__featured-item img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.video-feed__featured-item .play-btn {
+    height: 50px;
+    width: 50px;
+    background: #5b1a76;
+    border-radius: 50%;
+    font-size: 18px;
+    line-height: 50px;
+    text-align: center;
+    display: inline-block;
+    color: #ffffff;
+    position: relative;
+    z-index: 2;
+}
+
+.video-feed__featured-text {
+    background: rgba(7, 14, 38, 0.7);
+    padding: 25px 30px 25px;
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    z-index: 1;
+}
+
+.video-feed__featured-text h4 {
+    color: #ffffff;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.video-feed__featured-text ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.video-feed__featured-text ul li {
+    font-size: 13px;
+    display: inline-block;
+    margin-right: 18px;
+    color: #ffffff;
+    position: relative;
+}
+
+.video-feed__featured-text ul li:after {
+    position: absolute;
+    right: -12px;
+    top: 2px;
+    height: 17px;
+    width: 1px;
+    background: #ffffff;
+    content: "";
+}
+
+.video-feed__featured-text ul li:last-child {
+    margin-right: 0;
+}
+
+.video-feed__featured-text ul li:last-child:after {
+    display: none;
+}
+
+/* Carousel Video Items */
+.video-feed__item-pic {
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 15px;
+    border-radius: 4px;
+}
+
+.video-feed__item-pic img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.video-feed__item-pic .play-btn {
+    height: 50px;
+    width: 50px;
+    background: #5b1a76;
+    border-radius: 50%;
+    font-size: 18px;
+    line-height: 50px;
+    text-align: center;
+    display: inline-block;
+    color: #ffffff;
+    position: absolute;
+}
+
+.video-feed__item-text h5 {
+    font-weight: 700;
+    color: #111111;
+    margin-bottom: 8px;
+    font-size: 16px;
+    line-height: 1.4;
+}
+
+.video-feed__item-text ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.video-feed__item-text ul li {
+    font-size: 13px;
+    display: inline-block;
+    margin-right: 18px;
+    color: #666666;
+    position: relative;
+}
+
+.video-feed__item-text ul li:after {
+    position: absolute;
+    right: -12px;
+    top: 2px;
+    height: 17px;
+    width: 1px;
+    background: #666666;
+    content: "";
+}
+
+.video-feed__item-text ul li:last-child {
+    margin-right: 0;
+}
+
+.video-feed__item-text ul li:last-child:after {
+    display: none;
+}
+
+/* Hover Effects */
+.video-feed__featured-item:hover img,
+.video-feed__item-pic:hover img {
+    transform: scale(1.05);
+    transition: transform 0.3s ease;
+}
+
+.play-btn {
+    transition: all 0.3s ease;
+}
+
+.play-btn:hover {
+    background: #7b2a96;
+    transform: scale(1.1);
+}
+
+/* Placeholder */
+.video-feed__thumbnail-placeholder {
+    width: 100%;
+    background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+}
+
+/* Modal customization */
+#videoModal .modal-content {
+    border: none;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#videoModal .modal-header {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    padding: 10px;
+}
+
+#videoModal .close {
+    color: white;
+    opacity: 1;
+    text-shadow: none;
+    font-size: 2rem;
+}
+
+#videoModal .embed-responsive {
+    min-height: 400px;
+}
