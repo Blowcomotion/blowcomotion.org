@@ -2009,12 +2009,36 @@ def gigs_for_date(request):
 @require_http_methods(["POST"])
 def fetch_embed_data(request):
     """API endpoint to fetch embed data (title, thumbnail) for a video URL"""
+    from urllib.parse import urlparse
+
     from wagtail.embeds.embeds import get_embed
     from wagtail.embeds.exceptions import EmbedException
+
+    # Require Wagtail admin access to prevent unauthorized SSRF attempts
+    if not request.user.is_authenticated or not request.user.is_staff:
+        logger.warning(f"Unauthorized access attempt to fetch_embed_data by user {request.user}")
+        return JsonResponse({'error': 'Authentication required'}, status=403)
     
     url = request.POST.get('url', '').strip()
     if not url:
         return JsonResponse({'error': 'URL parameter is required'}, status=400)
+    
+    # Validate URL scheme and hostname to prevent SSRF
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ('http', 'https'):
+            return JsonResponse({'error': 'Only HTTP/HTTPS URLs are allowed'}, status=400)
+        
+        # Allowlist known video providers to reduce SSRF risk
+        allowed_hosts = [
+            'youtube.com', 'www.youtube.com', 'youtu.be', 'm.youtube.com',
+            'vimeo.com', 'www.vimeo.com', 'player.vimeo.com'
+        ]
+        if not any(parsed.netloc.endswith(host) or parsed.netloc == host for host in allowed_hosts):
+            return JsonResponse({'error': 'Only YouTube and Vimeo URLs are supported'}, status=400)
+    except Exception as e:
+        logger.warning(f"Invalid URL format in fetch_embed_data: {url}")
+        return JsonResponse({'error': 'Invalid URL format'}, status=400)
     
     try:
         # Use Wagtail's embed system to fetch metadata

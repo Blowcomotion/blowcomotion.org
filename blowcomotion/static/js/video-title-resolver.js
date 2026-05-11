@@ -61,8 +61,9 @@ class VideoTitleResolverController extends window.StimulusModule.Controller {
 
     isVideoUrlInput(input) {
         const name = input.getAttribute('name');
-        // Match pattern like: body-0-value-videos-0-value-video
-        return name && /body-\d+-value-videos-\d+-value-video$/.test(name);
+        // Match pattern ending with -value-videos-N-value-video
+        // This works for nested StreamFields (e.g., column_layout) too
+        return name && /-value-videos-\d+-value-video$/.test(name);
     }
 
     handleUrlChange(event) {
@@ -84,8 +85,9 @@ class VideoTitleResolverController extends window.StimulusModule.Controller {
         if (!url) return;
 
         try {
-            // Use our custom embeds API endpoint
-            const response = await fetch('/admin/embeds/fetch/', {
+            // Derive admin URL from current location to handle custom admin paths
+            const adminBase = this.getAdminBase();
+            const response = await fetch(`${adminBase}/embeds/fetch/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -156,6 +158,12 @@ class VideoTitleResolverController extends window.StimulusModule.Controller {
             // Store full title as tooltip
             minimapLink.setAttribute('title', title);
         }
+    }
+
+    getAdminBase() {
+        // Extract admin base from current URL (works for default /admin/ or custom paths)
+        const match = window.location.pathname.match(/^(\/.*?\/admin)/);
+        return match ? match[1] : '/admin';
     }
 
     getCsrfToken() {

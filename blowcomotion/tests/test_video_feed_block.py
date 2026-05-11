@@ -284,14 +284,18 @@ class VideoFeedBlockContextTests(TestCase):
                 context = block.get_context(value)
                 self.assertEqual(context['col_class'], expected_class)
 
-    def test_context_includes_all_expected_keys(self):
+    @patch('wagtail.embeds.embeds.get_embed')
+    def test_context_includes_all_expected_keys(self, mock_get_embed):
         """Test that context has all expected keys"""
         block = VideoFeedBlock()
+        
+        embed_value, embed = self._create_mock_embed()
+        mock_get_embed.return_value = embed
         
         value = {
             'title': 'Test',
             'videos': [
-                {'video': self._create_mock_embed(), 'overrides': {}}
+                {'video': embed_value, 'overrides': {}}
             ],
             'show_featured': True,
             'grid_columns': '4',
