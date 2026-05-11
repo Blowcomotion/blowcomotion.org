@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import os
 import sys
+from datetime import date
+
 import django
 
 # Add project root to Python path
@@ -11,8 +13,7 @@ sys.path.insert(0, project_root)
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'blowcomotion.settings.dev')
 django.setup()
 
-from blowcomotion.models import Section, Member, Instrument, MemberInstrument
-from datetime import date
+from blowcomotion.models import Instrument, Member, MemberInstrument, Section
 
 # Create or get sections (same as in create_instrument_library_data.py)
 print("Creating/verifying sections...")

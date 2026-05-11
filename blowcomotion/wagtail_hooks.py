@@ -3,6 +3,7 @@ from wagtail.admin.menu import Menu, MenuItem, SubmenuMenuItem
 from wagtail.admin.ui.components import Component
 from wagtail.snippets.models import register_snippet
 
+from django.templatetags.static import static
 from django.urls import path, reverse
 from django.utils.html import format_html
 
@@ -10,6 +11,7 @@ from blowcomotion.views import (
     dump_data,
     export_attendance_csv,
     export_members_csv,
+    fetch_embed_data,
     instrument_library_available,
     instrument_library_needs_repair,
     instrument_library_quick_rent,
@@ -41,6 +43,7 @@ def register_admin_urls():
         path("dump_data/", dump_data, name="dump_data"),
         path("export_members/", export_members_csv, name="export_members"),
         path("export_attendance/", export_attendance_csv, name="export_attendance"),
+        path("embeds/fetch/", fetch_embed_data, name="fetch_embed_data"),
         path(
             "instrument-library/rented/",
             instrument_library_rented,
@@ -137,3 +140,15 @@ class NotificationBannerPanel(Component):
 def add_notification_banner_panel(request, panels):
     """Add notification banner shortcut to the admin homepage."""
     panels.append(NotificationBannerPanel())
+
+
+@hooks.register('insert_global_admin_js')
+def video_title_resolver_js():
+    """
+    Load the video title resolver JavaScript for VideoFeedBlock.
+    This fetches video titles from URLs and updates the minimap display.
+    """
+    return format_html(
+        '<script src="{}"></script>',
+        static('js/video-title-resolver.js')
+    )

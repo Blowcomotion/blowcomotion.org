@@ -2004,3 +2004,66 @@ def gigs_for_date(request):
         date_param = request.GET.get('date', 'unknown')
         logger.error("Unexpected error in gigs_for_date for date %s: %s", date_param, e, exc_info=True)
         return JsonResponse({'error': f'Error fetching gigs: {str(e)}'}, status=500)
+
+
+@require_http_methods(["POST"])
+def fetch_embed_data(request):
+    """API endpoint to fetch embed data (title, thumbnail) for a video URL"""
+    from urllib.parse import urlparse
+
+    from wagtail.embeds.embeds import get_embed
+    from wagtail.embeds.exceptions import EmbedException
+
+    # Require Wagtail admin access to prevent unauthorized SSRF attempts
+    if not request.user.is_authenticated or not request.user.has_perm('wagtailadmin.access_admin'):
+        logger.warning(f"Unauthorized access attempt to fetch_embed_data by user {request.user}")
+        return JsonResponse({'error': 'Authentication required'}, status=403)
+    
+    url = request.POST.get('url', '').strip()
+    if not url:
+        return JsonResponse({'error': 'URL parameter is required'}, status=400)
+    
+    # Validate URL scheme and hostname to prevent SSRF
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ('http', 'https'):
+            return JsonResponse({'error': 'Only HTTP/HTTPS URLs are allowed'}, status=400)
+        
+        # Validate hostname (handles None case and ports correctly)
+        hostname = parsed.hostname
+        if not hostname:
+            return JsonResponse({'error': 'Invalid URL: missing hostname'}, status=400)
+        
+        hostname = hostname.lower()
+        
+        # Allowlist known video providers to reduce SSRF risk
+        # Use exact match or subdomain match to prevent bypasses like "evilyoutube.com"
+        allowed_hosts = [
+            'youtube.com', 'www.youtube.com', 'youtu.be', 'm.youtube.com',
+            'vimeo.com', 'www.vimeo.com', 'player.vimeo.com'
+        ]
+        is_allowed = any(
+            hostname == host or hostname.endswith('.' + host)
+            for host in allowed_hosts
+        )
+        if not is_allowed:
+            return JsonResponse({'error': 'Only YouTube and Vimeo URLs are supported'}, status=400)
+    except Exception as e:
+        logger.warning(f"Invalid URL format in fetch_embed_data: {url}")
+        return JsonResponse({'error': 'Invalid URL format'}, status=400)
+    
+    try:
+        # Use Wagtail's embed system to fetch metadata
+        embed = get_embed(url)
+        return JsonResponse({
+            'title': embed.title,
+            'thumbnail_url': embed.thumbnail_url,
+            'author_name': embed.author_name,
+            'provider_name': embed.provider_name,
+        })
+    except EmbedException as e:
+        logger.warning(f"Failed to fetch embed data for URL {url}: {e}")
+        return JsonResponse({'error': f'Unable to fetch embed data: {str(e)}'}, status=400)
+    except Exception as e:
+        logger.error(f"Unexpected error fetching embed data for URL {url}: {e}", exc_info=True)
+        return JsonResponse({'error': 'An unexpected error occurred'}, status=500)

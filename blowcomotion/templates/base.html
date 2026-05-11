@@ -50,5 +50,32 @@
                 </button>
             </div>
         {% endblock feedback_form_modal_button %}
+
+        {# Shared Video Modal - used by HeroBlock and VideoFeedBlock #}
+        {# Supports both embedded videos (iframe) and uploaded videos (HTML5 video) #}
+        <div class="modal fade" id="videoModal" tabindex="-1" role="dialog" aria-label="Video player" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+                <div class="modal-content bg-dark">
+                    <div class="modal-header border-0">
+                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body p-0">
+                        {# Iframe for embedded videos (YouTube, Vimeo) #}
+                        <div class="embed-responsive embed-responsive-16by9" id="videoIframeContainer" style="display: none;">
+                            <iframe id="videoIframe" class="embed-responsive-item" src="" title="Video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                        </div>
+                        {# HTML5 video player for uploaded videos #}
+                        <div class="embed-responsive embed-responsive-16by9" id="videoPlayerContainer" style="display: none;">
+                            <video id="videoPlayer" class="embed-responsive-item" controls>
+                                <source id="videoSource" src="" type="">
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </body>
 </html>
