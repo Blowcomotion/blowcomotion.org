@@ -746,13 +746,16 @@ class VideoFeedBlock(blocks.StructBlock):
             elif v.get('video_file'):
                 video_file = v['video_file']
                 # Extract file extension for MIME type (e.g., 'mp4', 'webm', 'ogg')
-                file_extension = os.path.splitext(video_file.file.name)[1].lstrip('.')
+                file_extension = os.path.splitext(video_file.file.name)[1].lstrip('.').lower()
+                # Fallback to 'mp4' if no extension to avoid invalid MIME types
+                if not file_extension:
+                    file_extension = 'mp4'
                 # Create data dict for uploaded video
                 video_data = {
                     'video': None,
                     'video_file': video_file,
                     'is_uploaded': True,
-                    'file_extension': file_extension,  # e.g., 'mp4', 'webm'
+                    'file_extension': file_extension,  # e.g., 'mp4', 'webm' (normalized lowercase)
                     'overrides': v.get('overrides', {}),
                     'embed_url': None,
                     'thumbnail_url': video_file.thumbnail.url if video_file.thumbnail else '',

@@ -36,13 +36,7 @@
                         {% else %}
                             <div class="video-feed__thumbnail-placeholder bg-dark" style="padding-top: 56.25%;"></div>
                         {% endif %}
-                        <a href="#" class="play-btn video-popup-trigger" 
-                           {% if featured_video.is_uploaded %}
-                           data-video-file="{{ featured_video.video_file.file.url }}"
-                           data-video-type="{{ featured_video.file_extension }}"
-                           {% else %}
-                           data-video-url="{{ featured_video.embed_url }}"
-                           {% endif %}><i class="fa fa-play"></i></a>
+                        <a href="#" class="play-btn"><i class="fa fa-play"></i></a>
                         {% if featured_video.overrides.title_override or featured_video.title or featured_video.overrides.description %}
                         <div class="video-feed__featured-text">
                             {% if featured_video.overrides.title_override or featured_video.title %}
@@ -81,13 +75,7 @@
                                     {% else %}
                                         <div class="video-feed__thumbnail-placeholder bg-dark" style="padding-top: 56.25%;"></div>
                                     {% endif %}
-                                    <a href="#" class="play-btn video-popup-trigger" 
-                                       {% if video.is_uploaded %}
-                                       data-video-file="{{ video.video_file.file.url }}"
-                                       data-video-type="{{ video.video_file.type }}"
-                                       {% else %}
-                                       data-video-url="{{ video.embed_url }}"
-                                       {% endif %}><i class="fa fa-play"></i></a>
+                                    <a href="#" class="play-btn"><i class="fa fa-play"></i></a>
                                 </div>
                                 {% if video.overrides.title_override or video.title or video.overrides.description %}
                                 <div class="video-feed__item-text">

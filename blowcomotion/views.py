@@ -2015,7 +2015,7 @@ def fetch_embed_data(request):
     from wagtail.embeds.exceptions import EmbedException
 
     # Require Wagtail admin access to prevent unauthorized SSRF attempts
-    if not request.user.is_authenticated or not request.user.is_staff:
+    if not request.user.is_authenticated or not request.user.has_perm('wagtailadmin.access_admin'):
         logger.warning(f"Unauthorized access attempt to fetch_embed_data by user {request.user}")
         return JsonResponse({'error': 'Authentication required'}, status=403)
     

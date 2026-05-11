@@ -371,6 +371,18 @@ class VideoFeedBlockContextTests(TestCase):
         context = block.get_context(value)
         video = context['grid_videos'][0]
         self.assertEqual(video['file_extension'], 'webm')
+        
+        # Test with uppercase extension (should be normalized to lowercase)
+        mock_video_file.file.name = 'VIDEO.MP4'
+        context = block.get_context(value)
+        video = context['grid_videos'][0]
+        self.assertEqual(video['file_extension'], 'mp4')
+        
+        # Test with no extension (should fallback to 'mp4')
+        mock_video_file.file.name = 'video_without_extension'
+        context = block.get_context(value)
+        video = context['grid_videos'][0]
+        self.assertEqual(video['file_extension'], 'mp4')
 
 
 class VideoFeedBlockMetaTests(TestCase):
