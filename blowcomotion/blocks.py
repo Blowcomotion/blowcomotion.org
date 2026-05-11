@@ -574,6 +574,57 @@ class ImageBlock(blocks.StructBlock):
         label_format = "Image: {image}"
 
 
+class ImageCarouselBlock(blocks.StructBlock):
+    """
+    Image carousel block using Slick carousel.
+    Displays a responsive image carousel with navigation arrows.
+    """
+    title = blocks.CharBlock(
+        required=False,
+        max_length=100,
+        help_text="Optional title for the carousel"
+    )
+    images = blocks.ListBlock(
+        blocks.StructBlock([
+            ('image', ImageChooserBlock(required=True)),
+            ('caption', blocks.CharBlock(
+                required=False,
+                max_length=200,
+                help_text="Optional caption for this image"
+            )),
+            ('url', blocks.URLBlock(
+                required=False,
+                help_text="Optional link for this image"
+            )),
+        ]),
+        help_text="Add images to the carousel",
+        min_num=1,
+        max_num=20,
+    )
+    slides_to_show = blocks.IntegerBlock(
+        default=3,
+        min_value=1,
+        max_value=6,
+        help_text="Number of slides to show at once (desktop)"
+    )
+    autoplay = blocks.BooleanBlock(
+        default=False,
+        required=False,
+        help_text="Enable automatic slide rotation"
+    )
+    autoplay_speed = blocks.IntegerBlock(
+        default=3000,
+        min_value=1000,
+        max_value=10000,
+        help_text="Autoplay speed in milliseconds (if autoplay is enabled)"
+    )
+
+    class Meta:
+        icon = "image"
+        template = "blocks/image_carousel_block.html"
+        label = "Image Carousel"
+
+
 class ColumnContentBlock(blocks.StreamBlock):
     accordion_list = AccordionListBlock()
     booking_form = BookingFormBlock(group="Forms")
@@ -583,6 +634,7 @@ class ColumnContentBlock(blocks.StreamBlock):
     join_band_form = JoinBandFormBlock(group="Forms")
     horizontal_rule = HorizontalRuleBlock()
     image = ImageBlock()
+    image_carousel = ImageCarouselBlock()
     rich_text = AlignableRichtextBlock()
     adjustable_spacer = AdjustableSpacerBlock()
     spacer = SpacerBlock()
@@ -945,4 +997,5 @@ class TimelineBlock(blocks.StructBlock):
         template = "blocks/timeline_block.html"
         label = "Timeline"
         help_text = "This displays a timeline with alternating left/right items."
+
 

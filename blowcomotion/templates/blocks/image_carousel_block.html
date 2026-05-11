@@ -1,0 +1,39 @@
+{% load wagtailimages_tags static %}
+
+<!-- Slick Carousel CSS from CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick-theme.css"/>
+<link rel="stylesheet" href="{% static 'css/image-carousel.css' %}">
+
+<div class="image-carousel-container my-5">
+    {% if value.title %}
+        <h3 class="image-carousel-title text-center mb-4">{{ value.title }}</h3>
+    {% endif %}
+
+    <div class="image-carousel" 
+         data-slides-to-show="{{ value.slides_to_show }}"
+         data-autoplay="{{ value.autoplay|yesno:'true,false' }}"
+         data-autoplay-speed="{{ value.autoplay_speed }}">
+        {% for item in value.images %}
+            <div class="carousel-item">
+                {% image item.image fill-800x600 as carousel_image %}
+                {% if item.url %}
+                    <a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">
+                        <img src="{{ carousel_image.url }}" alt="{{ carousel_image.alt }}" class="carousel-image" />
+                    </a>
+                {% else %}
+                    <img src="{{ carousel_image.url }}" alt="{{ carousel_image.alt }}" class="carousel-image" />
+                {% endif %}
+                {% if item.caption %}
+                    <div class="carousel-caption">
+                        <p>{{ item.caption }}</p>
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Slick Carousel JS from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
+<script src="{% static 'js/image-carousel.js' %}"></script>
