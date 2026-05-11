@@ -4,6 +4,12 @@
  */
 class VideoTitleResolverController extends window.StimulusModule.Controller {
     connect() {
+        // Early exit if not on a page editor (avoid MutationObserver overhead)
+        if (!document.querySelector('[data-streamfield]') && !document.querySelector('.sequence-member-inner')) {
+            return;
+        }
+        // Initialize tracking for duplicate request prevention
+        this.lastFetchedUrls = new Map();
         // Observe the entire document for new video inputs
         this.setupInputObserver();
         // Process any existing inputs
@@ -49,9 +55,8 @@ class VideoTitleResolverController extends window.StimulusModule.Controller {
         // Mark as attached to avoid duplicate listeners
         input.dataset.videoTitleResolverAttached = 'true';
         
-        // Listen for changes and blur events
+        // Listen for change event only (blur was causing duplicate requests)
         input.addEventListener('change', (e) => this.handleUrlChange(e));
-        input.addEventListener('blur', (e) => this.handleUrlChange(e));
         
         // If there's already a value, fetch the title
         if (input.value) {
@@ -70,8 +75,13 @@ class VideoTitleResolverController extends window.StimulusModule.Controller {
         const input = event.target;
         const url = input.value.trim();
         
+        // Check if we've already fetched this URL for this input (prevent duplicate requests)
         if (url && this.isValidVideoUrl(url)) {
-            this.fetchAndUpdateTitle(input);
+            const lastUrl = this.lastFetchedUrls.get(input);
+            if (lastUrl !== url) {
+                this.lastFetchedUrls.set(input, url);
+                this.fetchAndUpdateTitle(input);
+            }
         }
     }
 
