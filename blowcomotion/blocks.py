@@ -746,7 +746,6 @@ class VideoFeedBlock(blocks.StructBlock):
             elif v.get('video_file'):
                 video_file = v['video_file']
                 # Extract file extension for MIME type (e.g., 'mp4', 'webm', 'ogg')
-                import os
                 file_extension = os.path.splitext(video_file.file.name)[1].lstrip('.')
                 # Create data dict for uploaded video
                 video_data = {
