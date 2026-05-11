@@ -669,7 +669,7 @@ class VideoFeedBlock(blocks.StructBlock):
             ("4", "4 Columns"),
         ],
         default="4",
-        help_text="Number of videos to display per row in the carousel at desktop widths."
+        help_text="Number of columns for the video carousel (Note: currently set to 4 in carousel config)."
     )
 
     def _get_embed_data(self, embed_value):
@@ -781,7 +781,6 @@ class VideoFeedBlock(blocks.StructBlock):
             'featured_video': featured_video,
             'grid_videos': grid_videos,
             'col_class': col_class,
-            'grid_columns': columns,
         })
         
         return context

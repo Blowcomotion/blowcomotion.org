@@ -64,35 +64,30 @@
     /*--------------------------
         Videos Slider
     ----------------------------*/
-    $(".videos__slider").each(function() {
-        var $carousel = $(this);
-        var columns = parseInt($carousel.data('columns')) || 4;
-        
-        $carousel.owlCarousel({
-            loop: true,
-            margin: 0,
-            items: columns,
-            dots: false,
-            nav: true,
-            navText: ["<i class='fa fa-angle-left'></i>","<i class='fa fa-angle-right'></i>"],
-            smartSpeed: 1200,
-            autoHeight: false,
-            autoplay: true,
-            responsive: {
-                992: {
-                    items: columns,
-                },
-                768: {
-                    items: Math.min(columns, 3),
-                },
-                576: {
-                    items: Math.min(columns, 2),
-                },
-                0: {
-                    items: 1,
-                }
+    $(".videos__slider").owlCarousel({
+        loop: true,
+        margin: 0,
+        items: 4,
+        dots: false,
+        nav: true,
+        navText: ["<i class='fa fa-angle-left'></i>","<i class='fa fa-angle-right'></i>"],
+        smartSpeed: 1200,
+        autoHeight: false,
+        autoplay: true,
+        responsive: {
+            992: {
+                items: 4,
+            },
+            768: {
+                items: 3,
+            },
+            576: {
+                items: 2,
+            },
+            0: {
+                items: 1,
             }
-        });
+        }
     });
 
     /*------------------

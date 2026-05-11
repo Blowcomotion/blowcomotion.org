@@ -56,7 +56,7 @@
                 {# Video Grid - Using Owl Carousel for sliding behavior #}
                 {% if grid_videos %}
                 <div class="video-feed__grid">
-                    <div class="videos__slider owl-carousel" data-columns="{{ grid_columns }}">
+                    <div class="videos__slider owl-carousel">
                         {% for video in grid_videos %}
                         <div class="{{ col_class }}">
                             <div class="video-feed__item">
