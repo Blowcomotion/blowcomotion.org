@@ -334,6 +334,44 @@ class VideoFeedBlockContextTests(TestCase):
         # Also should have the original value
         self.assertIn('value', context)
 
+    def test_uploaded_video_extracts_file_extension(self):
+        """Test that uploaded videos get proper file extension for MIME type"""
+        from unittest.mock import Mock
+        
+        block = VideoFeedBlock()
+        
+        # Create mock video file
+        mock_video_file = Mock()
+        mock_video_file.file.name = 'test-video.mp4'
+        mock_video_file.file.url = '/media/videos/test-video.mp4'
+        mock_video_file.title = 'Test Video'
+        mock_video_file.thumbnail = None
+        mock_video_file.type = 'video'  # This is wagtailmedia's category field
+        
+        value = {
+            'videos': [
+                {'video': None, 'video_file': mock_video_file, 'overrides': {}}
+            ],
+            'show_featured': False,
+            'grid_columns': '4',
+        }
+        
+        context = block.get_context(value)
+        
+        # Check that video was processed
+        self.assertEqual(len(context['grid_videos']), 1)
+        video = context['grid_videos'][0]
+        
+        # Check that file_extension was extracted correctly
+        self.assertTrue(video['is_uploaded'])
+        self.assertEqual(video['file_extension'], 'mp4')
+        
+        # Test with webm file
+        mock_video_file.file.name = 'another-video.webm'
+        context = block.get_context(value)
+        video = context['grid_videos'][0]
+        self.assertEqual(video['file_extension'], 'webm')
+
 
 class VideoFeedBlockMetaTests(TestCase):
     """Test cases for VideoFeedBlock Meta configuration"""
