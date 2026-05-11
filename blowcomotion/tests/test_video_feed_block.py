@@ -2,10 +2,7 @@
 Tests for VideoFeedBlock and related blocks.
 """
 
-from unittest.mock import Mock, PropertyMock, patch
-
-from wagtail.embeds.embeds import get_embed
-from wagtail.embeds.exceptions import EmbedException
+from unittest.mock import Mock, patch
 
 from django.test import TestCase
 
@@ -64,6 +61,32 @@ class VideoItemBlockTests(TestCase):
             block.child_blocks['overrides'], 
             VideoItemOverridesBlock
         )
+
+    def test_has_video_file_field(self):
+        """Test that VideoItemBlock has video_file field"""
+        block = VideoItemBlock()
+        self.assertIn('video_file', block.child_blocks)
+
+    def test_xor_validation_rejects_neither_field(self):
+        """Test that providing neither video nor video_file raises validation error"""
+        from wagtail.blocks import StructBlockValidationError
+        
+        block = VideoItemBlock()
+        
+        value = {
+            'video': None,
+            'video_file': None,
+            'overrides': {}
+        }
+        
+        with self.assertRaises(StructBlockValidationError) as cm:
+            block.clean(value)
+        
+        # Check that errors mention both fields
+        errors = cm.exception.block_errors
+        self.assertIn('video', errors)
+        self.assertIn('video_file', errors)
+        self.assertIn('must be provided', str(errors['video']).lower())
 
 
 class VideoFeedBlockTests(TestCase):

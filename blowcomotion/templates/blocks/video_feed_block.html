@@ -21,7 +21,13 @@
                 {# Featured Large Video #}
                 {% if featured_video %}
                 <div class="video-feed__featured mb-5">
-                    <div class="video-feed__featured-item video-popup-trigger" data-video-url="{{ featured_video.embed_url }}">
+                    <div class="video-feed__featured-item video-popup-trigger" 
+                         {% if featured_video.is_uploaded %}
+                         data-video-file="{{ featured_video.video_file.file.url }}" 
+                         data-video-type="{{ featured_video.file_extension }}"
+                         {% else %}
+                         data-video-url="{{ featured_video.embed_url }}"
+                         {% endif %}>
                         {% if featured_video.overrides.thumbnail_override %}
                             {% image featured_video.overrides.thumbnail_override fill-1200x675 as thumb %}
                             <img src="{{ thumb.url }}" alt="{{ featured_video.overrides.title_override|default:featured_video.title }}" class="img-fluid w-100">
@@ -30,7 +36,13 @@
                         {% else %}
                             <div class="video-feed__thumbnail-placeholder bg-dark" style="padding-top: 56.25%;"></div>
                         {% endif %}
-                        <a href="#" class="play-btn video-popup-trigger" data-video-url="{{ featured_video.embed_url }}"><i class="fa fa-play"></i></a>
+                        <a href="#" class="play-btn video-popup-trigger" 
+                           {% if featured_video.is_uploaded %}
+                           data-video-file="{{ featured_video.video_file.file.url }}"
+                           data-video-type="{{ featured_video.file_extension }}"
+                           {% else %}
+                           data-video-url="{{ featured_video.embed_url }}"
+                           {% endif %}><i class="fa fa-play"></i></a>
                         {% if featured_video.overrides.title_override or featured_video.title or featured_video.overrides.description %}
                         <div class="video-feed__featured-text">
                             {% if featured_video.overrides.title_override or featured_video.title %}
@@ -54,7 +66,13 @@
                         {% for video in grid_videos %}
                         <div class="{{ col_class }}">
                             <div class="video-feed__item">
-                                <div class="video-feed__item-pic video-popup-trigger" data-video-url="{{ video.embed_url }}">
+                                <div class="video-feed__item-pic video-popup-trigger" 
+                                     {% if video.is_uploaded %}
+                                     data-video-file="{{ video.video_file.file.url }}"
+                                     data-video-type="{{ video.file_extension }}"
+                                     {% else %}
+                                     data-video-url="{{ video.embed_url }}"
+                                     {% endif %}>
                                     {% if video.overrides.thumbnail_override %}
                                         {% image video.overrides.thumbnail_override fill-600x338 as thumb %}
                                         <img src="{{ thumb.url }}" alt="{{ video.overrides.title_override|default:video.title }}" class="img-fluid w-100">
@@ -63,7 +81,13 @@
                                     {% else %}
                                         <div class="video-feed__thumbnail-placeholder bg-dark" style="padding-top: 56.25%;"></div>
                                     {% endif %}
-                                    <a href="#" class="play-btn video-popup-trigger" data-video-url="{{ video.embed_url }}"><i class="fa fa-play"></i></a>
+                                    <a href="#" class="play-btn video-popup-trigger" 
+                                       {% if video.is_uploaded %}
+                                       data-video-file="{{ video.video_file.file.url }}"
+                                       data-video-type="{{ video.video_file.type }}"
+                                       {% else %}
+                                       data-video-url="{{ video.embed_url }}"
+                                       {% endif %}><i class="fa fa-play"></i></a>
                                 </div>
                                 {% if video.overrides.title_override or video.title or video.overrides.description %}
                                 <div class="video-feed__item-text">

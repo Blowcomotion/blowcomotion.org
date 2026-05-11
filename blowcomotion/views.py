@@ -2029,12 +2029,24 @@ def fetch_embed_data(request):
         if parsed.scheme not in ('http', 'https'):
             return JsonResponse({'error': 'Only HTTP/HTTPS URLs are allowed'}, status=400)
         
+        # Validate hostname (handles None case and ports correctly)
+        hostname = parsed.hostname
+        if not hostname:
+            return JsonResponse({'error': 'Invalid URL: missing hostname'}, status=400)
+        
+        hostname = hostname.lower()
+        
         # Allowlist known video providers to reduce SSRF risk
+        # Use exact match or subdomain match to prevent bypasses like "evilyoutube.com"
         allowed_hosts = [
             'youtube.com', 'www.youtube.com', 'youtu.be', 'm.youtube.com',
             'vimeo.com', 'www.vimeo.com', 'player.vimeo.com'
         ]
-        if not any(parsed.netloc.endswith(host) or parsed.netloc == host for host in allowed_hosts):
+        is_allowed = any(
+            hostname == host or hostname.endswith('.' + host)
+            for host in allowed_hosts
+        )
+        if not is_allowed:
             return JsonResponse({'error': 'Only YouTube and Vimeo URLs are supported'}, status=400)
     except Exception as e:
         logger.warning(f"Invalid URL format in fetch_embed_data: {url}")

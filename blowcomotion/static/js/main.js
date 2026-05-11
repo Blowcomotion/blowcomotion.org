@@ -95,20 +95,51 @@
 	--------------------*/
     $('.video-popup-trigger').on('click', function(e) {
         e.preventDefault();
+        
         var videoUrl = $(this).data('video-url');
-        // Add autoplay parameter to URL
-        if (videoUrl.indexOf('?') > -1) {
-            videoUrl += '&autoplay=1';
-        } else {
-            videoUrl += '?autoplay=1';
+        var videoFile = $(this).data('video-file');
+        var videoType = $(this).data('video-type');
+        
+        // Check if it's an uploaded video file
+        if (videoFile) {
+            // Show HTML5 video player, hide iframe
+            $('#videoIframeContainer').hide();
+            $('#videoPlayerContainer').show();
+            
+            // Set video source and type
+            $('#videoSource').attr('src', videoFile);
+            $('#videoSource').attr('type', 'video/' + videoType);
+            
+            // Load and play the video
+            var videoPlayer = document.getElementById('videoPlayer');
+            videoPlayer.load();
+            videoPlayer.play();
+        } else if (videoUrl) {
+            // Show iframe, hide HTML5 player
+            $('#videoPlayerContainer').hide();
+            $('#videoIframeContainer').show();
+            
+            // Add autoplay parameter to URL
+            if (videoUrl.indexOf('?') > -1) {
+                videoUrl += '&autoplay=1';
+            } else {
+                videoUrl += '?autoplay=1';
+            }
+            $('#videoIframe').attr('src', videoUrl);
         }
-        $('#videoIframe').attr('src', videoUrl);
+        
         $('#videoModal').modal('show');
     });
 
     // Clear video when modal is closed to stop playback
     $('#videoModal').on('hidden.bs.modal', function () {
         $('#videoIframe').attr('src', '');
+        
+        // Stop and reset HTML5 video player
+        var videoPlayer = document.getElementById('videoPlayer');
+        videoPlayer.pause();
+        videoPlayer.currentTime = 0;
+        $('#videoSource').attr('src', '');
     });
 
 

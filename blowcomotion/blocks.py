@@ -7,6 +7,7 @@ import requests
 from wagtail import blocks
 from wagtail.embeds.blocks import EmbedBlock
 from wagtail.images.blocks import ImageChooserBlock
+from wagtailmedia.blocks import VideoChooserBlock
 
 from django.conf import settings
 from django.core.cache import cache
@@ -597,15 +598,44 @@ class VideoItemOverridesBlock(blocks.StructBlock):
 
 
 class VideoItemBlock(blocks.StructBlock):
-    """Individual video item with embed URL and optional overrides."""
+    """Individual video item with either embed URL OR uploaded video file."""
     video = EmbedBlock(
         required=False,
-        help_text="Enter a video URL (YouTube, Vimeo, etc.). The video will be embedded automatically."
+        help_text="Enter a video URL (YouTube, Vimeo, etc.). Use either this OR the video file field below, not both."
+    )
+    video_file = VideoChooserBlock(
+        required=False,
+        help_text="Upload a video file. Use either this OR the video URL field above, not both."
     )
     overrides = VideoItemOverridesBlock(
         required=False,
         help_text="Optional: Override video title, thumbnail, or add a description."
     )
+
+    def clean(self, value):
+        """Enforce XOR validation: either video OR video_file must be provided, but not both."""
+        from wagtail.blocks import StructBlockValidationError
+
+        from django.core.exceptions import ValidationError
+        
+        result = super().clean(value)
+        
+        has_video = bool(result.get('video'))
+        has_video_file = bool(result.get('video_file'))
+        
+        # XOR validation: exactly one must be provided
+        if has_video and has_video_file:
+            raise StructBlockValidationError(block_errors={
+                'video': ValidationError("Cannot provide both a video URL and a video file. Choose one."),
+                'video_file': ValidationError("Cannot provide both a video URL and a video file. Choose one."),
+            })
+        elif not has_video and not has_video_file:
+            raise StructBlockValidationError(block_errors={
+                'video': ValidationError("Either a video URL or a video file must be provided."),
+                'video_file': ValidationError("Either a video URL or a video file must be provided."),
+            })
+        
+        return result
 
     class Meta:
         icon = "media"
@@ -690,10 +720,13 @@ class VideoFeedBlock(blocks.StructBlock):
     def get_context(self, value, parent_context=None):
         context = super().get_context(value, parent_context)
         
-        # Filter out videos that don't have a valid embed and add embed URLs
+        # Process videos: handle both embeds and uploaded video files
         # Fetch embed data once per video to avoid N+1 queries
         valid_videos = []
         for v in value.get('videos', []):
+            video_data = None
+            
+            # Check if it's an embed URL
             if v.get('video'):
                 # Single embed fetch per video returns both URL and metadata
                 embed_data = self._get_embed_data(v['video'])
@@ -701,12 +734,33 @@ class VideoFeedBlock(blocks.StructBlock):
                     # Create a new dict with the video data plus embed_url and embed metadata
                     video_data = {
                         'video': v['video'],
+                        'video_file': None,
+                        'is_uploaded': False,
                         'overrides': v.get('overrides', {}),
                         'embed_url': embed_data['embed_url'],
                         'thumbnail_url': embed_data.get('thumbnail_url', ''),
                         'title': embed_data.get('title', ''),
                     }
-                    valid_videos.append(video_data)
+            # Check if it's an uploaded video file
+            elif v.get('video_file'):
+                video_file = v['video_file']
+                # Extract file extension for MIME type (e.g., 'mp4', 'webm', 'ogg')
+                import os
+                file_extension = os.path.splitext(video_file.file.name)[1].lstrip('.')
+                # Create data dict for uploaded video
+                video_data = {
+                    'video': None,
+                    'video_file': video_file,
+                    'is_uploaded': True,
+                    'file_extension': file_extension,  # e.g., 'mp4', 'webm'
+                    'overrides': v.get('overrides', {}),
+                    'embed_url': None,
+                    'thumbnail_url': video_file.thumbnail.url if video_file.thumbnail else '',
+                    'title': v.get('overrides', {}).get('title_override') or video_file.title,
+                }
+            
+            if video_data:
+                valid_videos.append(video_data)
         
         # Separate featured video from grid videos
         featured_video = None
