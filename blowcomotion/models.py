@@ -1043,6 +1043,7 @@ class BlankCanvasPage(BasePage):
             ("hero", blowcomotion_blocks.HeroBlock()),
             ("horizontal_rule", blowcomotion_blocks.HorizontalRuleBlock()),
             ("image", blowcomotion_blocks.ImageBlock()),
+            ("image_carousel", blowcomotion_blocks.ImageCarouselBlock()),
             ("join_band_form", blowcomotion_blocks.JoinBandFormBlock(group="Forms")),
             ("member_signup_form", blowcomotion_blocks.MemberSignupFormBlock(group="Forms")),
             ("jukebox", blowcomotion_blocks.JukeBoxBlock()),
@@ -1076,6 +1077,31 @@ class BlankCanvasPage(BasePage):
         context = super().get_context(request)
         context["include_countdown_js"] = False
         context["include_form_js"] = True # set to True for the feedback form
+        context["has_image_carousel"] = False
+        
+        # Check both sticky_content and body for image_carousel blocks
+        for field in [self.sticky_content, self.body]:
+            if field and not context["has_image_carousel"]:
+                for block in field:
+                    # Check for image_carousel at top level
+                    if block.block_type == "image_carousel":
+                        context["has_image_carousel"] = True
+                        break
+                    # Check for image_carousel inside column_layout blocks
+                    if block.block_type == "column_layout":
+                        # ColumnLayoutBlock can be TwoColumnBlock or ThreeColumnBlock
+                        layout_value = block.value
+                        # Check all column fields for nested image_carousel blocks
+                        for field_name in ['left_column', 'middle_column', 'right_column']:
+                            column = layout_value.get(field_name)
+                            if column:
+                                for nested_block in column:
+                                    if nested_block.block_type == "image_carousel":
+                                        context["has_image_carousel"] = True
+                                        break
+                        if context["has_image_carousel"]:
+                            break
+        
         if self.body:
             has_notification_banner = NotificationBanner.for_request(request).message and (not NotificationBanner.for_request(request).expiration_date or NotificationBanner.for_request(request).expiration_date > datetime.date.today())
             context["hero_header"] = self.body[0].block_type == "hero" and not has_notification_banner

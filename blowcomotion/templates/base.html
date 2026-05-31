@@ -77,5 +77,39 @@
                 </div>
             </div>
         </div>
+
+        {% if has_image_carousel %}
+        {# Shared Image Modal - used by ImageCarouselBlock #}
+        {# Lightbox modal for viewing full-size images with carousel navigation #}
+        <div class="modal fade image-modal" id="imageModal" tabindex="-1" role="dialog" aria-label="Image viewer" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
+                <div class="modal-content bg-dark">
+                    <div class="modal-header border-0">
+                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        {# Previous/Next Navigation Buttons #}
+                        <button type="button" class="image-modal__nav image-modal__nav--prev" id="imageModalPrev" aria-label="Previous image" style="display: none;">
+                            <i class="fa fa-angle-left"></i>
+                        </button>
+                        <button type="button" class="image-modal__nav image-modal__nav--next" id="imageModalNext" aria-label="Next image" style="display: none;">
+                            <i class="fa fa-angle-right"></i>
+                        </button>
+                        
+                        <div class="image-modal__img-container">
+                            <img id="imageModalImg" src="" alt="">
+                        </div>
+                        <div id="imageModalCounter" class="image-modal__counter" style="display: none;"></div>
+                        <div id="imageModalCaption" class="image-modal__caption" style="display: none;"></div>
+                        <div id="imageModalLink" class="image-modal__link text-center" style="display: none;">
+                            <a id="imageModalLinkBtn" href="#" target="_self" class="site-btn">View More</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </body>
 </html>
