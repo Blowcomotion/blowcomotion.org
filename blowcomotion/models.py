@@ -1007,9 +1007,62 @@ class AttendanceRecord(models.Model):
             return f"{self.guest_name} (Guest) - {self.date}"
 
 
+def _has_image_carousel_in_streamfield(stream_value):
+    """
+    Recursively check if a StreamField contains an ImageCarouselBlock.
+    Handles nested structures like column_layout blocks.
+    
+    Args:
+        stream_value: A StreamValue to search through
+        
+    Returns:
+        bool: True if any image_carousel block is found
+    """
+    if not stream_value:
+        return False
+    
+    for block in stream_value:
+        # Check if this block is an image_carousel
+        if block.block_type == "image_carousel":
+            return True
+        
+        # Check if this is a column_layout block
+        if block.block_type == "column_layout":
+            # column_layout is a StreamBlock containing two_column/three_column/four_column blocks
+            # Iterate through each column block (two_column, three_column, four_column)
+            for column_block in block.value:
+                # Each column block is a StructBlock with column fields
+                # Check all possible column field names (covers 2, 3, and 4 column layouts)
+                column_field_names = ['left_column', 'middle_column', 'right_column', 
+                                     'middle_left_column', 'middle_right_column']
+                
+                for field_name in column_field_names:
+                    column_stream = column_block.value.get(field_name)
+                    if column_stream and _has_image_carousel_in_streamfield(column_stream):
+                        return True
+    
+    return False
+
+
 class BasePage(Page):
     class Meta:
         abstract = True
+    
+    def get_context(self, request):
+        context = super().get_context(request)
+        
+        # Check all StreamFields on the page for image_carousel blocks
+        context["has_image_carousel"] = False
+        
+        # Check common StreamField names that might contain image_carousel
+        for field_name in ['body', 'sticky_content', 'content']:
+            if hasattr(self, field_name):
+                field_value = getattr(self, field_name)
+                if field_value and _has_image_carousel_in_streamfield(field_value):
+                    context["has_image_carousel"] = True
+                    break
+        
+        return context
 
 
 class BlankCanvasPage(BasePage):
@@ -1077,30 +1130,6 @@ class BlankCanvasPage(BasePage):
         context = super().get_context(request)
         context["include_countdown_js"] = False
         context["include_form_js"] = True # set to True for the feedback form
-        context["has_image_carousel"] = False
-        
-        # Check both sticky_content and body for image_carousel blocks
-        for field in [self.sticky_content, self.body]:
-            if field and not context["has_image_carousel"]:
-                for block in field:
-                    # Check for image_carousel at top level
-                    if block.block_type == "image_carousel":
-                        context["has_image_carousel"] = True
-                        break
-                    # Check for image_carousel inside column_layout blocks
-                    if block.block_type == "column_layout":
-                        # ColumnLayoutBlock can be TwoColumnBlock or ThreeColumnBlock
-                        layout_value = block.value
-                        # Check all column fields for nested image_carousel blocks
-                        for field_name in ['left_column', 'middle_column', 'right_column']:
-                            column = layout_value.get(field_name)
-                            if column:
-                                for nested_block in column:
-                                    if nested_block.block_type == "image_carousel":
-                                        context["has_image_carousel"] = True
-                                        break
-                        if context["has_image_carousel"]:
-                            break
         
         if self.body:
             has_notification_banner = NotificationBanner.for_request(request).message and (not NotificationBanner.for_request(request).expiration_date or NotificationBanner.for_request(request).expiration_date > datetime.date.today())
