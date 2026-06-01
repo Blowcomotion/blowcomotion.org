@@ -1043,6 +1043,7 @@ class BlankCanvasPage(BasePage):
             ("hero", blowcomotion_blocks.HeroBlock()),
             ("horizontal_rule", blowcomotion_blocks.HorizontalRuleBlock()),
             ("image", blowcomotion_blocks.ImageBlock()),
+            ("image_carousel", blowcomotion_blocks.ImageCarouselBlock()),
             ("join_band_form", blowcomotion_blocks.JoinBandFormBlock(group="Forms")),
             ("member_signup_form", blowcomotion_blocks.MemberSignupFormBlock(group="Forms")),
             ("jukebox", blowcomotion_blocks.JukeBoxBlock()),
@@ -1076,6 +1077,7 @@ class BlankCanvasPage(BasePage):
         context = super().get_context(request)
         context["include_countdown_js"] = False
         context["include_form_js"] = True # set to True for the feedback form
+        
         if self.body:
             has_notification_banner = NotificationBanner.for_request(request).message and (not NotificationBanner.for_request(request).expiration_date or NotificationBanner.for_request(request).expiration_date > datetime.date.today())
             context["hero_header"] = self.body[0].block_type == "hero" and not has_notification_banner

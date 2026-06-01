@@ -1,0 +1,264 @@
+/* Image Carousel Styles - Based on Video Feed Pattern */
+
+/* Carousel Image Items */
+.image-carousel__item-pic {
+    width: 250px;
+    height: 250px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    margin: 0 auto 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.image-carousel__item-pic img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+/* Hover effect for image zoom */
+.image-carousel__item-pic:hover img {
+    transform: scale(1.1);
+}
+
+/* Overlay with search icon */
+.image-carousel__overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(91, 26, 118, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.image-carousel__overlay i {
+    font-size: 36px;
+    color: #ffffff;
+}
+
+.image-carousel__item-pic:hover .image-carousel__overlay {
+    opacity: 1;
+}
+
+/* Caption Text */
+.image-carousel__item-text {
+    padding-top: 5px;
+}
+
+.image-carousel__item-text p {
+    font-size: 14px;
+    color: #666666;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Modal Styles for Image Lightbox */
+.image-modal .modal-dialog {
+    max-width: 90vw;
+    max-height: 90vh;
+}
+
+.image-modal .modal-content {
+    background: rgba(7, 14, 38, 0.98);
+}
+
+.image-modal .modal-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.image-modal__img-container {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-height: 80vh;
+    position: relative;
+}
+
+.image-modal__img-container img {
+    max-width: 100%;
+    max-height: 80vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+/* Navigation buttons */
+.image-modal__nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(91, 26, 118, 0.9);
+    color: #ffffff;
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    outline: none;
+}
+
+.image-modal__nav i {
+    pointer-events: none;
+}
+
+.image-modal__nav:focus {
+    outline: 2px solid rgba(255, 255, 255, 0.5);
+    outline-offset: 2px;
+}
+
+.image-modal__nav:hover {
+    background: rgba(91, 26, 118, 1);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.image-modal__nav--prev {
+    left: 20px;
+}
+
+.image-modal__nav--next {
+    right: 20px;
+}
+
+/* Counter display */
+.image-modal__counter {
+    padding: 10px 20px;
+    text-align: center;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0.8;
+}
+
+.image-modal__caption {
+    padding: 20px;
+    text-align: center;
+    color: #ffffff;
+    font-size: 16px;
+}
+
+.image-modal__link {
+    padding: 10px 20px;
+    margin-bottom: 10px;
+}
+
+.image-modal__link .site-btn {
+    background: #5b1a76;
+    color: #ffffff;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.image-modal__link .site-btn:hover {
+    background: #7a2499;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
+    .image-carousel__item-pic {
+        height: 200px;
+    }
+    
+    .image-modal .modal-dialog {
+        max-width: 95vw;
+    }
+    
+    .image-modal__nav {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+    }
+    
+    .image-modal__nav--prev {
+        left: 10px;
+    }
+    
+    .image-modal__nav--next {
+        right: 10px;
+    }
+}
+
+@media (max-width: 575px) {
+    .image-carousel__item-pic {
+        height: 180px;
+    }
+    
+    .image-modal__nav {
+        width: 35px;
+        height: 35px;
+        font-size: 18px;
+    }
+    
+    .image-modal__nav--prev {
+        left: 5px;
+    }
+    
+    .image-modal__nav--next {
+        right: 5px;
+    }
+}
+
+/* Owl Carousel Dots Styling for Image Carousel */
+.image-carousel-block .owl-dots {
+    text-align: center;
+    margin-top: 20px;
+    display: block !important; /* Force show even when Owl Carousel sets disabled */
+}
+
+.image-carousel-block .owl-dots.disabled {
+    display: block !important; /* Override Owl Carousel's disabled state */
+}
+
+.image-carousel-block .owl-dot {
+    display: inline-block;
+    margin: 0 5px;
+}
+
+.image-carousel-block .owl-dot span {
+    width: 12px;
+    height: 12px;
+    background: #d6d6d6;
+    display: block;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.image-carousel-block .owl-dot:hover span {
+    background: #999999;
+}
+
+.image-carousel-block .owl-dot.active span {
+    background: #5b1a76;
+    width: 14px;
+    height: 14px;
+}

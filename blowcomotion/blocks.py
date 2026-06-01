@@ -2,6 +2,7 @@ import datetime
 import logging
 import os
 import time
+import uuid
 from datetime import timedelta, tzinfo
 
 import requests
@@ -577,6 +578,109 @@ class ImageBlock(blocks.StructBlock):
         label_format = "Image: {image}"
 
 
+class CarouselImageBlock(blocks.StructBlock):
+    """Individual image item for carousel with optional caption and link."""
+    image = ImageChooserBlock(
+        help_text="Select an image for the carousel."
+    )
+    caption = blocks.CharBlock(
+        required=False,
+        max_length=200,
+        help_text="Optional: Add a caption for this image."
+    )
+    url = blocks.URLBlock(
+        required=False,
+        help_text="Optional: Link the image to a URL (e.g., event page, merch)."
+    )
+    open_in_new_tab = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Open link in a new browser tab."
+    )
+
+    class Meta:
+        icon = "image"
+        label = "Carousel Image"
+
+
+class ImageCarouselBlock(blocks.StructBlock):
+    """Block for displaying a carousel of images with lightbox functionality."""
+    title = blocks.CharBlock(
+        required=False,
+        help_text="Main title for the image carousel section (e.g., 'Photo Gallery')."
+    )
+    subtitle = blocks.CharBlock(
+        required=False,
+        help_text="Subtitle text displayed above the title (e.g., 'Recent Events')."
+    )
+    images = blocks.ListBlock(
+        CarouselImageBlock(),
+        min_num=1,
+        help_text="Add images to display in the carousel. Click an image to view it full-size."
+    )
+    autoplay = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Automatically advance slides."
+    )
+    autoplay_speed = blocks.IntegerBlock(
+        required=False,
+        default=3000,
+        min_value=1000,
+        help_text="Autoplay speed in milliseconds (e.g., 3000 = 3 seconds)."
+    )
+    show_dots = blocks.BooleanBlock(
+        required=False,
+        default=True,
+        help_text="Show navigation dots below the carousel."
+    )
+    slides_to_show = blocks.ChoiceBlock(
+        choices=[
+            ("2", "2 Slides (Desktop)"),
+            ("3", "3 Slides (Desktop)"),
+            ("4", "4 Slides (Desktop)"),
+        ],
+        default="4",
+        help_text="Number of slides visible on desktop screens (>992px)."
+    )
+
+    def get_context(self, value, parent_context=None):
+        context = super().get_context(value, parent_context)
+        
+        # Generate a unique ID for this carousel instance
+        carousel_id = f"carousel-{uuid.uuid4().hex[:8]}"
+        
+        # Process images with Wagtail image renditions
+        processed_images = []
+        for img_block in value.get('images', []):
+            if img_block.get('image'):
+                processed_images.append({
+                    'image': img_block['image'],
+                    'caption': img_block.get('caption', ''),
+                    'url': img_block.get('url', ''),
+                    'open_in_new_tab': img_block.get('open_in_new_tab', False),
+                })
+        
+        # Calculate responsive column class based on slides_to_show
+        slides = int(value.get('slides_to_show', 4))
+        col_class = f"col-lg-{12 // slides}"
+        
+        context.update({
+            'carousel_id': carousel_id,
+            'processed_images': processed_images,
+            'col_class': col_class,
+        })
+        
+        return context
+
+    class Meta:
+        icon = "bi-images"
+        template = "blocks/image_carousel_block.html"
+        label = "Image Carousel"
+        label_format = "Image Carousel: {title}"
+        help_text = "Display a carousel of images with click-to-expand lightbox functionality."
+
+
 class VideoItemOverridesBlock(blocks.StructBlock):
     """Collapsed group of optional override fields for video items."""
     title_override = blocks.CharBlock(
@@ -802,6 +906,7 @@ class ColumnContentBlock(blocks.StreamBlock):
     join_band_form = JoinBandFormBlock(group="Forms")
     horizontal_rule = HorizontalRuleBlock()
     image = ImageBlock()
+    image_carousel = ImageCarouselBlock()
     rich_text = AlignableRichtextBlock()
     adjustable_spacer = AdjustableSpacerBlock()
     spacer = SpacerBlock()
