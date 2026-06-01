@@ -224,3 +224,9 @@ GIGO_BAND_ID_LOCAL = None
 FROM_EMAIL = None
 
 WAGTAILADMIN_BASE_URL = 'http://localhost:8000'
+
+# Security: Limit document uploads (recommended in 7.4 security audit)
+WAGTAILDOCS_MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10MB
+
+WAGTAILIMAGES_JPEG_QUALITY = 85
+WAGTAILIMAGES_AVIF_QUALITY = 80
