@@ -233,7 +233,8 @@
                 const oldPlayBtn = this.state.currentAudioPlayer.closest('.accordion-song')?.querySelector('.song-play-btn');
                 if (oldPlayBtn) {
                     oldPlayBtn.classList.remove('playing');
-                    oldPlayBtn.querySelector('i').className = 'fa fa-play-circle';
+                    const icon = oldPlayBtn.querySelector('i');
+                    if (icon) icon.className = 'fa fa-play-circle';
                 }
                 this.state.currentAudioPlayer.remove();
                 this.state.currentAudioPlayer = null;
@@ -256,7 +257,8 @@
                     const oldPlayBtn = this.state.currentAudioPlayer.closest('.accordion-song')?.querySelector('.song-play-btn');
                     if (oldPlayBtn) {
                         oldPlayBtn.classList.remove('playing');
-                        oldPlayBtn.querySelector('i').className = 'fa fa-play-circle';
+                        const icon = oldPlayBtn.querySelector('i');
+                        if (icon) icon.className = 'fa fa-play-circle';
                     }
                     this.state.currentAudioPlayer.remove();
                     this.state.currentAudioPlayer = null;

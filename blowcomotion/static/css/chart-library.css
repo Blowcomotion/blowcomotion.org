@@ -63,7 +63,7 @@
     background: linear-gradient(to bottom, #f8f9fa, #f0f1f2);
     cursor: pointer;
     user-select: none;
-    transition: background-color 0.15s ease;
+    transition: background 0.15s ease;
 }
 
 .accordion-section-header:hover {
@@ -224,6 +224,9 @@
     color: #333;
     flex: 1;
     min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .accordion-song.expanded > .accordion-song-header {
@@ -519,6 +522,9 @@
     
     .accordion-song-title {
         font-size: 13px;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
     }
 }
 
