@@ -532,8 +532,9 @@
             const lowerQuery = query.toLowerCase().trim();
 
             songs.forEach(song => {
-                const title = song.dataset.songTitle.toLowerCase();
-                const matches = !lowerQuery || title.includes(lowerQuery);
+                const title = (song.dataset.songTitle || '').toLowerCase();
+                const isPlayingSong = this.state.currentAudioPlayer && song.contains(this.state.currentAudioPlayer);
+                const matches = isPlayingSong || !lowerQuery || title.includes(lowerQuery);
                 song.style.display = matches ? '' : 'none';
             });
         }
