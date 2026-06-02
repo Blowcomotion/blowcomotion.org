@@ -136,6 +136,13 @@
                         this.toggleInstrument(instrumentHeader.closest('.accordion-instrument'));
                         return;
                     }
+
+                    const songHeader = e.target.closest('.accordion-song-header[role="button"]');
+                    if (songHeader) {
+                        e.preventDefault();
+                        this.toggleSongParts(songHeader.closest('.accordion-song'));
+                        return;
+                    }
                 }
             });
         }
@@ -311,11 +318,11 @@
                      data-has-multiple="${hasMultipleCharts}"
                      data-charts='${JSON.stringify(song.charts || []).replace(/'/g, "&#39;")}'
                      data-instrument-id="${instrumentId}">
-                    <div class="accordion-song-header">
+                    <div class="accordion-song-header"${hasMultipleCharts ? ' role="button" tabindex="0" aria-expanded="false"' : ''}>
                         <span class="song-media-icons">
                             <span class="media-icon-slot">
                                 ${song.has_recording ? `
-                                    <button class="song-play-btn" title="Play recording" aria-label="Play ${this.escapeHtml(song.title)}">
+                                    <button type="button" class="song-play-btn" title="Play recording" aria-label="Play ${this.escapeHtml(song.title)}">
                                         <i class="fa fa-play-circle"></i>
                                     </button>
                                 ` : ''}
@@ -386,14 +393,17 @@
             const isExpanded = songItem.classList.contains('expanded');
             const content = songItem.querySelector('.accordion-song-content');
             const expandIcon = songItem.querySelector('.song-expand-icon');
+            const header = songItem.querySelector('.accordion-song-header');
             
             if (isExpanded) {
                 songItem.classList.remove('expanded');
                 if (expandIcon) expandIcon.className = 'fa fa-chevron-right accordion-icon song-expand-icon';
+                if (header) header.setAttribute('aria-expanded', 'false');
                 content.innerHTML = '';
             } else {
                 songItem.classList.add('expanded');
                 if (expandIcon) expandIcon.className = 'fa fa-chevron-down accordion-icon song-expand-icon';
+                if (header) header.setAttribute('aria-expanded', 'true');
                 
                 // Render parts
                 try {
@@ -447,10 +457,17 @@
                     oldPlayBtn.querySelector('i').className = 'fa fa-play-circle';
                 }
                 this.state.currentAudioPlayer.remove();
+                this.state.currentAudioPlayer = null;
+                this.state.currentlyPlayingUrl = null;
             }
 
             // Create inline audio player
-            const videos = JSON.parse(songItem.dataset.videos || '[]');
+            let videos = [];
+            try {
+                videos = JSON.parse(songItem.dataset.videos || '[]');
+            } catch (e) {
+                console.error('Error parsing videos data:', e);
+            }
             const videoLinksHtml = videos.length > 0 ? `
                 <span class="audio-video-links">
                     ${videos.map((v, i) => `
