@@ -1,3 +1,5 @@
+import django_filters
+from wagtail.admin.filters import DateRangePickerWidget, WagtailFilterSet
 from wagtail.admin.panels import (
     FieldPanel,
     FieldRowPanel,
@@ -5,9 +7,15 @@ from wagtail.admin.panels import (
     MultiFieldPanel,
     MultipleChooserPanel,
 )
-from wagtail.admin.ui.tables import DateColumn, UpdatedAtColumn
+from wagtail.admin.ui.tables import Column, DateColumn, UpdatedAtColumn
 from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup
 from wagtailmedia.edit_handlers import MediaChooserPanel
+
+# Custom FilterSets
+class ChartFilterSet(WagtailFilterSet):
+    class Meta:
+        model = None
+        fields = ['instrument', 'song']
 
 
 class ChartViewSet(SnippetViewSet):
@@ -15,9 +23,15 @@ class ChartViewSet(SnippetViewSet):
     menu_label = 'Charts'
     menu_name = 'charts'
     menu_icon = 'doc-full-inverse'
-    search_fields = ['song__title', 'instrument__name']
-    list_display = ['__str__', UpdatedAtColumn()]
-    list_filter = ['song', 'instrument']
+    search_fields = ['song__title', 'instrument__name', 'part']
+    list_display = [
+        'song',
+        'instrument',
+        Column('part', label='Part'),
+        UpdatedAtColumn()
+    ]
+    filterset_class = None  # Set in __init__
+    ordering = ['song__title', 'instrument__name']
     panels = [
         'song',
         'pdf',
@@ -26,9 +40,28 @@ class ChartViewSet(SnippetViewSet):
     ]
 
     def __init__(self, *args, **kwargs):
-        from .models import Chart  # Lazy import inside the method
+        from .models import Chart
+
+        # Create a dynamic FilterSet class with the model set
+        class ChartFilterSetWithModel(ChartFilterSet):
+            class Meta(ChartFilterSet.Meta):
+                model = Chart
+        
         self.model = Chart
+        self.filterset_class = ChartFilterSetWithModel
         super().__init__(*args, **kwargs)
+
+
+class SongFilterSet(WagtailFilterSet):
+    class Meta:
+        model = None
+        fields = {
+            'active': ['exact'],
+            'style': ['exact'],
+            'key_signature': ['exact'],
+            'time_signature': ['exact'],
+            'tonality': ['exact'],
+        }
 
 
 class SongViewSet(SnippetViewSet):
@@ -36,9 +69,19 @@ class SongViewSet(SnippetViewSet):
     menu_label = 'Songs'
     menu_name = 'songs'
     menu_icon = 'music'
-    search_fields = ['title', 'composer', 'style']
-    list_display = ['title', 'tempo', 'composer', 'style', 'active', UpdatedAtColumn()]
-    list_filter = ['style', 'composer', 'active']
+    search_fields = ['title', 'composer', 'arranger', 'style', 'source_band']
+    list_display = [
+        'title',
+        'key_signature',
+        'time_signature',
+        Column('tempo', label='Tempo (BPM)'),
+        'style',
+        'composer',
+        'active',
+        UpdatedAtColumn()
+    ]
+    filterset_class = None  # Set in __init__
+    ordering = ['title']
     panels = [
         'title',
         MediaChooserPanel('recording', help_text="Select the audio recording for this song.", media_type='audio'),
@@ -66,8 +109,26 @@ class SongViewSet(SnippetViewSet):
 
     def __init__(self, *args, **kwargs):
         from .models import Song
+
+        # Create a dynamic FilterSet class with the model set
+        class SongFilterSetWithModel(SongFilterSet):
+            class Meta(SongFilterSet.Meta):
+                model = Song
+        
         self.model = Song
+        self.filterset_class = SongFilterSetWithModel
         super().__init__(*args, **kwargs)
+
+
+class EventFilterSet(WagtailFilterSet):
+    date = django_filters.DateFromToRangeFilter(
+        widget=DateRangePickerWidget,
+        label='Date Range',
+    )
+    
+    class Meta:
+        model = None
+        fields = ['date', 'location']
 
 
 class EventViewSet(SnippetViewSet):
@@ -75,13 +136,16 @@ class EventViewSet(SnippetViewSet):
     menu_label = 'Events'
     menu_name = 'events'
     menu_icon = 'date'
+    search_fields = ['title', 'location', 'description']
     list_display = [
         'title',
-        'date',
+        DateColumn('date', label='Date'),
         'time',
         'location',
         UpdatedAtColumn(),
     ]
+    filterset_class = None  # Set in __init__
+    ordering = ['-date', 'time']
     panels = [
         'title',
         'date',
@@ -95,7 +159,14 @@ class EventViewSet(SnippetViewSet):
 
     def __init__(self, *args, **kwargs):
         from .models import Event
+
+        # Create a dynamic FilterSet class with the model set
+        class EventFilterSetWithModel(EventFilterSet):
+            class Meta(EventFilterSet.Meta):
+                model = Event
+        
         self.model = Event
+        self.filterset_class = EventFilterSetWithModel
         super().__init__(*args, **kwargs)
 
 
@@ -139,14 +210,40 @@ class InstrumentViewSet(SnippetViewSet):
         super().__init__(*args, **kwargs)
 
 
+class MemberFilterSet(WagtailFilterSet):
+    last_seen = django_filters.DateFromToRangeFilter(
+        widget=DateRangePickerWidget,
+        label='Last Seen Date Range',
+    )
+    
+    class Meta:
+        model = None
+        fields = {
+            'is_active': ['exact'],
+            'primary_instrument': ['exact'],
+            'instructor': ['exact'],
+            'board_member': ['exact'],
+            'renting': ['exact'],
+        }
+
+
 class MemberViewSet(SnippetViewSet):
     model = None
     menu_label = 'Members'
     menu_name = 'members'
     menu_icon = 'group'
-    list_display = ["first_name", "last_name", "last_seen", "is_active", "join_date", "primary_instrument", UpdatedAtColumn()]
-    list_filter = ["primary_instrument", "instructor", "board_member", "is_active", "renting"]
-    # search_fields = ("first_name", "last_name", "preferred_name", "gigomatic_username", "bio")
+    search_fields = ("first_name", "last_name", "preferred_name", "gigomatic_username", "email")
+    list_display = [
+        '__str__',
+        'primary_instrument',
+        DateColumn('last_seen', label='Last Seen'),
+        'renting',
+        DateColumn('join_date', label='Joined'),
+        'is_active',
+        UpdatedAtColumn()
+    ]
+    filterset_class = None  # Set in __init__
+    ordering = ['last_name', 'first_name']
     panels = [
         "first_name",
         "last_name",
@@ -182,8 +279,29 @@ class MemberViewSet(SnippetViewSet):
 
     def __init__(self, *args, **kwargs):
         from .models import Member
+
+        # Create a dynamic FilterSet class with the model set
+        class MemberFilterSetWithModel(MemberFilterSet):
+            class Meta(MemberFilterSet.Meta):
+                model = Member
+        
         self.model = Member
+        self.filterset_class = MemberFilterSetWithModel
         super().__init__(*args, **kwargs)
+
+
+class AttendanceRecordFilterSet(WagtailFilterSet):
+    date = django_filters.DateFromToRangeFilter(
+        widget=DateRangePickerWidget,
+        label='Date Range',
+    )
+    
+    class Meta:
+        model = None
+        fields = {
+            'member': ['exact'],
+            'played_instrument': ['exact'],
+        }
 
 
 class AttendanceRecordViewSet(SnippetViewSet):
@@ -191,9 +309,18 @@ class AttendanceRecordViewSet(SnippetViewSet):
     menu_label = 'Attendance Records'
     menu_name = 'attendance_records'
     menu_icon = 'check'
-    list_display = ['member', 'played_instrument', 'guest_name', DateColumn('date', label='Date'), 'notes', UpdatedAtColumn()]
-    list_filter = ['date', 'member', 'played_instrument']
     search_fields = ('member__first_name', 'member__last_name', 'guest_name', 'notes', 'played_instrument__name')
+    list_display = [
+        '__str__',
+        DateColumn('date', label='Date'),
+        'member',
+        'played_instrument',
+        'guest_name',
+        'notes',
+        UpdatedAtColumn()
+    ]
+    filterset_class = None  # Set in __init__
+    ordering = ['-date', 'member__last_name']
     panels = [
         FieldRowPanel([
             'date',
@@ -203,12 +330,43 @@ class AttendanceRecordViewSet(SnippetViewSet):
         'guest_name',
         'notes',
     ]
-    ordering = ['-date', 'member__first_name']
 
     def __init__(self, *args, **kwargs):
         from .models import AttendanceRecord
+
+        # Create a dynamic FilterSet class with the model set
+        class AttendanceRecordFilterSetWithModel(AttendanceRecordFilterSet):
+            class Meta(AttendanceRecordFilterSet.Meta):
+                model = AttendanceRecord
+        
         self.model = AttendanceRecord
+        self.filterset_class = AttendanceRecordFilterSetWithModel
         super().__init__(*args, **kwargs)
+
+
+class LibraryInstrumentFilterSet(WagtailFilterSet):
+    rental_date = django_filters.DateFromToRangeFilter(
+        widget=DateRangePickerWidget,
+        label='Rental Date Range',
+    )
+    review_date_6_month = django_filters.DateFromToRangeFilter(
+        widget=DateRangePickerWidget,
+        label='6-Month Review Date Range',
+    )
+    review_date_12_month = django_filters.DateFromToRangeFilter(
+        widget=DateRangePickerWidget,
+        label='12-Month Review Date Range',
+    )
+    
+    class Meta:
+        model = None
+        fields = {
+            'status': ['exact'],
+            'instrument': ['exact'],
+            'member': ['exact'],
+            'storage_location': ['exact'],
+            'patreon_active': ['exact'],
+        }
 
 
 class LibraryInstrumentViewSet(SnippetViewSet):
@@ -216,9 +374,19 @@ class LibraryInstrumentViewSet(SnippetViewSet):
     menu_label = 'Library Instruments'
     menu_name = 'library_instruments'
     menu_icon = 'french-horn'
-    list_display = ['instrument', 'serial_number', 'status', 'storage_location', 'member', 'member__last_seen', 'rental_date', 'review_date_6_month', 'review_date_12_month', UpdatedAtColumn()]
-    list_filter = ['status', 'instrument', 'storage_location', 'patreon_active', 'live']
     search_fields = ('instrument__name', 'serial_number', 'member__first_name', 'member__last_name', 'comments')
+    list_display = [
+        'instrument',
+        'serial_number',
+        'status',
+        'member',
+        'storage_location',
+        DateColumn('rental_date', label='Rental Date'),
+        'patreon_active',
+        UpdatedAtColumn()
+    ]
+    filterset_class = None  # Set in __init__
+    ordering = ['instrument__name', 'serial_number']
     panels = [
         MultiFieldPanel([
             'instrument',
@@ -246,11 +414,17 @@ class LibraryInstrumentViewSet(SnippetViewSet):
         InlinePanel('rental_documents', label="Rental Documents"),
         InlinePanel('history_logs', label="History Log", help_text="Event history for this instrument"),
     ]
-    ordering = ['instrument__name', 'serial_number']
 
     def __init__(self, *args, **kwargs):
         from .models import LibraryInstrument
+
+        # Create a dynamic FilterSet class with the model set
+        class LibraryInstrumentFilterSetWithModel(LibraryInstrumentFilterSet):
+            class Meta(LibraryInstrumentFilterSet.Meta):
+                model = LibraryInstrument
+        
         self.model = LibraryInstrument
+        self.filterset_class = LibraryInstrumentFilterSetWithModel
         super().__init__(*args, **kwargs)
 
 
