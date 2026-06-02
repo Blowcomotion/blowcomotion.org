@@ -1,3 +1,4 @@
+from wagtail.admin.filters import DateRangePickerWidget, WagtailFilterSet
 from wagtail.admin.panels import (
     FieldPanel,
     FieldRowPanel,
@@ -5,9 +6,20 @@ from wagtail.admin.panels import (
     MultiFieldPanel,
     MultipleChooserPanel,
 )
-from wagtail.admin.ui.tables import DateColumn, UpdatedAtColumn
+from wagtail.admin.ui.tables import Column, DateColumn, UpdatedAtColumn
 from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup
 from wagtailmedia.edit_handlers import MediaChooserPanel
+
+from django import forms
+from django.db import models
+from django.utils.html import format_html
+
+
+# Custom FilterSets
+class ChartFilterSet(WagtailFilterSet):
+    class Meta:
+        model = None
+        fields = ['instrument', 'song']
 
 
 class ChartViewSet(SnippetViewSet):
@@ -15,9 +27,15 @@ class ChartViewSet(SnippetViewSet):
     menu_label = 'Charts'
     menu_name = 'charts'
     menu_icon = 'doc-full-inverse'
-    search_fields = ['song__title', 'instrument__name']
-    list_display = ['__str__', UpdatedAtColumn()]
-    list_filter = ['song', 'instrument']
+    search_fields = ['song__title', 'instrument__name', 'part']
+    list_display = [
+        'song',
+        'instrument',
+        Column('part', label='Part'),
+        UpdatedAtColumn()
+    ]
+    filterset_class = None  # Set in __init__
+    ordering = ['song__title', 'instrument__name']
     panels = [
         'song',
         'pdf',
@@ -25,10 +43,34 @@ class ChartViewSet(SnippetViewSet):
         'instrument',
     ]
 
+    def get_section(self, instance):
+        return instance.instrument.section.name if instance.instrument and instance.instrument.section else '-'
+    get_section.short_description = 'Section'
+    get_section.admin_order_field = 'instrument__section__name'
+
     def __init__(self, *args, **kwargs):
-        from .models import Chart  # Lazy import inside the method
+        from .models import Chart
+
+        # Create a dynamic FilterSet class with the model set
+        class ChartFilterSetWithModel(ChartFilterSet):
+            class Meta(ChartFilterSet.Meta):
+                model = Chart
+        
         self.model = Chart
+        self.filterset_class = ChartFilterSetWithModel
         super().__init__(*args, **kwargs)
+
+
+class SongFilterSet(WagtailFilterSet):
+    class Meta:
+        model = None
+        fields = {
+            'active': ['exact'],
+            'style': ['exact'],
+            'key_signature': ['exact'],
+            'time_signature': ['exact'],
+            'tonality': ['exact'],
+        }
 
 
 class SongViewSet(SnippetViewSet):
@@ -36,9 +78,20 @@ class SongViewSet(SnippetViewSet):
     menu_label = 'Songs'
     menu_name = 'songs'
     menu_icon = 'music'
-    search_fields = ['title', 'composer', 'style']
-    list_display = ['title', 'tempo', 'composer', 'style', 'active', UpdatedAtColumn()]
-    list_filter = ['style', 'composer', 'active']
+    search_fields = ['title', 'composer', 'arranger', 'style', 'source_band']
+    list_display = [
+        'title',
+        'key_signature',
+        'time_signature',
+        Column('tempo', label='Tempo (BPM)'),
+        'style',
+        'composer',
+        'active',
+        UpdatedAtColumn()
+    ]
+    filterset_class = None  # Set in __init__
+    ordering = ['title']
+    list_filter = ['active', 'style', 'key_signature', 'time_signature', 'tonality']
     panels = [
         'title',
         MediaChooserPanel('recording', help_text="Select the audio recording for this song.", media_type='audio'),
@@ -64,10 +117,44 @@ class SongViewSet(SnippetViewSet):
         'active',
     ]
 
+    def get_key_display(self, instance):
+        if instance.key_signature and instance.tonality:
+            return f"{instance.key_signature} {instance.tonality.capitalize()}"
+        elif instance.key_signature:
+            return instance.key_signature
+        return '-'
+    get_key_display.short_description = 'Key'
+    
+    def get_active_badge(self, instance):
+        if instance.active:
+            return format_html('<span class="w-status w-status--primary">Active</span>')
+        return format_html('<span class="w-status">Inactive</span>')
+    get_active_badge.short_description = 'Active'
+    get_active_badge.admin_order_field = 'active'
+
     def __init__(self, *args, **kwargs):
         from .models import Song
+
+        # Create a dynamic FilterSet class with the model set
+        class SongFilterSetWithModel(SongFilterSet):
+            class Meta(SongFilterSet.Meta):
+                model = Song
+        
         self.model = Song
+        self.filterset_class = SongFilterSetWithModel
         super().__init__(*args, **kwargs)
+
+
+class EventFilterSet(WagtailFilterSet):
+    date = forms.DateField(
+        required=False,
+        widget=DateRangePickerWidget,
+        label='Date Range',
+    )
+    
+    class Meta:
+        model = None
+        fields = ['date', 'location']
 
 
 class EventViewSet(SnippetViewSet):
@@ -75,13 +162,16 @@ class EventViewSet(SnippetViewSet):
     menu_label = 'Events'
     menu_name = 'events'
     menu_icon = 'date'
+    search_fields = ['title', 'location', 'description']
     list_display = [
         'title',
-        'date',
+        DateColumn('date', label='Date'),
         'time',
         'location',
         UpdatedAtColumn(),
     ]
+    filterset_class = None  # Set in __init__
+    ordering = ['-date', 'time']
     panels = [
         'title',
         'date',
@@ -93,9 +183,23 @@ class EventViewSet(SnippetViewSet):
         'event_scroller_image',
     ]
 
+    def has_setlist(self, instance):
+        count = instance.setlist.count()
+        if count > 0:
+            return format_html('<span class="w-status w-status--primary">{} songs</span>', count)
+        return format_html('<span class="w-status">No setlist</span>')
+    has_setlist.short_description = 'Setlist'
+
     def __init__(self, *args, **kwargs):
         from .models import Event
+
+        # Create a dynamic FilterSet class with the model set
+        class EventFilterSetWithModel(EventFilterSet):
+            class Meta(EventFilterSet.Meta):
+                model = Event
+        
         self.model = Event
+        self.filterset_class = EventFilterSetWithModel
         super().__init__(*args, **kwargs)
 
 
@@ -139,14 +243,42 @@ class InstrumentViewSet(SnippetViewSet):
         super().__init__(*args, **kwargs)
 
 
+class MemberFilterSet(WagtailFilterSet):
+    last_seen = forms.DateField(
+        required=False,
+        widget=DateRangePickerWidget,
+        label='Last Seen Date Range',
+    )
+    
+    class Meta:
+        model = None
+        fields = {
+            'is_active': ['exact'],
+            'primary_instrument': ['exact'],
+            'instructor': ['exact'],
+            'board_member': ['exact'],
+            'renting': ['exact'],
+        }
+
+
 class MemberViewSet(SnippetViewSet):
     model = None
     menu_label = 'Members'
     menu_name = 'members'
     menu_icon = 'group'
-    list_display = ["first_name", "last_name", "last_seen", "is_active", "join_date", "primary_instrument", UpdatedAtColumn()]
-    list_filter = ["primary_instrument", "instructor", "board_member", "is_active", "renting"]
-    # search_fields = ("first_name", "last_name", "preferred_name", "gigomatic_username", "bio")
+    search_fields = ("first_name", "last_name", "preferred_name", "gigomatic_username", "email")
+    list_display = [
+        '__str__',
+        'primary_instrument',
+        DateColumn('last_seen', label='Last Seen'),
+        'renting',
+        DateColumn('join_date', label='Joined'),
+        'is_active',
+        UpdatedAtColumn()
+    ]
+    filterset_class = None  # Set in __init__
+    list_filter = ["is_active", "primary_instrument", "instructor", "board_member", "renting"]
+    ordering = ['last_name', 'first_name']
     panels = [
         "first_name",
         "last_name",
@@ -180,10 +312,61 @@ class MemberViewSet(SnippetViewSet):
         "emergency_contact",
     ]
 
+    def get_name_display(self, instance):
+        if instance.preferred_name:
+            return format_html('"{}" {} {}', instance.preferred_name, instance.first_name, instance.last_name)
+        return f"{instance.first_name} {instance.last_name}"
+    get_name_display.short_description = 'Name'
+    get_name_display.admin_order_field = 'first_name'
+    
+    def get_section(self, instance):
+        if instance.primary_instrument and instance.primary_instrument.section:
+            return instance.primary_instrument.section.name
+        return '-'
+    get_section.short_description = 'Section'
+    get_section.admin_order_field = 'primary_instrument__section__name'
+    
+    def get_status_badges(self, instance):
+        badges = []
+        if instance.is_active:
+            badges.append('<span class="w-status w-status--primary">Active</span>')
+        else:
+            badges.append('<span class="w-status">Inactive</span>')
+        if instance.instructor:
+            badges.append('<span class="w-status w-status--label">Instructor</span>')
+        if instance.board_member:
+            badges.append('<span class="w-status w-status--label">Board</span>')
+        if instance.renting:
+            badges.append('<span class="w-status w-status--label">Renting</span>')
+        return format_html(' '.join(badges))
+    get_status_badges.short_description = 'Status'
+
     def __init__(self, *args, **kwargs):
         from .models import Member
+
+        # Create a dynamic FilterSet class with the model set
+        class MemberFilterSetWithModel(MemberFilterSet):
+            class Meta(MemberFilterSet.Meta):
+                model = Member
+        
         self.model = Member
+        self.filterset_class = MemberFilterSetWithModel
         super().__init__(*args, **kwargs)
+
+
+class AttendanceRecordFilterSet(WagtailFilterSet):
+    date = forms.DateField(
+        required=False,
+        widget=DateRangePickerWidget,
+        label='Date Range',
+    )
+    
+    class Meta:
+        model = None
+        fields = {
+            'member': ['exact'],
+            'played_instrument': ['exact'],
+        }
 
 
 class AttendanceRecordViewSet(SnippetViewSet):
@@ -191,9 +374,19 @@ class AttendanceRecordViewSet(SnippetViewSet):
     menu_label = 'Attendance Records'
     menu_name = 'attendance_records'
     menu_icon = 'check'
-    list_display = ['member', 'played_instrument', 'guest_name', DateColumn('date', label='Date'), 'notes', UpdatedAtColumn()]
-    list_filter = ['date', 'member', 'played_instrument']
     search_fields = ('member__first_name', 'member__last_name', 'guest_name', 'notes', 'played_instrument__name')
+    list_display = [
+        '__str__',
+        DateColumn('date', label='Date'),
+        'member',
+        'played_instrument',
+        'guest_name',
+        'notes',
+        UpdatedAtColumn()
+    ]
+    filterset_class = None  # Set in __init__
+    list_filter = ['member', 'played_instrument']
+    ordering = ['-date', 'member__last_name']
     panels = [
         FieldRowPanel([
             'date',
@@ -203,12 +396,65 @@ class AttendanceRecordViewSet(SnippetViewSet):
         'guest_name',
         'notes',
     ]
-    ordering = ['-date', 'member__first_name']
+
+    def get_attendee(self, instance):
+        if instance.member:
+            name = str(instance.member)
+            if instance.guest_name:
+                return format_html('{} <span class="w-help-text">(Guest: {})</span>', name, instance.guest_name)
+            return name
+        elif instance.guest_name:
+            return format_html('<span class="w-status w-status--label">Guest:</span> {}', instance.guest_name)
+        return '-'
+    get_attendee.short_description = 'Attendee'
+    get_attendee.admin_order_field = 'member__last_name'
+    
+    def get_section(self, instance):
+        if instance.played_instrument and instance.played_instrument.section:
+            return instance.played_instrument.section.name
+        return '-'
+    get_section.short_description = 'Section'
+    get_section.admin_order_field = 'played_instrument__section__name'
 
     def __init__(self, *args, **kwargs):
         from .models import AttendanceRecord
+
+        # Create a dynamic FilterSet class with the model set
+        class AttendanceRecordFilterSetWithModel(AttendanceRecordFilterSet):
+            class Meta(AttendanceRecordFilterSet.Meta):
+                model = AttendanceRecord
+        
         self.model = AttendanceRecord
+        self.filterset_class = AttendanceRecordFilterSetWithModel
         super().__init__(*args, **kwargs)
+
+
+class LibraryInstrumentFilterSet(WagtailFilterSet):
+    rental_date = forms.DateField(
+        required=False,
+        widget=DateRangePickerWidget,
+        label='Rental Date Range',
+    )
+    review_date_6_month = forms.DateField(
+        required=False,
+        widget=DateRangePickerWidget,
+        label='6-Month Review Date Range',
+    )
+    review_date_12_month = forms.DateField(
+        required=False,
+        widget=DateRangePickerWidget,
+        label='12-Month Review Date Range',
+    )
+    
+    class Meta:
+        model = None
+        fields = {
+            'status': ['exact'],
+            'instrument': ['exact'],
+            'member': ['exact'],
+            'storage_location': ['exact'],
+            'patreon_active': ['exact'],
+        }
 
 
 class LibraryInstrumentViewSet(SnippetViewSet):
@@ -216,9 +462,20 @@ class LibraryInstrumentViewSet(SnippetViewSet):
     menu_label = 'Library Instruments'
     menu_name = 'library_instruments'
     menu_icon = 'french-horn'
-    list_display = ['instrument', 'serial_number', 'status', 'storage_location', 'member', 'member__last_seen', 'rental_date', 'review_date_6_month', 'review_date_12_month', UpdatedAtColumn()]
-    list_filter = ['status', 'instrument', 'storage_location', 'patreon_active', 'live']
     search_fields = ('instrument__name', 'serial_number', 'member__first_name', 'member__last_name', 'comments')
+    list_display = [
+        'instrument',
+        'serial_number',
+        'status',
+        'member',
+        'storage_location',
+        DateColumn('rental_date', label='Rental Date'),
+        'patreon_active',
+        UpdatedAtColumn()
+    ]
+    filterset_class = None  # Set in __init__
+    list_filter = ['status', 'instrument', 'storage_location', 'patreon_active']
+    ordering = ['instrument__name', 'serial_number']
     panels = [
         MultiFieldPanel([
             'instrument',
@@ -246,11 +503,80 @@ class LibraryInstrumentViewSet(SnippetViewSet):
         InlinePanel('rental_documents', label="Rental Documents"),
         InlinePanel('history_logs', label="History Log", help_text="Event history for this instrument"),
     ]
-    ordering = ['instrument__name', 'serial_number']
+
+    def get_serial_short(self, instance):
+        if len(instance.serial_number) > 20:
+            return instance.serial_number[:20] + '...'
+        return instance.serial_number
+    get_serial_short.short_description = 'Serial #'
+    get_serial_short.admin_order_field = 'serial_number'
+    
+    def get_status_badge(self, instance):
+        status_map = {
+            'available': ('Available', 'w-status--primary'),
+            'rented': ('Rented', 'w-status--label'),
+            'needs_repair': ('Needs Repair', 'w-status--critical'),
+            'out_for_repair': ('Out for Repair', 'w-status--warning'),
+            'disposed': ('Disposed', ''),
+        }
+        label, css_class = status_map.get(instance.status, (instance.get_status_display(), ''))
+        return format_html('<span class="w-status {}">{}</span>', css_class, label)
+    get_status_badge.short_description = 'Status'
+    get_status_badge.admin_order_field = 'status'
+    
+    def get_location(self, instance):
+        if instance.member:
+            return format_html('<strong>{}</strong>', str(instance.member))
+        elif instance.storage_location:
+            return format_html('<span class="w-help-text">{}</span>', instance.storage_location.name)
+        return '-'
+    get_location.short_description = 'Location/Renter'
+    
+    def get_review_status(self, instance):
+        if not instance.review_date_6_month and not instance.review_date_12_month:
+            return '-'
+        
+        from datetime import date
+        today = date.today()
+        statuses = []
+        
+        if instance.review_date_6_month:
+            if instance.review_date_6_month < today:
+                statuses.append('<span class="w-status w-status--critical">6mo overdue</span>')
+            else:
+                days_until = (instance.review_date_6_month - today).days
+                if days_until <= 14:
+                    statuses.append(f'<span class="w-status w-status--warning">6mo in {days_until}d</span>')
+        
+        if instance.review_date_12_month:
+            if instance.review_date_12_month < today:
+                statuses.append('<span class="w-status w-status--critical">12mo overdue</span>')
+            else:
+                days_until = (instance.review_date_12_month - today).days
+                if days_until <= 30:
+                    statuses.append(f'<span class="w-status w-status--warning">12mo in {days_until}d</span>')
+        
+        return format_html(' '.join(statuses)) if statuses else format_html('<span class="w-status w-status--primary">✓</span>')
+    get_review_status.short_description = 'Review Status'
+    
+    def get_patreon_badge(self, instance):
+        if instance.patreon_active and instance.patreon_amount:
+            return format_html('<span class="w-status w-status--primary">${}/mo</span>', instance.patreon_amount)
+        elif instance.patreon_active:
+            return format_html('<span class="w-status w-status--primary">Active</span>')
+        return '-'
+    get_patreon_badge.short_description = 'Patreon'
 
     def __init__(self, *args, **kwargs):
         from .models import LibraryInstrument
+
+        # Create a dynamic FilterSet class with the model set
+        class LibraryInstrumentFilterSetWithModel(LibraryInstrumentFilterSet):
+            class Meta(LibraryInstrumentFilterSet.Meta):
+                model = LibraryInstrument
+        
         self.model = LibraryInstrument
+        self.filterset_class = LibraryInstrumentFilterSetWithModel
         super().__init__(*args, **kwargs)
 
 
