@@ -111,6 +111,25 @@
                     });
                 }
             });
+
+            // Keyboard support for accordion headers
+            this.accordion.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    const sectionHeader = e.target.closest('.accordion-section-header');
+                    if (sectionHeader) {
+                        e.preventDefault();
+                        this.toggleSection(sectionHeader.closest('.accordion-section'));
+                        return;
+                    }
+
+                    const instrumentHeader = e.target.closest('.accordion-instrument-header');
+                    if (instrumentHeader) {
+                        e.preventDefault();
+                        this.toggleInstrument(instrumentHeader.closest('.accordion-instrument'));
+                        return;
+                    }
+                }
+            });
         }
 
         async loadSections() {
@@ -132,7 +151,7 @@
 
             const html = sections.map(section => `
                 <div class="accordion-section" data-section-id="${section.id}">
-                    <div class="accordion-section-header">
+                    <div class="accordion-section-header" role="button" tabindex="0" aria-expanded="false">
                         <i class="fa fa-chevron-right accordion-icon"></i>
                         <span class="accordion-section-title">${this.escapeHtml(section.name)}</span>
                         <span class="accordion-count">${section.instruments.length} instrument${section.instruments.length !== 1 ? 's' : ''}</span>
@@ -143,7 +162,7 @@
                                 <div class="accordion-instrument" 
                                      data-instrument-id="${instrument.id}"
                                      data-instrument-name="${this.escapeHtml(instrument.name)}">
-                                    <div class="accordion-instrument-header">
+                                    <div class="accordion-instrument-header" role="button" tabindex="0" aria-expanded="false">
                                         <i class="fa fa-chevron-right accordion-icon"></i>
                                         <span class="accordion-instrument-title">${this.escapeHtml(instrument.name)}</span>
                                     </div>
@@ -188,14 +207,19 @@
         }
 
         toggleSection(section) {
-            section.classList.toggle('expanded');
+            const isExpanded = section.classList.toggle('expanded');
+            const header = section.querySelector('.accordion-section-header');
+            if (header) header.setAttribute('aria-expanded', isExpanded);
         }
 
         async toggleInstrument(instrument) {
             const isExpanded = instrument.classList.contains('expanded');
             
+            const header = instrument.querySelector('.accordion-instrument-header');
+            
             if (isExpanded) {
                 instrument.classList.remove('expanded');
+                if (header) header.setAttribute('aria-expanded', 'false');
                 // Pause and cleanup audio player if it's inside this instrument
                 if (this.state.currentAudioPlayer && instrument.contains(this.state.currentAudioPlayer)) {
                     const audioEl = this.state.currentAudioPlayer.querySelector('audio');
@@ -211,12 +235,13 @@
                 }
             } else {
                 instrument.classList.add('expanded');
+                if (header) header.setAttribute('aria-expanded', 'true');
                 
                 // Lazy load songs if not already loaded
                 const instrumentId = instrument.dataset.instrumentId;
                 if (!this.state.loadedInstruments.has(instrumentId)) {
-                    await this.loadSongsForInstrument(instrument);
-                    this.state.loadedInstruments.add(instrumentId);
+                    const loaded = await this.loadSongsForInstrument(instrument);
+                    if (loaded) this.state.loadedInstruments.add(instrumentId);
                 }
             }
         }
@@ -234,9 +259,11 @@
                 const data = await response.json();
                 
                 this.renderSongs(songsContainer, data.songs, instrumentId);
+                return true;
             } catch (error) {
                 console.error('Error loading songs:', error);
                 songsContainer.innerHTML = '<div class="accordion-error">Error loading songs</div>';
+                return false;
             }
         }
 
@@ -382,9 +409,11 @@
                 const audioEl = this.state.currentAudioPlayer.querySelector('audio');
                 if (audioEl.paused) {
                     audioEl.play();
+                    playBtn.classList.add('playing');
                     playBtn.querySelector('i').className = 'fa fa-pause-circle';
                 } else {
                     audioEl.pause();
+                    playBtn.classList.remove('playing');
                     playBtn.querySelector('i').className = 'fa fa-play-circle';
                 }
                 return;
@@ -446,10 +475,12 @@
             });
 
             audioEl.addEventListener('pause', () => {
+                playBtn.classList.remove('playing');
                 playBtn.querySelector('i').className = 'fa fa-play-circle';
             });
 
             audioEl.addEventListener('play', () => {
+                playBtn.classList.add('playing');
                 playBtn.querySelector('i').className = 'fa fa-pause-circle';
             });
         }
