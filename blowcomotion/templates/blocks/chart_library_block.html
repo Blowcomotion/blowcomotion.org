@@ -23,51 +23,14 @@
         {% endif %}
         
         <div class="row">
-            <!-- Left Column: Instrument Selectors -->
-            <div class="col-lg-5 col-md-6">
-                <div class="chart-library-selectors">
-                    <!-- Instrument List -->
-                    <div class="chart-selector-section">
-                        <h5 class="selector-header">Instruments</h5>
-                        <div class="instrument-list selector-list" role="listbox" aria-label="Select an instrument">
-                            <div class="selector-loading">
-                                <span class="spinner-border spinner-border-sm" role="status"></span>
-                                Loading instruments...
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Right Column: Song List and Chart Display -->
-            <div class="col-lg-7 col-md-6">
-                <div class="chart-display-area">
-                    {% if value.show_search %}
-                    <div class="chart-search-container mb-3" style="display: none;">
-                        <input type="text" 
-                               class="form-control chart-search-input" 
-                               placeholder="{{ value.placeholder_text|default:'Search for a song...' }}"
-                               aria-label="Search songs">
-                    </div>
-                    {% endif %}
-                    
-                    <!-- Song List (hidden until instrument selected) -->
-                    <div class="chart-selector-section song-section" style="display: none;">
-                        <h5 class="selector-header">Songs</h5>
-                        <div class="song-list selector-list" role="listbox" aria-label="Select a song">
-                        </div>
-                    </div>
-                    
-                    <!-- Audio Player (hidden until song with recording selected) -->
-                    <div class="chart-audio-player" style="display: none;">
-                        <div class="audio-player-header">
-                            <span class="now-playing-label">Now Playing:</span>
-                            <span class="now-playing-title"></span>
-                            <span class="video-links" style="display: none;"></span>
-                        </div>
-                        <audio controls class="chart-audio-element w-100">
-                            Your browser does not support the audio element.
-                        </audio>
+            <div class="col-12">
+                <!-- Nested Accordion: Section → Instrument → Song → Part -->
+                <div class="chart-accordion" 
+                     data-show-search="{{ value.show_search|yesno:'true,false' }}"
+                     data-search-placeholder="{{ value.placeholder_text|default:'Search for a song...' }}">
+                    <div class="accordion-loading">
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                        Loading chart library...
                     </div>
                 </div>
             </div>

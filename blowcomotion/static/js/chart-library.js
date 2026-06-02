@@ -1,11 +1,12 @@
 /**
  * Chart Library Block JavaScript
  * 
- * Handles:
- * - Instrument-first selection flow (instrument → song → part)
- * - Song search with debounce
- * - HTML5 audio playback for song recordings
- * - Dynamic chart PDF link display
+ * Nested accordion structure: Section → Instrument → Song → Part
+ * Features:
+ * - Lazy loading of songs when instrument expands
+ * - Inline audio player below song row
+ * - Per-section search filtering
+ * - Multiple sections can be open simultaneously
  */
 
 (function() {
@@ -24,6 +25,20 @@
         };
     }
 
+    // Global click handler for closing dropdowns (registered once)
+    let globalClickHandlerRegistered = false;
+    function registerGlobalClickHandler() {
+        if (globalClickHandlerRegistered) return;
+        globalClickHandlerRegistered = true;
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.video-dropdown')) {
+                document.querySelectorAll('.chart-accordion .video-dropdown.open').forEach(d => {
+                    d.classList.remove('open');
+                });
+            }
+        });
+    }
+
     // Initialize all chart library blocks on the page
     function initChartLibraryBlocks() {
         const blocks = document.querySelectorAll('.chart-library-block');
@@ -33,21 +48,14 @@
     class ChartLibrary {
         constructor(container) {
             this.container = container;
+            this.accordion = container.querySelector('.chart-accordion');
+            this.showSearch = this.accordion.dataset.showSearch === 'true';
+            this.searchPlaceholder = this.accordion.dataset.searchPlaceholder || 'Search for a song...';
+            
             this.state = {
-                selectedInstrument: null,
-                currentlyPlayingUrl: null
-            };
-
-            // Cache DOM elements  
-            this.elements = {
-                searchInput: container.querySelector('.chart-search-input'),
-                searchContainer: container.querySelector('.chart-search-container'),
-                instrumentList: container.querySelector('.instrument-list'),
-                songSection: container.querySelector('.song-section'),
-                songList: container.querySelector('.song-list'),
-                audioPlayer: container.querySelector('.chart-audio-player'),
-                audioElement: container.querySelector('.chart-audio-element'),
-                nowPlayingTitle: container.querySelector('.now-playing-title')
+                currentlyPlayingUrl: null,
+                currentAudioPlayer: null,
+                loadedInstruments: new Set() // Track which instruments have loaded songs
             };
 
             this.init();
@@ -55,156 +63,223 @@
 
         init() {
             this.bindEvents();
-            this.loadInstruments();
+            this.loadSections();
         }
 
         bindEvents() {
-            // Search input with debounce (filters songs for selected instrument)
-            if (this.elements.searchInput) {
-                const debouncedSearch = debounce((query) => {
-                    if (this.state.selectedInstrument) {
-                        this.loadSongsForInstrument(this.state.selectedInstrument.id, query);
-                    }
-                }, 300);
-
-                this.elements.searchInput.addEventListener('input', (e) => {
-                    debouncedSearch(e.target.value);
-                });
-            }
-
-            // Instrument list click delegation
-            this.elements.instrumentList.addEventListener('click', (e) => {
-                // Handle section header toggle
-                const sectionHeader = e.target.closest('.section-header');
+            // Click delegation for accordion
+            this.accordion.addEventListener('click', (e) => {
+                // Section header toggle
+                const sectionHeader = e.target.closest('.accordion-section-header');
                 if (sectionHeader) {
-                    this.toggleSection(sectionHeader);
+                    this.toggleSection(sectionHeader.closest('.accordion-section'));
                     return;
                 }
-                
-                const instrumentItem = e.target.closest('.selector-item');
-                if (instrumentItem) {
-                    this.selectInstrument(instrumentItem);
-                }
-            });
 
-            // Song list click delegation
-            this.elements.songList.addEventListener('click', (e) => {
-                // Handle video dropdown toggle
-                const dropdownToggle = e.target.closest('.video-dropdown-toggle');
-                if (dropdownToggle) {
-                    e.stopPropagation();
-                    const dropdown = dropdownToggle.closest('.video-dropdown');
-                    // Close other dropdowns
-                    this.elements.songList.querySelectorAll('.video-dropdown.open').forEach(d => {
-                        if (d !== dropdown) d.classList.remove('open');
-                    });
-                    dropdown.classList.toggle('open');
+                // Instrument header toggle
+                const instrumentHeader = e.target.closest('.accordion-instrument-header');
+                if (instrumentHeader) {
+                    this.toggleInstrument(instrumentHeader.closest('.accordion-instrument'));
                     return;
                 }
-                
-                // Handle play button click
-                const playBtn = e.target.closest('.song-play-btn:not(.video-dropdown-toggle)');
+
+                // Song header toggle (for parts expansion)
+                const songHeader = e.target.closest('.accordion-song-header');
+                if (songHeader && !e.target.closest('.song-play-btn') && !e.target.closest('.chart-pdf-btn') && !e.target.closest('.song-video-btn') && !e.target.closest('.video-dropdown')) {
+                    const songItem = songHeader.closest('.accordion-song');
+                    if (songItem.dataset.hasMultiple === 'true') {
+                        this.toggleSongParts(songItem);
+                    }
+                    return;
+                }
+
+                // Play button click
+                const playBtn = e.target.closest('.song-play-btn');
                 if (playBtn) {
                     e.stopPropagation();
-                    const songItem = playBtn.closest('.selector-item');
+                    const songItem = playBtn.closest('.accordion-song');
                     if (songItem) {
                         this.playSong(songItem);
                     }
                     return;
                 }
 
-                // Handle expand/collapse for songs with multiple parts
-                const songItem = e.target.closest('.selector-item:not(.part-item)');
-                if (songItem && !e.target.closest('.chart-pdf-btn')) {
-                    this.toggleSongParts(songItem);
+                // Video dropdown toggle
+                const dropdownToggle = e.target.closest('.video-dropdown-toggle');
+                if (dropdownToggle) {
+                    e.stopPropagation();
+                    const dropdown = dropdownToggle.closest('.video-dropdown');
+                    this.accordion.querySelectorAll('.video-dropdown.open').forEach(d => {
+                        if (d !== dropdown) d.classList.remove('open');
+                    });
+                    dropdown.classList.toggle('open');
+                    return;
                 }
             });
 
-            // Close dropdowns when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.video-dropdown')) {
-                    this.elements.songList.querySelectorAll('.video-dropdown.open').forEach(d => {
-                        d.classList.remove('open');
-                    });
+            // Register global click handler for closing dropdowns (once for all instances)
+            registerGlobalClickHandler();
+
+            // Keyboard support for accordion headers
+            this.accordion.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    const sectionHeader = e.target.closest('.accordion-section-header');
+                    if (sectionHeader) {
+                        e.preventDefault();
+                        this.toggleSection(sectionHeader.closest('.accordion-section'));
+                        return;
+                    }
+
+                    const instrumentHeader = e.target.closest('.accordion-instrument-header');
+                    if (instrumentHeader) {
+                        e.preventDefault();
+                        this.toggleInstrument(instrumentHeader.closest('.accordion-instrument'));
+                        return;
+                    }
+
+                    const songHeader = e.target.closest('.accordion-song-header[role="button"]');
+                    if (songHeader) {
+                        e.preventDefault();
+                        this.toggleSongParts(songHeader.closest('.accordion-song'));
+                        return;
+                    }
                 }
             });
         }
 
-        async loadInstruments() {
-            this.showLoading(this.elements.instrumentList);
-            
+        async loadSections() {
             try {
                 const response = await fetch('/charts/instruments/');
                 const data = await response.json();
-                
-                this.renderInstrumentList(data.sections);
+                this.renderSections(data.sections);
             } catch (error) {
-                console.error('Error loading instruments:', error);
-                this.elements.instrumentList.innerHTML = '<div class="selector-error">Error loading instruments</div>';
+                console.error('Error loading sections:', error);
+                this.accordion.innerHTML = '<div class="accordion-error">Error loading chart library</div>';
             }
         }
 
-        renderInstrumentList(sections) {
+        renderSections(sections) {
             if (sections.length === 0) {
-                this.elements.instrumentList.innerHTML = '<div class="selector-empty">No instruments found</div>';
+                this.accordion.innerHTML = '<div class="accordion-empty">No charts available</div>';
                 return;
             }
 
             const html = sections.map(section => `
-                <div class="section-group collapsed">
-                    <div class="section-header">
-                        <i class="fa fa-chevron-down section-expand-icon"></i>
-                        ${this.escapeHtml(section.name)}
+                <div class="accordion-section" data-section-id="${section.id}">
+                    <div class="accordion-section-header" role="button" tabindex="0" aria-expanded="false">
+                        <i class="fa fa-chevron-right accordion-icon"></i>
+                        <span class="accordion-section-title">${this.escapeHtml(section.name)}</span>
+                        <span class="accordion-count">${section.instruments.length} instrument${section.instruments.length !== 1 ? 's' : ''}</span>
                     </div>
-                    <div class="section-instruments">
-                    ${section.instruments.map(instrument => `
-                        <div class="selector-item instrument-item"
-                             role="option"
-                             data-instrument-id="${instrument.id}"
-                             data-instrument-name="${this.escapeHtml(instrument.name)}">
-                            <span class="selector-item-text">${this.escapeHtml(instrument.name)}</span>
+                    <div class="accordion-section-content">
+                        <div class="accordion-instruments">
+                            ${section.instruments.map(instrument => `
+                                <div class="accordion-instrument" 
+                                     data-instrument-id="${instrument.id}"
+                                     data-instrument-name="${this.escapeHtml(instrument.name)}">
+                                    <div class="accordion-instrument-header" role="button" tabindex="0" aria-expanded="false">
+                                        <i class="fa fa-chevron-right accordion-icon"></i>
+                                        <span class="accordion-instrument-title">${this.escapeHtml(instrument.name)}</span>
+                                    </div>
+                                    <div class="accordion-instrument-content">
+                                        ${this.showSearch ? `
+                                        <div class="instrument-search-container">
+                                            <input type="text" 
+                                                   class="form-control instrument-search-input" 
+                                                   placeholder="${this.escapeHtml(this.searchPlaceholder)}"
+                                                   data-instrument-id="${instrument.id}"
+                                                   aria-label="Search songs for ${this.escapeHtml(instrument.name)}">
+                                        </div>
+                                        ` : ''}
+                                        <div class="accordion-songs">
+                                            <div class="accordion-loading">
+                                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                                                Loading songs...
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
                         </div>
-                    `).join('')}
                     </div>
                 </div>
             `).join('');
 
-            this.elements.instrumentList.innerHTML = html;
+            this.accordion.innerHTML = html;
+            
+            // Bind search inputs
+            if (this.showSearch) {
+                this.accordion.querySelectorAll('.instrument-search-input').forEach(input => {
+                    const debouncedSearch = debounce((query, instrumentId) => {
+                        this.filterSongsInInstrument(instrumentId, query);
+                    }, 300);
+                    
+                    input.addEventListener('input', (e) => {
+                        debouncedSearch(e.target.value, e.target.dataset.instrumentId);
+                    });
+                });
+            }
         }
 
-        async selectInstrument(instrumentItem) {
-            // Update UI state
-            this.elements.instrumentList.querySelectorAll('.selector-item').forEach(item => {
-                item.classList.remove('active');
-                item.setAttribute('aria-selected', 'false');
-            });
-            instrumentItem.classList.add('active');
-            instrumentItem.setAttribute('aria-selected', 'true');
-
-            // Update state
-            this.state.selectedInstrument = {
-                id: instrumentItem.dataset.instrumentId,
-                name: instrumentItem.dataset.instrumentName
-            };
-            this.state.currentlyPlayingUrl = null;
-
-            // Reset search
-            if (this.elements.searchInput) {
-                this.elements.searchInput.value = '';
+        toggleSection(section) {
+            const isExpanded = section.classList.toggle('expanded');
+            const header = section.querySelector('.accordion-section-header');
+            if (header) header.setAttribute('aria-expanded', isExpanded);
+            
+            // Pause and cleanup audio player if collapsing and it's inside this section
+            if (!isExpanded && this.state.currentAudioPlayer && section.contains(this.state.currentAudioPlayer)) {
+                const audioEl = this.state.currentAudioPlayer.querySelector('audio');
+                if (audioEl) audioEl.pause();
+                const oldPlayBtn = this.state.currentAudioPlayer.closest('.accordion-song')?.querySelector('.song-play-btn');
+                if (oldPlayBtn) {
+                    oldPlayBtn.classList.remove('playing');
+                    const icon = oldPlayBtn.querySelector('i');
+                    if (icon) icon.className = 'fa fa-play-circle';
+                }
+                this.state.currentAudioPlayer.remove();
+                this.state.currentAudioPlayer = null;
+                this.state.currentlyPlayingUrl = null;
             }
-
-            // Load songs for this instrument
-            await this.loadSongsForInstrument(this.state.selectedInstrument.id);
-
-            // Show search and song section
-            if (this.elements.searchContainer) {
-                this.elements.searchContainer.style.display = 'block';
-            }
-            this.elements.songSection.style.display = 'block';
         }
 
-        async loadSongsForInstrument(instrumentId, searchQuery = '') {
-            this.showLoading(this.elements.songList);
+        async toggleInstrument(instrument) {
+            const isExpanded = instrument.classList.contains('expanded');
+            
+            const header = instrument.querySelector('.accordion-instrument-header');
+            
+            if (isExpanded) {
+                instrument.classList.remove('expanded');
+                if (header) header.setAttribute('aria-expanded', 'false');
+                // Pause and cleanup audio player if it's inside this instrument
+                if (this.state.currentAudioPlayer && instrument.contains(this.state.currentAudioPlayer)) {
+                    const audioEl = this.state.currentAudioPlayer.querySelector('audio');
+                    if (audioEl) audioEl.pause();
+                    const oldPlayBtn = this.state.currentAudioPlayer.closest('.accordion-song')?.querySelector('.song-play-btn');
+                    if (oldPlayBtn) {
+                        oldPlayBtn.classList.remove('playing');
+                        const icon = oldPlayBtn.querySelector('i');
+                        if (icon) icon.className = 'fa fa-play-circle';
+                    }
+                    this.state.currentAudioPlayer.remove();
+                    this.state.currentAudioPlayer = null;
+                    this.state.currentlyPlayingUrl = null;
+                }
+            } else {
+                instrument.classList.add('expanded');
+                if (header) header.setAttribute('aria-expanded', 'true');
+                
+                // Lazy load songs if not already loaded
+                const instrumentId = instrument.dataset.instrumentId;
+                if (!this.state.loadedInstruments.has(instrumentId)) {
+                    const loaded = await this.loadSongsForInstrument(instrument);
+                    if (loaded) this.state.loadedInstruments.add(instrumentId);
+                }
+            }
+        }
+
+        async loadSongsForInstrument(instrumentElement, searchQuery = '') {
+            const instrumentId = instrumentElement.dataset.instrumentId;
+            const songsContainer = instrumentElement.querySelector('.accordion-songs');
             
             try {
                 const url = searchQuery 
@@ -214,171 +289,144 @@
                 const response = await fetch(url);
                 const data = await response.json();
                 
-                this.renderSongList(data.songs);
+                this.renderSongs(songsContainer, data.songs, instrumentId);
+                return true;
             } catch (error) {
                 console.error('Error loading songs:', error);
-                this.elements.songList.innerHTML = '<div class="selector-error">Error loading songs</div>';
+                songsContainer.innerHTML = '<div class="accordion-error">Error loading songs</div>';
+                return false;
             }
         }
 
-        renderSongList(songs) {
+        renderSongs(container, songs, instrumentId) {
             if (songs.length === 0) {
-                this.elements.songList.innerHTML = '<div class="selector-empty">No songs found</div>';
+                container.innerHTML = '<div class="accordion-empty">No songs found</div>';
                 return;
             }
 
             const html = songs.map(song => {
-                // Serialize video data and escape for double-quote attribute context
-                const videosJson = JSON.stringify(song.videos || [])
-                    .replace(/"/g, '&quot;');
-                const chartsJson = JSON.stringify(song.charts || [])
-                    .replace(/"/g, '&quot;');
-                
-                const hasSingleChart = song.charts && song.charts.length === 1;
                 const hasMultipleCharts = song.charts && song.charts.length > 1;
+                const hasSingleChart = song.charts && song.charts.length === 1;
                 const pdfUrl = hasSingleChart ? song.charts[0].pdf_url : '';
-
+                
                 return `
-                <div class="selector-item song-item" 
-                     role="option"
+                <div class="accordion-song" 
                      data-song-id="${song.id}"
                      data-song-title="${this.escapeHtml(song.title)}"
                      data-has-recording="${song.has_recording}"
                      data-recording-url="${this.escapeHtml(song.recording_url || '')}"
                      data-has-video="${song.has_video}"
-                     data-videos="${videosJson}"
+                     data-videos='${JSON.stringify(song.videos || []).replace(/'/g, "&#39;")}'
                      data-has-multiple="${hasMultipleCharts}"
-                     data-charts="${chartsJson}">
-                    <span class="song-media-icons">
-                        <span class="media-icon-slot">
-                            ${song.has_recording ? `
-                                <button class="song-play-btn" title="Play recording" aria-label="Play ${this.escapeHtml(song.title)}">
-                                    <i class="fa fa-play-circle"></i>
-                                </button>
-                            ` : ''}
+                     data-charts='${JSON.stringify(song.charts || []).replace(/'/g, "&#39;")}'
+                     data-instrument-id="${instrumentId}">
+                    <div class="accordion-song-header"${hasMultipleCharts ? ' role="button" tabindex="0" aria-expanded="false"' : ''}>
+                        <span class="song-media-icons">
+                            <span class="media-icon-slot">
+                                ${song.has_recording ? `
+                                    <button type="button" class="song-play-btn" title="Play recording" aria-label="Play ${this.escapeHtml(song.title)}">
+                                        <i class="fa fa-play-circle"></i>
+                                    </button>
+                                ` : ''}
+                            </span>
+                            <span class="media-icon-slot">
+                                ${this.renderVideoButtons(song)}
+                            </span>
                         </span>
-                        <span class="media-icon-slot">
-                            ${song.has_video && song.videos.length === 1 ? `
-                                <a href="${this.escapeHtml(song.videos[0].url)}" class="song-video-btn" target="_blank" rel="noopener" title="${this.escapeHtml(song.videos[0].title || 'Watch video')}" aria-label="Watch ${this.escapeHtml(song.title)} video">
-                                    <i class="fa fa-youtube-play"></i>
+                        <span class="accordion-song-title">${this.escapeHtml(song.title)}</span>
+                        <span class="song-actions">
+                            ${hasMultipleCharts ? '<i class="fa fa-chevron-right accordion-icon song-expand-icon"></i>' : ''}
+                            ${pdfUrl ? `
+                                <a href="${this.escapeHtml(pdfUrl)}" class="btn btn-sm btn-primary chart-pdf-btn" target="_blank" rel="noopener" title="Open Chart PDF">
+                                    <i class="fa fa-file-pdf-o"></i>
+                                    PDF
                                 </a>
                             ` : ''}
-                            ${song.has_video && song.videos.length > 1 ? `
-                                <div class="video-dropdown">
-                                    <button class="song-video-btn video-dropdown-toggle" title="Watch videos" aria-label="Watch ${this.escapeHtml(song.title)} videos">
-                                        <i class="fa fa-youtube-play"></i>
-                                        <span class="video-count">${song.videos.length}</span>
-                                    </button>
-                                    <div class="video-dropdown-menu">
-                                        ${song.videos.map((v, i) => `
-                                            <a href="${this.escapeHtml(v.url)}" class="video-dropdown-item" target="_blank" rel="noopener">
-                                                <i class="fa fa-play"></i> ${this.escapeHtml(v.title || 'Video ' + (i + 1))}
-                                            </a>
-                                        `).join('')}
-                                    </div>
-                                </div>
-                            ` : ''}
                         </span>
-                    </span>
-                    <span class="selector-item-text">
-                        ${this.escapeHtml(song.title)}
-                    </span>
-                    <span class="song-actions">
-                        ${hasMultipleCharts ? '<i class="fa fa-chevron-right expand-icon"></i>' : ''}
-                        ${pdfUrl ? `
-                            <a href="${pdfUrl}" class="btn btn-sm btn-primary chart-pdf-btn" target="_blank" rel="noopener" title="Open Chart PDF">
-                                <i class="fa fa-file-pdf-o"></i>
-                                Open Chart PDF
-                            </a>
-                        ` : ''}
-                    </span>
+                    </div>
+                    <div class="accordion-song-content">
+                        <!-- Parts will be rendered here when expanded -->
+                    </div>
                 </div>
             `;
             }).join('');
 
-            this.elements.songList.innerHTML = html;
+            container.innerHTML = html;
+
+            // Re-apply search filter if there's an active search query
+            const instrumentEl = container.closest('.accordion-instrument');
+            const searchInput = instrumentEl ? instrumentEl.querySelector('.instrument-search-input') : null;
+            if (searchInput && searchInput.value.trim()) {
+                this.filterSongsInInstrument(instrumentId, searchInput.value);
+            }
+        }
+
+        renderVideoButtons(song) {
+            if (!song.has_video || !song.videos || song.videos.length === 0) {
+                return '';
+            }
+            
+            if (song.videos.length === 1) {
+                return `
+                    <a href="${this.escapeHtml(song.videos[0].url)}" class="song-video-btn" target="_blank" rel="noopener" title="${this.escapeHtml(song.videos[0].title || 'Watch video')}" aria-label="Watch video for ${this.escapeHtml(song.title)}">
+                        <i class="fa fa-youtube-play"></i>
+                    </a>
+                `;
+            }
+
+            return `
+                <div class="video-dropdown">
+                    <button type="button" class="song-video-btn video-dropdown-toggle" title="Watch videos" aria-label="Watch videos for ${this.escapeHtml(song.title)}">
+                        <i class="fa fa-youtube-play"></i>
+                        <span class="video-count">${song.videos.length}</span>
+                    </button>
+                    <div class="video-dropdown-menu">
+                        ${song.videos.map((v, i) => `
+                            <a href="${this.escapeHtml(v.url)}" class="video-dropdown-item" target="_blank" rel="noopener">
+                                <i class="fa fa-play"></i> ${this.escapeHtml(v.title || 'Video ' + (i + 1))}
+                            </a>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
         }
 
         toggleSongParts(songItem) {
-            const hasMultipleParts = songItem.dataset.hasMultiple === 'true';
-            if (!hasMultipleParts) {
-                return; // Single part songs handled by direct PDF button
-            }
-
-            // Check if already expanded
             const isExpanded = songItem.classList.contains('expanded');
+            const content = songItem.querySelector('.accordion-song-content');
+            const expandIcon = songItem.querySelector('.song-expand-icon');
+            const header = songItem.querySelector('.accordion-song-header');
             
-            // Collapse all other songs and remove their parts
-            this.elements.songList.querySelectorAll('.selector-item.expanded').forEach(item => {
-                if (item !== songItem) {
-                    item.classList.remove('expanded');
-                    const expandIcon = item.querySelector('.expand-icon');
-                    if (expandIcon) expandIcon.className = 'fa fa-chevron-right expand-icon';
-                    // Remove parts after this song
-                    let next = item.nextElementSibling;
-                    while (next && next.classList.contains('part-item')) {
-                        const toRemove = next;
-                        next = next.nextElementSibling;
-                        toRemove.remove();
-                    }
-                }
-            });
-
             if (isExpanded) {
-                // Collapse this song
                 songItem.classList.remove('expanded');
-                const expandIcon = songItem.querySelector('.expand-icon');
-                if (expandIcon) expandIcon.className = 'fa fa-chevron-right expand-icon';
-                // Remove parts
-                let next = songItem.nextElementSibling;
-                while (next && next.classList.contains('part-item')) {
-                    const toRemove = next;
-                    next = next.nextElementSibling;
-                    toRemove.remove();
-                }
+                if (expandIcon) expandIcon.className = 'fa fa-chevron-right accordion-icon song-expand-icon';
+                if (header) header.setAttribute('aria-expanded', 'false');
+                content.innerHTML = '';
             } else {
-                // Expand this song
                 songItem.classList.add('expanded');
-                const expandIcon = songItem.querySelector('.expand-icon');
-                if (expandIcon) expandIcon.className = 'fa fa-chevron-down expand-icon';
+                if (expandIcon) expandIcon.className = 'fa fa-chevron-down accordion-icon song-expand-icon';
+                if (header) header.setAttribute('aria-expanded', 'true');
                 
-                // Get charts from data attribute
+                // Render parts
                 try {
                     const charts = JSON.parse(songItem.dataset.charts || '[]');
-                    
                     if (charts.length > 0) {
-                        // Create part items
                         const partsHtml = charts.map(chart => `
-                            <div class="selector-item part-item"
-                                 role="option"
-                                 data-chart-id="${chart.id}"
-                                 data-part-name="${this.escapeHtml(chart.part)}">
-                                <span class="song-media-icons"></span>
-                                <span class="selector-item-text">${this.escapeHtml(chart.part)}</span>
-                                <span class="song-actions">
-                                    ${chart.pdf_url ? `
-                                        <a href="${chart.pdf_url}" class="btn btn-sm btn-primary chart-pdf-btn" target="_blank" rel="noopener" title="Open Chart PDF">
-                                            <i class="fa fa-file-pdf-o"></i>
-                                            Open Chart PDF
-                                        </a>
-                                    ` : ''}
-                                </span>
+                            <div class="accordion-part" data-chart-id="${chart.id}">
+                                <span class="part-name">${this.escapeHtml(chart.part)}</span>
+                                ${chart.pdf_url ? `
+                                    <a href="${this.escapeHtml(chart.pdf_url)}" class="btn btn-sm btn-primary chart-pdf-btn" target="_blank" rel="noopener" title="Open Chart PDF">
+                                        <i class="fa fa-file-pdf-o"></i>
+                                        PDF
+                                    </a>
+                                ` : ''}
                             </div>
                         `).join('');
-                        
-                        // Insert parts after the song
-                        songItem.insertAdjacentHTML('afterend', partsHtml);
+                        content.innerHTML = `<div class="accordion-parts">${partsHtml}</div>`;
                     }
                 } catch (error) {
                     console.error('Error parsing charts:', error);
                 }
-            }
-        }
-
-        toggleSection(sectionHeader) {
-            const sectionGroup = sectionHeader.closest('.section-group');
-            if (sectionGroup) {
-                sectionGroup.classList.toggle('collapsed');
             }
         }
 
@@ -389,108 +437,118 @@
             if (!recordingUrl) return;
 
             const playBtn = songItem.querySelector('.song-play-btn');
-            const isCurrentSong = this.state.currentlyPlayingUrl === recordingUrl;
-            const isPlaying = !this.elements.audioElement.paused;
-
-            // Toggle play/pause if clicking the current song
-            if (isCurrentSong) {
-                if (isPlaying) {
-                    this.elements.audioElement.pause();
-                    if (playBtn) {
-                        playBtn.classList.remove('playing');
-                        playBtn.querySelector('i').className = 'fa fa-play-circle';
-                    }
-                } else {
-                    this.elements.audioElement.play().catch(err => {
+            
+            // If clicking the same song that's playing, toggle play/pause
+            if (this.state.currentlyPlayingUrl === recordingUrl && this.state.currentAudioPlayer) {
+                const audioEl = this.state.currentAudioPlayer.querySelector('audio');
+                if (audioEl.paused) {
+                    audioEl.play().catch(err => {
                         console.error('Error playing audio:', err);
                     });
-                    if (playBtn) {
-                        playBtn.classList.add('playing');
-                        playBtn.querySelector('i').className = 'fa fa-pause-circle';
-                    }
+                } else {
+                    audioEl.pause();
                 }
                 return;
             }
 
-            // Different song - load and play
-            this.state.currentlyPlayingUrl = recordingUrl;
-            this.elements.audioElement.src = recordingUrl;
-            this.elements.nowPlayingTitle.textContent = songTitle;
-            
-            // Update video links visibility
-            const videoLinksContainer = this.elements.audioPlayer.querySelector('.video-links');
+            // Remove any existing audio player
+            if (this.state.currentAudioPlayer) {
+                const oldAudioEl = this.state.currentAudioPlayer.querySelector('audio');
+                if (oldAudioEl) oldAudioEl.pause();
+
+                const oldPlayBtn = this.accordion.querySelector('.song-play-btn.playing');
+                if (oldPlayBtn) {
+                    oldPlayBtn.classList.remove('playing');
+                    const icon = oldPlayBtn.querySelector('i');
+                    if (icon) icon.className = 'fa fa-play-circle';
+                }
+                this.state.currentAudioPlayer.remove();
+                this.state.currentAudioPlayer = null;
+                this.state.currentlyPlayingUrl = null;
+            }
+
+            // Create inline audio player
             let videos = [];
             try {
                 videos = JSON.parse(songItem.dataset.videos || '[]');
             } catch (e) {
-                videos = [];
+                console.error('Error parsing videos data:', e);
             }
-            
-            if (videoLinksContainer) {
-                if (videos.length > 0) {
-                    const linksHtml = videos.map((v, i) => {
-                        const videoUrl = this.escapeHtml(v.url);
-                        const videoTitle = this.escapeHtml(v.title || 'Video ' + (i + 1));
-                        const displayLabel = videos.length > 1 ? ' ' + videoTitle : '';
-                        return `<a href="${videoUrl}" class="video-link" target="_blank" rel="noopener" title="${videoTitle}">
-                            <i class="fa fa-youtube-play"></i>${displayLabel}
-                        </a>`;
-                    }).join('');
-                    videoLinksContainer.innerHTML = linksHtml;
-                    videoLinksContainer.style.display = 'flex';
-                } else {
-                    videoLinksContainer.innerHTML = '';
-                    videoLinksContainer.style.display = 'none';
-                }
-            }
+            const videoLinksHtml = videos.length > 0 ? `
+                <span class="audio-video-links">
+                    ${videos.map((v, i) => `
+                        <a href="${this.escapeHtml(v.url)}" class="video-link" target="_blank" rel="noopener" title="${this.escapeHtml(v.title || 'Video ' + (i + 1))}">
+                            <i class="fa fa-youtube-play"></i>${videos.length > 1 ? ' ' + this.escapeHtml(v.title || 'Video ' + (i + 1)) : ''}
+                        </a>
+                    `).join('')}
+                </span>
+            ` : '';
 
-            // Show audio player and play
-            this.elements.audioPlayer.style.display = 'block';
-            this.elements.audioElement.play().catch(err => {
-                console.error('Error playing audio:', err);
-            });
-
-            // Update play button states
-            this.elements.songList.querySelectorAll('.song-play-btn').forEach(btn => {
-                btn.classList.remove('playing');
-                btn.querySelector('i').className = 'fa fa-play-circle';
-            });
-            
-            if (playBtn) {
-                playBtn.classList.add('playing');
-                playBtn.querySelector('i').className = 'fa fa-pause-circle';
-            }
-
-            // Handle audio events
-            this.elements.audioElement.onended = () => {
-                if (playBtn) {
-                    playBtn.classList.remove('playing');
-                    playBtn.querySelector('i').className = 'fa fa-play-circle';
-                }
-            };
-
-            this.elements.audioElement.onpause = () => {
-                if (playBtn) {
-                    playBtn.classList.remove('playing');
-                    playBtn.querySelector('i').className = 'fa fa-play-circle';
-                }
-            };
-        }
-
-        showLoading(element) {
-            element.innerHTML = `
-                <div class="selector-loading">
-                    <span class="spinner-border spinner-border-sm" role="status"></span>
-                    Loading...
+            const playerHtml = `
+                <div class="inline-audio-player">
+                    <div class="audio-player-header">
+                        <span class="now-playing-label">Now Playing:</span>
+                        <span class="now-playing-title">${this.escapeHtml(songTitle)}</span>
+                        ${videoLinksHtml}
+                    </div>
+                    <audio controls class="audio-element w-100">
+                        <source src="${this.escapeHtml(recordingUrl)}" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
                 </div>
             `;
+
+            // Insert player after song header
+            const songHeader = songItem.querySelector('.accordion-song-header');
+            songHeader.insertAdjacentHTML('afterend', playerHtml);
+
+            const player = songItem.querySelector('.inline-audio-player');
+            const audioEl = player.querySelector('audio');
+            
+            this.state.currentlyPlayingUrl = recordingUrl;
+            this.state.currentAudioPlayer = player;
+
+            // Handle audio events - let events drive button state
+            audioEl.addEventListener('ended', () => {
+                playBtn.classList.remove('playing');
+                playBtn.querySelector('i').className = 'fa fa-play-circle';
+            });
+
+            audioEl.addEventListener('pause', () => {
+                playBtn.classList.remove('playing');
+                playBtn.querySelector('i').className = 'fa fa-play-circle';
+            });
+
+            audioEl.addEventListener('play', () => {
+                playBtn.classList.add('playing');
+                playBtn.querySelector('i').className = 'fa fa-pause-circle';
+            });
+
+            // Explicitly start playback (autoplay may be blocked)
+            audioEl.play().catch(err => {
+                console.error('Error playing audio:', err);
+            });
+        }
+
+        filterSongsInInstrument(instrumentId, query) {
+            const instrument = this.accordion.querySelector(`.accordion-instrument[data-instrument-id="${instrumentId}"]`);
+            if (!instrument) return;
+
+            const songs = instrument.querySelectorAll('.accordion-song');
+            const lowerQuery = query.toLowerCase().trim();
+
+            songs.forEach(song => {
+                const title = (song.dataset.songTitle || '').toLowerCase();
+                const isPlayingSong = this.state.currentAudioPlayer && song.contains(this.state.currentAudioPlayer);
+                const matches = isPlayingSong || !lowerQuery || title.includes(lowerQuery);
+                song.style.display = matches ? '' : 'none';
+            });
         }
 
         escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
-            const escaped = div.innerHTML;
-            return escaped
+            return div.innerHTML
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#39;');
         }
