@@ -1,5 +1,6 @@
 /**
- * Chart Library Block Styles
+ * Chart Library Block Styles - Nested Accordion
+ * Hierarchy: Section → Instrument → Song → Part
  */
 
 .chart-library-block {
@@ -15,165 +16,264 @@
     color: #666;
 }
 
-/* Search Input */
-.chart-search-container {
-    position: relative;
-}
-
-.chart-search-input {
-    padding: 12px 16px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 16px;
-    transition: border-color 0.2s ease;
-}
-
-.chart-search-input:focus {
-    border-color: #5b1a76;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(91, 26, 118, 0.15);
-}
-
-/* Selector Sections */
-.chart-selector-section {
-    margin-bottom: 24px;
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.selector-header {
-    font-size: 14px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #666;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #f0f0f0;
-}
-
-/* Selector Lists */
-.selector-list {
+/* ===== Accordion Container ===== */
+.chart-accordion {
     border: 1px solid #e0e0e0;
-    border-radius: 8px;
+    border-radius: 12px;
     background: #fff;
+    overflow: hidden;
 }
 
-/* Section Groups (for instruments grouped by section) */
-.section-group {
-    border-bottom: 1px solid #f0f0f0;
+/* ===== Loading, Empty, Error States ===== */
+.accordion-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 40px;
+    color: #666;
+    font-size: 15px;
 }
 
-.section-group:last-child {
+.accordion-empty,
+.accordion-error {
+    padding: 40px;
+    text-align: center;
+    color: #999;
+    font-size: 15px;
+}
+
+.accordion-error {
+    color: #dc3545;
+}
+
+/* ===== Section Level (Top) ===== */
+.accordion-section {
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.accordion-section:last-child {
     border-bottom: none;
 }
 
-.section-header {
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #999;
-    padding: 10px 16px 6px;
-    background: #fafafa;
-    position: sticky;
-    top: 0;
-    z-index: 1;
+.accordion-section-header {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(to bottom, #f8f9fa, #f0f1f2);
     cursor: pointer;
     user-select: none;
     transition: background-color 0.15s ease;
 }
 
-.section-header:hover {
-    background-color: #f0f0f0;
+.accordion-section-header:hover {
+    background: linear-gradient(to bottom, #f0f1f2, #e8e9ea);
 }
 
-.section-header .section-expand-icon {
-    font-size: 10px;
-    margin-right: 8px;
-    color: #999;
-    transition: transform 0.2s ease;
-}
-
-.section-group.collapsed .section-header .section-expand-icon {
-    transform: rotate(-90deg);
-}
-
-.section-group.collapsed .section-instruments {
-    display: none;
-}
-
-/* Selector Items */
-.selector-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    cursor: pointer;
-    transition: background-color 0.15s ease;
-    border-bottom: 1px solid #f5f5f5;
-}
-
-.selector-item:last-child {
-    border-bottom: none;
-}
-
-.selector-item:hover {
-    background-color: #f8f9fa;
-}
-
-.selector-item.active {
-    background-color: #f3e8f9;
-    border-left: 3px solid #5b1a76;
-    padding-left: 13px;
-}
-
-.selector-item-text {
-    flex: 1;
-    font-size: 15px;
+.accordion-section-title {
+    font-size: 16px;
+    font-weight: 600;
     color: #333;
+    flex: 1;
 }
 
-/* Expand Icon for Multi-Part Songs */
-.expand-icon {
+.accordion-count {
+    font-size: 13px;
+    color: #888;
+    margin-right: 8px;
+}
+
+.accordion-icon {
     font-size: 12px;
-    color: #999;
+    color: #888;
+    margin-right: 12px;
     transition: transform 0.2s ease;
-    cursor: pointer;
 }
 
-.selector-item.expanded .expand-icon {
+.accordion-section.expanded > .accordion-section-header .accordion-icon {
     transform: rotate(90deg);
 }
 
-/* Part Items (nested under songs) */
-.selector-item.part-item {
-    background-color: #fafafa;
-    font-size: 14px;
-    border-left: 3px solid #e0e0e0;
+.accordion-section-content {
+    display: none;
 }
 
-.selector-item.part-item:hover {
-    background-color: #f0f0f0;
+.accordion-section.expanded > .accordion-section-content {
+    display: block;
 }
 
-.selector-item.part-item .selector-item-text {
+/* ===== Instrument Search ===== */
+.instrument-search-container {
+    padding: 10px 16px;
+    background: #f5f5f5;
+    border-bottom: 1px solid #eee;
+}
+
+.instrument-search-input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 13px;
+    width: 100%;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.instrument-search-input:focus {
+    border-color: #5b1a76;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(91, 26, 118, 0.1);
+}
+
+/* ===== Instrument Level ===== */
+.accordion-instruments {
+    background: #fff;
+}
+
+.accordion-instrument {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.accordion-instrument:last-child {
+    border-bottom: none;
+}
+
+.accordion-instrument-header {
+    display: flex;
+    align-items: center;
+    padding: 14px 20px 14px 36px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease;
+}
+
+.accordion-instrument-header:hover {
+    background-color: #f8f9fa;
+}
+
+.accordion-instrument-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: #444;
+    flex: 1;
+}
+
+.accordion-instrument.expanded > .accordion-instrument-header {
+    background-color: #f3e8f9;
+    border-left: 3px solid #5b1a76;
+    padding-left: 33px;
+}
+
+.accordion-instrument.expanded > .accordion-instrument-header .accordion-icon {
+    transform: rotate(90deg);
+}
+
+.accordion-instrument-content {
+    display: none;
+}
+
+.accordion-instrument.expanded > .accordion-instrument-content {
+    display: block;
+}
+
+/* ===== Song Level ===== */
+.accordion-songs {
+    background: #fafafa;
+}
+
+.accordion-song {
+    border-bottom: 1px solid #eee;
+}
+
+.accordion-song:last-child {
+    border-bottom: none;
+}
+
+.accordion-song-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px 12px 52px;
+    cursor: default;
+    transition: background-color 0.15s ease;
+}
+
+.accordion-song-header:hover {
+    background-color: #f5f5f5;
+}
+
+.accordion-song[data-has-multiple="true"] .accordion-song-header {
+    cursor: pointer;
+}
+
+.accordion-song-title {
     font-size: 14px;
+    color: #333;
+    flex: 1;
+    min-width: 0;
+}
+
+.accordion-song.expanded > .accordion-song-header {
+    background-color: #eee;
+}
+
+.accordion-song.expanded > .accordion-song-header .song-expand-icon {
+    transform: rotate(90deg);
+}
+
+.accordion-song-content {
+    display: none;
+}
+
+.accordion-song.expanded > .accordion-song-content {
+    display: block;
+}
+
+/* ===== Part Level (Deepest) ===== */
+.accordion-parts {
+    background: #f0f0f0;
+    border-left: 3px solid #ddd;
+    margin-left: 52px;
+}
+
+.accordion-part {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.accordion-part:last-child {
+    border-bottom: none;
+}
+
+.part-name {
+    font-size: 13px;
     color: #555;
 }
 
-.selector-item.part-item .song-media-icons {
-    visibility: hidden;
+/* ===== Media Icons ===== */
+.song-media-icons {
+    display: flex;
+    flex-shrink: 0;
+    width: 56px;
+    margin-right: 8px;
 }
 
-/* Play Button */
+.media-icon-slot {
+    width: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ===== Play Button ===== */
 .song-play-btn {
     background: none;
     border: none;
-    padding: 4px 8px;
+    padding: 4px;
     cursor: pointer;
     color: #666;
-    font-size: 20px;
+    font-size: 18px;
     line-height: 1;
     transition: color 0.15s ease, transform 0.15s ease;
 }
@@ -187,44 +287,13 @@
     color: #28a745;
 }
 
-/* Media Icons Container - Fixed width for alignment */
-.song-media-icons {
-    display: flex;
-    flex-shrink: 0;
-    width: 64px;
-    margin-right: 7px;
-}
-
-.media-icon-slot {
-    width: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Song Actions Container - Right side */
-.song-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-left: auto;
-    flex-shrink: 0;
-}
-
-/* Song item text - takes remaining space */
-.selector-item.song-item .selector-item-text,
-.selector-item.part-item .selector-item-text {
-    flex: 1;
-    min-width: 0;
-}
-
-/* Video Button */
+/* ===== Video Button ===== */
 .song-video-btn {
     background: none;
     border: none;
-    padding: 4px 8px;
+    padding: 4px;
     color: #c00;
-    font-size: 20px;
+    font-size: 18px;
     line-height: 1;
     text-decoration: none;
     transition: color 0.15s ease, transform 0.15s ease;
@@ -235,34 +304,7 @@
     transform: scale(1.1);
 }
 
-/* Video link in audio player header */
-.audio-player-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.audio-player-header .video-links {
-    display: flex;
-    gap: 12px;
-    margin-left: auto;
-    flex-wrap: wrap;
-}
-
-.audio-player-header .video-link {
-    color: #c00;
-    font-size: 14px;
-    text-decoration: none;
-    white-space: nowrap;
-    transition: color 0.15s ease;
-}
-
-.audio-player-header .video-link:hover {
-    color: #ff0000;
-}
-
-/* Video Dropdown */
+/* ===== Video Dropdown ===== */
 .video-dropdown {
     position: relative;
     display: inline-block;
@@ -271,14 +313,13 @@
 .video-dropdown-toggle {
     display: flex;
     align-items: center;
-    gap: 2px;
     position: relative;
 }
 
 .video-count {
     position: absolute;
-    top: -1px;
-    right: 1px;
+    top: -2px;
+    right: -2px;
     font-size: 9px;
     background: #c00;
     color: white;
@@ -294,6 +335,7 @@
     display: none;
     position: absolute;
     top: 100%;
+    left: 0;
     background: white;
     border: 1px solid #e0e0e0;
     border-radius: 6px;
@@ -326,15 +368,24 @@
     color: #c00;
 }
 
-/* Chart PDF Button in Instrument List */
+/* ===== Song Actions ===== */
+.song-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* ===== PDF Button ===== */
 .chart-pdf-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    font-size: 13px;
+    gap: 5px;
+    padding: 5px 10px;
+    font-size: 12px;
     font-weight: 500;
-    border-radius: 6px;
+    border-radius: 5px;
     text-decoration: none;
     white-space: nowrap;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -342,83 +393,118 @@
 
 .chart-pdf-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(91, 26, 118, 0.25);
+    box-shadow: 0 2px 6px rgba(91, 26, 118, 0.25);
 }
 
 .chart-pdf-btn i {
-    font-size: 14px;
+    font-size: 12px;
 }
 
-/* Loading State */
-.selector-loading {
+/* ===== Inline Audio Player ===== */
+.inline-audio-player {
+    background: linear-gradient(to bottom, #f8f9fa, #fff);
+    border-top: 1px solid #e0e0e0;
+    padding: 14px 20px 14px 52px;
+}
+
+.inline-audio-player .audio-player-header {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 24px;
-    color: #666;
-    font-size: 14px;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
 }
 
-.selector-empty,
-.selector-error {
-    padding: 24px;
-    text-align: center;
-    color: #999;
-    font-size: 14px;
-}
-
-.selector-error {
-    color: #dc3545;
-}
-
-/* Chart Display Area */
-.chart-display-area {
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
-    padding: 24px;
-}
-
-/* Audio Player */
-.chart-audio-player {
-    margin-bottom: 24px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.audio-player-header {
-    margin-bottom: 12px;
-}
-
-.now-playing-label {
-    font-size: 12px;
+.inline-audio-player .now-playing-label {
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #999;
-    margin-right: 8px;
+    color: #888;
 }
 
-.now-playing-title {
+.inline-audio-player .now-playing-title {
+    font-size: 14px;
     font-weight: 600;
     color: #333;
 }
 
-.chart-audio-element {
-    width: 100%;
-    border-radius: 8px;
+.inline-audio-player .audio-video-links {
+    display: flex;
+    gap: 12px;
+    margin-left: auto;
 }
 
-/* Responsive Adjustments */
+.inline-audio-player .video-link {
+    color: #c00;
+    font-size: 13px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.15s ease;
+}
+
+.inline-audio-player .video-link:hover {
+    color: #ff0000;
+}
+
+.inline-audio-player .audio-element {
+    width: 100%;
+    border-radius: 6px;
+    height: 40px;
+}
+
+/* ===== Responsive ===== */
 @media (max-width: 767px) {
     .chart-library-block {
         padding: 40px 0;
     }
-
-    .chart-display-area {
-        position: relative;
-        top: 0;
-        margin-top: 24px;
+    
+    .accordion-section-header {
+        padding: 14px 16px;
+    }
+    
+    .accordion-instrument-header {
+        padding: 12px 16px 12px 28px;
+    }
+    
+    .accordion-instrument.expanded > .accordion-instrument-header {
+        padding-left: 25px;
+    }
+    
+    .accordion-song-header {
+        padding: 10px 16px 10px 40px;
+        flex-wrap: wrap;
+    }
+    
+    .inline-audio-player {
+        padding: 12px 16px 12px 40px;
+    }
+    
+    .accordion-parts {
+        margin-left: 40px;
+    }
+    
+    .song-media-icons {
+        width: 48px;
+        margin-right: 6px;
+    }
+    
+    .media-icon-slot {
+        width: 24px;
+    }
+    
+    .song-play-btn,
+    .song-video-btn {
+        font-size: 16px;
+    }
+    
+    .chart-pdf-btn {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+    
+    .accordion-song-title {
+        font-size: 13px;
     }
 }
+
 
