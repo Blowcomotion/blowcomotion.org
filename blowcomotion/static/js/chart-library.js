@@ -451,10 +451,14 @@
 
             // Remove any existing audio player
             if (this.state.currentAudioPlayer) {
+                const oldAudioEl = this.state.currentAudioPlayer.querySelector('audio');
+                if (oldAudioEl) oldAudioEl.pause();
+
                 const oldPlayBtn = this.accordion.querySelector('.song-play-btn.playing');
                 if (oldPlayBtn) {
                     oldPlayBtn.classList.remove('playing');
-                    oldPlayBtn.querySelector('i').className = 'fa fa-play-circle';
+                    const icon = oldPlayBtn.querySelector('i');
+                    if (icon) icon.className = 'fa fa-play-circle';
                 }
                 this.state.currentAudioPlayer.remove();
                 this.state.currentAudioPlayer = null;
