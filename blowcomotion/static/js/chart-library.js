@@ -25,6 +25,20 @@
         };
     }
 
+    // Global click handler for closing dropdowns (registered once)
+    let globalClickHandlerRegistered = false;
+    function registerGlobalClickHandler() {
+        if (globalClickHandlerRegistered) return;
+        globalClickHandlerRegistered = true;
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.video-dropdown')) {
+                document.querySelectorAll('.chart-accordion .video-dropdown.open').forEach(d => {
+                    d.classList.remove('open');
+                });
+            }
+        });
+    }
+
     // Initialize all chart library blocks on the page
     function initChartLibraryBlocks() {
         const blocks = document.querySelectorAll('.chart-library-block');
@@ -103,14 +117,8 @@
                 }
             });
 
-            // Close dropdowns when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.video-dropdown')) {
-                    this.accordion.querySelectorAll('.video-dropdown.open').forEach(d => {
-                        d.classList.remove('open');
-                    });
-                }
-            });
+            // Register global click handler for closing dropdowns (once for all instances)
+            registerGlobalClickHandler();
 
             // Keyboard support for accordion headers
             this.accordion.addEventListener('keydown', (e) => {
@@ -210,6 +218,20 @@
             const isExpanded = section.classList.toggle('expanded');
             const header = section.querySelector('.accordion-section-header');
             if (header) header.setAttribute('aria-expanded', isExpanded);
+            
+            // Pause and cleanup audio player if collapsing and it's inside this section
+            if (!isExpanded && this.state.currentAudioPlayer && section.contains(this.state.currentAudioPlayer)) {
+                const audioEl = this.state.currentAudioPlayer.querySelector('audio');
+                if (audioEl) audioEl.pause();
+                const oldPlayBtn = this.state.currentAudioPlayer.closest('.accordion-song')?.querySelector('.song-play-btn');
+                if (oldPlayBtn) {
+                    oldPlayBtn.classList.remove('playing');
+                    oldPlayBtn.querySelector('i').className = 'fa fa-play-circle';
+                }
+                this.state.currentAudioPlayer.remove();
+                this.state.currentAudioPlayer = null;
+                this.state.currentlyPlayingUrl = null;
+            }
         }
 
         async toggleInstrument(instrument) {
@@ -408,13 +430,11 @@
             if (this.state.currentlyPlayingUrl === recordingUrl && this.state.currentAudioPlayer) {
                 const audioEl = this.state.currentAudioPlayer.querySelector('audio');
                 if (audioEl.paused) {
-                    audioEl.play();
-                    playBtn.classList.add('playing');
-                    playBtn.querySelector('i').className = 'fa fa-pause-circle';
+                    audioEl.play().catch(err => {
+                        console.error('Error playing audio:', err);
+                    });
                 } else {
                     audioEl.pause();
-                    playBtn.classList.remove('playing');
-                    playBtn.querySelector('i').className = 'fa fa-play-circle';
                 }
                 return;
             }
@@ -448,7 +468,7 @@
                         <span class="now-playing-title">${this.escapeHtml(songTitle)}</span>
                         ${videoLinksHtml}
                     </div>
-                    <audio controls class="audio-element w-100" autoplay>
+                    <audio controls class="audio-element w-100">
                         <source src="${this.escapeHtml(recordingUrl)}" type="audio/mpeg">
                         Your browser does not support the audio element.
                     </audio>
@@ -464,11 +484,8 @@
             
             this.state.currentlyPlayingUrl = recordingUrl;
             this.state.currentAudioPlayer = player;
-            
-            playBtn.classList.add('playing');
-            playBtn.querySelector('i').className = 'fa fa-pause-circle';
 
-            // Handle audio events
+            // Handle audio events - let events drive button state
             audioEl.addEventListener('ended', () => {
                 playBtn.classList.remove('playing');
                 playBtn.querySelector('i').className = 'fa fa-play-circle';
@@ -482,6 +499,11 @@
             audioEl.addEventListener('play', () => {
                 playBtn.classList.add('playing');
                 playBtn.querySelector('i').className = 'fa fa-pause-circle';
+            });
+
+            // Explicitly start playback (autoplay may be blocked)
+            audioEl.play().catch(err => {
+                console.error('Error playing audio:', err);
             });
         }
 
