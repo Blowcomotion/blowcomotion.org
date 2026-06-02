@@ -196,6 +196,19 @@
             
             if (isExpanded) {
                 instrument.classList.remove('expanded');
+                // Pause and cleanup audio player if it's inside this instrument
+                if (this.state.currentAudioPlayer && instrument.contains(this.state.currentAudioPlayer)) {
+                    const audioEl = this.state.currentAudioPlayer.querySelector('audio');
+                    if (audioEl) audioEl.pause();
+                    const oldPlayBtn = this.state.currentAudioPlayer.closest('.accordion-song')?.querySelector('.song-play-btn');
+                    if (oldPlayBtn) {
+                        oldPlayBtn.classList.remove('playing');
+                        oldPlayBtn.querySelector('i').className = 'fa fa-play-circle';
+                    }
+                    this.state.currentAudioPlayer.remove();
+                    this.state.currentAudioPlayer = null;
+                    this.state.currentlyPlayingUrl = null;
+                }
             } else {
                 instrument.classList.add('expanded');
                 
@@ -266,7 +279,7 @@
                         <span class="song-actions">
                             ${hasMultipleCharts ? '<i class="fa fa-chevron-right accordion-icon song-expand-icon"></i>' : ''}
                             ${pdfUrl ? `
-                                <a href="${pdfUrl}" class="btn btn-sm btn-primary chart-pdf-btn" target="_blank" rel="noopener" title="Open Chart PDF">
+                                <a href="${this.escapeHtml(pdfUrl)}" class="btn btn-sm btn-primary chart-pdf-btn" target="_blank" rel="noopener" title="Open Chart PDF">
                                     <i class="fa fa-file-pdf-o"></i>
                                     PDF
                                 </a>
@@ -281,6 +294,13 @@
             }).join('');
 
             container.innerHTML = html;
+
+            // Re-apply search filter if there's an active search query
+            const instrumentEl = container.closest('.accordion-instrument');
+            const searchInput = instrumentEl ? instrumentEl.querySelector('.instrument-search-input') : null;
+            if (searchInput && searchInput.value.trim()) {
+                this.filterSongsInInstrument(instrumentId, searchInput.value);
+            }
         }
 
         renderVideoButtons(song) {
@@ -290,15 +310,15 @@
             
             if (song.videos.length === 1) {
                 return `
-                    <a href="${this.escapeHtml(song.videos[0].url)}" class="song-video-btn" target="_blank" rel="noopener" title="${this.escapeHtml(song.videos[0].title || 'Watch video')}">
+                    <a href="${this.escapeHtml(song.videos[0].url)}" class="song-video-btn" target="_blank" rel="noopener" title="${this.escapeHtml(song.videos[0].title || 'Watch video')}" aria-label="Watch video for ${this.escapeHtml(song.title)}">
                         <i class="fa fa-youtube-play"></i>
                     </a>
                 `;
             }
-            
+
             return `
                 <div class="video-dropdown">
-                    <button class="song-video-btn video-dropdown-toggle" title="Watch videos">
+                    <button type="button" class="song-video-btn video-dropdown-toggle" title="Watch videos" aria-label="Watch videos for ${this.escapeHtml(song.title)}">
                         <i class="fa fa-youtube-play"></i>
                         <span class="video-count">${song.videos.length}</span>
                     </button>
@@ -334,7 +354,7 @@
                             <div class="accordion-part" data-chart-id="${chart.id}">
                                 <span class="part-name">${this.escapeHtml(chart.part)}</span>
                                 ${chart.pdf_url ? `
-                                    <a href="${chart.pdf_url}" class="btn btn-sm btn-primary chart-pdf-btn" target="_blank" rel="noopener" title="Open Chart PDF">
+                                    <a href="${this.escapeHtml(chart.pdf_url)}" class="btn btn-sm btn-primary chart-pdf-btn" target="_blank" rel="noopener" title="Open Chart PDF">
                                         <i class="fa fa-file-pdf-o"></i>
                                         PDF
                                     </a>
@@ -356,7 +376,6 @@
             if (!recordingUrl) return;
 
             const playBtn = songItem.querySelector('.song-play-btn');
-            const existingPlayer = songItem.querySelector('.inline-audio-player');
             
             // If clicking the same song that's playing, toggle play/pause
             if (this.state.currentlyPlayingUrl === recordingUrl && this.state.currentAudioPlayer) {
@@ -401,7 +420,7 @@
                         ${videoLinksHtml}
                     </div>
                     <audio controls class="audio-element w-100" autoplay>
-                        <source src="${recordingUrl}" type="audio/mpeg">
+                        <source src="${this.escapeHtml(recordingUrl)}" type="audio/mpeg">
                         Your browser does not support the audio element.
                     </audio>
                 </div>
