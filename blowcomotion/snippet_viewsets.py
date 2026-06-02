@@ -11,9 +11,6 @@ from wagtail.admin.ui.tables import Column, DateColumn, UpdatedAtColumn
 from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup
 from wagtailmedia.edit_handlers import MediaChooserPanel
 
-from django.utils.html import format_html, mark_safe
-
-
 # Custom FilterSets
 class ChartFilterSet(WagtailFilterSet):
     class Meta:
