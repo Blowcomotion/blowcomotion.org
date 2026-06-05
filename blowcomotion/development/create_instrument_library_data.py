@@ -188,8 +188,6 @@ def create_rental_history_logs():
             instrument.member = member
             instrument.rental_date = rental_date
             instrument.agreement_signed_date = agreement_date
-            instrument.review_date_6_month = rental_date + timedelta(days=180)
-            instrument.review_date_12_month = rental_date + timedelta(days=365)
             instrument.patreon_active = idx % 2 == 0  # Alternate Patreon status
             if instrument.patreon_active:
                 instrument.patreon_amount = 5.00 + (idx * 2.50)

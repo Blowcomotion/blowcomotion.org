@@ -11,6 +11,7 @@ from wagtail.admin.ui.tables import Column, DateColumn, UpdatedAtColumn
 from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup
 from wagtailmedia.edit_handlers import MediaChooserPanel
 
+
 # Custom FilterSets
 class ChartFilterSet(WagtailFilterSet):
     class Meta:
@@ -349,14 +350,6 @@ class LibraryInstrumentFilterSet(WagtailFilterSet):
         widget=DateRangePickerWidget,
         label='Rental Date Range',
     )
-    review_date_6_month = django_filters.DateFromToRangeFilter(
-        widget=DateRangePickerWidget,
-        label='6-Month Review Date Range',
-    )
-    review_date_12_month = django_filters.DateFromToRangeFilter(
-        widget=DateRangePickerWidget,
-        label='12-Month Review Date Range',
-    )
     
     class Meta:
         model = None
@@ -400,11 +393,14 @@ class LibraryInstrumentViewSet(SnippetViewSet):
                 'rental_date',
                 'agreement_signed_date',
             ]),
-            FieldRowPanel([
-                'review_date_6_month',
-                'review_date_12_month',
-            ], heading="Review Cycle"),
         ], heading="Rental Dates"),
+        MultiFieldPanel([
+            FieldRowPanel([
+                'acquisition_cost',
+                'current_value',
+            ]),
+            'replacement_cost',
+        ], heading="Cost Information"),
         MultiFieldPanel([
             'patreon_active',
             'patreon_amount',

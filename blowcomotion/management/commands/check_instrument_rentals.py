@@ -3,7 +3,6 @@ Management command to check instrument rental status and send notifications.
 
 This command checks for:
 1. Renters who haven't been seen at rehearsal/performance for 3+ weeks
-2. Instruments that need rental review (6- or 12-month date has passed)
 
 Run this command regularly (e.g., monthly via cron) to send notification emails.
 """
@@ -63,14 +62,10 @@ class Command(BaseCommand):
         # Check for inactive renters
         inactive_renters = self._check_inactive_renters()
         
-        # Check for instruments needing review
-        needs_review = self._check_review_needed()
-        
         # Send notifications if any issues found
-        if inactive_renters or needs_review:
+        if inactive_renters:
             self._send_notifications(
                 inactive_renters,
-                needs_review,
                 recipients,
                 dry_run
             )
@@ -108,50 +103,7 @@ class Command(BaseCommand):
         
         return inactive
     
-    def _check_review_needed(self):
-        """Find instruments that need review at 6-month or 12-month cycles."""
-        needs_review = []
-        today = datetime.date.today()
-        rented_instruments = LibraryInstrument.objects.filter(
-            status=LibraryInstrument.STATUS_RENTED
-        ).select_related('instrument', 'member')
-
-        for instrument in rented_instruments:
-            overdue_checks = []
-            for label, review_date in instrument.review_schedule.items():
-                if review_date and today >= review_date:
-                    overdue_checks.append(
-                        {
-                            'label': label,
-                            'review_date': review_date,
-                            'days_overdue': (today - review_date).days,
-                        }
-                    )
-
-            if overdue_checks:
-                needs_review.append(
-                    {
-                        'instrument': instrument,
-                        'member': instrument.member,
-                        'rental_date': instrument.rental_date,
-                        'checks': overdue_checks,
-                    }
-                )
-                overdue_strings = ", ".join(
-                    f"{check['label']} ({check['days_overdue']} days overdue)"
-                    for check in overdue_checks
-                )
-                self.stdout.write(
-                    self.style.WARNING(
-                        f"📅 {instrument.instrument.name} rented to "
-                        f"{instrument.member.full_name if instrument.member else 'Unknown'} - "
-                        f"reviews overdue: {overdue_strings}"
-                    )
-                )
-
-        return needs_review
-    
-    def _send_notifications(self, inactive_renters, needs_review, recipients, dry_run):
+    def _send_notifications(self, inactive_renters, recipients, dry_run):
         """
         Send email notifications about rental issues.
         """
@@ -176,33 +128,6 @@ class Command(BaseCommand):
                     f"  Last seen: {last_seen} ({item['days_since_seen']} days ago)\n"
                     f"  Email: {email}\n"
                     f"  Phone: {phone}\n\n"
-                )
-
-        if needs_review:
-            if inactive_renters:
-                message_parts.append('\n')
-            message_parts.extend([
-                'RENTALS NEEDING REVIEW:\n',
-                '-' * 50,
-                '\n',
-            ])
-            for item in needs_review:
-                member = item['member']
-                member_display = member.full_name if member else 'Unknown'
-                email = member.email if member and member.email else 'N/A'
-                phone = member.phone if member and member.phone else 'N/A'
-                message_parts.append(
-                    f"• {item['instrument'].instrument.name} - {member_display}\n"
-                    f"  Serial: {item['instrument'].serial_number}\n"
-                    f"  Rental date: {item['rental_date'] or 'Unknown'}\n"
-                )
-                for check in item['checks']:
-                    message_parts.append(
-                        f"  {check['label']} review date: {check['review_date']} ("
-                        f"{check['days_overdue']} days overdue)\n"
-                    )
-                message_parts.append(
-                    f"  Email: {email}\n  Phone: {phone}\n\n"
                 )
 
         message_parts.extend([
