@@ -873,7 +873,7 @@ def dump_data(request):
         # Scrub member data - generate fake members if not including real data
         if not include_real_data:
             # Get real members to preserve structure and relationships
-            real_members = Member.objects.all()
+            real_members = Member.objects.order_by('pk')
             fake_members = []
             
             for idx, member in enumerate(real_members, start=1):
@@ -903,13 +903,22 @@ def dump_data(request):
                         "board_member": member.board_member,
                         "join_date": str(member.join_date) if member.join_date else None,
                         "last_seen": str(member.last_seen) if member.last_seen else None,
+                        "separation_date": str(member.separation_date) if member.separation_date else None,
+                        "reactivated_date": str(member.reactivated_date) if member.reactivated_date else None,
+                        "bio": "Scrubbed for privacy" if member.bio else None,
+                        "notes": "Scrubbed for privacy" if member.notes else None,
                         "renting": member.renting,
                     }
                 }
                 fake_members.append(fake_member)
             
-            # Add fake members to data
-            data.extend(fake_members)
+            # Insert fake members after dependency targets (e.g., instruments/images) so FK constraints
+            # are satisfied when loading fixtures.
+            insert_at = 0
+            for i, item in enumerate(data):
+                if item.get("model") in {"blowcomotion.instrument", "blowcomotion.customimage"}:
+                    insert_at = i + 1
+            data[insert_at:insert_at] = fake_members
             logger.info(f"Generated {len(fake_members)} fake members for scrubbed data dump")
 
         logger.info(f"Data dump completed successfully by user {request.user.username}")
