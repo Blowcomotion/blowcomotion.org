@@ -1229,15 +1229,29 @@ class LibraryInstrument(DraftStateMixin, RevisionMixin, LockableMixin, Clusterab
         blank=True,
         help_text="Date the rental agreement was signed",
     )
-    review_date_6_month = models.DateField(
+    acquisition_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
         null=True,
         blank=True,
-        help_text="Six-month rental review date (auto-calculated)",
+        validators=[MinValueValidator(0)],
+        help_text="Original cost of acquiring this instrument",
     )
-    review_date_12_month = models.DateField(
+    current_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
         null=True,
         blank=True,
-        help_text="Twelve-month rental review date (auto-calculated)",
+        validators=[MinValueValidator(0)],
+        help_text="Current estimated value of this instrument",
+    )
+    replacement_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Estimated cost to replace this instrument",
     )
     patreon_active = models.BooleanField(
         default=False,
@@ -1312,11 +1326,6 @@ class LibraryInstrument(DraftStateMixin, RevisionMixin, LockableMixin, Clusterab
                 old_status = old_instance.status
                 old_member_id = old_instance.member_id
                 old_member = old_instance.member
-
-        # Auto-calculate review dates based on rental date
-        if self.rental_date:
-            self.review_date_6_month = self.rental_date + datetime.timedelta(days=182)
-            self.review_date_12_month = self.rental_date + datetime.timedelta(days=365)
 
         super().save(*args, **kwargs)
 
@@ -1415,20 +1424,6 @@ class LibraryInstrument(DraftStateMixin, RevisionMixin, LockableMixin, Clusterab
                 event_date=datetime.date.today(),
                 notes=notes,
             )
-
-    @property
-    def review_schedule(self):
-        return {
-            "6-month": self.review_date_6_month,
-            "12-month": self.review_date_12_month,
-        }
-
-    @property
-    def needs_review(self):
-        if self.status != self.STATUS_RENTED:
-            return False
-        today = datetime.date.today()
-        return any(date and today >= date for date in self.review_schedule.values())
 
     @property
     def renter_inactive(self):
