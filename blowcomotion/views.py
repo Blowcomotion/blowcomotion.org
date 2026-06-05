@@ -829,21 +829,32 @@ def _process_form_submission(request, form_type, form_data, submission_model):
 def dump_data(request):
     # Create an in-memory string buffer to capture the output
     output = StringIO()
+    
+    # Check if the user wants real member data (default is scrubbed for privacy)
+    # Pass ?include_real_data=true to get actual member information
+    include_real_data = request.GET.get('include_real_data', 'false').lower() == 'true'
 
-    # Arguments for `dumpdata`
-    args = [
+    # Base arguments for `dumpdata`
+    base_args = [
         '--natural-primary', '--natural-foreign', '--indent', '2',
         '-e', 'contenttypes', '-e', 'auth.permission', 
         '-e', 'wagtailcore.groupcollectionpermission', '-e', 'wagtailcore.grouppagepermission', '-e', 'wagtailcore.referenceindex', 
         '-e', 'wagtailimages.rendition', '-e', 'sessions', '-e', 'wagtailsearch', '-e', 'wagtailcore.pagelogentry', '-e', 'wagtailcore.revision', '-e', 'wagtailcore.taskstate', '-e', 'wagtailcore.workflowstate', '-e', 'wagtailcore.comment',
     ]
+    
+    # Exclude Member table if scrubbing data (will be replaced with fake data)
+    if not include_real_data:
+        base_args.extend(['-e', 'blowcomotion.Member'])
+    
+    args = base_args
+    
     # Check if the user is superuser
     if not request.user.is_superuser:
         logger.warning(f"Unauthorized access attempt to dump_data by user {request.user.username}")
         return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
 
     try:
-        logger.info(f"Starting data dump by user {request.user.username}")
+        logger.info(f"Starting data dump by user {request.user.username} (include_real_data={include_real_data})")
         # Use call_command to execute `dumpdata` and capture the output in the StringIO buffer
         call_command('dumpdata', *args, stdout=output)
 
@@ -858,6 +869,48 @@ def dump_data(request):
                     item['fields']['latest_revision'] = None
                 if 'live_revision' in item['fields']:
                     item['fields']['live_revision'] = None
+
+        # Scrub member data - generate fake members if not including real data
+        if not include_real_data:
+            # Get real members to preserve structure and relationships
+            real_members = Member.objects.all()
+            fake_members = []
+            
+            for idx, member in enumerate(real_members, start=1):
+                # Create fake member data preserving only non-sensitive fields
+                fake_member = {
+                    "model": "blowcomotion.member",
+                    "pk": member.pk,
+                    "fields": {
+                        "first_name": f"FirstName{idx}",
+                        "last_name": f"LastName{idx}",
+                        "preferred_name": f"Preferred{idx}" if member.preferred_name else None,
+                        "primary_instrument": member.primary_instrument_id,
+                        "birth_month": member.birth_month,
+                        "birth_day": member.birth_day,
+                        "birth_year": member.birth_year,
+                        "email": f"member{idx}@example.com" if member.email else None,
+                        "phone": f"555-{idx:04d}" if member.phone else None,
+                        "address": f"{idx} Main Street" if member.address else None,
+                        "city": "Austin" if member.city else None,
+                        "state": "TX" if member.state else None,
+                        "zip_code": f"{idx:05d}" if member.zip_code else None,
+                        "country": "USA" if member.country else None,
+                        "emergency_contact": f"Emergency Contact {idx}" if member.emergency_contact else None,
+                        "inspired_by": "Scrubbed for privacy" if member.inspired_by else None,
+                        "is_active": member.is_active,
+                        "instructor": member.instructor,
+                        "board_member": member.board_member,
+                        "join_date": str(member.join_date) if member.join_date else None,
+                        "last_seen": str(member.last_seen) if member.last_seen else None,
+                        "renting": member.renting,
+                    }
+                }
+                fake_members.append(fake_member)
+            
+            # Add fake members to data
+            data.extend(fake_members)
+            logger.info(f"Generated {len(fake_members)} fake members for scrubbed data dump")
 
         logger.info(f"Data dump completed successfully by user {request.user.username}")
         # Return the data as a JSON response with pretty formatting
