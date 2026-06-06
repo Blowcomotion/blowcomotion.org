@@ -835,7 +835,7 @@ def dump_data(request):
     include_real_data = request.GET.get('include_real_data', 'false').lower() == 'true'
 
     # Base arguments for `dumpdata`
-    # Always exclude auth users and site settings (contain plaintext passwords)
+    # Always exclude auth users and site settings (may contain credentials and other sensitive data)
     base_args = [
         '--natural-primary', '--natural-foreign', '--indent', '2',
         '-e', 'contenttypes', '-e', 'auth.permission', 
@@ -909,7 +909,10 @@ def dump_data(request):
 
         logger.info(f"Data dump completed successfully by user {request.user.username}")
         # Return the data as a JSON response with pretty formatting
-        return JsonResponse(data, safe=False, json_dumps_params={'indent': 2})
+        # Mark as non-cacheable to prevent sensitive data from being stored by browsers/proxies
+        response = JsonResponse(data, safe=False, json_dumps_params={'indent': 2})
+        response['Cache-Control'] = 'no-store'
+        return response
 
     except Exception as e:
         logger.error(f"Error during data dump by user {request.user.username}: {str(e)}")

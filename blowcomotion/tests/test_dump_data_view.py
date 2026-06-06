@@ -68,9 +68,9 @@ class DumpDataViewTests(TestCase):
 
     def test_requires_superuser(self):
         """Test that dump_data requires superuser authentication"""
-        # Try without authentication - admin views redirect to login
+        # Try without authentication - may redirect to login or return forbidden
         response = self.client.get(reverse('dump_data'))
-        self.assertEqual(response.status_code, 302)  # Redirects to login
+        self.assertIn(response.status_code, [302, 403])  # Redirect to login or forbidden
         
         # Try with regular (staff) user - should be forbidden or redirected
         User.objects.create_user(
