@@ -72,13 +72,15 @@ class DumpDataViewTests(TestCase):
         response = self.client.get(reverse('dump_data'))
         self.assertEqual(response.status_code, 302)  # Redirects to login
         
-        # Try with regular user - also redirects since they lack admin access
+        # Try with regular (staff) user - should be forbidden or redirected
         User.objects.create_user(
             username='regular',
-            password='testpass123'
+            password='testpass123',
+            is_staff=True,
         )
+        self.client.login(username='regular', password='testpass123')
         response = self.client.get(reverse('dump_data'))
-        # Regular users without admin permissions are redirected
+        # Non-superuser staff are redirected by admin middleware or get 403 from view
         self.assertIn(response.status_code, [302, 403])
         
         # Superuser should have access
@@ -98,7 +100,7 @@ class DumpDataViewTests(TestCase):
         
         # Find member records in the dump
         member_records = [item for item in data if item.get('model') == 'blowcomotion.member']
-        self.assertEqual(len(member_records), 2, "Should have 2 fake member records")
+        self.assertEqual(len(member_records), 2, "Should have 2 scrubbed member records")
         
         # Check that member1's data is scrubbed
         member1_record = next((r for r in member_records if r['pk'] == self.member1.pk), None)
@@ -161,7 +163,7 @@ class DumpDataViewTests(TestCase):
         self.assertEqual(fields['notes'], 'Real notes text')
 
     def test_fake_members_after_dependencies(self):
-        """Test that fake members are inserted after instrument dependencies"""
+        """Test that dumpdata orders member records after instrument records (FK dependency ordering)"""
         self.client.login(username='admin', password='testpass123')
         response = self.client.get(reverse('dump_data'))
         
@@ -178,7 +180,7 @@ class DumpDataViewTests(TestCase):
             self.assertGreater(
                 first_member_index, 
                 last_instrument_index,
-                "Fake members should be inserted after instruments to satisfy FK constraints"
+                "Member records should be serialized after instruments to satisfy FK constraints"
             )
 
     def test_deterministic_ordering(self):
@@ -204,7 +206,7 @@ class DumpDataViewTests(TestCase):
         # Names should be consistent
         names1 = [(m['fields']['first_name'], m['fields']['last_name']) for m in members1]
         names2 = [(m['fields']['first_name'], m['fields']['last_name']) for m in members2]
-        self.assertEqual(names1, names2, "Generated fake names should be consistent")
+        self.assertEqual(names1, names2, "Scrubbed member names should be deterministic")
 
     def test_preserves_expected_member_fields(self):
         """Test that the expected member fields are included in scrubbed output"""

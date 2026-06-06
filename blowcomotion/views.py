@@ -835,17 +835,16 @@ def dump_data(request):
     include_real_data = request.GET.get('include_real_data', 'false').lower() == 'true'
 
     # Base arguments for `dumpdata`
+    # Always exclude auth users and site settings (contain plaintext passwords)
     base_args = [
         '--natural-primary', '--natural-foreign', '--indent', '2',
         '-e', 'contenttypes', '-e', 'auth.permission', 
         '-e', 'wagtailcore.groupcollectionpermission', '-e', 'wagtailcore.grouppagepermission', '-e', 'wagtailcore.referenceindex', 
         '-e', 'wagtailimages.rendition', '-e', 'sessions', '-e', 'wagtailsearch', '-e', 'wagtailcore.pagelogentry', '-e', 'wagtailcore.revision', '-e', 'wagtailcore.taskstate', '-e', 'wagtailcore.workflowstate', '-e', 'wagtailcore.comment',
+        '-e', 'auth.user', '-e', 'blowcomotion.sitesettings',
     ]
     
-    # For scrubbed dumps, also exclude auth users and site settings that contain passwords
-    args = list(base_args)
-    if not include_real_data:
-        args += ['-e', 'auth.user', '-e', 'blowcomotion.sitesettings']
+    args = base_args
     
     # Check if the user is superuser
     if not request.user.is_superuser:
