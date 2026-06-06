@@ -869,11 +869,15 @@ def dump_data(request):
                     item['fields']['live_revision'] = None
 
         # Clear user FKs that would otherwise reference excluded `auth.user` records
-        # (e.g. blowcomotion.CustomImage.uploaded_by_user)
+        # (e.g. wagtailimages.Image.uploaded_by_user, LibraryInstrument.locked_by, InstrumentHistoryLog.user)
+        user_fk_field_names = {'uploaded_by_user', 'user', 'locked_by', 'owner'}
         for item in data:
             fields = item.get('fields')
-            if fields and 'uploaded_by_user' in fields:
-                fields['uploaded_by_user'] = None
+            if not fields:
+                continue
+            for field_name in user_fk_field_names:
+                if field_name in fields:
+                    fields[field_name] = None
 
         # Scrub member data in-place if not including real data
         # This preserves Django's dependency ordering while scrubbing sensitive information

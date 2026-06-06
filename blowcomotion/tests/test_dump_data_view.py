@@ -240,3 +240,22 @@ class DumpDataViewTests(TestCase):
                     fields, 
                     f"Field '{field_name}' should be included in scrubbed member data"
                 )
+
+    def test_user_fks_are_cleared(self):
+        """Test that user FK fields are nulled to prevent dangling references"""
+        self.client.login(username='admin', password='testpass123')
+        response = self.client.get(reverse('dump_data'))
+        
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        
+        # Check that any user FK fields in the dump are nulled
+        user_fk_field_names = {'uploaded_by_user', 'user', 'locked_by', 'owner'}
+        for item in data:
+            fields = item.get('fields', {})
+            for field_name in user_fk_field_names:
+                if field_name in fields:
+                    self.assertIsNone(
+                        fields[field_name],
+                        f"User FK field '{field_name}' in {item.get('model')} should be null"
+                    )
