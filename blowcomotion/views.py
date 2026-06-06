@@ -842,7 +842,10 @@ def dump_data(request):
         '-e', 'wagtailimages.rendition', '-e', 'sessions', '-e', 'wagtailsearch', '-e', 'wagtailcore.pagelogentry', '-e', 'wagtailcore.revision', '-e', 'wagtailcore.taskstate', '-e', 'wagtailcore.workflowstate', '-e', 'wagtailcore.comment',
     ]
     
-    args = base_args
+    # For scrubbed dumps, also exclude auth users and site settings that contain passwords
+    args = list(base_args)
+    if not include_real_data:
+        args += ['-e', 'auth.user', '-e', 'blowcomotion.sitesettings']
     
     # Check if the user is superuser
     if not request.user.is_superuser:
@@ -896,6 +899,10 @@ def dump_data(request):
                     fields['inspired_by'] = 'Scrubbed for privacy' if fields.get('inspired_by') else None
                     fields['bio'] = 'Scrubbed for privacy' if fields.get('bio') else None
                     fields['notes'] = 'Scrubbed for privacy' if fields.get('notes') else None
+                    # Scrub GigoGig integration identifiers and member photos
+                    fields['gigomatic_username'] = None
+                    fields['gigomatic_id'] = None
+                    fields['image'] = None
                     
                     scrubbed_count += 1
             

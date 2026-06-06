@@ -73,11 +73,10 @@ class DumpDataViewTests(TestCase):
         self.assertEqual(response.status_code, 302)  # Redirects to login
         
         # Try with regular user - also redirects since they lack admin access
-        regular_user = User.objects.create_user(
+        User.objects.create_user(
             username='regular',
             password='testpass123'
         )
-        self.client.login(username='regular', password='testpass123')
         response = self.client.get(reverse('dump_data'))
         # Regular users without admin permissions are redirected
         self.assertIn(response.status_code, [302, 403])
