@@ -78,7 +78,7 @@ def register_management_menu_item():
         MenuItem('Dump Data', reverse('dump_data'), icon_name='download'),
         MenuItem('Export Members CSV', reverse('export_members'), icon_name='table'),
         MenuItem('Export Attendance CSV', reverse('export_attendance'), icon_name='calendar'),
-        MenuItem('Export Charts CSV', reverse('export_charts'), icon_name='doc-full'),
+        MenuItem('Export Charts CSV', reverse('export_charts'), icon_name='doc-full-inverse'),
         MenuItem('Library: Rented', reverse('instrument_library_rented'), icon_name='french-horn'),
         MenuItem('Library: Available', reverse('instrument_library_available'), icon_name='french-horn'),
         MenuItem('Library: Maintenance', reverse('instrument_library_needs_repair'), icon_name='warning'),
