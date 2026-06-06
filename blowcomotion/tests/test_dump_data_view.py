@@ -162,6 +162,11 @@ class DumpDataViewTests(TestCase):
         self.assertEqual(fields['bio'], 'Real bio text')
         self.assertEqual(fields['notes'], 'Real notes text')
 
+        # Users and site settings should never be exported (even when including real member data)
+        dumped_models = {item.get('model') for item in data}
+        self.assertNotIn('auth.user', dumped_models)
+        self.assertNotIn('blowcomotion.sitesettings', dumped_models)
+
     def test_fake_members_after_dependencies(self):
         """Test that dumpdata orders member records after instrument records (FK dependency ordering)"""
         self.client.login(username='admin', password='testpass123')
