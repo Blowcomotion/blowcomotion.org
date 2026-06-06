@@ -207,8 +207,8 @@ class DumpDataViewTests(TestCase):
         names2 = [(m['fields']['first_name'], m['fields']['last_name']) for m in members2]
         self.assertEqual(names1, names2, "Generated fake names should be consistent")
 
-    def test_preserves_all_member_fields(self):
-        """Test that all member fields are included in scrubbed output"""
+    def test_preserves_expected_member_fields(self):
+        """Test that the expected member fields are included in scrubbed output"""
         self.client.login(username='admin', password='testpass123')
         response = self.client.get(reverse('dump_data'))
         

@@ -842,10 +842,6 @@ def dump_data(request):
         '-e', 'wagtailimages.rendition', '-e', 'sessions', '-e', 'wagtailsearch', '-e', 'wagtailcore.pagelogentry', '-e', 'wagtailcore.revision', '-e', 'wagtailcore.taskstate', '-e', 'wagtailcore.workflowstate', '-e', 'wagtailcore.comment',
     ]
     
-    # Exclude Member table if scrubbing data (will be replaced with fake data)
-    if not include_real_data:
-        base_args.extend(['-e', 'blowcomotion.Member'])
-    
     args = base_args
     
     # Check if the user is superuser
@@ -870,56 +866,40 @@ def dump_data(request):
                 if 'live_revision' in item['fields']:
                     item['fields']['live_revision'] = None
 
-        # Scrub member data - generate fake members if not including real data
+        # Scrub member data in-place if not including real data
+        # This preserves Django's dependency ordering while scrubbing sensitive information
         if not include_real_data:
-            # Get real members to preserve structure and relationships
-            real_members = Member.objects.order_by('pk')
-            fake_members = []
+            # Build a mapping of member PKs to sequential indices for consistent fake data
+            member_pks = sorted([item['pk'] for item in data if item.get('model') == 'blowcomotion.member'])
+            member_pk_to_index = {pk: idx + 1 for idx, pk in enumerate(member_pks)}
             
-            for idx, member in enumerate(real_members, start=1):
-                # Create fake member data preserving only non-sensitive fields
-                fake_member = {
-                    "model": "blowcomotion.member",
-                    "pk": member.pk,
-                    "fields": {
-                        "first_name": f"FirstName{idx}",
-                        "last_name": f"LastName{idx}",
-                        "preferred_name": f"Preferred{idx}" if member.preferred_name else None,
-                        "primary_instrument": member.primary_instrument_id,
-                        "birth_month": member.birth_month,
-                        "birth_day": member.birth_day,
-                        "birth_year": member.birth_year,
-                        "email": f"member{idx}@example.com" if member.email else None,
-                        "phone": f"555-{idx:04d}" if member.phone else None,
-                        "address": f"{idx} Main Street" if member.address else None,
-                        "city": "Austin" if member.city else None,
-                        "state": "TX" if member.state else None,
-                        "zip_code": f"{idx:05d}" if member.zip_code else None,
-                        "country": "USA" if member.country else None,
-                        "emergency_contact": f"Emergency Contact {idx}" if member.emergency_contact else None,
-                        "inspired_by": "Scrubbed for privacy" if member.inspired_by else None,
-                        "is_active": member.is_active,
-                        "instructor": member.instructor,
-                        "board_member": member.board_member,
-                        "join_date": str(member.join_date) if member.join_date else None,
-                        "last_seen": str(member.last_seen) if member.last_seen else None,
-                        "separation_date": str(member.separation_date) if member.separation_date else None,
-                        "reactivated_date": str(member.reactivated_date) if member.reactivated_date else None,
-                        "bio": "Scrubbed for privacy" if member.bio else None,
-                        "notes": "Scrubbed for privacy" if member.notes else None,
-                        "renting": member.renting,
-                    }
-                }
-                fake_members.append(fake_member)
+            scrubbed_count = 0
+            # Scrub member records in-place
+            for item in data:
+                if item.get('model') == 'blowcomotion.member':
+                    member_pk = item['pk']
+                    idx = member_pk_to_index[member_pk]
+                    fields = item['fields']
+                    
+                    # Scrub sensitive fields while preserving structure and non-sensitive data
+                    fields['first_name'] = f'FirstName{idx}'
+                    fields['last_name'] = f'LastName{idx}'
+                    fields['preferred_name'] = f'Preferred{idx}' if fields.get('preferred_name') else None
+                    fields['email'] = f'member{idx}@example.com' if fields.get('email') else None
+                    fields['phone'] = f'555-{idx:04d}' if fields.get('phone') else None
+                    fields['address'] = f'{idx} Main Street' if fields.get('address') else None
+                    fields['city'] = 'Austin' if fields.get('city') else None
+                    fields['state'] = 'TX' if fields.get('state') else None
+                    fields['zip_code'] = f'{idx:05d}' if fields.get('zip_code') else None
+                    fields['country'] = 'USA' if fields.get('country') else None
+                    fields['emergency_contact'] = f'Emergency Contact {idx}' if fields.get('emergency_contact') else None
+                    fields['inspired_by'] = 'Scrubbed for privacy' if fields.get('inspired_by') else None
+                    fields['bio'] = 'Scrubbed for privacy' if fields.get('bio') else None
+                    fields['notes'] = 'Scrubbed for privacy' if fields.get('notes') else None
+                    
+                    scrubbed_count += 1
             
-            # Insert fake members after dependency targets (e.g., instruments/images) so FK constraints
-            # are satisfied when loading fixtures.
-            insert_at = 0
-            for i, item in enumerate(data):
-                if item.get("model") in {"blowcomotion.instrument", "blowcomotion.customimage"}:
-                    insert_at = i + 1
-            data[insert_at:insert_at] = fake_members
-            logger.info(f"Generated {len(fake_members)} fake members for scrubbed data dump")
+            logger.info(f'Scrubbed {scrubbed_count} member records in data dump')
 
         logger.info(f"Data dump completed successfully by user {request.user.username}")
         # Return the data as a JSON response with pretty formatting
