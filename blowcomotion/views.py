@@ -829,21 +829,30 @@ def _process_form_submission(request, form_type, form_data, submission_model):
 def dump_data(request):
     # Create an in-memory string buffer to capture the output
     output = StringIO()
+    
+    # Check if the user wants real member data (default is scrubbed for privacy)
+    # Pass ?include_real_data=true to get actual member information
+    include_real_data = request.GET.get('include_real_data', 'false').lower() == 'true'
 
-    # Arguments for `dumpdata`
-    args = [
+    # Base arguments for `dumpdata`
+    # Always exclude auth users and site settings (may contain credentials and other sensitive data)
+    base_args = [
         '--natural-primary', '--natural-foreign', '--indent', '2',
         '-e', 'contenttypes', '-e', 'auth.permission', 
         '-e', 'wagtailcore.groupcollectionpermission', '-e', 'wagtailcore.grouppagepermission', '-e', 'wagtailcore.referenceindex', 
         '-e', 'wagtailimages.rendition', '-e', 'sessions', '-e', 'wagtailsearch', '-e', 'wagtailcore.pagelogentry', '-e', 'wagtailcore.revision', '-e', 'wagtailcore.taskstate', '-e', 'wagtailcore.workflowstate', '-e', 'wagtailcore.comment',
+        '-e', 'auth.user', '-e', 'blowcomotion.sitesettings',
     ]
+    
+    args = base_args
+    
     # Check if the user is superuser
     if not request.user.is_superuser:
         logger.warning(f"Unauthorized access attempt to dump_data by user {request.user.username}")
         return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
 
     try:
-        logger.info(f"Starting data dump by user {request.user.username}")
+        logger.info(f"Starting data dump by user {request.user.username} (include_real_data={include_real_data})")
         # Use call_command to execute `dumpdata` and capture the output in the StringIO buffer
         call_command('dumpdata', *args, stdout=output)
 
@@ -859,9 +868,62 @@ def dump_data(request):
                 if 'live_revision' in item['fields']:
                     item['fields']['live_revision'] = None
 
+        # Clear user FKs that would otherwise reference excluded `auth.user` records
+        # (e.g. wagtailimages.Image.uploaded_by_user, LibraryInstrument.locked_by, InstrumentHistoryLog.user)
+        user_fk_field_names = {'uploaded_by_user', 'user', 'locked_by', 'owner'}
+        for item in data:
+            fields = item.get('fields')
+            if not fields:
+                continue
+            for field_name in user_fk_field_names:
+                if field_name in fields:
+                    fields[field_name] = None
+
+        # Scrub member data in-place if not including real data
+        # This preserves Django's dependency ordering while scrubbing sensitive information
+        if not include_real_data:
+            # Build a mapping of member PKs to sequential indices for consistent fake data
+            member_pks = sorted([item['pk'] for item in data if item.get('model') == 'blowcomotion.member'])
+            member_pk_to_index = {pk: idx + 1 for idx, pk in enumerate(member_pks)}
+            
+            scrubbed_count = 0
+            # Scrub member records in-place
+            for item in data:
+                if item.get('model') == 'blowcomotion.member':
+                    member_pk = item['pk']
+                    idx = member_pk_to_index[member_pk]
+                    fields = item['fields']
+                    
+                    # Scrub sensitive fields while preserving structure and non-sensitive data
+                    fields['first_name'] = f'FirstName{idx}'
+                    fields['last_name'] = f'LastName{idx}'
+                    fields['preferred_name'] = f'Preferred{idx}' if fields.get('preferred_name') else None
+                    fields['email'] = f'member{idx}@example.com' if fields.get('email') else None
+                    fields['phone'] = f'555-{idx:04d}' if fields.get('phone') else None
+                    fields['address'] = f'{idx} Main Street' if fields.get('address') else None
+                    fields['city'] = 'Austin' if fields.get('city') else None
+                    fields['state'] = 'TX' if fields.get('state') else None
+                    fields['zip_code'] = f'{idx:05d}' if fields.get('zip_code') else None
+                    fields['country'] = 'USA' if fields.get('country') else None
+                    fields['emergency_contact'] = f'Emergency Contact {idx}' if fields.get('emergency_contact') else None
+                    fields['inspired_by'] = 'Scrubbed for privacy' if fields.get('inspired_by') else None
+                    fields['bio'] = 'Scrubbed for privacy' if fields.get('bio') else None
+                    fields['notes'] = 'Scrubbed for privacy' if fields.get('notes') else None
+                    # Scrub GigoGig integration identifiers and member photos
+                    fields['gigomatic_username'] = None
+                    fields['gigomatic_id'] = None
+                    fields['image'] = None
+                    
+                    scrubbed_count += 1
+            
+            logger.info(f'Scrubbed {scrubbed_count} member records in data dump')
+
         logger.info(f"Data dump completed successfully by user {request.user.username}")
         # Return the data as a JSON response with pretty formatting
-        return JsonResponse(data, safe=False, json_dumps_params={'indent': 2})
+        # Mark as non-cacheable to prevent sensitive data from being stored by browsers/proxies
+        response = JsonResponse(data, safe=False, json_dumps_params={'indent': 2})
+        response['Cache-Control'] = 'no-store'
+        return response
 
     except Exception as e:
         logger.error(f"Error during data dump by user {request.user.username}: {str(e)}")
