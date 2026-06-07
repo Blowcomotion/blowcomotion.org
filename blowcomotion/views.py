@@ -1036,7 +1036,7 @@ def export_charts_csv(request):
         logger.info("Starting chart export by user %s", request.user.username)
         call_command(
             'export_charts_to_csv',
-            output=temp_path,
+            output_path=temp_path,
             stdout=StringIO(),
         )
 

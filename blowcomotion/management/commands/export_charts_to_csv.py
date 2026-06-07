@@ -1,6 +1,5 @@
 import csv
 import os
-from datetime import date, datetime
 
 from django.core.management.base import BaseCommand
 

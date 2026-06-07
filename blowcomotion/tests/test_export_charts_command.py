@@ -9,7 +9,7 @@ from io import StringIO
 from django.core.management import call_command
 from django.test import TestCase
 
-from blowcomotion.models import Chart
+from blowcomotion.models import Chart, Instrument, Song
 
 
 class ExportChartsToCSVCommandTest(TestCase):
@@ -22,7 +22,7 @@ class ExportChartsToCSVCommandTest(TestCase):
 
         try:
             out = StringIO()
-            call_command('export_charts_to_csv', output=tmp_path, stdout=out)
+            call_command('export_charts_to_csv', output_path=tmp_path, stdout=out)
 
             # Verify file was created
             self.assertTrue(os.path.exists(tmp_path))
@@ -91,7 +91,7 @@ class ExportChartsToCSVCommandTest(TestCase):
 
         try:
             out = StringIO()
-            call_command('export_charts_to_csv', output=tmp_path, stdout=out)
+            call_command('export_charts_to_csv', output_path=tmp_path, stdout=out)
 
             # Verify file was created with just headers
             with open(tmp_path, 'r', encoding='utf-8') as csvfile:
@@ -115,7 +115,7 @@ class ExportChartsToCSVCommandTest(TestCase):
             output_path = os.path.join(tmpdir, 'subdir', 'charts.csv')
             
             out = StringIO()
-            call_command('export_charts_to_csv', output=output_path, stdout=out)
+            call_command('export_charts_to_csv', output_path=output_path, stdout=out)
 
             # Verify file was created (directory should be created automatically)
             self.assertTrue(os.path.exists(output_path))
@@ -144,7 +144,7 @@ class ExportChartsToCSVCommandTest(TestCase):
             tmp_path = tmp.name
 
         try:
-            call_command('export_charts_to_csv', output=tmp_path, stdout=StringIO())
+            call_command('export_charts_to_csv', output_path=tmp_path, stdout=StringIO())
 
             with open(tmp_path, 'r', encoding='utf-8') as csvfile:
                 reader = csv.DictReader(csvfile)
