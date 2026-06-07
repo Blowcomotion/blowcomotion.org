@@ -42,6 +42,7 @@ class Command(BaseCommand):
             writer = csv.writer(csvfile)
             writer.writerow(headers)
 
+            row_count = 0
             for chart in charts:
                 row = [
                     chart.id,
@@ -54,9 +55,10 @@ class Command(BaseCommand):
                     chart.pdf.title if chart.pdf else "",
                 ]
                 writer.writerow(row)
+                row_count += 1
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Export complete. {charts.count()} charts written to {output_path}"
+                f"Export complete. {row_count} charts written to {output_path}"
             )
         )

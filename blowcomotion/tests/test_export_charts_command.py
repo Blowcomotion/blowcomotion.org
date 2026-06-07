@@ -80,9 +80,7 @@ class ExportChartsToCSVCommandTest(TestCase):
 
     def test_export_charts_empty_database(self):
         """Test export when no charts exist."""
-        # Get current chart count
-        initial_count = Chart.objects.count()
-        
+        # Ensure database is empty
         # Delete all charts
         Chart.objects.all().delete()
 
