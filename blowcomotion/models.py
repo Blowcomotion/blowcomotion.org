@@ -1638,6 +1638,45 @@ class BookingFormSubmission(BaseFormSubmission):
     """
     Model for booking form submissions
     """
+    event_date = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Date of the event",
+    )
+    event_time = models.TimeField(
+        blank=True,
+        null=True,
+        help_text="Time of the event",
+    )
+    event_location = models.CharField(
+        blank=True,
+        null=True,
+        max_length=500,
+        help_text="Location of the event",
+    )
+    duration = models.CharField(
+        blank=True,
+        null=True,
+        max_length=255,
+        help_text="How long the band should play",
+    )
+    expected_guests = models.CharField(
+        blank=True,
+        null=True,
+        max_length=255,
+        help_text="Expected number of guests",
+    )
+    event_details = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Specific event details and expectations",
+    )
+    budget = models.CharField(
+        blank=True,
+        null=True,
+        max_length=255,
+        help_text="Budget for the performance",
+    )
     newsletter_opt_in = models.BooleanField(
         default=False,
         help_text="Whether the user signed up for the newsletter",

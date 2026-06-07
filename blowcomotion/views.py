@@ -1101,11 +1101,18 @@ def process_form(request):
                 }
             },
             'booking_form': {
-                'required_fields': ['name', 'email', 'message'],
+                'required_fields': ['name', 'email'],
                 'model': BookingFormSubmission,
                 'field_mapping': lambda req: {
                     'name': req.POST.get('name'),
                     'email': req.POST.get('email'),
+                    'event_date': req.POST.get('event_date') or None,
+                    'event_time': req.POST.get('event_time') or None,
+                    'event_location': req.POST.get('event_location'),
+                    'duration': req.POST.get('duration'),
+                    'expected_guests': req.POST.get('expected_guests'),
+                    'event_details': req.POST.get('event_details'),
+                    'budget': req.POST.get('budget'),
                     'message': req.POST.get('message'),
                     'newsletter_opt_in': req.POST.get('newsletter', False) == 'yes',
                 }

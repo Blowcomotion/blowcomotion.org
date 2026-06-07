@@ -557,11 +557,18 @@ class BookingFormSubmissionViewset(SnippetViewSet):
     menu_label = 'Booking Form'
     menu_name = 'booking_form'
     menu_icon = 'calendar-alt'
-    list_display = ["name", "email", "message", "date_submitted"]
-    search_fields = ("name", "email", "message")
+    list_display = ["name", "email", "event_date", "event_location", "date_submitted"]
+    search_fields = ("name", "email", "event_location", "event_details", "message")
     panels = [
         "name",
         "email",
+        "event_date",
+        "event_time",
+        "event_location",
+        "duration",
+        "expected_guests",
+        "budget",
+        "event_details",
         "message",
         "newsletter_opt_in",
     ]

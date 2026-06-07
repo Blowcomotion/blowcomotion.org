@@ -229,9 +229,44 @@ class BookingFormBlock(blocks.StructBlock):
         default="Your Email:",
         help_text="Enter the label for the email field.",
     )
+    event_date_field_label = blocks.CharBlock(
+        required=False,
+        default="Event Date:",
+        help_text="Enter the label for the event date field.",
+    )
+    event_time_field_label = blocks.CharBlock(
+        required=False,
+        default="Event Time:",
+        help_text="Enter the label for the event time field.",
+    )
+    event_location_field_label = blocks.CharBlock(
+        required=False,
+        default="Event Location:",
+        help_text="Enter the label for the event location field.",
+    )
+    duration_field_label = blocks.CharBlock(
+        required=False,
+        default="How long should the band play:",
+        help_text="Enter the label for the duration field.",
+    )
+    expected_guests_field_label = blocks.CharBlock(
+        required=False,
+        default="Expected number of guests:",
+        help_text="Enter the label for the expected guests field.",
+    )
+    event_details_field_label = blocks.CharBlock(
+        required=False,
+        default="Event details and expectations:",
+        help_text="Enter the label for the event details field.",
+    )
+    budget_field_label = blocks.CharBlock(
+        required=False,
+        default="Budget:",
+        help_text="Enter the label for the budget field.",
+    )
     message_field_label = blocks.CharBlock(
         required=False,
-        default="Tell us about your event:",
+        default="Additional comments or questions:",
         help_text="Enter the label for the message field.",
     )
     newsletter_opt_in = blocks.BooleanBlock(

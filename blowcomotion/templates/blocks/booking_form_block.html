@@ -4,21 +4,51 @@
         <div class="col-12 contact__form">
             {% if value.title %}<h2>{{ value.title }}</h2>{% endif %}
             {% if value.description %}{{ value.description|richtext }}{% endif %}
+            <p class="mb-3"><em>Please fill out as many fields as you can to help us better understand your booking needs.</em></p>
             <form hx-post="{% url 'process-form' %}" name="booking-form">
                 <div class="input__list row">
                     {% csrf_token %}
                     <input type="text" class="best-color" name="best_color" value="" style="display:none;">
                     <div class="form-group col-sm-6">
-                        <label for="name">{{ value.name_field_label|default:"Your Name:" }}</label>
+                        <label for="name">{{ value.name_field_label|default:"Your Name:" }} <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="name" name="name" placeholder="Your Name" required>
                     </div>
                     <div class="form-group col-sm-6">
-                        <label for="email">{{ value.email_field_label|default:"Your Email:" }}</label>
+                        <label for="email">{{ value.email_field_label|default:"Your Email:" }} <span class="text-danger">*</span></label>
                         <input type="email" class="form-control" id="email" name="email" placeholder="Your Email" required>
                     </div>
+                    <div class="form-group col-sm-6">
+                        <label for="event_date">{{ value.event_date_field_label|default:"Event Date:" }}</label>
+                        <input type="date" class="form-control" id="event_date" name="event_date">
+                    </div>
+                    <div class="form-group col-sm-6">
+                        <label for="event_time">{{ value.event_time_field_label|default:"Event Time:" }}</label>
+                        <input type="time" class="form-control" id="event_time" name="event_time">
+                    </div>
                     <div class="form-group col-12">
-                        <label for="message">{{ value.message_field_label|default:"Tell us about your event:" }}</label>
-                        <textarea class="form-control" id="message" name="message" rows="6" placeholder="Please provide details about your event: date, location, type of event, number of expected guests, budget, and any special requirements..." required></textarea>
+                        <label for="event_location">{{ value.event_location_field_label|default:"Event Location:" }}</label>
+                        <input type="text" class="form-control" id="event_location" name="event_location" placeholder="Venue name and address">
+                    </div>
+                    <div class="form-group col-sm-6">
+                        <label for="duration">{{ value.duration_field_label|default:"How long should the band play:" }}</label>
+                        <input type="text" class="form-control" id="duration" name="duration" placeholder="e.g., 2 hours, 30 minutes">
+                    </div>
+                    <div class="form-group col-sm-6">
+                        <label for="expected_guests">{{ value.expected_guests_field_label|default:"Expected number of guests:" }}</label>
+                        <input type="text" class="form-control" id="expected_guests" name="expected_guests" placeholder="e.g., 50-100">
+                    </div>
+                    <div class="form-group col-12">
+                        <label for="budget">{{ value.budget_field_label|default:"Budget:" }}</label>
+                        <input type="text" class="form-control" id="budget" name="budget" placeholder="Your budget for this performance">
+                    </div>
+                    <div class="form-group col-12">
+                        <label for="event_details">{{ value.event_details_field_label|default:"Event details and expectations:" }}</label>
+                        <textarea class="form-control" id="event_details" name="event_details" rows="6" placeholder="What are your expectations for this performance booking? Please write a brief narrative of your vision for our performance. Example: We would like Blowcomotion to assemble at 5:30PM at the north end of our parking lot, near the main building doors, and commence playing at 6PM in that same space, and play a 30 minute setlist, and then depart afterwards."></textarea>
+                        <small class="form-text text-muted"><em>Please provide a narrative describing your vision for the performance, including setup time, performance time, and any special requirements.</em></small>
+                    </div>
+                    <div class="form-group col-12">
+                        <label for="message">{{ value.message_field_label|default:"Additional comments or questions:" }}</label>
+                        <textarea class="form-control" id="message" name="message" rows="3" placeholder="Any other information you'd like to share"></textarea>
                     </div>
                     {% if value.newsletter_opt_in %}
                         <div class="form-group col-12">
