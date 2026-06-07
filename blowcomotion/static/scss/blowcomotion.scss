@@ -179,3 +179,20 @@ hr {
     background: $white-color;
     width: 100%;
 }
+
+// HTMX loading indicator
+.htmx-indicator {
+    display: none;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+    display: inline-block;
+}
+
+// Disable button during form submission
+form.htmx-request button[type="submit"] {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}

@@ -561,7 +561,19 @@ def _create_email_message(form_type, name, email, **kwargs):
         'booking_form': {
             'greeting': f'Hello {name},\n\n',
             'intro': 'Thank you for your interest in booking Blowcomotion! We have received your booking request with the following details:\n\n',
-            'fields': f'Name: {name}\nEmail: {email}\nEvent Details: {kwargs.get("message", "")}\n\n',
+            'fields': (
+                f'Name: {name}\n'
+                f'Email: {email}\n'
+                + (f'Event Date: {kwargs.get("event_date", "Not provided")}\n' if kwargs.get("event_date") else '')
+                + (f'Event Time: {kwargs.get("event_time", "Not provided")}\n' if kwargs.get("event_time") else '')
+                + (f'Event Location: {kwargs.get("event_location", "Not provided")}\n' if kwargs.get("event_location") else '')
+                + (f'Duration: {kwargs.get("duration", "Not provided")}\n' if kwargs.get("duration") else '')
+                + (f'Expected Guests: {kwargs.get("expected_guests", "Not provided")}\n' if kwargs.get("expected_guests") else '')
+                + (f'Budget: {kwargs.get("budget", "Not provided")}\n' if kwargs.get("budget") else '')
+                + (f'\nEvent Details:\n{kwargs.get("event_details", "Not provided")}\n' if kwargs.get("event_details") else '')
+                + (f'\nAdditional Comments:\n{kwargs.get("message", "")}\n' if kwargs.get("message") else '')
+                + '\n'
+            ),
             'closing': 'We will review your request and get back to you soon with availability and pricing information.\n\n',
         },
         'donate_form': {
@@ -1101,11 +1113,18 @@ def process_form(request):
                 }
             },
             'booking_form': {
-                'required_fields': ['name', 'email', 'message'],
+                'required_fields': ['name', 'email', 'event_details'],
                 'model': BookingFormSubmission,
                 'field_mapping': lambda req: {
                     'name': req.POST.get('name'),
                     'email': req.POST.get('email'),
+                    'event_date': req.POST.get('event_date') or None,
+                    'event_time': req.POST.get('event_time') or None,
+                    'event_location': req.POST.get('event_location'),
+                    'duration': req.POST.get('duration'),
+                    'expected_guests': req.POST.get('expected_guests'),
+                    'event_details': req.POST.get('event_details'),
+                    'budget': req.POST.get('budget'),
                     'message': req.POST.get('message'),
                     'newsletter_opt_in': req.POST.get('newsletter', False) == 'yes',
                 }
