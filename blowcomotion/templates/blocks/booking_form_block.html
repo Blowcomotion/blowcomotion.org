@@ -42,8 +42,8 @@
                         <input type="text" class="form-control" id="budget" name="budget" placeholder="Your budget for this performance">
                     </div>
                     <div class="form-group col-12">
-                        <label for="event_details">{{ value.event_details_field_label|default:"Event details and expectations:" }}</label>
-                        <textarea class="form-control" id="event_details" name="event_details" rows="6" placeholder="What are your expectations for this performance booking? Please write a brief narrative of your vision for our performance. Example: We would like Blowcomotion to assemble at 5:30PM at the north end of our parking lot, near the main building doors, and commence playing at 6PM in that same space, and play a 30 minute setlist, and then depart afterwards."></textarea>
+                        <label for="event_details">{{ value.event_details_field_label|default:"Event details and expectations:" }} <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="event_details" name="event_details" rows="6" placeholder="What are your expectations for this performance booking? Please write a brief narrative of your vision for our performance. Example: We would like Blowcomotion to assemble at 5:30PM at the north end of our parking lot, near the main building doors, and commence playing at 6PM in that same space, and play a 30 minute setlist, and then depart afterwards." required></textarea>
                         <small class="form-text text-muted"><em>Please provide a narrative describing your vision for the performance, including setup time, performance time, and any special requirements.</em></small>
                     </div>
                     <div class="form-group col-12">

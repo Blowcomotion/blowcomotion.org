@@ -1113,7 +1113,7 @@ def process_form(request):
                 }
             },
             'booking_form': {
-                'required_fields': ['name', 'email'],
+                'required_fields': ['name', 'email', 'event_details'],
                 'model': BookingFormSubmission,
                 'field_mapping': lambda req: {
                     'name': req.POST.get('name'),
