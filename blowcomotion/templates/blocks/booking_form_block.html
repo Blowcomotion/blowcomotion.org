@@ -5,7 +5,7 @@
             {% if value.title %}<h2>{{ value.title }}</h2>{% endif %}
             {% if value.description %}{{ value.description|richtext }}{% endif %}
             <p class="mb-3"><em>Please fill out as many fields as you can to help us better understand your booking needs.</em></p>
-            <form hx-post="{% url 'process-form' %}" name="booking-form">
+            <form hx-post="{% url 'process-form' %}" name="booking-form" hx-indicator="#booking-form-spinner">
                 <div class="input__list row">
                     {% csrf_token %}
                     <input type="text" class="best-color" name="best_color" value="" style="display:none;">
@@ -55,7 +55,10 @@
                             <input type="checkbox" id="newsletter" name="newsletter" value="yes"> Opt-in to receive our newsletter
                         </div>
                     {% endif %}
-                    <button type="submit" class="site-btn" name="form_type" value="booking_form">{{ value.button_text|default:"Submit Booking Request" }}</button>
+                    <button type="submit" class="site-btn" name="form_type" value="booking_form">
+                        <span id="booking-form-spinner" class="htmx-indicator spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        {{ value.button_text|default:"Submit Booking Request" }}
+                    </button>
                 </div>
             </form>
         </div>
