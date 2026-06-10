@@ -15,6 +15,29 @@ from blowcomotion.models import LibraryInstrument
 class ExportLibraryInstrumentsToCSVCommandTest(TestCase):
     """Tests for the export_library_instruments_to_csv management command."""
 
+    def setUp(self):
+        from decimal import Decimal
+        import datetime
+
+        from blowcomotion.models import Instrument, Member
+
+        instrument = Instrument.objects.create(name="Trombone")
+        member = Member.objects.create(first_name="Ada", last_name="Lovelace")
+
+        LibraryInstrument.objects.create(
+            instrument=instrument,
+            status=LibraryInstrument.STATUS_RENTED,
+            serial_number="SN123",
+            member=member,
+            rental_date=datetime.date(2026, 1, 2),
+            agreement_signed_date=datetime.date(2026, 1, 3),
+            acquisition_cost=Decimal("0.00"),
+            current_value=Decimal("123.45"),
+            replacement_cost=Decimal("0.00"),
+            patreon_active=False,
+            patreon_amount=Decimal("0.00"),
+            comments="Test export",
+        )
     def test_export_library_instruments_to_csv_with_existing_data(self):
         """Test basic CSV export functionality with existing database data."""
         with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.csv') as tmp:
@@ -58,11 +81,12 @@ class ExportLibraryInstrumentsToCSVCommandTest(TestCase):
                 ]
                 self.assertEqual(list(rows[0].keys()), expected_headers)
 
-                # Verify data structure of first row
-                self.assertIn('id', rows[0])
-                self.assertIn('instrument_name', rows[0])
-                self.assertIn('status', rows[0])
-
+                # Verify data structure of first row (including 0.00 values)
+                self.assertEqual(rows[0]["instrument_name"], "Trombone")
+                self.assertEqual(rows[0]["status"], LibraryInstrument.STATUS_RENTED)
+                self.assertEqual(rows[0]["acquisition_cost"], "0.00")
+                self.assertEqual(rows[0]["replacement_cost"], "0.00")
+                self.assertEqual(rows[0]["patreon_amount"], "0.00")
             # Verify command output
             output = out.getvalue()
             self.assertIn('written to', output)

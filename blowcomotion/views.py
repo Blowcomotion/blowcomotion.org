@@ -1089,9 +1089,9 @@ def export_library_instruments_csv(request):
             stdout=StringIO(),
         )
 
-    except Exception as e:
-        logger.error("Error during library instrument export by user %s: %s", request.user.username, str(e))
-        return JsonResponse({'error': str(e)}, status=500)
+    except Exception:
+        logger.exception("Error during library instrument export by user %s", request.user.username)
+        return JsonResponse({'error': 'Export failed. See server logs for details.'}, status=500)
     else:
         with open(temp_path, 'rb') as csv_file:
             csv_data = csv_file.read()
