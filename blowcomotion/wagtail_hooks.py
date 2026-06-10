@@ -11,6 +11,7 @@ from blowcomotion.views import (
     dump_data,
     export_attendance_csv,
     export_charts_csv,
+    export_library_instruments_csv,
     export_members_csv,
     fetch_embed_data,
     instrument_library_available,
@@ -45,6 +46,7 @@ def register_admin_urls():
         path("export_members/", export_members_csv, name="export_members"),
         path("export_attendance/", export_attendance_csv, name="export_attendance"),
         path("export_charts/", export_charts_csv, name="export_charts"),
+        path("export_library_instruments/", export_library_instruments_csv, name="export_library_instruments"),
         path("embeds/fetch/", fetch_embed_data, name="fetch_embed_data"),
         path(
             "instrument-library/rented/",
@@ -74,16 +76,25 @@ def register_management_menu_item():
     """
     Register the admin menu item for the app.
     """
-    submenu = Menu(items=[
+    exports_submenu = Menu(items=[
         MenuItem('Dump Data', reverse('dump_data'), icon_name='download'),
         MenuItem('Export Members CSV', reverse('export_members'), icon_name='table'),
         MenuItem('Export Attendance CSV', reverse('export_attendance'), icon_name='calendar'),
         MenuItem('Export Charts CSV', reverse('export_charts'), icon_name='doc-full-inverse'),
+        MenuItem('Export Library Instruments CSV', reverse('export_library_instruments'), icon_name='french-horn'),
+    ])
+    
+    library_dashboards_submenu = Menu(items=[
         MenuItem('Library: Rented', reverse('instrument_library_rented'), icon_name='french-horn'),
         MenuItem('Library: Available', reverse('instrument_library_available'), icon_name='french-horn'),
         MenuItem('Library: Maintenance', reverse('instrument_library_needs_repair'), icon_name='warning'),
     ])
-    return SubmenuMenuItem('Management', submenu, icon_name='cogs', order=10000)
+    
+    submenu = Menu(items=[
+        SubmenuMenuItem('Exports', exports_submenu, icon_name='download'),
+        SubmenuMenuItem('Library Dashboards', library_dashboards_submenu, icon_name='french-horn'),
+    ])
+    return SubmenuMenuItem('Band Utilities', submenu, icon_name='cogs', order=10000)
 
 
 @hooks.register("register_admin_menu_item")
