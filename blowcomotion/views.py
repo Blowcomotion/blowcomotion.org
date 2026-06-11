@@ -32,6 +32,7 @@ from blowcomotion.forms import (
 from blowcomotion.models import (
     AttendanceRecord,
     BookingFormSubmission,
+    CachedGig,
     ContactFormSubmission,
     DonateFormSubmission,
     FeedbackFormSubmission,
@@ -838,6 +839,59 @@ def _process_form_submission(request, form_type, form_data, submission_model):
         }
 
 
+def sync_gigs_admin(request):
+    """
+    Admin view to manually trigger gig sync from the Gig-O-Matic API.
+    
+    This provides a web interface to run the sync_gigs management command
+    for cases when immediate sync is needed (e.g., after adding new gigs).
+    """
+    # Check if the user is superuser
+    if not request.user.is_superuser:
+        logger.warning(f"Unauthorized access attempt to sync_gigs_admin by user {request.user.username}")
+        return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
+    
+    if request.method == 'POST':
+        # Run the sync
+        output = StringIO()
+        try:
+            call_command('sync_gigs', stdout=output, verbosity=2)
+            sync_output = output.getvalue()
+            # Strip ANSI color codes for HTML display
+            import re
+            sync_output = re.sub(r'\x1b\[[0-9;]*m', '', sync_output)
+            logger.info(f"Manual gig sync triggered by {request.user.username}")
+            
+            # Get sync stats
+            gig_count = CachedGig.objects.count()
+            upcoming_count = CachedGig.get_upcoming_gigs().count()
+            
+            return render(request, 'admin/sync_gigs_result.html', {
+                'success': True,
+                'output': sync_output,
+                'gig_count': gig_count,
+                'upcoming_count': upcoming_count,
+            })
+        except Exception as e:
+            logger.error(f"Error during manual gig sync by {request.user.username}: {e}")
+            return render(request, 'admin/sync_gigs_result.html', {
+                'success': False,
+                'error': str(e),
+            })
+    
+    # GET request - show the sync form with current status
+    gig_count = CachedGig.objects.count()
+    upcoming_count = CachedGig.get_upcoming_gigs().count()
+    last_sync = CachedGig.objects.order_by('-last_synced').first()
+    last_sync_time = last_sync.last_synced if last_sync else None
+    
+    return render(request, 'admin/sync_gigs.html', {
+        'gig_count': gig_count,
+        'upcoming_count': upcoming_count,
+        'last_sync_time': last_sync_time,
+    })
+
+
 def dump_data(request):
     # Create an in-memory string buffer to capture the output
     output = StringIO()
@@ -1427,10 +1481,15 @@ def attendance_capture(request, section_slug=None):
             # Extract gig ID from 'gig_<id>' format
             gig_id = event_type_raw.split('_', 1)[1]
             event_type = 'performance'
-            # Get gig information
-            gig_data = make_gigo_api_request(f"/gigs/{gig_id}")
-            if gig_data:
-                gig_title = gig_data.get('title', 'Unknown Gig')
+            # Get gig information from database cache
+            cached_gig = CachedGig.get_gig_by_id(int(gig_id))
+            if cached_gig:
+                gig_title = cached_gig.title
+            else:
+                # Fallback to API if not in cache (e.g., newly created gig)
+                gig_data = make_gigo_api_request(f"/gigs/{gig_id}")
+                if gig_data:
+                    gig_title = gig_data.get('title', 'Unknown Gig')
         elif event_type_raw == 'performance_no_gig':
             event_type = 'performance'
         else:
@@ -1709,24 +1768,16 @@ def attendance_capture(request, section_slug=None):
     if cached_result is not None:
         gig_choices = cached_result.get('gigs', [])
     else:
-        # If not cached, fetch from API and cache the result
-        gigs_data = make_gigo_api_request("/gigs")
-        if gigs_data and gigs_data.get("gigs"):
-            # Filter gigs for the specific date
-            for gig_item in gigs_data["gigs"]:
-                # Convert UTC time to Central timezone, keep API date
-                gig_date_str, _ = convert_utc_gig_to_central(gig_item)
-                
-                if (gig_date_str == date_str and 
-                    gig_item.get("gig_status", "").lower() == "confirmed" and 
-                    gig_item.get("band", "").lower() == "blowcomotion"):
-                    gig_choices.append({
-                        'id': gig_item.get('id'),
-                        'title': gig_item.get('title', 'Untitled Gig'),
-                        'date': gig_date_str,  # API date with times converted to Central
-                    })
+        # Fetch from database cache (synced from API via management command)
+        cached_gigs = CachedGig.get_gigs_for_date(date_str)
+        for gig in cached_gigs:
+            gig_choices.append({
+                'id': gig.gig_id,
+                'title': gig.title,
+                'date': gig.date.isoformat(),
+            })
         
-        # Cache the result for 10 minutes
+        # Cache the result for 10 minutes (fast lookup for repeated requests)
         result = {'gigs': gig_choices}
         cache.set(cache_key, result, 600)
     
@@ -2116,31 +2167,19 @@ def gigs_for_date(request):
             logger.info(f"Returning cached gigs for {date_str}: {len(cached_result.get('gigs', []))} gig(s)")
             return JsonResponse(cached_result)
         
-        # Fetch gigs from API
-        logger.info(f"Fetching gigs from API for date {date_str}")
-        gigs_data = make_gigo_api_request("/gigs")
-        if gigs_data is None:
-            logger.error(f"Failed to fetch gigs from API for date {date_str}")
-            return JsonResponse({'error': 'Unable to fetch gigs at this time.'}, status=500)
+        # Fetch from database cache (synced from API via management command)
+        logger.info(f"Fetching gigs from database cache for date {date_str}")
+        cached_gigs = CachedGig.get_gigs_for_date(date_str)
         filtered_gigs = []
         
-        if gigs_data and gigs_data.get("gigs"):
-            # Filter gigs for the specific date and other criteria
-            logger.info(f"Processing {len(gigs_data.get('gigs', []))} total gigs from API")
-            for gig in gigs_data["gigs"]:
-                # Convert UTC time to Central timezone, keep API date
-                gig_date_str, _ = convert_utc_gig_to_central(gig)
-                
-                if (gig_date_str == date_str and 
-                    gig.get("gig_status", "").lower() == "confirmed" and 
-                    gig.get("band", "").lower() == "blowcomotion"):
-                    logger.info(f"Found matching gig: {gig.get('title')} (ID: {gig.get('id')}) for {date_str}")
-                    filtered_gigs.append({
-                        'id': gig.get('id'),
-                        'title': gig.get('title', 'Untitled Gig'),
-                        'date': gig_date_str,  # API date with times converted to Central
-                        'address': gig.get('address', '')
-                    })
+        for gig in cached_gigs:
+            logger.info(f"Found matching gig: {gig.title} (ID: {gig.gig_id}) for {date_str}")
+            filtered_gigs.append({
+                'id': gig.gig_id,
+                'title': gig.title,
+                'date': gig.date.isoformat(),
+                'address': gig.address
+            })
         
         result = {'gigs': filtered_gigs}
         logger.info(f"Returning {len(filtered_gigs)} gig(s) for {date_str}, caching for 10 minutes")

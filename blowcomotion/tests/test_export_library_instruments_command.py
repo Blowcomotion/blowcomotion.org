@@ -16,8 +16,8 @@ class ExportLibraryInstrumentsToCSVCommandTest(TestCase):
     """Tests for the export_library_instruments_to_csv management command."""
 
     def setUp(self):
-        from decimal import Decimal
         import datetime
+        from decimal import Decimal
 
         from blowcomotion.models import Instrument, Member
 

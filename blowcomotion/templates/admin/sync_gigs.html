@@ -1,0 +1,57 @@
+{% extends "wagtailadmin/base.html" %}
+{% load wagtailadmin_tags %}
+
+{% block titletag %}Sync Gigs{% endblock %}
+
+{% block content %}
+<div class="nice-padding">
+    <h1 class="heading heading--icon">
+        <svg class="icon icon-cog" aria-hidden="true">
+            <use href="#icon-cog"></use>
+        </svg>
+        Sync Gigs from Gig-O-Matic
+    </h1>
+
+    <div class="panel" style="max-width: 800px;">
+        <h2>Current Cache Status</h2>
+        <table class="listing">
+            <tbody>
+                <tr>
+                    <th>Total Cached Gigs</th>
+                    <td>{{ gig_count }}</td>
+                </tr>
+                <tr>
+                    <th>Upcoming Confirmed Gigs</th>
+                    <td>{{ upcoming_count }}</td>
+                </tr>
+                <tr>
+                    <th>Last Sync</th>
+                    <td>
+                        {% if last_sync_time %}
+                            {{ last_sync_time|date:"F j, Y, g:i a" }}
+                        {% else %}
+                            Never synced
+                        {% endif %}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top: 20px;">
+            <h2>Manual Sync</h2>
+            <p>Click the button below to manually sync gig data from the Gig-O-Matic API. This is useful when new gigs have been added and you need them to appear immediately.</p>
+            <p><strong>Note:</strong> Gigs are automatically synced hourly via a scheduled task. Use this only when immediate sync is needed.</p>
+            
+            <form method="post" style="margin-top: 15px;">
+                {% csrf_token %}
+                <button type="submit" class="button button-longrunning" data-clicked-text="Syncing...">
+                    <svg class="icon icon-spinner icon-spinner-active" aria-hidden="true">
+                        <use href="#icon-spinner"></use>
+                    </svg>
+                    <em>Sync Now</em>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

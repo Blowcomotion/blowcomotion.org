@@ -212,6 +212,7 @@ WAGTAILIMAGES_IMAGE_MODEL = 'blowcomotion.CustomImage'
 
 GIGO_API_URL = "http://localhost:8000/api"
 GIGO_API_KEY = None
+GIGO_BAND_NAME = "Blowcomotion"  # Band name to filter gigs (case-insensitive)
 
 # GO3 Band Invitation Settings
 # Band ID for Blowcomotion in GO3 - set in dev.py for local testing, and should be set in production.py or local.py for production

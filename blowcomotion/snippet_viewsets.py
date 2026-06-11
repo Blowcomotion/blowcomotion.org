@@ -483,11 +483,74 @@ class InstrumentStorageLocationViewSet(SnippetViewSet):
         super().__init__(*args, **kwargs)
 
 
+class CachedGigFilterSet(WagtailFilterSet):
+    date = django_filters.DateFromToRangeFilter(
+        widget=DateRangePickerWidget,
+        label='Date Range',
+    )
+    
+    class Meta:
+        model = None
+        fields = {
+            'gig_status': ['exact'],
+            'band': ['exact'],
+        }
+
+
+class CachedGigViewSet(SnippetViewSet):
+    model = None
+    menu_label = 'Cached Gigs'
+    menu_name = 'cached_gigs'
+    menu_icon = 'date'
+    search_fields = ('title', 'address', 'band')
+    list_display = [
+        'title',
+        DateColumn('date', label='Date'),
+        'time',
+        'gig_status',
+        'band',
+        'address',
+        DateColumn('last_synced', label='Last Synced'),
+    ]
+    filterset_class = None  # Set in __init__
+    ordering = ['-date', 'time']
+    list_filter = ['gig_status', 'band']
+    panels = [
+        FieldRowPanel([
+            FieldPanel('gig_id', read_only=True),
+            FieldPanel('title'),
+        ], heading="Gig Info"),
+        FieldRowPanel([
+            FieldPanel('date'),
+            FieldPanel('time'),
+        ], heading="Date and Time"),
+        FieldPanel('address'),
+        FieldRowPanel([
+            FieldPanel('gig_status'),
+            FieldPanel('band'),
+        ], heading="Status"),
+        FieldPanel('last_synced', read_only=True),
+    ]
+
+    def __init__(self, *args, **kwargs):
+        from .models import CachedGig
+
+        # Create a dynamic FilterSet class with the model set
+        class CachedGigFilterSetWithModel(CachedGigFilterSet):
+            class Meta(CachedGigFilterSet.Meta):
+                model = CachedGig
+        
+        self.model = CachedGig
+        self.filterset_class = CachedGigFilterSetWithModel
+        super().__init__(*args, **kwargs)
+
+
 class BandViewSetGroup(SnippetViewSetGroup):
     items = (EventViewSet, SectionViewSet, InstrumentViewSet, MemberViewSet, SongViewSet, ChartViewSet, AttendanceRecordViewSet, LibraryInstrumentViewSet, InstrumentHistoryLogViewSet, InstrumentStorageLocationViewSet)
     menu_icon = 'drum'
     menu_label = 'Band Stuff'
     menu_name = 'band'
+
 
 
 class ContactFormSubmissionViewset(SnippetViewSet):

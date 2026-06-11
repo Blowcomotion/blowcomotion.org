@@ -18,6 +18,7 @@ from blowcomotion.views import (
     instrument_library_needs_repair,
     instrument_library_quick_rent,
     instrument_library_rented,
+    sync_gigs_admin,
 )
 
 from .chooser_viewsets import (
@@ -30,10 +31,11 @@ from .chooser_viewsets import (
     section_chooser_viewset,
     song_chooser_viewset,
 )
-from .snippet_viewsets import BandViewSetGroup, FormsViewSetGroup
+from .snippet_viewsets import BandViewSetGroup, CachedGigViewSet, FormsViewSetGroup
 
 register_snippet(BandViewSetGroup)
 register_snippet(FormsViewSetGroup)
+register_snippet(CachedGigViewSet)
 
 
 @hooks.register("register_admin_urls")
@@ -43,6 +45,7 @@ def register_admin_urls():
     """
     return [
         path("dump_data/", dump_data, name="dump_data"),
+        path("sync_gigs/", sync_gigs_admin, name="sync_gigs"),
         path("export_members/", export_members_csv, name="export_members"),
         path("export_attendance/", export_attendance_csv, name="export_attendance"),
         path("export_charts/", export_charts_csv, name="export_charts"),
@@ -90,9 +93,15 @@ def register_management_menu_item():
         MenuItem('Library: Maintenance', reverse('instrument_library_needs_repair'), icon_name='warning'),
     ])
     
+    sync_submenu = Menu(items=[
+        MenuItem('Sync Gigs', reverse('sync_gigs'), icon_name='cog'),
+        MenuItem('Cached Gigs', reverse('wagtailsnippets_blowcomotion_cachedgig:list'), icon_name='date'),
+    ])
+    
     submenu = Menu(items=[
         SubmenuMenuItem('Exports', exports_submenu, icon_name='download'),
         SubmenuMenuItem('Library Dashboards', library_dashboards_submenu, icon_name='french-horn'),
+        SubmenuMenuItem('Sync', sync_submenu, icon_name='cog'),
     ])
     return SubmenuMenuItem('Band Utilities', submenu, icon_name='cogs', order=10000)
 

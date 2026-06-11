@@ -19,6 +19,12 @@ from django.conf import settings
 from django.views.generic.base import View
 
 
+def get_cached_gig_model():
+    """Late import to avoid circular import."""
+    from blowcomotion.models import CachedGig
+    return CachedGig
+
+
 class ChartChooserViewset(ChooserViewSet):
     model = "blowcomotion.Chart"
     choose_one_text = "Choose a chart"
@@ -247,7 +253,7 @@ class BaseGigoGigChooseView(BaseChooseView):
                 "title",
                 label="Title",
                 url_name=self.chosen_url_name,
-                id_accessor="id",
+                id_accessor="gig_id",
                 link_attrs={"data-chooser-modal-choice": True},
             ),
             Column("date", label="Date"),
@@ -255,23 +261,9 @@ class BaseGigoGigChooseView(BaseChooseView):
         ]
 
     def get_object_list(self):
-        r = requests.get(
-            f"{settings.GIGO_API_URL}/gigs",
-            headers={"X-API-KEY": settings.GIGO_API_KEY},
-        )
-        r.raise_for_status()
-        results = r.json()
-        if results["gigs"] is None:
-            return []
-        # remove gigs before today
-        results = [
-            gig
-            for gig in results["gigs"]
-            if gig["date"] >= datetime.date.today().isoformat() and gig["gig_status"].lower() == "confirmed" and gig["band"].lower() == "blowcomotion"
-        ]
-
-        results.sort(key=lambda gig: gig["date"])
-        return results
+        """Get upcoming confirmed gigs from database cache."""
+        CachedGig = get_cached_gig_model()
+        return list(CachedGig.get_upcoming_gigs())
 
     def apply_object_list_ordering(self, objects):
         return objects
@@ -289,6 +281,17 @@ class GigoGigChooseResultsView(
 
 class GigoGigChosenViewMixin(ChosenViewMixin):
     def get_object(self, pk):
+        """Get a gig by ID from database cache."""
+        CachedGig = get_cached_gig_model()
+        cached_gig = CachedGig.get_gig_by_id(int(pk))
+        if cached_gig:
+            return {
+                "id": cached_gig.gig_id,
+                "title": cached_gig.title,
+                "date": cached_gig.date.isoformat(),
+                "address": cached_gig.address,
+            }
+        # Fallback to API if not in cache
         r = requests.get(
             f"{settings.GIGO_API_URL}/gigs/{int(pk)}",
             headers={"X-API-KEY": settings.GIGO_API_KEY},
@@ -299,6 +302,13 @@ class GigoGigChosenViewMixin(ChosenViewMixin):
 
 class GigoGigChosenResponseMixin(ChosenResponseMixin):
     def get_chosen_response_data(self, item):
+        CachedGig = get_cached_gig_model()
+        # Handle both CachedGig model instances and dict responses
+        if isinstance(item, CachedGig):
+            return {
+                "id": item.gig_id,
+                "title": item.title,
+            }
         return {
             "id": item["id"],
             "title": item["title"],
@@ -311,19 +321,39 @@ class GigoGigChosenView(GigoGigChosenViewMixin, GigoGigChosenResponseMixin, View
 
 class BaseGigoGigChooserWidget(BaseChooser):
     def get_instance(self, value):
+        CachedGig = get_cached_gig_model()
         if value is None:
             return None
         elif isinstance(value, dict):
             return value
+        elif isinstance(value, CachedGig):
+            return {
+                "id": value.gig_id,
+                "title": value.title,
+            }
         else:
+            # Try to get from database cache first
+            cached_gig = CachedGig.get_gig_by_id(int(value.id) if hasattr(value, 'id') else int(value))
+            if cached_gig:
+                return {
+                    "id": cached_gig.gig_id,
+                    "title": cached_gig.title,
+                }
+            # Fallback to API
             r = requests.get(
-                f"{settings.GIGO_API_URL}/gigs/{value.id}",
+                f"{settings.GIGO_API_URL}/gigs/{value.id if hasattr(value, 'id') else value}",
                 headers={"X-API-KEY": settings.GIGO_API_KEY},
             )
             r.raise_for_status()
             return r.json()
 
     def get_value_data_from_instance(self, instance):
+        CachedGig = get_cached_gig_model()
+        if isinstance(instance, CachedGig):
+            return {
+                "id": instance.gig_id,
+                "title": instance.title,
+            }
         return {
             "id": instance["id"],
             "title": instance["title"],
