@@ -839,6 +839,7 @@ def _process_form_submission(request, form_type, form_data, submission_model):
         }
 
 
+@require_http_methods(["GET", "POST"])
 def sync_gigs_admin(request):
     """
     Admin view to manually trigger gig sync from the Gig-O-Matic API.

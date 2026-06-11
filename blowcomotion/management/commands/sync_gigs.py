@@ -87,10 +87,13 @@ class Command(BaseCommand):
         
         for gig in gigs_list:
             try:
-                gig_id = gig.get('id')
-                if not gig_id:
+                # Coerce gig_id to int to ensure consistent typing
+                raw_gig_id = gig.get('id')
+                try:
+                    gig_id = int(raw_gig_id)
+                except (TypeError, ValueError):
                     if verbosity >= 2:
-                        self.stdout.write(self.style.WARNING(f'Skipping gig without ID: {gig}'))
+                        self.stdout.write(self.style.WARNING(f'Skipping gig with invalid ID: {raw_gig_id!r} ({gig})'))
                     error_count += 1
                     continue
                 
@@ -103,16 +106,17 @@ class Command(BaseCommand):
                 if date_value:
                     # Handle datetime objects directly (local GO3 returns these)
                     if hasattr(date_value, 'date') and callable(getattr(date_value, 'date', None)):
-                        # It's a datetime object - convert to Central timezone first
+                        # It's a datetime object - use API date, convert time to Central
                         from zoneinfo import ZoneInfo
                         dt = date_value
+                        # Use the date from the API as-is (don't shift across days)
+                        gig_date = dt.date()
                         # If naive datetime, assume UTC (GO3 stores times in UTC)
                         if dt.tzinfo is None:
                             dt = dt.replace(tzinfo=ZoneInfo("UTC"))
-                        # Convert to Central timezone
+                        # Convert to Central timezone and strip tzinfo for TimeField
                         central_dt = dt.astimezone(ZoneInfo("America/Chicago"))
-                        gig_date = central_dt.date()
-                        gig_time = central_dt.time()
+                        gig_time = central_dt.time().replace(tzinfo=None)
                     elif hasattr(date_value, 'year'):
                         # It's a date object (no time component, use as-is)
                         gig_date = date_value
@@ -123,7 +127,8 @@ class Command(BaseCommand):
                             central_date_str, central_time_obj = convert_utc_gig_to_central(gig)
                             gig_date = datetime.strptime(central_date_str, '%Y-%m-%d').date()
                             if central_time_obj and hasattr(central_time_obj, 'time'):
-                                gig_time = central_time_obj.time()
+                                # Strip tzinfo before saving to TimeField
+                                gig_time = central_time_obj.time().replace(tzinfo=None)
                         except (ValueError, TypeError) as e:
                             if verbosity >= 2:
                                 self.stdout.write(

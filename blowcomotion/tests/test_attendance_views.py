@@ -1434,7 +1434,7 @@ class GigsEndpointTests(TestCase):
         # Create CachedGig objects
         from datetime import time
         CachedGig.objects.create(
-            gig_id="123",
+            gig_id=123,
             title="Test Concert",
             date=date(2024, 8, 15),
             time=time(19, 0),
@@ -1443,7 +1443,7 @@ class GigsEndpointTests(TestCase):
             address="Test Venue"
         )
         CachedGig.objects.create(
-            gig_id="124",
+            gig_id=124,
             title="Different Band Gig",
             date=date(2024, 8, 15),
             time=time(20, 0),
@@ -1452,7 +1452,7 @@ class GigsEndpointTests(TestCase):
             address="Other Venue"
         )
         CachedGig.objects.create(
-            gig_id="125",
+            gig_id=125,
             title="Unconfirmed Gig",
             date=date(2024, 8, 15),
             time=time(21, 0),
