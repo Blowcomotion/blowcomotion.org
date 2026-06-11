@@ -994,7 +994,6 @@ class CachedGig(models.Model):
     @classmethod
     def get_gigs_for_date(cls, date_str, band='blowcomotion', status='confirmed'):
         """Get confirmed gigs for a specific date."""
-        from django.db.models.functions import Lower
         return cls.objects.filter(
             date=date_str,
             band__iexact=band,
@@ -1004,7 +1003,6 @@ class CachedGig(models.Model):
     @classmethod
     def get_upcoming_gigs(cls, band='blowcomotion', status='confirmed'):
         """Get all upcoming confirmed gigs from today onwards."""
-        from django.db.models.functions import Lower
         return cls.objects.filter(
             date__gte=datetime.date.today(),
             band__iexact=band,

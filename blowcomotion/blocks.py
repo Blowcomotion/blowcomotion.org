@@ -1150,11 +1150,13 @@ class UpcomingPublicGigs(blocks.StructBlock):
                             continue
                         
                         # Build gig dict for template
+                        from django.utils import timezone
+                        
                         validated_gigs.append({
                             'id': gig.gig_id,
                             'title': gig.title,
-                            'date': datetime.datetime.combine(gig.date, datetime.time()) if gig.date else None,
-                            'set_time': datetime.datetime.combine(gig.date, gig.time) if gig.date and gig.time else None,
+                            'date': gig.date,
+                            'set_time': timezone.make_aware(datetime.datetime.combine(gig.date, gig.time)) if gig.date and gig.time else None,
                             'address': gig.address,
                             'gig_status': gig.gig_status,
                             'band': gig.band,

@@ -18,8 +18,6 @@ from datetime import datetime
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from django.db import transaction
-from django.utils import timezone
 
 from blowcomotion.models import CachedGig
 from blowcomotion.utils import convert_utc_gig_to_central, make_gigo_api_request
@@ -98,9 +96,6 @@ class Command(BaseCommand):
         updated_count = 0
         error_count = 0
         
-        # Track gig IDs we've seen to handle deletions
-        synced_gig_ids = set()
-        
         for gig in gigs_list:
             try:
                 gig_id = gig.get('id')
@@ -109,8 +104,6 @@ class Command(BaseCommand):
                         self.stdout.write(self.style.WARNING(f'Skipping gig without ID: {gig}'))
                     error_count += 1
                     continue
-                
-                synced_gig_ids.add(gig_id)
                 
                 # Parse date and time from the API response
                 # The API may return date as ISO format string (YYYY-MM-DD) or datetime object
@@ -156,7 +149,7 @@ class Command(BaseCommand):
                 if not gig_date:
                     if verbosity >= 2:
                         self.stdout.write(
-                            self.style.WARNING(f'Skipping gig {gig_id} with invalid date: {date_str}')
+                            self.style.WARNING(f'Skipping gig {gig_id} with invalid date: {date_value}')
                         )
                     error_count += 1
                     continue
