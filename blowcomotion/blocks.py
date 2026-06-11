@@ -1,26 +1,21 @@
 import datetime
 import logging
 import os
-import time
 import uuid
-from datetime import timedelta, tzinfo
+from datetime import timedelta
 
-import requests
 from wagtail import blocks
 from wagtail.embeds.blocks import EmbedBlock
 from wagtail.images.blocks import ImageChooserBlock
 from wagtailmedia.blocks import VideoChooserBlock
 
-from django.conf import settings
 from django.core.cache import cache
-from django.utils import timezone
 
 from blowcomotion.chooser_blocks import (
     EventChooserBlock,
     GigoGigChooserBlock,
     SongChooserBlock,
 )
-from blowcomotion.utils import convert_utc_gig_to_central
 
 logger = logging.getLogger(__name__)
 
@@ -1128,37 +1123,58 @@ class UpcomingPublicGigs(blocks.StructBlock):
 
     def get_context(self, value, parent_context=None):
         context = super().get_context(value, parent_context)
+        context['gigs'] = []
+        context['error'] = None
+        
         try:
             context['gigs'] = cache.get('upcoming_public_gigs')
             if context['gigs'] is None:
-                r = requests.get(
-                        f"{settings.GIGO_API_URL}/gigs",
-                        headers={"X-API-KEY": settings.GIGO_API_KEY},
-                    )
-                context['gigs'] = [gig for gig in r.json()['gigs'] if gig['gig_status'].lower() == 'confirmed' and gig['band'].lower() == 'blowcomotion' and gig["date"] >= datetime.date.today().isoformat() and gig['is_private'] == False and gig["hide_from_calendar"] == False and gig["is_archived"] == False and gig["is_in_trash"] == False]
+                # Import here to avoid circular imports
+                from blowcomotion.models import CachedGig
+
+                # Get upcoming confirmed gigs from database cache
+                cached_gigs = CachedGig.get_upcoming_gigs()
+                
                 validated_gigs = []
-                for gig in context['gigs']:
-                    # Convert UTC time to Central timezone (CST/CDT), keep API date as-is
-                    date_str, local_datetime = convert_utc_gig_to_central(gig)
-                    
-                    # Parse and validate the date; skip if invalid
+                for gig in cached_gigs:
                     try:
-                        parsed_date = datetime.datetime.strptime(date_str, "%Y-%m-%d")
-                    except (ValueError, TypeError):  # includes missing or malformed date
+                        # Filter out private, hidden, archived, and trashed gigs using raw_data
+                        raw = gig.raw_data or {}
+                        if raw.get('is_private', False):
+                            continue
+                        if raw.get('hide_from_calendar', False):
+                            continue
+                        if raw.get('is_archived', False):
+                            continue
+                        if raw.get('is_in_trash', False):
+                            continue
+                        
+                        # Build gig dict for template
+                        from django.utils import timezone
+                        
+                        validated_gigs.append({
+                            'id': gig.gig_id,
+                            'title': gig.title,
+                            'date': gig.date,
+                            'set_time': timezone.make_aware(datetime.datetime.combine(gig.date, gig.time)) if gig.date and gig.time else None,
+                            'address': gig.address,
+                            'gig_status': gig.gig_status,
+                            'band': gig.band,
+                        })
+                    except Exception as e:
+                        # Log individual gig errors but continue processing
+                        logger.error(f"Error processing gig {gig.gig_id}: {e}")
                         continue
 
-                    # Use the API date with Central Time for display
-                    gig['date'] = parsed_date  # date as datetime object for sorting
-                    gig['set_time'] = local_datetime  # timezone-aware datetime in Central Time
-                    validated_gigs.append(gig)
-
-                validated_gigs.sort(key=lambda gig: gig['date'])
+                # Already sorted by date from get_upcoming_gigs()
                 context['gigs'] = validated_gigs
 
                 cache.set('upcoming_public_gigs', context['gigs'], 60 * 60) # cache for 1 hour
         except Exception as e:
-            context['error'] = str(e)
+            logger.error(f"Error in UpcomingPublicGigs block: {e}")
+            context['error'] = None  # Don't show errors to end users
             context['gigs'] = []
+        
         return context
 
     class Meta:

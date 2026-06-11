@@ -15,6 +15,7 @@ from django.urls import reverse
 
 from blowcomotion.models import (
     AttendanceRecord,
+    CachedGig,
     Instrument,
     Member,
     MemberInstrument,
@@ -1428,40 +1429,37 @@ class GigsEndpointTests(TestCase):
         self.assertIn('error', data)
         self.assertEqual(data['error'], 'Invalid date format')
 
-    @patch('requests.get')
-    def test_gigs_for_date_api_success(self, mock_get):
+    def test_gigs_for_date_api_success(self):
         """Test successful gigs API response"""
-        # Mock API response
-        mock_response = mock_get.return_value
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "gigs": [
-                {
-                    "id": "123",
-                    "title": "Test Concert",
-                    "date": "2024-08-15",
-                    "gig_status": "Confirmed",
-                    "band": "Blowcomotion",
-                    "address": "Test Venue"
-                },
-                {
-                    "id": "124",
-                    "title": "Different Band Gig",
-                    "date": "2024-08-15",
-                    "gig_status": "Confirmed",
-                    "band": "Other Band",
-                    "address": "Other Venue"
-                },
-                {
-                    "id": "125",
-                    "title": "Unconfirmed Gig",
-                    "date": "2024-08-15",
-                    "gig_status": "Tentative",
-                    "band": "Blowcomotion",
-                    "address": "Test Venue"
-                }
-            ]
-        }
+        # Create CachedGig objects
+        from datetime import time
+        CachedGig.objects.create(
+            gig_id=123,
+            title="Test Concert",
+            date=date(2024, 8, 15),
+            time=time(19, 0),
+            gig_status="Confirmed",
+            band="Blowcomotion",
+            address="Test Venue"
+        )
+        CachedGig.objects.create(
+            gig_id=124,
+            title="Different Band Gig",
+            date=date(2024, 8, 15),
+            time=time(20, 0),
+            gig_status="Confirmed",
+            band="Other Band",
+            address="Other Venue"
+        )
+        CachedGig.objects.create(
+            gig_id=125,
+            title="Unconfirmed Gig",
+            date=date(2024, 8, 15),
+            time=time(21, 0),
+            gig_status="Tentative",
+            band="Blowcomotion",
+            address="Test Venue"
+        )
         
         response = self.client.get(reverse('gigs-for-date'), {'date': '2024-08-15'})
         self.assertEqual(response.status_code, 200)
@@ -1470,31 +1468,24 @@ class GigsEndpointTests(TestCase):
         # Should only return confirmed Blowcomotion gigs
         self.assertIn('gigs', data)
         self.assertEqual(len(data['gigs']), 1)
-        self.assertEqual(data['gigs'][0]['id'], '123')
+        self.assertEqual(data['gigs'][0]['id'], 123)  # gig_id is stored as integer
         self.assertEqual(data['gigs'][0]['title'], 'Test Concert')
 
-    @patch('requests.get')
-    def test_gigs_for_date_api_error(self, mock_get):
-        """Test handling of API errors"""
-        # Mock API error
-        mock_get.side_effect = Exception("API connection failed")
-        
+    def test_gigs_for_date_api_error(self):
+        """Test handling when no gigs exist in database"""
+        # With CachedGig, there's no external API call that can fail
+        # Instead, we just return empty results when no gigs match
         response = self.client.get(reverse('gigs-for-date'), {'date': '2024-08-15'})
-        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertIn('error', data)
+        self.assertIn('gigs', data)
+        self.assertEqual(len(data['gigs']), 0)
 
-    @patch('requests.get')
-    def test_gigs_for_date_no_matching_gigs(self, mock_get):
+    def test_gigs_for_date_no_matching_gigs(self):
         """Test response when no gigs match the criteria"""
         # Clear cache to ensure clean test
         from django.core.cache import cache
         cache.clear()
-        
-        # Mock API response with no matching gigs
-        mock_response = mock_get.return_value
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"gigs": []}
         
         response = self.client.get(reverse('gigs-for-date'), {'date': '2024-08-15'})
         self.assertEqual(response.status_code, 200)
