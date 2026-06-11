@@ -866,6 +866,8 @@ def sync_gigs_admin(request):
             # Get sync stats
             gig_count = CachedGig.objects.count()
             upcoming_count = CachedGig.get_upcoming_gigs().count()
+
+            cache.clear()  # Clear cache to ensure updated gig data is shown on the site
             
             return render(request, 'admin/sync_gigs_result.html', {
                 'success': True,
