@@ -1482,7 +1482,10 @@ def attendance_capture(request, section_slug=None):
             gig_id = event_type_raw.split('_', 1)[1]
             event_type = 'performance'
             # Get gig information from database cache
-            cached_gig = CachedGig.get_gig_by_id(int(gig_id))
+            try:
+                cached_gig = CachedGig.get_gig_by_id(int(gig_id))
+            except (TypeError, ValueError):
+                cached_gig = None
             if cached_gig:
                 gig_title = cached_gig.title
             else:

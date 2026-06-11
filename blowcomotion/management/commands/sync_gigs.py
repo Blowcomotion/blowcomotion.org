@@ -34,31 +34,20 @@ class Command(BaseCommand):
             action='store_true',
             help='Preview sync without saving to database',
         )
-        parser.add_argument(
-            '--force',
-            action='store_true',
-            help='Force sync even if API settings are not configured',
-        )
 
     def handle(self, *args, **options):
         verbosity = options.get('verbosity', 1)
         dry_run = options.get('dry_run', False)
-        force = options.get('force', False)
         
         # Check API configuration
         api_url = getattr(settings, 'GIGO_API_URL', None)
         api_key = getattr(settings, 'GIGO_API_KEY', None)
         
         if not api_url or not api_key:
-            if force:
-                self.stdout.write(
-                    self.style.WARNING('API settings not configured, but --force flag was used')
-                )
-            else:
-                self.stdout.write(
-                    self.style.ERROR('GIGO_API_URL or GIGO_API_KEY not configured in settings')
-                )
-                return
+            self.stdout.write(
+                self.style.ERROR('GIGO_API_URL or GIGO_API_KEY not configured in settings')
+            )
+            return
         
         if dry_run:
             self.stdout.write(self.style.WARNING('DRY RUN - No changes will be saved'))

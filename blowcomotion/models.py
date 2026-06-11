@@ -992,21 +992,27 @@ class CachedGig(models.Model):
         return f"{self.title} ({self.date})"
     
     @classmethod
-    def get_gigs_for_date(cls, date_str, band='blowcomotion', status='confirmed'):
+    def get_gigs_for_date(cls, date_str, band=None, status='confirmed'):
         """Get confirmed gigs for a specific date."""
+        from django.conf import settings
+        
+        band = band or getattr(settings, 'GIGO_BAND_NAME', 'Blowcomotion')
         return cls.objects.filter(
             date=date_str,
             band__iexact=band,
-            gig_status__iexact=status
+            gig_status__iexact=status,
         )
     
     @classmethod
-    def get_upcoming_gigs(cls, band='blowcomotion', status='confirmed'):
+    def get_upcoming_gigs(cls, band=None, status='confirmed'):
         """Get all upcoming confirmed gigs from today onwards."""
+        from django.conf import settings
+        
+        band = band or getattr(settings, 'GIGO_BAND_NAME', 'Blowcomotion')
         return cls.objects.filter(
             date__gte=datetime.date.today(),
             band__iexact=band,
-            gig_status__iexact=status
+            gig_status__iexact=status,
         ).order_by('date', 'time')
     
     @classmethod
