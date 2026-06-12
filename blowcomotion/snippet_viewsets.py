@@ -505,7 +505,7 @@ class CachedGigViewSet(SnippetViewSet):
     search_fields = ('title', 'address', 'band')
     list_display = [
         'title',
-        DateColumn('date', label='Date'),
+        'date',
         'time',
         'gig_status',
         'band',
