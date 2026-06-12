@@ -103,7 +103,7 @@ def register_management_menu_item():
         SubmenuMenuItem('Library Dashboards', library_dashboards_submenu, icon_name='french-horn'),
         SubmenuMenuItem('Sync', sync_submenu, icon_name='cog'),
     ])
-    return SubmenuMenuItem('Band Utilities', submenu, icon_name='cogs', order=10000)
+    return SubmenuMenuItem('Utilities', submenu, icon_name='cogs', order=10000)
 
 
 @hooks.register("register_admin_menu_item")
