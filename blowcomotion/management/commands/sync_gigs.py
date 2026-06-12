@@ -14,7 +14,7 @@ Cron example (run every hour):
     0 * * * * cd /path/to/project && /path/to/venv/bin/python manage.py sync_gigs >> /var/log/sync_gigs.log 2>&1
 """
 import logging
-from datetime import datetime
+from datetime import date, datetime
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -52,6 +52,9 @@ class Command(BaseCommand):
         if dry_run:
             self.stdout.write(self.style.WARNING('DRY RUN - No changes will be saved'))
         
+        # Get today's date for filtering
+        today = date.today()
+        
         self.stdout.write('Fetching gigs from Gig-O-Matic API...')
         
         # Fetch all gigs from the API
@@ -80,6 +83,42 @@ class Command(BaseCommand):
             filtered_count = original_count - len(gigs_list)
             if filtered_count > 0:
                 self.stdout.write(f'Filtered to {len(gigs_list)} gigs for band "{band_name}" (excluded {filtered_count})')
+        
+        # Filter out gigs before today's date
+        original_count = len(gigs_list)
+        future_gigs = []
+        for gig in gigs_list:
+            date_value = gig.get('date', '')
+            try:
+                # Parse the date to check if it's today or in the future
+                if hasattr(date_value, 'date') and callable(getattr(date_value, 'date', None)):
+                    gig_date = date_value.date()
+                elif hasattr(date_value, 'year'):
+                    gig_date = date_value
+                else:
+                    gig_date = datetime.strptime(str(date_value)[:10], '%Y-%m-%d').date()
+                
+                if gig_date >= today:
+                    future_gigs.append(gig)
+            except (ValueError, TypeError, AttributeError):
+                # If we can't parse the date, skip this gig
+                continue
+        
+        gigs_list = future_gigs
+        past_filtered_count = original_count - len(gigs_list)
+        if past_filtered_count > 0:
+            self.stdout.write(f'Filtered out {past_filtered_count} past gigs (keeping {len(gigs_list)} current/future gigs)')
+        
+        # Delete cached gigs before today's date
+        if dry_run:
+            old_gigs_count = CachedGig.objects.filter(date__lt=today).count()
+            if old_gigs_count > 0:
+                self.stdout.write(f'Would delete {old_gigs_count} cached gigs before {today}')
+        else:
+            deleted_count, _ = CachedGig.objects.filter(date__lt=today).delete()
+            if deleted_count > 0:
+                self.stdout.write(f'Deleted {deleted_count} cached gigs before {today}')
+                logger.info(f'sync_gigs: Deleted {deleted_count} old cached gigs before {today}')
         
         created_count = 0
         updated_count = 0

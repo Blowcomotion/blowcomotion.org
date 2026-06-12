@@ -10,6 +10,9 @@ from django.test import TestCase, override_settings
 
 from blowcomotion.models import CachedGig
 
+# Use a fixed future date for testing
+TEST_DATE = datetime.date(2027, 7, 15)
+
 
 class SyncGigsCommandTests(TestCase):
     """Test cases for sync_gigs management command."""
@@ -41,7 +44,7 @@ class SyncGigsCommandTests(TestCase):
                 {
                     'id': 123,
                     'title': 'Test Concert',
-                    'date': '2026-07-15',
+                    'date': TEST_DATE.strftime('%Y-%m-%d'),
                     'call_time': '18:00',
                     'address': 'Test Venue',
                     'gig_status': 'confirmed',
@@ -75,7 +78,7 @@ class SyncGigsCommandTests(TestCase):
         CachedGig.objects.create(
             gig_id=123,
             title='Old Title',
-            date=datetime.date(2026, 7, 15),
+            date=TEST_DATE,
             time=datetime.time(18, 0),
             address='Old Venue',
             gig_status='confirmed',
@@ -88,7 +91,7 @@ class SyncGigsCommandTests(TestCase):
                 {
                     'id': 123,
                     'title': 'Updated Concert',
-                    'date': '2026-07-15',
+                    'date': TEST_DATE.strftime('%Y-%m-%d'),
                     'call_time': '19:00',
                     'address': 'New Venue',
                     'gig_status': 'confirmed',
@@ -125,7 +128,7 @@ class SyncGigsCommandTests(TestCase):
                 {
                     'id': 123,
                     'title': 'Test Concert',
-                    'date': '2026-07-15',
+                    'date': TEST_DATE.strftime('%Y-%m-%d'),
                     'call_time': '18:00',
                     'address': 'Test Venue',
                     'gig_status': 'confirmed',
@@ -134,7 +137,7 @@ class SyncGigsCommandTests(TestCase):
                 {
                     'id': 124,
                     'title': 'Other Concert',
-                    'date': '2026-07-16',
+                    'date': (TEST_DATE + datetime.timedelta(days=1)).strftime('%Y-%m-%d'),
                     'call_time': '19:00',
                     'address': 'Other Venue',
                     'gig_status': 'confirmed',
@@ -168,7 +171,7 @@ class SyncGigsCommandTests(TestCase):
                 {
                     'id': 123,
                     'title': 'Test Concert',
-                    'date': '2026-07-15',
+                    'date': TEST_DATE.strftime('%Y-%m-%d'),
                     'call_time': '18:00',
                     'address': 'Test Venue',
                     'gig_status': 'confirmed',
@@ -201,7 +204,7 @@ class SyncGigsCommandTests(TestCase):
                 {
                     # Missing ID
                     'title': 'No ID Concert',
-                    'date': '2026-07-15',
+                    'date': TEST_DATE.strftime('%Y-%m-%d'),
                     'call_time': '18:00',
                     'address': 'Test Venue',
                     'gig_status': 'confirmed',
@@ -219,7 +222,7 @@ class SyncGigsCommandTests(TestCase):
                 {
                     'id': 125,
                     'title': 'Valid Concert',
-                    'date': '2026-07-15',
+                    'date': TEST_DATE.strftime('%Y-%m-%d'),
                     'call_time': '18:00',
                     'address': 'Test Venue',
                     'gig_status': 'confirmed',
@@ -237,7 +240,10 @@ class SyncGigsCommandTests(TestCase):
         self.assertEqual(gig.title, 'Valid Concert')
         
         output = out.getvalue()
-        self.assertIn('2 errors', output)
+        # Invalid date gig is filtered out during date filtering, only missing ID causes error
+        self.assertIn('1 errors', output)
+        # Should also see that 1 gig was filtered out due to invalid date
+        self.assertIn('Filtered out 1 past gigs', output)
     
     @override_settings(
         GIGO_API_URL='http://test-api/api',
@@ -255,3 +261,140 @@ class SyncGigsCommandTests(TestCase):
         
         output = out.getvalue()
         self.assertIn('failed to fetch', output.lower())
+    
+    @override_settings(
+        GIGO_API_URL='http://test-api/api',
+        GIGO_API_KEY='test-key',
+        GIGO_BAND_NAME='TestBand'
+    )
+    @patch('blowcomotion.management.commands.sync_gigs.make_gigo_api_request')
+    def test_sync_gigs_filters_past_gigs(self, mock_request):
+        """Test that sync filters out gigs before today's date."""
+        past_date = datetime.date.today() - datetime.timedelta(days=7)
+        
+        # Mock API response with past and future gigs
+        mock_request.return_value = {
+            'gigs': [
+                {
+                    'id': 123,
+                    'title': 'Past Concert',
+                    'date': past_date.strftime('%Y-%m-%d'),
+                    'call_time': '18:00',
+                    'address': 'Test Venue',
+                    'gig_status': 'confirmed',
+                    'band': 'TestBand',
+                },
+                {
+                    'id': 124,
+                    'title': 'Future Concert',
+                    'date': TEST_DATE.strftime('%Y-%m-%d'),
+                    'call_time': '19:00',
+                    'address': 'Test Venue',
+                    'gig_status': 'confirmed',
+                    'band': 'TestBand',
+                },
+            ]
+        }
+        
+        out = StringIO()
+        call_command('sync_gigs', stdout=out, verbosity=2)
+        
+        # Verify only future gig was created
+        self.assertEqual(CachedGig.objects.count(), 1)
+        gig = CachedGig.objects.first()
+        self.assertEqual(gig.title, 'Future Concert')
+        
+        output = out.getvalue()
+        self.assertIn('Filtered out 1 past gigs', output)
+    
+    @override_settings(
+        GIGO_API_URL='http://test-api/api',
+        GIGO_API_KEY='test-key',
+        GIGO_BAND_NAME='TestBand'
+    )
+    @patch('blowcomotion.management.commands.sync_gigs.make_gigo_api_request')
+    def test_sync_gigs_deletes_old_cached_gigs(self, mock_request):
+        """Test that sync deletes cached gigs before today's date."""
+        past_date = datetime.date.today() - datetime.timedelta(days=7)
+        
+        # Create old cached gig
+        CachedGig.objects.create(
+            gig_id=999,
+            title='Old Cached Concert',
+            date=past_date,
+            time=datetime.time(18, 0),
+            address='Old Venue',
+            gig_status='confirmed',
+            band='TestBand',
+        )
+        
+        # Mock API response with only future gigs
+        mock_request.return_value = {
+            'gigs': [
+                {
+                    'id': 124,
+                    'title': 'Future Concert',
+                    'date': TEST_DATE.strftime('%Y-%m-%d'),
+                    'call_time': '19:00',
+                    'address': 'Test Venue',
+                    'gig_status': 'confirmed',
+                    'band': 'TestBand',
+                },
+            ]
+        }
+        
+        out = StringIO()
+        call_command('sync_gigs', stdout=out, verbosity=2)
+        
+        # Verify old gig was deleted and only future gig exists
+        self.assertEqual(CachedGig.objects.count(), 1)
+        gig = CachedGig.objects.first()
+        self.assertEqual(gig.title, 'Future Concert')
+        
+        output = out.getvalue()
+        self.assertIn('Deleted 1 cached gigs', output)
+    
+    @override_settings(
+        GIGO_API_URL='http://test-api/api',
+        GIGO_API_KEY='test-key',
+        GIGO_BAND_NAME='TestBand'
+    )
+    @patch('blowcomotion.management.commands.sync_gigs.make_gigo_api_request')
+    def test_sync_gigs_dry_run_deletes_old_gigs(self, mock_request):
+        """Test that dry run reports old gigs that would be deleted."""
+        past_date = datetime.date.today() - datetime.timedelta(days=7)
+        
+        # Create old cached gig
+        CachedGig.objects.create(
+            gig_id=999,
+            title='Old Cached Concert',
+            date=past_date,
+            time=datetime.time(18, 0),
+            address='Old Venue',
+            gig_status='confirmed',
+            band='TestBand',
+        )
+        
+        # Mock API response
+        mock_request.return_value = {
+            'gigs': [
+                {
+                    'id': 124,
+                    'title': 'Future Concert',
+                    'date': TEST_DATE.strftime('%Y-%m-%d'),
+                    'call_time': '19:00',
+                    'address': 'Test Venue',
+                    'gig_status': 'confirmed',
+                    'band': 'TestBand',
+                },
+            ]
+        }
+        
+        out = StringIO()
+        call_command('sync_gigs', '--dry-run', stdout=out, verbosity=2)
+        
+        # Verify old gig was NOT deleted in dry run
+        self.assertEqual(CachedGig.objects.filter(gig_id=999).count(), 1)
+        
+        output = out.getvalue()
+        self.assertIn('Would delete 1 cached gigs', output)
