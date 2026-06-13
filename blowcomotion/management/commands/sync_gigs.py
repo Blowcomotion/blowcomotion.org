@@ -84,9 +84,12 @@ class Command(BaseCommand):
             if filtered_count > 0:
                 self.stdout.write(f'Filtered to {len(gigs_list)} gigs for band "{band_name}" (excluded {filtered_count})')
         
-        # Filter out gigs before today's date
+        # Filter out gigs before today's date and track invalid dates separately
         original_count = len(gigs_list)
         future_gigs = []
+        past_gigs_count = 0
+        invalid_date_count = 0
+        
         for gig in gigs_list:
             date_value = gig.get('date', '')
             try:
@@ -100,14 +103,27 @@ class Command(BaseCommand):
                 
                 if gig_date >= today:
                     future_gigs.append(gig)
-            except (ValueError, TypeError, AttributeError):
-                # If we can't parse the date, skip this gig
-                continue
+                else:
+                    past_gigs_count += 1
+            except (ValueError, TypeError, AttributeError) as e:
+                # If we can't parse the date, track as invalid
+                invalid_date_count += 1
+                if verbosity >= 2:
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f'Skipping gig with invalid date: {date_value!r} ({gig.get("id", "unknown")}: {gig.get("title", "untitled")})'
+                        )
+                    )
         
         gigs_list = future_gigs
-        past_filtered_count = original_count - len(gigs_list)
-        if past_filtered_count > 0:
-            self.stdout.write(f'Filtered out {past_filtered_count} past gigs (keeping {len(gigs_list)} current/future gigs)')
+        
+        # Report filtering results
+        if past_gigs_count > 0:
+            self.stdout.write(f'Filtered out {past_gigs_count} past gigs (keeping {len(gigs_list)} current/future gigs)')
+        if invalid_date_count > 0:
+            self.stdout.write(
+                self.style.WARNING(f'Skipped {invalid_date_count} gigs with invalid dates')
+            )
         
         # Delete cached gigs before today's date
         if dry_run:

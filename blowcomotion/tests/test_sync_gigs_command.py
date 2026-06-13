@@ -240,10 +240,10 @@ class SyncGigsCommandTests(TestCase):
         self.assertEqual(gig.title, 'Valid Concert')
         
         output = out.getvalue()
-        # Invalid date gig is filtered out during date filtering, only missing ID causes error
+        # Missing ID causes error during processing
         self.assertIn('1 errors', output)
-        # Should also see that 1 gig was filtered out due to invalid date
-        self.assertIn('Filtered out 1 past gigs', output)
+        # Invalid date gig should be reported as having an invalid date, not as a past gig
+        self.assertIn('Skipped 1 gigs with invalid dates', output)
     
     @override_settings(
         GIGO_API_URL='http://test-api/api',
@@ -398,3 +398,51 @@ class SyncGigsCommandTests(TestCase):
         
         output = out.getvalue()
         self.assertIn('Would delete 1 cached gigs', output)
+    
+    @override_settings(
+        GIGO_API_URL='http://test-api/api',
+        GIGO_API_KEY='test-key',
+        GIGO_BAND_NAME='TestBand'
+    )
+    @patch('blowcomotion.management.commands.sync_gigs.make_gigo_api_request')
+    def test_sync_gigs_reports_invalid_dates_verbosely(self, mock_request):
+        """Test that sync reports detailed invalid date warnings at verbosity=2."""
+        # Mock API response with invalid date
+        mock_request.return_value = {
+            'gigs': [
+                {
+                    'id': 124,
+                    'title': 'Invalid Date Concert',
+                    'date': 'not-a-date',
+                    'call_time': '18:00',
+                    'address': 'Test Venue',
+                    'gig_status': 'confirmed',
+                    'band': 'TestBand',
+                },
+                {
+                    'id': 125,
+                    'title': 'Valid Concert',
+                    'date': TEST_DATE.strftime('%Y-%m-%d'),
+                    'call_time': '18:00',
+                    'address': 'Test Venue',
+                    'gig_status': 'confirmed',
+                    'band': 'TestBand',
+                },
+            ]
+        }
+        
+        out = StringIO()
+        call_command('sync_gigs', stdout=out, verbosity=2)
+        
+        # Verify only valid gig was created
+        self.assertEqual(CachedGig.objects.count(), 1)
+        gig = CachedGig.objects.first()
+        self.assertEqual(gig.title, 'Valid Concert')
+        
+        output = out.getvalue()
+        # At verbosity=2, should see detailed invalid date warning
+        self.assertIn('Skipping gig with invalid date', output)
+        self.assertIn('not-a-date', output)
+        self.assertIn('124', output)
+        # Should also see summary of skipped gigs
+        self.assertIn('Skipped 1 gigs with invalid dates', output)
