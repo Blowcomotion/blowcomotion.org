@@ -85,7 +85,6 @@ class Command(BaseCommand):
                 self.stdout.write(f'Filtered to {len(gigs_list)} gigs for band "{band_name}" (excluded {filtered_count})')
         
         # Filter out gigs before today's date and track invalid dates separately
-        original_count = len(gigs_list)
         future_gigs = []
         past_gigs_count = 0
         invalid_date_count = 0
@@ -105,7 +104,7 @@ class Command(BaseCommand):
                     future_gigs.append(gig)
                 else:
                     past_gigs_count += 1
-            except (ValueError, TypeError, AttributeError) as e:
+            except (ValueError, TypeError, AttributeError):
                 # If we can't parse the date, track as invalid
                 invalid_date_count += 1
                 if verbosity >= 2:
