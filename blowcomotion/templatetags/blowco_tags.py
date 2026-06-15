@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from django import template
+from django.conf import settings as django_settings
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 
@@ -22,3 +23,12 @@ def is_url(string):
         return True
     except ValidationError:
         return False
+
+
+@register.simple_tag
+def get_recaptcha_site_key():
+    """
+    Return the reCAPTCHA public (site) key if configured.
+    Returns empty string if not configured.
+    """
+    return getattr(django_settings, 'RECAPTCHA_PUBLIC_KEY', '') or ''

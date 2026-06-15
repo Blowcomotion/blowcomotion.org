@@ -2,6 +2,7 @@ Django==5.2.8
 django-compressor==4.6.0
 django-libsass==0.9
 django-livereload-server==0.5.1
+django-recaptcha==4.1.0
 queryish==0.3
 wagtail==7.4.1
 wagtailmedia==0.17.2

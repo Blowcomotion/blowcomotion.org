@@ -18,6 +18,12 @@ GIGO_API_KEY = "test-api-key-local"
 # Use a test band ID locally (set up a test band in local GO3)
 GIGO_BAND_ID_LOCAL = None
 
+# reCAPTCHA: In development, keys are not set so django-recaptcha uses test keys.
+# Test keys always pass validation but show a warning banner.
+# To test with real keys locally, set them in local.py:
+# RECAPTCHA_PUBLIC_KEY = 'your-site-key'
+# RECAPTCHA_PRIVATE_KEY = 'your-secret-key'
+
 try:
     from .local import *
 except ImportError:
