@@ -31,6 +31,12 @@
                 }
                 if (!form) return;
                 
+                // If a previous reCAPTCHA attempt failed, allow one request to proceed to avoid a retry loop
+                if (form.dataset.recaptchaBypass === '1') {
+                    delete form.dataset.recaptchaBypass;
+                    return;
+                }
+                
                 // Only handle forms that post to process-form
                 var hxPost = form.getAttribute('hx-post') || '';
                 if (hxPost.indexOf('process-form') === -1) {
@@ -39,11 +45,19 @@
                 
                 var tokenInput = form.querySelector('input[name="g-recaptcha-response"]');
                 
-                // If we already have a fresh token (set within last 100ms), allow request
-                if (tokenInput && tokenInput.value && tokenInput.dataset.tokenTime) {
+                // Create token input if it doesn't exist (for dynamically injected forms)
+                if (!tokenInput) {
+                    tokenInput = document.createElement('input');
+                    tokenInput.type = 'hidden';
+                    tokenInput.name = 'g-recaptcha-response';
+                    form.appendChild(tokenInput);
+                }
+                
+                // If we already have a recent token (reCAPTCHA v3 tokens are valid ~2min), allow request
+                if (tokenInput.value && tokenInput.dataset.tokenTime) {
                     var tokenAge = Date.now() - parseInt(tokenInput.dataset.tokenTime, 10);
-                    if (tokenAge < 100) {
-                        // Fresh token, proceed with request
+                    if (tokenAge < 110000) {  // ~110s (keeps buffer under Google's ~2min lifetime)
+                        // Recent token, proceed with request
                         return;
                     }
                 }
@@ -53,15 +67,14 @@
                 
                 grecaptcha.ready(function() {
                     grecaptcha.execute(window.RECAPTCHA_SITE_KEY, {action: 'submit'}).then(function(token) {
-                        if (tokenInput) {
-                            tokenInput.value = token;
-                            tokenInput.dataset.tokenTime = Date.now().toString();
-                        }
+                        tokenInput.value = token;
+                        tokenInput.dataset.tokenTime = Date.now().toString();
                         // Re-trigger the HTMX request now that we have a token
                         htmx.trigger(form, 'submit');
                     }).catch(function(error) {
                         console.error('reCAPTCHA error:', error);
-                        // Allow form to submit anyway - server will reject if token is required
+                        // Avoid retry loops: allow one request to proceed without a token (server will decide)
+                        form.dataset.recaptchaBypass = '1';
                         htmx.trigger(form, 'submit');
                     });
                 });
@@ -77,7 +90,7 @@
                     grecaptcha.ready(function() {
                         grecaptcha.execute(window.RECAPTCHA_SITE_KEY, {action: 'submit'}).then(function(token) {
                             $tokenInput.val(token);
-                            $tokenInput.data('tokenTime', Date.now());
+                            $tokenInput.attr('data-token-time', Date.now().toString());
                         });
                     });
                 }

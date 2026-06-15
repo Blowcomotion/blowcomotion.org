@@ -234,7 +234,7 @@ WAGTAILIMAGES_AVIF_QUALITY = 80
 
 # reCAPTCHA Settings
 # Set RECAPTCHA_PUBLIC_KEY and RECAPTCHA_PRIVATE_KEY in local.py for production.
-# When keys are not set, server-side reCAPTCHA validation is skipped.
+# If keys are missing, validation is skipped only when DEBUG=True; when DEBUG=False submissions are rejected.
 # Get keys from: https://www.google.com/recaptcha/admin (select reCAPTCHA v3)
 # Example for local.py:
 #   RECAPTCHA_PUBLIC_KEY = 'your-site-key'

@@ -345,12 +345,25 @@ class MemberSignupGO3IntegrationTests(TestCase):
         GIGO_API_KEY="test-key",
         GIGO_BAND_ID_LOCAL=1,
         GIGO_BAND_ID=999,
-        DEBUG=False  # Production mode
+        DEBUG=False,  # Production mode
+        RECAPTCHA_PUBLIC_KEY='test-public',
+        RECAPTCHA_PRIVATE_KEY='test-private'
     )
+    @patch('blowcomotion.views.requests.post')
     @patch('blowcomotion.views.send_member_to_go3_band_invite')
     @patch('blowcomotion.views._send_form_email')
-    def test_signup_uses_production_band_in_production(self, mock_email, mock_go3_invite):
+    def test_signup_uses_production_band_in_production(self, mock_email, mock_go3_invite, mock_recaptcha):
         """Test that production mode uses production band ID"""
+        # Mock reCAPTCHA validation
+        mock_recaptcha_response = MagicMock()
+        mock_recaptcha_response.json.return_value = {
+            'success': True,
+            'score': 0.9,
+            'action': 'submit'
+        }
+        mock_recaptcha_response.raise_for_status = MagicMock()
+        mock_recaptcha.return_value = mock_recaptcha_response
+        
         mock_go3_invite.return_value = {
             'status': 'success',
             'message': 'Invitation sent successfully',
@@ -363,7 +376,8 @@ class MemberSignupGO3IntegrationTests(TestCase):
             'first_name': 'Alice',
             'last_name': 'Johnson',
             'email': 'alice@example.com',
-            'primary_instrument': self.instrument.name
+            'primary_instrument': self.instrument.name,
+            'g-recaptcha-response': 'test-token'
         }
         
         response = self.client.post(reverse('process-form'), form_data)
