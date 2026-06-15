@@ -523,6 +523,79 @@ def _validate_honeypot(request):
     return honeypot == 'purple'
 
 
+def _validate_recaptcha(request):
+    """
+    Validate reCAPTCHA v3 token from the request.
+    
+    Returns:
+        tuple: (is_valid: bool, error_message: str or None)
+    """
+    # If reCAPTCHA is not configured (no keys), skip validation in dev, fail in production
+    if not getattr(settings, 'RECAPTCHA_PUBLIC_KEY', None) or not getattr(settings, 'RECAPTCHA_PRIVATE_KEY', None):
+        if settings.DEBUG:
+            logger.debug("reCAPTCHA validation skipped - no keys configured")
+            return True, None
+        else:
+            logger.error("reCAPTCHA keys not configured in production - rejecting form submission")
+            return False, "reCAPTCHA verification failed. Please try again."
+    
+    recaptcha_token = request.POST.get('g-recaptcha-response')
+    
+    if not recaptcha_token:
+        logger.warning("reCAPTCHA token missing from form submission")
+        return False, "reCAPTCHA verification failed. Please try again."
+    
+    # Verify the token with Google's reCAPTCHA API
+    try:
+        response = requests.post(
+            'https://www.google.com/recaptcha/api/siteverify',
+            data={
+                'secret': settings.RECAPTCHA_PRIVATE_KEY,
+                'response': recaptcha_token,
+                'remoteip': request.META.get('REMOTE_ADDR'),
+            },
+            timeout=10,
+        )
+        response.raise_for_status()
+        
+        try:
+            result = response.json()
+        except ValueError:
+            logger.warning("reCAPTCHA verification returned a non-JSON response")
+            return False, "reCAPTCHA verification failed. Please try again."
+        
+        if not result.get('success'):
+            error_codes = result.get('error-codes', [])
+            logger.warning(f"reCAPTCHA verification failed: {error_codes}")
+            return False, "reCAPTCHA verification failed. Please try again."
+        
+        # Validate action matches what we expect (prevents token reuse across contexts)
+        action = result.get('action')
+        if action != 'submit':
+            logger.warning(f"reCAPTCHA action mismatch: {action!r} (expected: 'submit')")
+            return False, "reCAPTCHA verification failed. Please try again."
+        
+        # Check score for v3 - fail closed if score is missing (unexpected for v3 keys)
+        score = result.get('score')
+        required_score = getattr(settings, 'RECAPTCHA_REQUIRED_SCORE', 0.5)
+        
+        if score is None:
+            logger.warning("reCAPTCHA v3 score missing from response - possible key mismatch")
+            return False, "reCAPTCHA verification failed. Please try again."
+        
+        if score < required_score:
+            logger.warning(f"reCAPTCHA score too low: {score} (required: {required_score})")
+            return False, "reCAPTCHA verification failed. Please try again."
+        
+        logger.debug(f"reCAPTCHA validation successful (score: {score})")
+        return True, None
+        
+    except requests.RequestException as e:
+        logger.error(f"reCAPTCHA API request failed: {e}")
+        # On API failure, fail closed for security
+        return False, "reCAPTCHA verification failed. Please try again."
+
+
 def _send_form_email(subject, message, recipient_list):
     """Send email for form submission."""
     send_mail(
@@ -1178,6 +1251,13 @@ def process_form(request):
         if not _validate_honeypot(request):
             logger.warning(f"Honeypot triggered by user {request.user.username}")
             context['error'] = honeypot_message
+            return render(request, 'forms/error.html', context)
+        
+        # Validate reCAPTCHA
+        recaptcha_valid, recaptcha_error = _validate_recaptcha(request)
+        if not recaptcha_valid:
+            logger.warning(f"reCAPTCHA validation failed for user {request.user.username}")
+            context['error'] = recaptcha_error
             return render(request, 'forms/error.html', context)
         
         form_type = request.POST.get('form_type')

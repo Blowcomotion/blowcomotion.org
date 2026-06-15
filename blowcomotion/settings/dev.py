@@ -18,6 +18,12 @@ GIGO_API_KEY = "test-api-key-local"
 # Use a test band ID locally (set up a test band in local GO3)
 GIGO_BAND_ID_LOCAL = None
 
+# reCAPTCHA: In development, keys are typically not set, so server-side reCAPTCHA
+# validation is skipped by default.
+# To test with real keys locally, set them in local.py:
+# RECAPTCHA_PUBLIC_KEY = 'your-site-key'
+# RECAPTCHA_PRIVATE_KEY = 'your-secret-key'
+
 try:
     from .local import *
 except ImportError:

@@ -231,3 +231,14 @@ WAGTAILDOCS_MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10MB
 
 WAGTAILIMAGES_JPEG_QUALITY = 85
 WAGTAILIMAGES_AVIF_QUALITY = 80
+
+# reCAPTCHA Settings
+# Set RECAPTCHA_PUBLIC_KEY and RECAPTCHA_PRIVATE_KEY in local.py for production.
+# If keys are missing, validation is skipped only when DEBUG=True; when DEBUG=False submissions are rejected.
+# Get keys from: https://www.google.com/recaptcha/admin (select reCAPTCHA v3)
+# Example for local.py:
+#   RECAPTCHA_PUBLIC_KEY = 'your-site-key'
+#   RECAPTCHA_PRIVATE_KEY = 'your-secret-key'
+
+# Use reCAPTCHA v3 (invisible, score-based)
+RECAPTCHA_REQUIRED_SCORE = 0.5  # Score threshold (0.0 to 1.0, higher = more strict)
