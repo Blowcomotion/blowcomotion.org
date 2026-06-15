@@ -320,3 +320,8 @@ ol {
     border-left-color: transparent;
   }
 }
+
+/* Hide reCAPTCHA v3 badge - required branding is shown in form instead */
+.grecaptcha-badge {
+  visibility: hidden;
+}
