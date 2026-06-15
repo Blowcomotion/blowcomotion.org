@@ -223,12 +223,12 @@ Always wait for commands to complete. Build times are fast but package installat
 The site uses Google reCAPTCHA v3 for spam protection on all forms (contact, join band, booking, donate, feedback, member signup).
 
 **Development:**
-- No configuration needed - reCAPTCHA is disabled when keys are not set
+- No configuration needed - reCAPTCHA validation is skipped when keys are not set
 - Forms work normally without reCAPTCHA verification
 
 **Production (local.py):**
 ```python
-# Get keys from https://www.google.com/recaptcha/admin
+# Get keys from https://www.google.com/recaptcha/admin (select reCAPTCHA v3)
 RECAPTCHA_PUBLIC_KEY = 'your-site-key'
 RECAPTCHA_PRIVATE_KEY = 'your-secret-key'
 ```
@@ -238,6 +238,7 @@ RECAPTCHA_PRIVATE_KEY = 'your-secret-key'
 2. JavaScript intercepts form submissions to get a token
 3. Server validates the token with Google's API
 4. Score must meet `RECAPTCHA_REQUIRED_SCORE` threshold (default: 0.5)
+5. If score is missing or below threshold, form submission is rejected
 
 ### Files involved:
 - `blowcomotion/settings/base.py`: reCAPTCHA settings

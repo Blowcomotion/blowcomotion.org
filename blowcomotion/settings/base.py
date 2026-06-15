@@ -28,7 +28,6 @@ INSTALLED_APPS = [
     "search",
     "compressor",
     "livereload",
-    "django_recaptcha",
     "wagtail.contrib.forms",
     "wagtail.contrib.redirects",
     "wagtailseo",
@@ -235,14 +234,11 @@ WAGTAILIMAGES_AVIF_QUALITY = 80
 
 # reCAPTCHA Settings
 # Set RECAPTCHA_PUBLIC_KEY and RECAPTCHA_PRIVATE_KEY in local.py for production.
-# When not set, django-recaptcha will use test keys (which always pass but show a warning).
-# Get keys from: https://www.google.com/recaptcha/admin
+# When keys are not set, server-side reCAPTCHA validation is skipped.
+# Get keys from: https://www.google.com/recaptcha/admin (select reCAPTCHA v3)
 # Example for local.py:
 #   RECAPTCHA_PUBLIC_KEY = 'your-site-key'
 #   RECAPTCHA_PRIVATE_KEY = 'your-secret-key'
 
 # Use reCAPTCHA v3 (invisible, score-based)
 RECAPTCHA_REQUIRED_SCORE = 0.5  # Score threshold (0.0 to 1.0, higher = more strict)
-
-# Silence the test key warning in development (when keys are not set)
-SILENCED_SYSTEM_CHECKS = ['django_recaptcha.recaptcha_test_key_error']

@@ -550,20 +550,30 @@ def _validate_recaptcha(request):
                 'response': recaptcha_token,
                 'remoteip': request.META.get('REMOTE_ADDR'),
             },
-            timeout=10
+            timeout=10,
         )
-        result = response.json()
+        response.raise_for_status()
+        
+        try:
+            result = response.json()
+        except ValueError:
+            logger.warning("reCAPTCHA verification returned a non-JSON response")
+            return False, "reCAPTCHA verification failed. Please try again."
         
         if not result.get('success'):
             error_codes = result.get('error-codes', [])
             logger.warning(f"reCAPTCHA verification failed: {error_codes}")
             return False, "reCAPTCHA verification failed. Please try again."
         
-        # Check score for v3 (if available)
+        # Check score for v3 - fail closed if score is missing (unexpected for v3 keys)
         score = result.get('score')
         required_score = getattr(settings, 'RECAPTCHA_REQUIRED_SCORE', 0.5)
         
-        if score is not None and score < required_score:
+        if score is None:
+            logger.warning("reCAPTCHA v3 score missing from response - possible key mismatch")
+            return False, "reCAPTCHA verification failed. Please try again."
+        
+        if score < required_score:
             logger.warning(f"reCAPTCHA score too low: {score} (required: {required_score})")
             return False, "reCAPTCHA verification failed. Please try again."
         
@@ -572,8 +582,7 @@ def _validate_recaptcha(request):
         
     except requests.RequestException as e:
         logger.error(f"reCAPTCHA API request failed: {e}")
-        # On API failure, we could either fail open or closed
-        # Failing closed is more secure for spam prevention
+        # On API failure, fail closed for security
         return False, "reCAPTCHA verification failed. Please try again."
 
 
