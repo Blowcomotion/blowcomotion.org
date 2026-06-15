@@ -28,7 +28,9 @@ def is_url(string):
 @register.simple_tag
 def get_recaptcha_site_key():
     """
-    Return the reCAPTCHA public (site) key if configured.
-    Returns empty string if not configured.
+    Return the reCAPTCHA public (site) key if both keys are configured.
+    Returns empty string if either key is missing to keep frontend/backend behavior consistent.
     """
-    return getattr(django_settings, 'RECAPTCHA_PUBLIC_KEY', '') or ''
+    public_key = getattr(django_settings, 'RECAPTCHA_PUBLIC_KEY', None)
+    private_key = getattr(django_settings, 'RECAPTCHA_PRIVATE_KEY', None)
+    return public_key if (public_key and private_key) else ''

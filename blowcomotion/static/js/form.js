@@ -101,12 +101,20 @@
                 var $form = $(this);
                 var $tokenInput = $form.find('input[name="g-recaptcha-response"]');
                 
-                // If we already have a token, allow submission
+                // Check if we have a recent token (reCAPTCHA v3 tokens expire in ~2 minutes)
                 if ($tokenInput.length && $tokenInput.val()) {
-                    return true;
+                    var tokenTime = $tokenInput.attr('data-token-time');
+                    if (tokenTime) {
+                        var tokenAge = Date.now() - parseInt(tokenTime, 10);
+                        if (tokenAge < 110000) {  // ~110s (keeps buffer under Google's ~2min lifetime)
+                            return true;  // Recent token, allow submission
+                        }
+                    } else {
+                        return true;  // Token exists but no timestamp, allow submission
+                    }
                 }
                 
-                // Prevent submission and get token
+                // Prevent submission and get fresh token
                 event.preventDefault();
                 
                 // Add hidden input if not exists
@@ -118,6 +126,7 @@
                 grecaptcha.ready(function() {
                     grecaptcha.execute(window.RECAPTCHA_SITE_KEY, {action: 'submit'}).then(function(token) {
                         $tokenInput.val(token);
+                        $tokenInput.attr('data-token-time', Date.now().toString());
                         // Submit the form
                         $form.off('submit').submit();
                     }).catch(function(error) {
