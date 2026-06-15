@@ -96,7 +96,28 @@ class ValidateRecaptchaFunctionTests(TestCase):
         mock_response = MagicMock()
         mock_response.json.return_value = {
             'success': True,
+            'action': 'submit',
             # No 'score' key - unexpected for v3
+        }
+        mock_response.raise_for_status = MagicMock()
+        mock_post.return_value = mock_response
+
+        mock_request = self._make_mock_request({'g-recaptcha-response': 'test-token'})
+        
+        is_valid, error = _validate_recaptcha(mock_request)
+        
+        self.assertFalse(is_valid)
+        self.assertEqual(error, "reCAPTCHA verification failed. Please try again.")
+
+    @override_settings(RECAPTCHA_PUBLIC_KEY='test-public', RECAPTCHA_PRIVATE_KEY='test-private')
+    @patch('blowcomotion.views.requests.post')
+    def test_fails_when_action_mismatch(self, mock_post):
+        """When reCAPTCHA action doesn't match 'submit', validation should fail."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            'success': True,
+            'score': 0.9,
+            'action': 'different_action',  # Wrong action
         }
         mock_response.raise_for_status = MagicMock()
         mock_post.return_value = mock_response
@@ -220,6 +241,7 @@ class ProcessFormRecaptchaIntegrationTests(TestCase):
         mock_response.json.return_value = {
             'success': True,
             'score': 0.2,  # Low score indicates bot
+            'action': 'submit',
         }
         mock_response.raise_for_status = MagicMock()
         mock_post.return_value = mock_response
@@ -243,6 +265,7 @@ class ProcessFormRecaptchaIntegrationTests(TestCase):
         mock_response.json.return_value = {
             'success': True,
             'score': 0.9,  # High score indicates human
+            'action': 'submit',
         }
         mock_response.raise_for_status = MagicMock()
         mock_post.return_value = mock_response

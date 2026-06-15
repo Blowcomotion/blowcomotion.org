@@ -532,7 +532,10 @@ def _validate_recaptcha(request):
     """
     # If reCAPTCHA is not configured (no keys), skip validation
     if not getattr(settings, 'RECAPTCHA_PUBLIC_KEY', None) or not getattr(settings, 'RECAPTCHA_PRIVATE_KEY', None):
-        logger.debug("reCAPTCHA validation skipped - no keys configured")
+        if not settings.DEBUG:
+            logger.warning("reCAPTCHA keys not configured in production - spam protection disabled!")
+        else:
+            logger.debug("reCAPTCHA validation skipped - no keys configured")
         return True, None
     
     recaptcha_token = request.POST.get('g-recaptcha-response')
@@ -563,6 +566,12 @@ def _validate_recaptcha(request):
         if not result.get('success'):
             error_codes = result.get('error-codes', [])
             logger.warning(f"reCAPTCHA verification failed: {error_codes}")
+            return False, "reCAPTCHA verification failed. Please try again."
+        
+        # Validate action matches what we expect (prevents token reuse across contexts)
+        action = result.get('action')
+        if action != 'submit':
+            logger.warning(f"reCAPTCHA action mismatch: {action!r} (expected: 'submit')")
             return False, "reCAPTCHA verification failed. Please try again."
         
         # Check score for v3 - fail closed if score is missing (unexpected for v3 keys)

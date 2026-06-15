@@ -23,9 +23,13 @@
             });
             
             // Handle HTMX form submissions
-            // Use htmx:confirm to intercept before the request is made
-            document.body.addEventListener('htmx:confirm', function(event) {
-                var form = event.target;
+            // Use htmx:configRequest to add token before every HTMX request
+            document.body.addEventListener('htmx:configRequest', function(event) {
+                var form = event.detail.elt;
+                if (form.tagName !== 'FORM') {
+                    form = form.closest('form');
+                }
+                if (!form) return;
                 
                 // Only handle forms that post to process-form
                 var hxPost = form.getAttribute('hx-post') || '';
@@ -35,27 +39,40 @@
                 
                 var tokenInput = form.querySelector('input[name="g-recaptcha-response"]');
                 
-                // If we already have a token, allow the request
+                // If we have a token, add it to the request parameters
                 if (tokenInput && tokenInput.value) {
-                    return;
+                    event.detail.parameters['g-recaptcha-response'] = tokenInput.value;
                 }
+            });
+            
+            // Pre-fetch reCAPTCHA token on form focus for faster submission
+            $('form[hx-post*="process-form"]').on('focusin', function() {
+                var $form = $(this);
+                var $tokenInput = $form.find('input[name="g-recaptcha-response"]');
                 
-                // Prevent the request until we have a token
-                event.preventDefault();
-                
-                grecaptcha.ready(function() {
-                    grecaptcha.execute(window.RECAPTCHA_SITE_KEY, {action: 'submit'}).then(function(token) {
-                        if (tokenInput) {
-                            tokenInput.value = token;
-                        }
-                        // Re-issue the request now that we have a token
-                        event.detail.issueRequest(true);
-                    }).catch(function(error) {
-                        console.error('reCAPTCHA error:', error);
-                        // Allow form to submit anyway - server will reject if token is required
-                        event.detail.issueRequest(true);
+                // Only fetch if we don't have a token yet
+                if ($tokenInput.length && !$tokenInput.val()) {
+                    grecaptcha.ready(function() {
+                        grecaptcha.execute(window.RECAPTCHA_SITE_KEY, {action: 'submit'}).then(function(token) {
+                            $tokenInput.val(token);
+                        });
                     });
-                });
+                }
+            });
+            
+            // Get fresh token right before HTMX submit
+            $('form[hx-post*="process-form"]').on('submit', function(e) {
+                var $form = $(this);
+                var $tokenInput = $form.find('input[name="g-recaptcha-response"]');
+                
+                if ($tokenInput.length) {
+                    // Get a fresh token synchronously if possible (token might be stale)
+                    grecaptcha.ready(function() {
+                        grecaptcha.execute(window.RECAPTCHA_SITE_KEY, {action: 'submit'}).then(function(token) {
+                            $tokenInput.val(token);
+                        });
+                    });
+                }
             });
             
             // Handle regular (non-HTMX) form submissions
