@@ -530,13 +530,14 @@ def _validate_recaptcha(request):
     Returns:
         tuple: (is_valid: bool, error_message: str or None)
     """
-    # If reCAPTCHA is not configured (no keys), skip validation
+    # If reCAPTCHA is not configured (no keys), skip validation in dev, fail in production
     if not getattr(settings, 'RECAPTCHA_PUBLIC_KEY', None) or not getattr(settings, 'RECAPTCHA_PRIVATE_KEY', None):
-        if not settings.DEBUG:
-            logger.warning("reCAPTCHA keys not configured in production - spam protection disabled!")
-        else:
+        if settings.DEBUG:
             logger.debug("reCAPTCHA validation skipped - no keys configured")
-        return True, None
+            return True, None
+        else:
+            logger.error("reCAPTCHA keys not configured in production - rejecting form submission")
+            return False, "reCAPTCHA verification failed. Please try again."
     
     recaptcha_token = request.POST.get('g-recaptcha-response')
     

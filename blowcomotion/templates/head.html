@@ -44,7 +44,7 @@
     {# reCAPTCHA v3 - only load if site key is configured and forms are on the page #}
     {% get_recaptcha_site_key as recaptcha_site_key %}
     {% if include_form_js and recaptcha_site_key %}
-    <script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key|urlencode }}"></script>
+    <script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key|urlencode }}" defer></script>
     <script>window.RECAPTCHA_SITE_KEY = "{{ recaptcha_site_key|escapejs }}";</script>
     {% endif %}
     {% if include_form_js %}<script src="{% static 'js/form.js' %}"></script>{% endif %}

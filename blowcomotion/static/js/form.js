@@ -23,8 +23,8 @@
             });
             
             // Handle HTMX form submissions
-            // Use htmx:configRequest to add token before every HTMX request
-            document.body.addEventListener('htmx:configRequest', function(event) {
+            // Use htmx:beforeRequest to cancel request if no token, fetch token, then retry
+            document.body.addEventListener('htmx:beforeRequest', function(event) {
                 var form = event.detail.elt;
                 if (form.tagName !== 'FORM') {
                     form = form.closest('form');
@@ -39,10 +39,32 @@
                 
                 var tokenInput = form.querySelector('input[name="g-recaptcha-response"]');
                 
-                // If we have a token, add it to the request parameters
-                if (tokenInput && tokenInput.value) {
-                    event.detail.parameters['g-recaptcha-response'] = tokenInput.value;
+                // If we already have a fresh token (set within last 100ms), allow request
+                if (tokenInput && tokenInput.value && tokenInput.dataset.tokenTime) {
+                    var tokenAge = Date.now() - parseInt(tokenInput.dataset.tokenTime, 10);
+                    if (tokenAge < 100) {
+                        // Fresh token, proceed with request
+                        return;
+                    }
                 }
+                
+                // Cancel this request, get a fresh token, then re-trigger
+                event.preventDefault();
+                
+                grecaptcha.ready(function() {
+                    grecaptcha.execute(window.RECAPTCHA_SITE_KEY, {action: 'submit'}).then(function(token) {
+                        if (tokenInput) {
+                            tokenInput.value = token;
+                            tokenInput.dataset.tokenTime = Date.now().toString();
+                        }
+                        // Re-trigger the HTMX request now that we have a token
+                        htmx.trigger(form, 'submit');
+                    }).catch(function(error) {
+                        console.error('reCAPTCHA error:', error);
+                        // Allow form to submit anyway - server will reject if token is required
+                        htmx.trigger(form, 'submit');
+                    });
+                });
             });
             
             // Pre-fetch reCAPTCHA token on form focus for faster submission
@@ -55,21 +77,7 @@
                     grecaptcha.ready(function() {
                         grecaptcha.execute(window.RECAPTCHA_SITE_KEY, {action: 'submit'}).then(function(token) {
                             $tokenInput.val(token);
-                        });
-                    });
-                }
-            });
-            
-            // Get fresh token right before HTMX submit
-            $('form[hx-post*="process-form"]').on('submit', function(e) {
-                var $form = $(this);
-                var $tokenInput = $form.find('input[name="g-recaptcha-response"]');
-                
-                if ($tokenInput.length) {
-                    // Get a fresh token synchronously if possible (token might be stale)
-                    grecaptcha.ready(function() {
-                        grecaptcha.execute(window.RECAPTCHA_SITE_KEY, {action: 'submit'}).then(function(token) {
-                            $tokenInput.val(token);
+                            $tokenInput.data('tokenTime', Date.now());
                         });
                     });
                 }

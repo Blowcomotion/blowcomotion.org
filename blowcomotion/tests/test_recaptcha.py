@@ -20,8 +20,9 @@ class ValidateRecaptchaFunctionTests(TestCase):
         mock_request.META = {'REMOTE_ADDR': '127.0.0.1'}
         return mock_request
 
+    @override_settings(DEBUG=True)
     def test_skips_validation_when_no_keys_configured(self):
-        """When RECAPTCHA keys are not set, validation should be skipped."""
+        """When RECAPTCHA keys are not set in dev mode, validation should be skipped."""
         mock_request = self._make_mock_request()
         
         with override_settings(RECAPTCHA_PUBLIC_KEY=None, RECAPTCHA_PRIVATE_KEY=None):
@@ -30,8 +31,9 @@ class ValidateRecaptchaFunctionTests(TestCase):
         self.assertTrue(is_valid)
         self.assertIsNone(error)
 
+    @override_settings(DEBUG=True)
     def test_skips_validation_when_only_public_key_set(self):
-        """When only public key is set, validation should be skipped."""
+        """When only public key is set in dev mode, validation should be skipped."""
         mock_request = self._make_mock_request()
         
         with override_settings(RECAPTCHA_PUBLIC_KEY='test-public', RECAPTCHA_PRIVATE_KEY=None):
@@ -39,6 +41,17 @@ class ValidateRecaptchaFunctionTests(TestCase):
         
         self.assertTrue(is_valid)
         self.assertIsNone(error)
+
+    @override_settings(DEBUG=False)
+    def test_fails_in_production_when_no_keys_configured(self):
+        """When RECAPTCHA keys are not set in production, validation should fail."""
+        mock_request = self._make_mock_request()
+        
+        with override_settings(RECAPTCHA_PUBLIC_KEY=None, RECAPTCHA_PRIVATE_KEY=None):
+            is_valid, error = _validate_recaptcha(mock_request)
+        
+        self.assertFalse(is_valid)
+        self.assertEqual(error, "reCAPTCHA verification failed. Please try again.")
 
     @override_settings(RECAPTCHA_PUBLIC_KEY='test-public', RECAPTCHA_PRIVATE_KEY='test-private')
     def test_fails_when_token_missing(self):
@@ -204,8 +217,9 @@ class ProcessFormRecaptchaIntegrationTests(TestCase):
         self.client = Client()
         self.url = reverse('process-form')
 
+    @override_settings(DEBUG=True)
     def test_form_submission_succeeds_without_recaptcha_when_keys_not_set(self):
-        """Form submission should work when reCAPTCHA keys are not configured."""
+        """Form submission should work in dev mode when reCAPTCHA keys are not configured."""
         # Submit a simple feedback form (doesn't require email)
         response = self.client.post(self.url, {
             'form_type': 'feedback_form',
@@ -218,6 +232,19 @@ class ProcessFormRecaptchaIntegrationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         # Check it's not the error template
         self.assertNotContains(response, 'reCAPTCHA verification failed')
+
+    @override_settings(DEBUG=False)
+    def test_form_submission_fails_in_production_without_recaptcha_keys(self):
+        """Form submission should fail in production when reCAPTCHA keys are not configured."""
+        response = self.client.post(self.url, {
+            'form_type': 'feedback_form',
+            'name': 'Test User',
+            'message': 'Test message',
+            'best_color': 'purple',
+        })
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'reCAPTCHA verification failed')
 
     @override_settings(RECAPTCHA_PUBLIC_KEY='test-public', RECAPTCHA_PRIVATE_KEY='test-private')
     def test_form_submission_fails_when_recaptcha_token_missing(self):
