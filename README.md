@@ -150,6 +150,52 @@ This ensures that all Python code follows consistent import formatting standards
 - You can access the admin panel at [http://localhost:8000/admin](http://localhost:8000/admin)
 - To stop the server, press `Ctrl+C` in the terminal
 
+## Testing
+
+The project includes comprehensive unit tests for all major features.
+
+### Run all tests
+
+```bash
+python manage.py test
+```
+
+### Run tests with deprecation warnings (useful before Django upgrades)
+
+```bash
+python -Wa manage.py test
+```
+
+### Run specific test modules
+
+```bash
+# Test attendance functionality
+python manage.py test blowcomotion.tests.test_attendance_views
+
+# Test birthday features
+python manage.py test blowcomotion.tests.test_birthday_views
+
+# Test member model
+python manage.py test blowcomotion.tests.test_member_model
+```
+
+### Available test modules
+
+- `test_attendance_views.py` - Attendance tracking views and forms
+- `test_attendance_commands.py` - Attendance management commands
+- `test_birthday_views.py` - Birthday display views
+- `test_birthday_command.py` - Birthday email notification command
+- `test_member_model.py` - Member model and instrument relationships
+- `test_chart_api.py` - Chart library API endpoints
+- `test_sync_gigs_command.py` - GigoGig API synchronization
+- `test_dump_data_view.py` - Database export functionality
+- `test_export_charts_command.py` - Chart export command
+- `test_export_library_instruments_command.py` - Library instrument export
+- `test_fetch_embed_data.py` - Video embed data fetching
+- `test_video_feed_block.py` - Video feed block functionality
+- `test_recaptcha.py` - reCAPTCHA validation
+- `test_member_signup_go3.py` - Member signup and GO3 integration
+
 ## Import data from the website to the local database
 
 - Navigate to the live website admin [data dump page](https://www.blowcomotion.org/admin/dump_data/)
