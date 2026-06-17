@@ -12,9 +12,13 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
+import sys
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE_DIR = os.path.dirname(PROJECT_DIR)
+
+# Detect if we're running tests
+TESTING = 'test' in sys.argv
 
 
 # Quick-start development settings - unsuitable for production
@@ -182,13 +186,54 @@ LOGGING = {
         # Suppress verbose Wagtail task logging
         "wagtail.tasks": {
             "handlers": ["console"],
-            "level": "WARNING",
+            "level": "ERROR",
             "propagate": False,
         },
         # Suppress verbose modelsearch task logging
         "modelsearch": {
             "handlers": ["console"],
-            "level": "WARNING",
+            "level": "ERROR",
+            "propagate": False,
+        },
+        # Suppress django-tasks verbose logging (Task id= messages)
+        "django_tasks": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        # Suppress application warnings during tests
+        "blowcomotion": {
+            "handlers": ["console"],
+            "level": "CRITICAL" if TESTING else "ERROR",
+            "propagate": False,
+        },
+        # Suppress Django request logging
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        # Suppress urllib3 connection errors
+        "urllib3": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        # Suppress requests library logs
+        "requests": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        # Suppress task runner logs
+        "wagtail.core.task_runner": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "wagtail.task_runner": {
+            "handlers": ["console"],
+            "level": "ERROR",
             "propagate": False,
         },
     },

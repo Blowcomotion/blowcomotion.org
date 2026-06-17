@@ -9,6 +9,9 @@ def migrate_instruments_to_primary(apps, schema_editor):
     The first instrument in the MemberInstrument relationship becomes the primary instrument.
     The primary instrument is then removed from the additional instruments list.
     """
+    import sys
+    TESTING = 'test' in sys.argv
+    
     Member = apps.get_model('blowcomotion', 'Member')
     MemberInstrument = apps.get_model('blowcomotion', 'MemberInstrument')
     
@@ -29,16 +32,19 @@ def migrate_instruments_to_primary(apps, schema_editor):
             member.save()
             migrated_count += 1
             
-            print(f"Migrated member {member.id} ({member.first_name} {member.last_name}): "
-                  f"Primary instrument set to {first_member_instrument.instrument.name}")
+            if not TESTING:
+                print(f"Migrated member {member.id} ({member.first_name} {member.last_name}): "
+                      f"Primary instrument set to {first_member_instrument.instrument.name}")
             
             # Remove the primary instrument from additional instruments
             first_member_instrument.delete()
             removed_count += 1
-            print(f"  Removed {first_member_instrument.instrument.name} from additional instruments")
+            if not TESTING:
+                print(f"  Removed {first_member_instrument.instrument.name} from additional instruments")
     
-    print(f"\nMigration complete: Set primary instrument for {migrated_count} members")
-    print(f"Removed {removed_count} primary instruments from additional instruments list")
+    if not TESTING:
+        print(f"\nMigration complete: Set primary instrument for {migrated_count} members")
+        print(f"Removed {removed_count} primary instruments from additional instruments list")
 
 
 def reverse_migration(apps, schema_editor):

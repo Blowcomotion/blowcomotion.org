@@ -99,11 +99,13 @@ class Command(BaseCommand):
 
             month_name = calendar.month_name[target_month]
             
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f'Generating birthday summary for {month_name} {target_year}'
+            verbosity = options.get('verbosity', 1)
+            if verbosity >= 1:
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f'Generating birthday summary for {month_name} {target_year}'
+                    )
                 )
-            )
 
             # Get site settings for email recipients
             site_settings = self._get_site_settings()
@@ -123,14 +125,16 @@ class Command(BaseCommand):
                     "No valid birthday email recipients configured. "
                     "Please add at least one valid email address in Django admin under Site Settings."
                 )
-            self.stdout.write(f'Recipients: {", ".join(recipient_list)}')
+            if verbosity >= 1:
+                self.stdout.write(f'Recipients: {", ".join(recipient_list)}')
 
             # Get members with birthdays in the target month
             upcoming_birthdays = self._get_upcoming_birthdays(target_month, target_year)
             
-            self.stdout.write(
-                f'Found {len(upcoming_birthdays)} birthday(s) in {month_name} {target_year}'
-            )
+            if verbosity >= 1:
+                self.stdout.write(
+                    f'Found {len(upcoming_birthdays)} birthday(s) in {month_name} {target_year}'
+                )
 
             # Skip email if no birthdays
             if not upcoming_birthdays:
@@ -147,10 +151,11 @@ class Command(BaseCommand):
                 age_info = f" (turning {birthday['age']})" if birthday.get('age') else ""
                 instrument_names = birthday.get('instruments', [])
                 instruments_info = f" - {', '.join(instrument_names)}" if instrument_names else ""
-                
-                self.stdout.write(
-                    f"  • {member.first_name} {member.last_name} - "
-                    f"{birthday_date.strftime('%B %d')}{age_info}{instruments_info}"
+                if verbosity >= 1:
+                    self.stdout.write(
+                        f"  • {member.first_name} {member.last_name} - "
+                        f"{birthday_date.strftime('%B %d')}{age_info}{instruments_info}"
+                        f"{birthday_date.strftime('%B %d')}{age_info}{instruments_info}"
                 )
 
             # Generate email content
@@ -207,11 +212,12 @@ class Command(BaseCommand):
                     f"to {len(recipient_list)} recipient(s): {', '.join(recipient_list)}"
                 )
                 
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f'✅ Monthly birthday summary sent successfully to {len(recipient_list)} recipient(s)'
+                if verbosity >= 1:
+                    self.stdout.write(
+                        self.style.SUCCESS(
+                            f'✅ Monthly birthday summary sent successfully to {len(recipient_list)} recipient(s)'
+                        )
                     )
-                )
 
             except Exception as e:
                 logger.error(f"Error sending birthday summary email: {str(e)}")

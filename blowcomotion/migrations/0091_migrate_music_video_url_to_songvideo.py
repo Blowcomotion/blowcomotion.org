@@ -8,6 +8,9 @@ def migrate_video_urls(apps, schema_editor):
     Migrate existing music_video_url values to SongVideo entries.
     This preserves data from the old field before it's removed.
     """
+    import sys
+    TESTING = 'test' in sys.argv
+    
     Song = apps.get_model('blowcomotion', 'Song')
     SongVideo = apps.get_model('blowcomotion', 'SongVideo')
     
@@ -24,10 +27,11 @@ def migrate_video_urls(apps, schema_editor):
             )
             migrated_count += 1
     
-    if migrated_count > 0:
-        print(f"\n✓ Successfully migrated {migrated_count} music video URLs to SongVideo model")
-    else:
-        print("\n✓ No music video URLs to migrate (all songs already updated or field was empty)")
+    if not TESTING:
+        if migrated_count > 0:
+            print(f"\n✓ Successfully migrated {migrated_count} music video URLs to SongVideo model")
+        else:
+            print("\n✓ No music video URLs to migrate (all songs already updated or field was empty)")
 
 
 def reverse_migration(apps, schema_editor):

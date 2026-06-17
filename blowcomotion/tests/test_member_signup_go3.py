@@ -60,6 +60,7 @@ class GO3BandInviteUtilsTests(TestCase):
     @override_settings(
         GIGO_API_URL="http://localhost:8001/api",
         GIGO_API_KEY="test-key",
+        GIGO_BAND_ID=None,  # Explicitly unset for testing
         GIGO_BAND_ID_LOCAL=1,
         DEBUG=False
     )
