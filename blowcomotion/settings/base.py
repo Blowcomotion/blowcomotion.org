@@ -164,8 +164,10 @@ STORAGES = {
     # outdated JavaScript / CSS assets being served from cache
     # (e.g. after a Wagtail upgrade).
     # See https://docs.djangoproject.com/en/5.1/ref/contrib/staticfiles/#manifeststaticfilesstorage
+    # During tests, use the simple storage backend to avoid requiring collectstatic
     "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage" if TESTING 
+                   else "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
     },
 }
 
