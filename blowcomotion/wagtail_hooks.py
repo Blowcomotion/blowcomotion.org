@@ -31,11 +31,11 @@ from .chooser_viewsets import (
     section_chooser_viewset,
     song_chooser_viewset,
 )
-from .snippet_viewsets import BandViewSetGroup, CachedGigViewSet, FormsViewSetGroup
+from .snippet_viewsets import BandViewSetGroup, FormsViewSetGroup, SyncViewSetGroup
 
 register_snippet(BandViewSetGroup)
 register_snippet(FormsViewSetGroup)
-register_snippet(CachedGigViewSet)
+register_snippet(SyncViewSetGroup)
 
 
 @hooks.register("register_admin_urls")
@@ -93,15 +93,10 @@ def register_management_menu_item():
         MenuItem('Library: Maintenance', reverse('instrument_library_needs_repair'), icon_name='warning'),
     ])
     
-    sync_submenu = Menu(items=[
-        MenuItem('Sync Gigs', reverse('sync_gigs'), icon_name='cog'),
-        MenuItem('Cached Gigs', reverse('wagtailsnippets_blowcomotion_cachedgig:list'), icon_name='date'),
-    ])
-    
     submenu = Menu(items=[
         SubmenuMenuItem('Exports', exports_submenu, icon_name='download'),
         SubmenuMenuItem('Library Dashboards', library_dashboards_submenu, icon_name='french-horn'),
-        SubmenuMenuItem('Sync', sync_submenu, icon_name='cog'),
+        MenuItem('Sync Gigs', reverse('sync_gigs'), icon_name='cog'),
     ])
     return SubmenuMenuItem('Utilities', submenu, icon_name='cogs', order=10000)
 

@@ -667,3 +667,10 @@ class FormsViewSetGroup(SnippetViewSetGroup):
     menu_icon = 'clipboard-list'
     menu_label = 'Form Submissions'
     menu_name = 'forms'
+
+
+class SyncViewSetGroup(SnippetViewSetGroup):
+    items = (CachedGigViewSet,)
+    menu_icon = 'music'
+    menu_label = 'Gigo Gigs'
+    menu_name = 'sync'
