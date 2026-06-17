@@ -176,7 +176,21 @@ LOGGING = {
     },
     "root": {
         "handlers": ["console"],
-        "level": "DEBUG",
+        "level": "INFO",
+    },
+    "loggers": {
+        # Suppress verbose Wagtail task logging
+        "wagtail.tasks": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        # Suppress verbose modelsearch task logging
+        "modelsearch": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
     },
 }
 
