@@ -11,7 +11,7 @@ from django.utils import timezone
 from blowcomotion.member_auth import create_member_user, send_set_password_email
 from blowcomotion.member_forms import GetAccessForm
 from blowcomotion.models import Member, PasswordSetToken
-from blowcomotion.views import _validate_recaptcha
+from blowcomotion.views import _validate_honeypot, _validate_recaptcha
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class MemberLoginView(auth_views.LoginView):
     template_name = "member/login.html"
 
     def post(self, request, *args, **kwargs):
-        if request.POST.get("best_color"):
+        if not _validate_honeypot(request):
             return redirect("/")
         is_valid, error = _validate_recaptcha(request)
         if not is_valid:
@@ -54,7 +54,7 @@ def set_password_view(request, token_uuid):
         return render(request, "member/set_password.html", {"expired": True})
 
     if request.method == "POST":
-        if request.POST.get("best_color"):
+        if not _validate_honeypot(request):
             return redirect("/")
         is_valid, error = _validate_recaptcha(request)
         if not is_valid:
@@ -88,7 +88,7 @@ class MemberPasswordResetView(auth_views.PasswordResetView):
     email_template_name = "registration/password_reset_email.html"  # Django default
 
     def post(self, request, *args, **kwargs):
-        if request.POST.get("best_color"):
+        if not _validate_honeypot(request):
             return redirect("/")
         is_valid, error = _validate_recaptcha(request)
         if not is_valid:
@@ -129,7 +129,7 @@ class MemberPasswordResetView(auth_views.PasswordResetView):
 @ratelimit(key="ip", rate="10/h", method="POST", block=True)
 def get_access_view(request):
     if request.method == "POST":
-        if request.POST.get("best_color"):
+        if not _validate_honeypot(request):
             return redirect("/")
         is_valid, error = _validate_recaptcha(request)
         if not is_valid:
