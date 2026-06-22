@@ -212,7 +212,7 @@ def profile_view(request):
     if request.method == "POST":
         is_valid_captcha, captcha_error = _validate_recaptcha(request)
         if not is_valid_captcha:
-            form = MemberProfileForm(instance=member)
+            form = MemberProfileForm(request.POST, request.FILES, instance=member)
             return render(request, "member/profile.html", {
                 "form": form, "member": member,
                 "include_form_js": True, "recaptcha_error": captcha_error,

@@ -46,6 +46,9 @@ def create_member_user(member):
     if created:
         user.set_unusable_password()
         user.save(update_fields=["password"])
+    elif user.email != email:
+        user.email = email
+        user.save(update_fields=["email"])
 
     member.user = user
     member.save(update_fields=["user"], sync_go3=False)

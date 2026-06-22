@@ -119,6 +119,19 @@ class ProfileViewTests(TestCase):
         self.assertEqual(response.context["recaptcha_error"], "reCAPTCHA failed")
         self.assertContains(response, "reCAPTCHA failed")
 
+    def test_profile_recaptcha_failure_preserves_submitted_input(self):
+        self._recaptcha.stop()
+        with patch(
+            "blowcomotion.member_views._validate_recaptcha",
+            return_value=(False, "reCAPTCHA failed"),
+        ):
+            response = self.client.post(
+                reverse("member-profile"),
+                {"first_name": "Changed", "last_name": "Player", "email": "robin@example.com"},
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["form"]["first_name"].value(), "Changed")
+
     def test_email_unchanged_does_not_send_confirmation(self):
         from django.core import mail
         with self.settings(

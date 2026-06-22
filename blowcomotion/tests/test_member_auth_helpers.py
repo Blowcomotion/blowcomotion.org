@@ -193,6 +193,13 @@ class CreateMemberUserTests(TestCase):
         self.assertEqual(member.user_id, existing.pk)
         self.assertEqual(User.objects.filter(username="taken@example.com").count(), 1)
 
+    def test_syncs_email_field_when_linking_existing_user_with_stale_email(self):
+        existing = User.objects.create_user(username="stale@example.com", email="")
+        member = Member.objects.create(first_name="St", last_name="Ale", email="stale@example.com")
+        create_member_user(member)
+        existing.refresh_from_db()
+        self.assertEqual(existing.email, "stale@example.com")
+
 
 @override_settings(
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
