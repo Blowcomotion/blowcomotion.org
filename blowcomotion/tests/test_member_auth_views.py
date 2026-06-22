@@ -128,13 +128,14 @@ class GetAccessViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     @recaptcha_pass
-    def test_unknown_email_shows_generic_response(self, mock_recaptcha):
+    def test_unknown_email_receives_signup_invite(self, mock_recaptcha):
         response = self.client.post(
             reverse("member-get-access"), {"email": "nobody@example.com", "best_color": "purple"}
         )
         self.assertEqual(response.status_code, 200)
         from django.core import mail
-        self.assertEqual(len(mail.outbox), 0)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("member-signup", mail.outbox[0].body)
 
     @recaptcha_pass
     def test_member_without_user_creates_account_and_sends_email(self, mock_recaptcha):

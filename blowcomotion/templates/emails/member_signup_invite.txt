@@ -1,0 +1,12 @@
+Hi,
+
+Someone requested member portal access for this email address at Blowcomotion.
+
+We don't have this address in our member list. If you'd like to join the band, you can apply at:
+
+{{ signup_url }}
+
+If this wasn't you, you can safely ignore this email.
+
+Start Wearing Purple,
+Blowcomotion

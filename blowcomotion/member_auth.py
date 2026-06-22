@@ -78,3 +78,21 @@ def send_email_change_confirmation(member, new_email, request):
     member.pending_email = new_email
     member.save(update_fields=["pending_email"], sync_go3=False)
     logger.info(f"Sent email-change confirmation to {new_email} for member {member.pk}")
+
+
+def send_signup_invite_email(email, request):
+    """Send a signup link to an address not found in the member list."""
+    signup_url = request.build_absolute_uri("/member-signup/")
+    subject = "Blowcomotion member portal access"
+    message = render_to_string(
+        "emails/member_signup_invite.txt",
+        {"signup_url": signup_url},
+    )
+    send_mail(
+        subject=subject,
+        message=message,
+        from_email=settings.FROM_EMAIL,
+        recipient_list=[email],
+        fail_silently=False,
+    )
+    logger.info(f"Sent signup invite to non-member address: {email}")

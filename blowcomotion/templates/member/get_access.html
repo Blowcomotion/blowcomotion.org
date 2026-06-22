@@ -7,7 +7,7 @@
         <div class="col-md-6 col-lg-5">
             <h1 class="mb-4 text-center">Get Member Access</h1>
             {% if sent %}
-                <div class="alert alert-success">If you're a member, check your email for next steps.</div>
+                <div class="alert alert-success">Check your email for next steps.</div>
             {% else %}
                 {% if recaptcha_error %}<div class="alert alert-danger">{{ recaptcha_error }}</div>{% endif %}
                 <p class="text-muted mb-4">Enter your member email address and we'll send you a link to set up your account.</p>

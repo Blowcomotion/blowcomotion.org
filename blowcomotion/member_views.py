@@ -8,7 +8,11 @@ from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from blowcomotion.member_auth import create_member_user, send_set_password_email
+from blowcomotion.member_auth import (
+    create_member_user,
+    send_set_password_email,
+    send_signup_invite_email,
+)
 from blowcomotion.member_forms import GetAccessForm
 from blowcomotion.models import Member, PasswordSetToken
 from blowcomotion.views import _validate_honeypot, _validate_recaptcha
@@ -164,7 +168,7 @@ def get_access_view(request):
                         )
                     logger.info(f"Get-access: sent reset email to member {member.pk}")
             except Member.DoesNotExist:
-                pass  # Generic response — no enumeration
+                send_signup_invite_email(email, request)
             return render(request, "member/get_access.html", {
                 "form": form, "sent": True,
             })
