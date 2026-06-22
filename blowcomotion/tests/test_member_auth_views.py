@@ -38,7 +38,7 @@ class LoginViewTests(TestCase):
     def test_valid_login_redirects_to_profile(self, mock_recaptcha):
         response = self.client.post(
             reverse("member-login"),
-            {"username": "sam@example.com", "password": "Str0ngP@ss!"},
+            {"username": "sam@example.com", "password": "Str0ngP@ss!", "best_color": "purple"},
         )
         self.assertRedirects(response, "/member/profile/", fetch_redirect_response=False)
 
@@ -56,7 +56,7 @@ class LoginViewTests(TestCase):
         ):
             response = self.client.post(
                 reverse("member-login"),
-                {"username": "sam@example.com", "password": "Str0ngP@ss!"},
+                {"username": "sam@example.com", "password": "Str0ngP@ss!", "best_color": "purple"},
             )
         self.assertEqual(response.status_code, 200)
 
@@ -113,7 +113,7 @@ class SetPasswordViewTests(TestCase):
         token = self._make_token()
         response = self.client.post(
             reverse("member-set-password", kwargs={"token_uuid": token.uuid}),
-            {"new_password1": "NewStr0ng@Pass!", "new_password2": "NewStr0ng@Pass!"},
+            {"new_password1": "NewStr0ng@Pass!", "new_password2": "NewStr0ng@Pass!", "best_color": "purple"},
         )
         self.assertRedirects(response, "/member/profile/", fetch_redirect_response=False)
         token.refresh_from_db()
@@ -130,7 +130,7 @@ class GetAccessViewTests(TestCase):
     @recaptcha_pass
     def test_unknown_email_shows_generic_response(self, mock_recaptcha):
         response = self.client.post(
-            reverse("member-get-access"), {"email": "nobody@example.com"}
+            reverse("member-get-access"), {"email": "nobody@example.com", "best_color": "purple"}
         )
         self.assertEqual(response.status_code, 200)
         from django.core import mail
@@ -140,7 +140,7 @@ class GetAccessViewTests(TestCase):
     def test_member_without_user_creates_account_and_sends_email(self, mock_recaptcha):
         make_member(email="newbie@example.com")
         response = self.client.post(
-            reverse("member-get-access"), {"email": "newbie@example.com"}
+            reverse("member-get-access"), {"email": "newbie@example.com", "best_color": "purple"}
         )
         self.assertEqual(response.status_code, 200)
         from django.core import mail
@@ -155,7 +155,7 @@ class GetAccessViewTests(TestCase):
         user.set_password("SomePass123!")
         user.save()
         response = self.client.post(
-            reverse("member-get-access"), {"email": "existing@example.com"}
+            reverse("member-get-access"), {"email": "existing@example.com", "best_color": "purple"}
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 1)
