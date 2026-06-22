@@ -159,3 +159,59 @@ class GetAccessViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 1)
+
+    @recaptcha_pass
+    def test_inactive_member_receives_set_password_email(self, mock_recaptcha):
+        from django.core import mail
+        make_member(email="inactive@example.com", is_active=False)
+        response = self.client.post(
+            reverse("member-get-access"), {"email": "inactive@example.com", "best_color": "purple"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("/member/set-password/", mail.outbox[0].body)
+
+    @recaptcha_pass
+    def test_inactive_member_with_password_gets_set_password_not_reset(self, mock_recaptcha):
+        """Inactive members always go through set-password flow regardless of existing password."""
+        from django.core import mail
+        member = make_member(email="oldmember@example.com", is_active=False)
+        user = create_member_user(member)
+        user.set_password("OldPass123!")
+        user.save()
+        response = self.client.post(
+            reverse("member-get-access"), {"email": "oldmember@example.com", "best_color": "purple"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("/member/set-password/", mail.outbox[0].body)
+
+
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+                   FROM_EMAIL="noreply@blowcomotion.org")
+class SetPasswordReactivationTests(TestCase):
+    def test_set_password_reactivates_inactive_member(self):
+        with patch("blowcomotion.member_views._validate_recaptcha", return_value=(True, None)):
+            member = make_member(email="dormant@example.com", is_active=False)
+            create_member_user(member)
+            token = PasswordSetToken.objects.create(member=member)
+            response = self.client.post(
+                reverse("member-set-password", kwargs={"token_uuid": token.uuid}),
+                {"new_password1": "FreshP@ss1!", "new_password2": "FreshP@ss1!", "best_color": "purple"},
+            )
+            self.assertRedirects(response, "/member/profile/", fetch_redirect_response=False)
+            member.refresh_from_db()
+            self.assertTrue(member.is_active)
+
+    def test_set_password_active_member_stays_active(self):
+        with patch("blowcomotion.member_views._validate_recaptcha", return_value=(True, None)):
+            member = make_member(email="active@example.com")
+            create_member_user(member)
+            token = PasswordSetToken.objects.create(member=member)
+            response = self.client.post(
+                reverse("member-set-password", kwargs={"token_uuid": token.uuid}),
+                {"new_password1": "FreshP@ss1!", "new_password2": "FreshP@ss1!", "best_color": "purple"},
+            )
+            self.assertRedirects(response, "/member/profile/", fetch_redirect_response=False)
+            member.refresh_from_db()
+            self.assertTrue(member.is_active)
