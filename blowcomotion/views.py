@@ -29,6 +29,7 @@ from blowcomotion.forms import (
     MemberSignupForm,
     SectionAttendanceForm,
 )
+from blowcomotion.member_auth import create_member_user, send_set_password_email
 from blowcomotion.models import (
     AttendanceRecord,
     BookingFormSubmission,
@@ -766,7 +767,16 @@ def _process_member_signup(request, form_data):
             except Exception as e:
                 # Log the error but don't fail the signup
                 logger.warning(f"Error sending GO3 band invite: {str(e)}")
-        
+
+        # Create a User account and send set-password email if the member has an email
+        if member.email:
+            try:
+                create_member_user(member)
+                send_set_password_email(member, request)
+                logger.info(f"Sent set-password email to new member {member.pk}")
+            except Exception as e:
+                logger.warning(f"Could not send set-password email to new member {member.pk}: {e}")
+
         # Send email notification to admin
         if recipients:
             try:
