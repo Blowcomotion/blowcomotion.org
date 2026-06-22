@@ -1,4 +1,5 @@
 import datetime
+import uuid as uuid_module
 
 from modelcluster.contrib.taggit import ClusterTaggableManager
 from modelcluster.fields import ParentalKey, ParentalManyToManyField
@@ -19,6 +20,7 @@ from wagtail.models import (
 )
 from wagtail.search import index
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -632,6 +634,21 @@ class Member(ClusterableModel, index.Indexed):
         help_text="What event or person inspired this member to join the band",
     )
 
+    # Auth
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="member",
+    )
+    pending_email = models.EmailField(null=True, blank=True)
+
+    # Notification preferences
+    notify_rental_updates = models.BooleanField(default=True)
+    notify_reminders = models.BooleanField(default=True)
+    notify_announcements = models.BooleanField(default=True)
+
     # Commenting out search_fields to avoid FTS indexing issues
     # Admin search still works via snippet_viewsets.py search_fields
     search_fields = [
@@ -787,7 +804,9 @@ class Member(ClusterableModel, index.Indexed):
         
         # Extract update_fields to check if specific fields are being updated
         update_fields = kwargs.get('update_fields')
-        
+        # Capture caller's value before any mutation (used by email drift guard below)
+        _caller_update_fields = update_fields
+
         # Determine if this save operation can affect fields relevant for GO3 sync
         sync_relevant_fields = (
             update_fields is None
@@ -847,7 +866,22 @@ class Member(ClusterableModel, index.Indexed):
             kwargs['update_fields'] = update_fields
         # Call parent save first
         super().save(*args, **kwargs)
-        
+
+        # Sync User.email and User.username if admin changed Member.email
+        if self.user_id and (_caller_update_fields is None or "email" in _caller_update_fields):
+            from django.contrib.auth import get_user_model as _get_user_model
+            _User = _get_user_model()
+            try:
+                _user = _User.objects.get(pk=self.user_id)
+                new_email = self.email or ""
+                if _user.email != new_email or _user.username != new_email:
+                    _user.email = new_email
+                    _user.username = new_email
+                    _user.save(update_fields=["email", "username"])
+                    logger.info(f"Synced User email/username for member {self.pk}")
+            except _User.DoesNotExist:
+                pass
+
         # Only query GO3 when sync_go3=True AND sync_relevant_fields=True AND one of these conditions is met:
         # 1. gigomatic_id or gigomatic_username is missing
         # 2. Email changed
@@ -950,6 +984,32 @@ class Member(ClusterableModel, index.Indexed):
     
     def __str__(self):
         return f"\"{self.preferred_name}\" {self.first_name} {self.last_name}" if self.preferred_name else f"{self.first_name} {self.last_name}"
+
+
+class PasswordSetToken(models.Model):
+    member = models.ForeignKey(
+        Member, on_delete=models.CASCADE, related_name="set_password_tokens"
+    )
+    uuid = models.UUIDField(default=uuid_module.uuid4, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    used = models.BooleanField(default=False)
+    superseded = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"PasswordSetToken({self.member}, used={self.used})"
+
+
+class EmailChangeToken(models.Model):
+    member = models.ForeignKey(
+        Member, on_delete=models.CASCADE, related_name="email_change_tokens"
+    )
+    uuid = models.UUIDField(default=uuid_module.uuid4, unique=True, editable=False)
+    new_email = models.EmailField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    used = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"EmailChangeToken({self.member} → {self.new_email})"
 
 
 class CachedGig(models.Model):
