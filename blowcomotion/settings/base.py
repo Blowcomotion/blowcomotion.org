@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "taggit",
     "django.contrib.admin",
     "django.contrib.auth",
+    "axes",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
@@ -62,6 +63,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "axes.middleware.AxesMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django.middleware.security.SecurityMiddleware",
@@ -122,6 +124,14 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+    "django.contrib.auth.hashers.BCryptSHA256PasswordHasher",
+    "django.contrib.auth.hashers.ScryptPasswordHasher",
+]
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
@@ -133,6 +143,27 @@ TIME_ZONE = "America/Chicago"
 USE_I18N = True
 
 USE_TZ = True
+
+# Member auth
+LOGIN_URL = "/member/login/"
+LOGIN_REDIRECT_URL = "/member/profile/"
+LOGOUT_REDIRECT_URL = "/"
+
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+# django-axes: rate-limit login attempts
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 1800  # seconds (30 minutes)
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_PARAMETERS = ["ip_address"]
+
+# Session security
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+MEMBER_IDLE_TIMEOUT = 3600  # seconds (60 minutes); used by MemberIdleLogoutMiddleware
 
 
 # Static files (CSS, JavaScript, Images)
