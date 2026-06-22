@@ -1,11 +1,9 @@
-import uuid
-from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
-from django.utils import timezone
+from django.test import TestCase, override_settings
 
-from blowcomotion.models import EmailChangeToken, Member, PasswordSetToken, Section
+from blowcomotion.models import EmailChangeToken, Member, PasswordSetToken
 
 User = get_user_model()
 
@@ -107,3 +105,27 @@ class MemberSaveEmailDriftTests(TestCase):
         member = make_member(email="solo@example.com")
         member.email = "changed@example.com"
         member.save(update_fields=["email"], sync_go3=False)  # should not raise
+
+    @override_settings(GIGO_API_URL="http://fake-go3.example.com", GIGO_API_KEY="testkey")
+    def test_email_drift_guard_fires_with_go3_configured(self):
+        """Regression: verify email drift guard fires when sync_go3=True (default)
+        and GO3 is configured. Without this, the guard only runs in the sync_go3=False
+        path. The guard is placed before the GO3 verification block so it runs
+        correctly even though the GO3 block later clobbers the update_fields local."""
+        member = make_member(email="old@example.com")
+        user = User.objects.create_user(
+            username="old@example.com", email="old@example.com"
+        )
+        member.user = user
+        member.save(update_fields=["user"], sync_go3=False)
+
+        # GO3 returns a valid member_id — this is what triggers the clobber:
+        # update_fields = [] inside the if-branch, then gigo fields appended.
+        go3_response = {"member_id": 12345, "username": "oldplayer"}
+        with patch("blowcomotion.utils.make_gigo_api_request", return_value=go3_response):
+            member.email = "new@example.com"
+            member.save(update_fields=["email"])  # sync_go3=True (default)
+
+        user.refresh_from_db()
+        self.assertEqual(user.email, "new@example.com")
+        self.assertEqual(user.username, "new@example.com")
