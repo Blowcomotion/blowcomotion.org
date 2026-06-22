@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Member Login — Blowcomotion{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <h1 class="mb-4 text-center">Member Login</h1>
+            {% if recaptcha_error %}<div class="alert alert-danger">{{ recaptcha_error }}</div>{% endif %}
+            <form method="post" id="member-form">
+                {% csrf_token %}
+                <input type="text" name="best_color" class="best-color" style="display:none;" tabindex="-1" autocomplete="off">
+                <input type="hidden" name="g-recaptcha-response" value="">
+                <div class="mb-3">
+                    <label for="id_username" class="form-label">Email address</label>
+                    <input type="email" name="username" id="id_username" class="form-control" required autofocus>
+                    {% if form.username.errors %}<div class="text-danger small">{{ form.username.errors }}</div>{% endif %}
+                </div>
+                <div class="mb-3">
+                    <label for="id_password" class="form-label">Password</label>
+                    <input type="password" name="password" id="id_password" class="form-control" required>
+                    {% if form.password.errors %}<div class="text-danger small">{{ form.password.errors }}</div>{% endif %}
+                </div>
+                {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+                <button type="submit" class="site-btn w-100">Log In</button>
+            </form>
+            <div class="mt-3 text-center small">
+                <a href="{% url 'member-get-access' %}">New member? Get access →</a>
+                &nbsp;|&nbsp;
+                <a href="{% url 'member-password-reset' %}">Forgot password?</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{% if include_form_js %}
+<script>
+(function() {
+    var form = document.getElementById('member-form');
+    if (!form || typeof grecaptcha === 'undefined' || !window.RECAPTCHA_SITE_KEY) return;
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var self = this;
+        grecaptcha.ready(function() {
+            grecaptcha.execute(window.RECAPTCHA_SITE_KEY, {action: 'submit'}).then(function(token) {
+                self.querySelector('input[name="g-recaptcha-response"]').value = token;
+                self.submit();
+            }).catch(function() { self.submit(); });
+        });
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}
