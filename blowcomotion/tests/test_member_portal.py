@@ -117,6 +117,7 @@ class ProfileViewTests(TestCase):
             )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["recaptcha_error"], "reCAPTCHA failed")
+        self.assertContains(response, "reCAPTCHA failed")
 
     def test_email_unchanged_does_not_send_confirmation(self):
         from django.core import mail
