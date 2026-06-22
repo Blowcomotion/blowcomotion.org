@@ -68,8 +68,13 @@ def set_password_view(request, token_uuid):
             form.save()
             token.used = True
             token.save(update_fields=["used"])
-            login(request, token.member.user, backend="django.contrib.auth.backends.ModelBackend")
-            logger.info(f"Member {token.member.pk} set password and logged in")
+            member = token.member
+            if not member.is_active:
+                member.is_active = True
+                member.save(update_fields=["is_active"], sync_go3=False)
+                logger.info(f"Reactivated member {member.pk} via set-password flow")
+            login(request, member.user, backend="django.contrib.auth.backends.ModelBackend")
+            logger.info(f"Member {member.pk} set password and logged in")
             return redirect("/member/profile/")
         return render(request, "member/set_password.html", {
             "form": form, "token": token, "include_form_js": True,
@@ -141,14 +146,15 @@ def get_access_view(request):
         if form.is_valid():
             email = form.cleaned_data["email"]
             try:
-                member = Member.objects.get(email__iexact=email, is_active=True)
-                if not member.user_id or not member.user.has_usable_password():
+                member = Member.objects.get(email__iexact=email)
+                if not member.user_id or not member.user.has_usable_password() or not member.is_active:
+                    # Inactive members always go through set-password so reactivation happens there
                     if not member.user_id:
                         create_member_user(member)
                     send_set_password_email(member, request)
                     logger.info(f"Get-access: sent set-password email to member {member.pk}")
                 else:
-                    # Member has account → send password reset email
+                    # Active member with usable password → send standard reset email
                     reset_form = PasswordResetForm({"email": email})
                     if reset_form.is_valid():
                         reset_form.save(request=request, use_https=request.is_secure())
