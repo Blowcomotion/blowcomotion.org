@@ -175,6 +175,7 @@ def get_access_view(request):
                         reset_form.save(
                             request=request,
                             use_https=request.is_secure(),
+                            from_email=settings.FROM_EMAIL,
                             email_template_name="member/password_reset_email.txt",
                         )
                     logger.info(f"Get-access: sent reset email to member {member.pk}")
