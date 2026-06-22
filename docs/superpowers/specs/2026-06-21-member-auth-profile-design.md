@@ -80,7 +80,7 @@ Email copy: "Welcome to Blowcomotion — set your password to access your member
 
 - URL: `/member/login/`
 - Django's `LoginView` with a custom template.
-- reCAPTCHA (consistent with existing site forms).
+- reCAPTCHA v3 via the existing `_validate_recaptcha()` helper in `views.py`.
 - JS honeypot field (consistent with existing site forms).
 - Rate-limited via `django-axes`: lockout after 5 failed attempts per IP for 30 minutes.
 - "Forgot password?" link on the form.
@@ -93,7 +93,7 @@ Email copy: "Welcome to Blowcomotion — set your password to access your member
   - If the email matches an active `Member` with no `User` (or a `User` with an unusable password): creates the `User` if needed and sends a Set Password email instead of a reset email.
   - If no active `Member` is found for the email: shows a generic "if you're a member, check your email" response without sending anything (no enumeration).
 - `PasswordResetConfirmView` is used as-is with a custom template.
-- reCAPTCHA on the request form.
+- reCAPTCHA v3 via `_validate_recaptcha()` on the request form.
 - Reset email includes the direct link to the reset form.
 - Tokens are single-use and expire after 24 hours (Django's default token generator).
 
@@ -111,7 +111,7 @@ Email copy: "Welcome to Blowcomotion — set your password to access your member
 ### Get Access (on-demand account creation)
 
 - URL: `/member/get-access/`
-- Email input form with reCAPTCHA.
+- Email input form with reCAPTCHA v3 via `_validate_recaptcha()`.
 - If email matches an active `Member` with no `User`: creates the account, sends Set Password email.
 - If email matches a `Member` with an existing `User`: sends a standard password reset email.
 - If no match: shows generic "if you're a member, check your email" response.
@@ -143,7 +143,7 @@ Notification preferences rendered as a section within this form:
 - `notify_reminders` — Operational reminders
 - `notify_announcements` — Band announcements
 
-reCAPTCHA on submit. Saves to `Member`; keeps `User.email` in sync on email change.
+reCAPTCHA v3 via `_validate_recaptcha()` on submit. Saves to `Member`; keeps `User.email` and `User.username` in sync on confirmed email change.
 
 ### My Requests (`/member/requests/`)
 
@@ -185,7 +185,10 @@ Argon2 via `django[argon2]` added to `requirements.txt`. Django's existing `AUTH
 
 ### Rate limiting
 
-`django-axes` added. Locks out after 5 failed login attempts per IP for 30 minutes. Applied to login, set-password, and get-access forms.
+`django-axes` hooks Django's authentication backend and counts failed `authenticate()` calls — so it protects the login form only. It cannot observe set-password or get-access form submissions, which never call `authenticate()`.
+
+- **Login** — `django-axes`: lockout after 5 failed attempts per IP for 30 minutes.
+- **Set-password, get-access, and password-reset-request forms** — `django-ratelimit` decorator: 10 submissions per IP per hour. Returns HTTP 429 on breach.
 
 ### Token security
 
@@ -219,6 +222,17 @@ Session invalidated server-side on logout via `session.flush()`.
 |---|---|
 | `django[argon2]` | Argon2 password hashing |
 | `django-axes` | Login rate limiting / lockout |
+| `django-ratelimit` | Rate limiting for set-password, get-access, and password-reset-request endpoints |
+
+---
+
+## Implementation Notes
+
+**Wagtail URL routing** — The root URLconf includes `wagtail_urls` as a catch-all. The `/member/` URL patterns must be registered *before* `wagtail_urls`, otherwise Wagtail's page-serving middleware intercepts member routes.
+
+**Admin email drift** — If an admin edits `Member.email` directly in the Wagtail admin, `User.email` and `User.username` will fall out of sync, silently breaking email-based login. `Member.save()` should detect when `email` has changed and update the linked `User` fields if a `User` is linked.
+
+**Accessibility & mobile** — All member-facing forms must be keyboard-accessible, have labeled error messages, and be mobile-friendly (consistent with the rest of the site).
 
 ---
 
