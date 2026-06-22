@@ -129,3 +129,19 @@ class MemberSaveEmailDriftTests(TestCase):
         user.refresh_from_db()
         self.assertEqual(user.email, "new@example.com")
         self.assertEqual(user.username, "new@example.com")
+
+    def test_full_save_syncs_user_email(self):
+        """Email drift guard fires on a full save (update_fields=None)."""
+        member = make_member(email="full@example.com")
+        user = User.objects.create_user(
+            username="full@example.com", email="full@example.com"
+        )
+        member.user = user
+        member.save(update_fields=["user"], sync_go3=False)
+
+        member.email = "fullnew@example.com"
+        member.save(sync_go3=False)  # full save, no update_fields
+
+        user.refresh_from_db()
+        self.assertEqual(user.email, "fullnew@example.com")
+        self.assertEqual(user.username, "fullnew@example.com")
