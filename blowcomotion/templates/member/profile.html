@@ -1,0 +1,105 @@
+{% extends "member/portal_base.html" %}
+{% block title %}My Profile — Blowcomotion{% endblock %}
+{% block portal_content %}
+<h2 class="mb-4">My Profile</h2>
+{% if messages %}{% for msg in messages %}<div class="alert alert-success">{{ msg }}</div>{% endfor %}{% endif %}
+{% if member.pending_email %}
+<div class="alert alert-info">
+    A confirmation email has been sent to <strong>{{ member.pending_email }}</strong>. Click the link in that email to complete the change.
+</div>
+{% endif %}
+<form method="post" enctype="multipart/form-data" id="member-form">
+    {% csrf_token %}
+    <input type="hidden" name="g-recaptcha-response" value="">
+
+    <h5 class="mt-4 mb-3">Personal Information</h5>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label">First Name *</label>
+            {{ form.first_name }}
+            {% if form.first_name.errors %}<div class="text-danger small">{{ form.first_name.errors }}</div>{% endif %}
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Last Name *</label>
+            {{ form.last_name }}
+            {% if form.last_name.errors %}<div class="text-danger small">{{ form.last_name.errors }}</div>{% endif %}
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Preferred Name</label>
+            {{ form.preferred_name }}
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Email</label>
+            {{ form.email }}
+            {% if form.email.errors %}<div class="text-danger small">{{ form.email.errors }}</div>{% endif %}
+            <div class="form-text">Changing your email requires confirmation. A link will be sent to the new address.</div>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Phone</label>
+            {{ form.phone }}
+        </div>
+    </div>
+
+    <h5 class="mt-4 mb-3">Address</h5>
+    <div class="row g-3">
+        <div class="col-12"><label class="form-label">Street Address</label>{{ form.address }}</div>
+        <div class="col-md-4"><label class="form-label">City</label>{{ form.city }}</div>
+        <div class="col-md-3"><label class="form-label">State</label>{{ form.state }}</div>
+        <div class="col-md-2"><label class="form-label">Zip</label>{{ form.zip_code }}</div>
+        <div class="col-md-3"><label class="form-label">Country</label>{{ form.country }}</div>
+    </div>
+
+    <h5 class="mt-4 mb-3">Birthday</h5>
+    <div class="row g-3">
+        <div class="col-md-4"><label class="form-label">Month</label>{{ form.birth_month }}</div>
+        <div class="col-md-4"><label class="form-label">Day</label>{{ form.birth_day }}</div>
+        <div class="col-md-4"><label class="form-label">Year</label>{{ form.birth_year }}</div>
+    </div>
+
+    <h5 class="mt-4 mb-3">Music</h5>
+    <div class="row g-3">
+        <div class="col-md-6"><label class="form-label">Primary Instrument</label>{{ form.primary_instrument }}</div>
+        <div class="col-12">
+            <label class="form-label">Additional Instruments</label>
+            {{ form.additional_instruments }}
+        </div>
+    </div>
+
+    <h5 class="mt-4 mb-3">About You</h5>
+    <div class="mb-3"><label class="form-label">Bio</label>{{ form.bio }}</div>
+    <div class="mb-3"><label class="form-label">What inspired you to join?</label>{{ form.inspired_by }}</div>
+    <div class="mb-3"><label class="form-label">Emergency Contact</label>{{ form.emergency_contact }}</div>
+    <div class="mb-3"><label class="form-label">Profile Photo</label>{{ form.image }}</div>
+
+    <h5 class="mt-4 mb-3">Notification Preferences</h5>
+    <div class="form-check mb-2">{{ form.notify_rental_updates }} <label class="form-check-label">Rental status updates</label></div>
+    <div class="form-check mb-2">{{ form.notify_reminders }} <label class="form-check-label">Operational reminders</label></div>
+    <div class="form-check mb-2">{{ form.notify_announcements }} <label class="form-check-label">Band announcements</label></div>
+
+    <div class="mt-4">
+        <button type="submit" class="site-btn">Save Profile</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{% if include_form_js %}
+<script>
+(function() {
+    var form = document.getElementById('member-form');
+    if (!form || typeof grecaptcha === 'undefined' || !window.RECAPTCHA_SITE_KEY) return;
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var self = this;
+        grecaptcha.ready(function() {
+            grecaptcha.execute(window.RECAPTCHA_SITE_KEY, {action: 'submit'}).then(function(token) {
+                self.querySelector('input[name="g-recaptcha-response"]').value = token;
+                self.submit();
+            }).catch(function() { self.submit(); });
+        });
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

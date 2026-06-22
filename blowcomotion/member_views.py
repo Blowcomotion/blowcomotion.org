@@ -168,7 +168,17 @@ def get_access_view(request):
     })
 
 
+from datetime import timedelta
+
+from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+
+from blowcomotion.member_auth import send_email_change_confirmation
+from blowcomotion.models import EmailChangeToken, MemberInstrument
+
+User = get_user_model()
 
 
 @login_required
@@ -178,13 +188,82 @@ def member_home(request):
 
 @login_required
 def profile_view(request):
-    return render(request, "member/profile.html", {})
+    from blowcomotion.member_forms import MemberProfileForm
+    member = request.user.member
+    original_email = member.email  # snapshot before form validation mutates member in place
+
+    if request.method == "POST":
+        form = MemberProfileForm(request.POST, request.FILES, instance=member)
+        if form.is_valid():
+            instance = form.save(commit=False)
+            new_email = form.cleaned_data.get("email") or ""
+            email_changed = new_email and new_email != original_email
+
+            if email_changed:
+                instance.email = original_email  # hold until confirmed
+            instance.save(sync_go3=False)
+
+            # Rebuild additional instruments
+            member.additional_instruments.all().delete()
+            for instrument in form.cleaned_data.get("additional_instruments", []):
+                MemberInstrument.objects.create(member=member, instrument=instrument)
+
+            if email_changed:
+                send_email_change_confirmation(member, new_email, request)
+                messages.success(
+                    request,
+                    f"Profile saved. A confirmation email has been sent to {new_email}.",
+                )
+            else:
+                messages.success(request, "Profile saved.")
+            return redirect("member-profile")
+        return render(request, "member/profile.html", {
+            "form": form, "member": member, "include_form_js": True,
+        })
+
+    form = MemberProfileForm(instance=member)
+    return render(request, "member/profile.html", {
+        "form": form, "member": member, "include_form_js": True,
+    })
 
 
 @login_required
 def requests_view(request):
-    return render(request, "member/requests.html", {})
+    return render(request, "member/requests.html", {"member": request.user.member})
 
 
 def confirm_email_view(request, token_uuid):
-    return render(request, "member/confirm_email_result.html", {})
+    from blowcomotion.models import EmailChangeToken
+    try:
+        token = EmailChangeToken.objects.get(uuid=token_uuid)
+    except EmailChangeToken.DoesNotExist:
+        return render(request, "member/confirm_email_result.html", {"invalid": True})
+
+    if token.used:
+        return render(request, "member/confirm_email_result.html", {"invalid": True})
+
+    expiry = token.created_at + timedelta(hours=24)
+    if timezone.now() > expiry:
+        return render(request, "member/confirm_email_result.html", {"expired": True})
+
+    member = token.member
+    new_email = token.new_email
+
+    member.email = new_email
+    member.pending_email = None
+    member.save(update_fields=["email", "pending_email"], sync_go3=False)
+
+    token.used = True
+    token.save(update_fields=["used"])
+
+    if member.user_id:
+        try:
+            user = User.objects.get(pk=member.user_id)
+            user.email = new_email
+            user.username = new_email
+            user.save(update_fields=["email", "username"])
+        except User.DoesNotExist:
+            pass
+
+    logger.info(f"Email confirmed for member {member.pk}: {new_email}")
+    return render(request, "member/confirm_email_result.html", {"confirmed": True, "new_email": new_email})
