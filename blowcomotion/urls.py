@@ -7,7 +7,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 import blowcomotion.views as blowcomotion_views
-from blowcomotion import chart_api
+from blowcomotion import chart_api, member_urls
 from search import views as search_views
 
 urlpatterns = [
@@ -35,6 +35,8 @@ urlpatterns = [
     path("charts/songs/", chart_api.songs_with_charts, name="chart-songs"),
     path("charts/instruments/<int:song_id>/", chart_api.instruments_for_song, name="chart-instruments"),
     path("charts/parts/<int:song_id>/<int:instrument_id>/", chart_api.charts_for_song_instrument, name="chart-parts"),
+
+    path("member/", include(member_urls)),
 ]
 
 
