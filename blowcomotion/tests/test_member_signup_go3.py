@@ -428,3 +428,56 @@ class MemberSignupGO3IntegrationTests(TestCase):
         # Verify second call was member confirmation
         second_call_args = mock_email.call_args_list[1]
         self.assertEqual(second_call_args[1]['subject'], 'Welcome to Blowcomotion - Application Received')
+
+
+class MemberSignupCreatesUserTests(TestCase):
+    """After signup, a User is created and a set-password email is sent."""
+
+    def setUp(self):
+        """Set up test data"""
+        self.client = Client()
+        self.site = Site.objects.get(is_default_site=True)
+
+        # Create site settings
+        SiteSettings.objects.create(
+            site=self.site,
+            member_signup_notification_recipients='admin@example.com'
+        )
+
+    @override_settings(
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+        FROM_EMAIL="noreply@blowcomotion.org",
+        RECAPTCHA_PUBLIC_KEY=None,
+        RECAPTCHA_PRIVATE_KEY=None,
+        GIGO_API_URL=None,
+        DEBUG=True,
+    )
+    @patch("blowcomotion.views.send_member_to_go3_band_invite")
+    def test_signup_creates_user_and_sends_set_password_email(self, mock_go3):
+        mock_go3.return_value = {"status": "success", "message": "ok"}
+        from django.contrib.auth import get_user_model
+        from django.core import mail
+
+        User = get_user_model()
+
+        response = self.client.post(
+            "/process-form/",
+            {
+                "form_type": "member_signup_form",
+                "best_color": "purple",
+                "first_name": "Alex",
+                "last_name": "Musician",
+                "email": "alex@example.com",
+            },
+        )
+        # Set-password email should have been sent
+        self.assertTrue(
+            any("/member/set-password/" in m.body for m in mail.outbox),
+            "Expected a set-password email but none found",
+        )
+        # A User linked to the new Member should exist
+        from blowcomotion.models import Member
+        member = Member.objects.get(email="alex@example.com")
+        self.assertIsNotNone(member.user_id)
+        user = User.objects.get(pk=member.user_id)
+        self.assertFalse(user.has_usable_password())
