@@ -18,6 +18,7 @@ class MemberProfileForm(forms.ModelForm):
         widget=forms.CheckboxSelectMultiple,
         label="Additional instruments",
     )
+    profile_photo = forms.ImageField(required=False, label="Profile Photo")
 
     class Meta:
         model = Member
@@ -39,7 +40,6 @@ class MemberProfileForm(forms.ModelForm):
             "bio",
             "inspired_by",
             "primary_instrument",
-            "image",
             "notify_rental_updates",
             "notify_reminders",
             "notify_announcements",
@@ -57,5 +57,11 @@ class MemberProfileForm(forms.ModelForm):
                 self.instance.additional_instruments.values_list("instrument_id", flat=True)
             )
         for field in self.fields.values():
-            if hasattr(field.widget, "attrs"):
+            if not hasattr(field.widget, "attrs"):
+                continue
+            if isinstance(field.widget, forms.CheckboxSelectMultiple):
+                pass  # styled via .instruments-chooser, no Bootstrap class needed
+            elif isinstance(field.widget, forms.CheckboxInput):
+                field.widget.attrs.setdefault("class", "form-check-input")
+            else:
                 field.widget.attrs.setdefault("class", "form-control")

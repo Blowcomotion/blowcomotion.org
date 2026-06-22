@@ -90,7 +90,7 @@ def set_password_view(request, token_uuid):
 
 class MemberPasswordResetView(auth_views.PasswordResetView):
     template_name = "member/password_reset.html"
-    email_template_name = "registration/password_reset_email.html"  # Django default
+    email_template_name = "member/password_reset_email.txt"
 
     def post(self, request, *args, **kwargs):
         if not _validate_honeypot(request):
@@ -157,7 +157,11 @@ def get_access_view(request):
                     # Active member with usable password → send standard reset email
                     reset_form = PasswordResetForm({"email": email})
                     if reset_form.is_valid():
-                        reset_form.save(request=request, use_https=request.is_secure())
+                        reset_form.save(
+                            request=request,
+                            use_https=request.is_secure(),
+                            email_template_name="member/password_reset_email.txt",
+                        )
                     logger.info(f"Get-access: sent reset email to member {member.pk}")
             except Member.DoesNotExist:
                 pass  # Generic response — no enumeration
@@ -207,6 +211,17 @@ def profile_view(request):
 
             if email_changed:
                 instance.email = original_email  # hold until confirmed
+
+            photo = form.cleaned_data.get("profile_photo")
+            if photo:
+                from blowcomotion.models import CustomImage
+                img = CustomImage(
+                    title=f"{instance.first_name} {instance.last_name} profile photo",
+                    file=photo,
+                )
+                img.save()
+                instance.image = img
+
             instance.save(sync_go3=False)
 
             # Rebuild additional instruments
