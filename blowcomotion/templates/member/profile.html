@@ -1,4 +1,5 @@
 {% extends "member/portal_base.html" %}
+{% load wagtailimages_tags %}
 {% block title %}My Profile — Blowcomotion{% endblock %}
 {% block portal_content %}
 <h2 class="mb-4">My Profile</h2>
@@ -61,7 +62,9 @@
         <div class="col-md-6"><label class="form-label">Primary Instrument</label>{{ form.primary_instrument }}</div>
         <div class="col-12">
             <label class="form-label">Additional Instruments</label>
-            {{ form.additional_instruments }}
+            <div class="instruments-chooser">
+                {{ form.additional_instruments }}
+            </div>
         </div>
     </div>
 
@@ -69,12 +72,23 @@
     <div class="mb-3"><label class="form-label">Bio</label>{{ form.bio }}</div>
     <div class="mb-3"><label class="form-label">What inspired you to join?</label>{{ form.inspired_by }}</div>
     <div class="mb-3"><label class="form-label">Emergency Contact</label>{{ form.emergency_contact }}</div>
-    <div class="mb-3"><label class="form-label">Profile Photo</label>{{ form.image }}</div>
+    <div class="mb-3">
+        <label class="form-label">Profile Photo</label>
+        {% if member.image %}
+            {% image member.image width-120 as current_photo %}
+            <div class="mb-2">
+                <img src="{{ current_photo.url }}" alt="Profile photo" style="width:120px;height:120px;object-fit:cover;border-radius:50%;">
+            </div>
+            <div class="form-text mb-2">Upload a new photo to replace the current one.</div>
+        {% endif %}
+        <input type="file" name="profile_photo" id="id_profile_photo" class="form-control" accept="image/*">
+        {% if form.profile_photo.errors %}<div class="text-danger small">{{ form.profile_photo.errors }}</div>{% endif %}
+    </div>
 
     <h5 class="mt-4 mb-3">Notification Preferences</h5>
-    <div class="form-check mb-2">{{ form.notify_rental_updates }} <label class="form-check-label">Rental status updates</label></div>
-    <div class="form-check mb-2">{{ form.notify_reminders }} <label class="form-check-label">Operational reminders</label></div>
-    <div class="form-check mb-2">{{ form.notify_announcements }} <label class="form-check-label">Band announcements</label></div>
+    <div class="form-check mb-2">{{ form.notify_rental_updates }}<label class="form-check-label" for="{{ form.notify_rental_updates.id_for_label }}">Rental status updates</label></div>
+    <div class="form-check mb-2">{{ form.notify_reminders }}<label class="form-check-label" for="{{ form.notify_reminders.id_for_label }}">Operational reminders</label></div>
+    <div class="form-check mb-2">{{ form.notify_announcements }}<label class="form-check-label" for="{{ form.notify_announcements.id_for_label }}">Band announcements</label></div>
 
     <div class="mt-4">
         <button type="submit" class="site-btn">Save Profile</button>

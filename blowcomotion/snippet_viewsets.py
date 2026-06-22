@@ -27,6 +27,7 @@ class ChartViewSet(SnippetViewSet):
     search_fields = ['song__title', 'instrument__name', 'part']
     list_display = [
         'song',
+        'pdf',
         'instrument',
         Column('part', label='Part'),
         UpdatedAtColumn()

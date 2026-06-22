@@ -134,6 +134,41 @@ hr {
     display: none !important;
 }
 
+// Scrollable container for the additional instruments checkbox list
+.instruments-chooser {
+    max-height: 240px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 6px 12px;
+
+    // Outer div rendered by CheckboxSelectMultiple — lay out items in 2 columns
+    > div {
+        columns: 2;
+        column-gap: 16px;
+    }
+
+    // Per-item div
+    > div > div {
+        break-inside: avoid;
+        padding: 1px 0;
+    }
+
+    label {
+        font-size: 0.875rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+    }
+
+    input[type="checkbox"] {
+        width: auto;
+        flex-shrink: 0;
+    }
+}
+
 .feedback-form-modal-button {
     position: fixed;
     bottom: 40px;
