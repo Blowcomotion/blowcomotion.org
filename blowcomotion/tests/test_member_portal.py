@@ -15,6 +15,18 @@ def make_member(**kwargs):
 
 
 class PortalAuthGateTests(TestCase):
+    def test_staff_user_without_member_profile_redirects(self):
+        staff = User.objects.create_user(username="staff@example.com", password="StaffP@ss!")
+        self.client.login(username="staff@example.com", password="StaffP@ss!")
+        response = self.client.get(reverse("member-profile"))
+        self.assertEqual(response.status_code, 302)
+
+    def test_staff_user_without_member_requests_redirects(self):
+        staff = User.objects.create_user(username="staff2@example.com", password="StaffP@ss!")
+        self.client.login(username="staff2@example.com", password="StaffP@ss!")
+        response = self.client.get(reverse("member-requests"))
+        self.assertEqual(response.status_code, 302)
+
     def test_profile_redirects_anonymous_to_login(self):
         response = self.client.get(reverse("member-profile"))
         self.assertRedirects(

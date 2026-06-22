@@ -3,21 +3,35 @@ from datetime import timedelta
 
 from django_ratelimit.decorators import ratelimit
 
-from django.contrib.auth import login, views as auth_views
+from django.contrib import messages
+from django.contrib.auth import get_user_model, login, views as auth_views
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 
 from blowcomotion.member_auth import (
     create_member_user,
+    ensure_set_password_flow,
+    needs_set_password,
+    send_email_change_confirmation,
     send_set_password_email,
     send_signup_invite_email,
 )
-from blowcomotion.member_forms import GetAccessForm
-from blowcomotion.models import Member, PasswordSetToken
+from blowcomotion.member_forms import GetAccessForm, MemberProfileForm
+from blowcomotion.models import (
+    CustomImage,
+    EmailChangeToken,
+    Member,
+    MemberInstrument,
+    PasswordSetToken,
+)
 from blowcomotion.views import _validate_honeypot, _validate_recaptcha
 
 logger = logging.getLogger(__name__)
+User = get_user_model()
 
 TOKEN_EXPIRY_HOURS = 24
 
@@ -92,6 +106,10 @@ def set_password_view(request, token_uuid):
 
 # ── Password Reset ─────────────────────────────────────────────────────────────
 
+@method_decorator(
+    ratelimit(key="ip", rate="10/h", method="POST", block=True),
+    name="dispatch",
+)
 class MemberPasswordResetView(auth_views.PasswordResetView):
     template_name = "member/password_reset.html"
     email_template_name = "member/password_reset_email.txt"
@@ -111,20 +129,15 @@ class MemberPasswordResetView(auth_views.PasswordResetView):
         email = form.cleaned_data["email"]
         try:
             member = Member.objects.get(email__iexact=email, is_active=True)
-        except Member.DoesNotExist:
-            # No active member — generic response, no email sent
-            logger.debug(f"Password reset attempted for non-member email: {email}")
+        except (Member.DoesNotExist, Member.MultipleObjectsReturned):
+            logger.debug(f"Password reset attempted for non-member or ambiguous email: {email}")
             return redirect("password_reset_done")
 
-        if not member.user_id or not member.user.has_usable_password():
-            # Member has no account or unusable password → send set-password email
-            if not member.user_id:
-                create_member_user(member)
-            send_set_password_email(member, self.request)
+        if needs_set_password(member):
+            ensure_set_password_flow(member, self.request)
             logger.info(f"Sent set-password email (via reset flow) for member {member.pk}")
             return redirect("password_reset_done")
 
-        # Member has a usable-password User → use Django's built-in reset
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -151,14 +164,10 @@ def get_access_view(request):
             email = form.cleaned_data["email"]
             try:
                 member = Member.objects.get(email__iexact=email)
-                if not member.user_id or not member.user.has_usable_password() or not member.is_active:
-                    # Inactive members always go through set-password so reactivation happens there
-                    if not member.user_id:
-                        create_member_user(member)
-                    send_set_password_email(member, request)
+                if needs_set_password(member):
+                    ensure_set_password_flow(member, request)
                     logger.info(f"Get-access: sent set-password email to member {member.pk}")
                 else:
-                    # Active member with usable password → send standard reset email
                     reset_form = PasswordResetForm({"email": email})
                     if reset_form.is_valid():
                         reset_form.save(
@@ -169,6 +178,8 @@ def get_access_view(request):
                     logger.info(f"Get-access: sent reset email to member {member.pk}")
             except Member.DoesNotExist:
                 send_signup_invite_email(email, request)
+            except Member.MultipleObjectsReturned:
+                logger.warning(f"Get-access: ambiguous email match for {email}, no email sent")
             return render(request, "member/get_access.html", {
                 "form": form, "sent": True,
             })
@@ -182,18 +193,7 @@ def get_access_view(request):
     })
 
 
-from datetime import timedelta
-
-from django.contrib import messages
-from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import login_required
-from django.utils import timezone
-
-from blowcomotion.member_auth import send_email_change_confirmation
-from blowcomotion.models import EmailChangeToken, MemberInstrument
-
-User = get_user_model()
-
+# ── Member Portal ──────────────────────────────────────────────────────────────
 
 @login_required
 def member_home(request):
@@ -202,7 +202,8 @@ def member_home(request):
 
 @login_required
 def profile_view(request):
-    from blowcomotion.member_forms import MemberProfileForm
+    if not hasattr(request.user, "member"):
+        return redirect("/")
     member = request.user.member
     original_email = member.email  # snapshot before form validation mutates member in place
 
@@ -217,8 +218,8 @@ def profile_view(request):
                 instance.email = original_email  # hold until confirmed
 
             photo = form.cleaned_data.get("profile_photo")
+            old_image = instance.image if photo else None
             if photo:
-                from blowcomotion.models import CustomImage
                 img = CustomImage(
                     title=f"{instance.first_name} {instance.last_name} profile photo",
                     file=photo,
@@ -227,6 +228,9 @@ def profile_view(request):
                 instance.image = img
 
             instance.save(sync_go3=False)
+
+            if old_image:
+                old_image.delete()
 
             # Rebuild additional instruments
             member.additional_instruments.all().delete()
@@ -254,11 +258,12 @@ def profile_view(request):
 
 @login_required
 def requests_view(request):
+    if not hasattr(request.user, "member"):
+        return redirect("/")
     return render(request, "member/requests.html", {"member": request.user.member})
 
 
 def confirm_email_view(request, token_uuid):
-    from blowcomotion.models import EmailChangeToken
     try:
         token = EmailChangeToken.objects.get(uuid=token_uuid)
     except EmailChangeToken.DoesNotExist:
@@ -267,28 +272,20 @@ def confirm_email_view(request, token_uuid):
     if token.used:
         return render(request, "member/confirm_email_result.html", {"invalid": True})
 
-    expiry = token.created_at + timedelta(hours=24)
+    expiry = token.created_at + timedelta(hours=TOKEN_EXPIRY_HOURS)
     if timezone.now() > expiry:
         return render(request, "member/confirm_email_result.html", {"expired": True})
 
     member = token.member
     new_email = token.new_email
 
-    member.email = new_email
-    member.pending_email = None
-    member.save(update_fields=["email", "pending_email"], sync_go3=False)
-
-    token.used = True
-    token.save(update_fields=["used"])
-
-    if member.user_id:
-        try:
-            user = User.objects.get(pk=member.user_id)
-            user.email = new_email
-            user.username = new_email
-            user.save(update_fields=["email", "username"])
-        except User.DoesNotExist:
-            pass
+    with transaction.atomic():
+        member.email = new_email
+        member.pending_email = None
+        member.save(update_fields=["email", "pending_email"], sync_go3=False)
+        token.used = True
+        token.save(update_fields=["used"])
+    # Member.save() email drift guard syncs User.email / User.username when "email" is in update_fields
 
     logger.info(f"Email confirmed for member {member.pk}: {new_email}")
     return render(request, "member/confirm_email_result.html", {"confirmed": True, "new_email": new_email})

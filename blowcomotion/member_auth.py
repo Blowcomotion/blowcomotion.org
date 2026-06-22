@@ -2,6 +2,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 
@@ -10,6 +11,18 @@ from blowcomotion.models import EmailChangeToken, Member, PasswordSetToken
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
+
+
+def needs_set_password(member):
+    """True when the member must go through the set-password flow rather than password-reset."""
+    return not member.user_id or not member.user.has_usable_password() or not member.is_active
+
+
+def ensure_set_password_flow(member, request):
+    """Create a User account if needed, then send the set-password email."""
+    if not member.user_id:
+        create_member_user(member)
+    send_set_password_email(member, request)
 
 
 def create_member_user(member):
@@ -81,7 +94,18 @@ def send_email_change_confirmation(member, new_email, request):
 
 
 def send_signup_invite_email(email, request):
-    """Send a signup link to an address not found in the member list."""
+    """Send a signup link to an address not found in the member list.
+
+    Suppressed for 24 hours after the first send to the same address to prevent
+    the get-access endpoint from being used as an email spam relay.
+    """
+    cache_key = f"signup_invite:{email.lower()}"
+    send_count = cache.get(cache_key, 0)
+    if send_count >= 2:
+        logger.debug(f"Signup invite suppressed for {email} (sent {send_count}x in past 24h)")
+        return
+    cache.set(cache_key, send_count + 1, timeout=86400)
+
     signup_url = request.build_absolute_uri("/member-signup/")
     subject = "Blowcomotion member portal access"
     message = render_to_string(

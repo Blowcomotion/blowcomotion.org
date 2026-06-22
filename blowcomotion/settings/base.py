@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 import sys
+from datetime import timedelta
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE_DIR = os.path.dirname(PROJECT_DIR)
@@ -157,9 +158,9 @@ AUTHENTICATION_BACKENDS = [
 
 # django-axes: rate-limit login attempts
 AXES_FAILURE_LIMIT = 5
-AXES_COOLOFF_TIME = 1800  # seconds (30 minutes)
+AXES_COOLOFF_TIME = timedelta(minutes=30)
 AXES_RESET_ON_SUCCESS = True
-AXES_LOCKOUT_PARAMETERS = ["ip_address"]
+AXES_LOCKOUT_PARAMETERS = [["ip_address"], ["username"]]
 
 # Disable axes rate-limiting during test runs
 # (test client doesn't pass request to authenticate())

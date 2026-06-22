@@ -187,6 +187,26 @@ class GetAccessViewTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn("/member/set-password/", mail.outbox[0].body)
 
+    @recaptcha_pass
+    def test_duplicate_email_get_access_returns_ok(self, mock_recaptcha):
+        """Two active members with the same email don't cause a MultipleObjectsReturned 500."""
+        make_member(email="dupe@example.com")
+        make_member(first_name="Other", last_name="Also", email="dupe@example.com")
+        response = self.client.post(
+            reverse("member-get-access"), {"email": "dupe@example.com", "best_color": "purple"}
+        )
+        self.assertEqual(response.status_code, 200)
+
+    @recaptcha_pass
+    def test_signup_invite_allows_two_sends_then_suppresses(self, mock_recaptcha):
+        """Same unknown email gets at most 2 invites per 24h window (re-delivery allowance)."""
+        from django.core import mail
+        for _ in range(3):
+            self.client.post(
+                reverse("member-get-access"), {"email": "newperson@example.com", "best_color": "purple"}
+            )
+        self.assertEqual(len(mail.outbox), 2)
+
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
                    FROM_EMAIL="noreply@blowcomotion.org")
@@ -216,3 +236,18 @@ class SetPasswordReactivationTests(TestCase):
             self.assertRedirects(response, "/member/profile/", fetch_redirect_response=False)
             member.refresh_from_db()
             self.assertTrue(member.is_active)
+
+
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+                   FROM_EMAIL="noreply@blowcomotion.org")
+class PasswordResetViewDuplicateEmailTests(TestCase):
+    @recaptcha_pass
+    def test_duplicate_email_password_reset_returns_ok(self, mock_recaptcha):
+        """Two active members with the same email don't cause a MultipleObjectsReturned 500."""
+        make_member(email="dupe3@example.com")
+        make_member(first_name="Other3", last_name="Also", email="dupe3@example.com")
+        response = self.client.post(
+            reverse("member-password-reset"),
+            {"email": "dupe3@example.com", "best_color": "purple"},
+        )
+        self.assertIn(response.status_code, [200, 302])

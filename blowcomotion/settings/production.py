@@ -12,6 +12,7 @@ WAGTAILADMIN_BASE_URL = 'https://www.blowcomotion.org'
 # GIGO_API_KEY = "your-production-api-key"  # Set in local.py or env vars
 
 SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 try:
     from .local import *
