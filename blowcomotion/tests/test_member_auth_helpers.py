@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 
 from blowcomotion.models import EmailChangeToken, Member, PasswordSetToken
 
@@ -145,3 +145,115 @@ class MemberSaveEmailDriftTests(TestCase):
         user.refresh_from_db()
         self.assertEqual(user.email, "fullnew@example.com")
         self.assertEqual(user.username, "fullnew@example.com")
+
+
+from blowcomotion.member_auth import (
+    create_member_user,
+    send_email_change_confirmation,
+    send_set_password_email,
+)
+
+
+class CreateMemberUserTests(TestCase):
+    def setUp(self):
+        self.member = make_member(email="test@example.com")
+
+    def test_creates_user_with_unusable_password(self):
+        user = create_member_user(self.member)
+        self.assertFalse(user.has_usable_password())
+
+    def test_sets_username_and_email_from_member_email(self):
+        user = create_member_user(self.member)
+        self.assertEqual(user.username, "test@example.com")
+        self.assertEqual(user.email, "test@example.com")
+
+    def test_links_user_to_member(self):
+        user = create_member_user(self.member)
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.user_id, user.pk)
+
+    def test_returns_existing_user_if_already_linked(self):
+        user1 = create_member_user(self.member)
+        user2 = create_member_user(self.member)
+        self.assertEqual(user1.pk, user2.pk)
+        self.assertEqual(User.objects.filter(email="test@example.com").count(), 1)
+
+
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    FROM_EMAIL="noreply@blowcomotion.org",
+)
+class SendSetPasswordEmailTests(TestCase):
+    def setUp(self):
+        self.member = make_member(email="invite@example.com")
+        create_member_user(self.member)
+        self.factory = RequestFactory()
+
+    def test_sends_email_to_member(self):
+        from django.core import mail
+        request = self.factory.get("/")
+        request.META["SERVER_NAME"] = "testserver"
+        request.META["SERVER_PORT"] = "80"
+        send_set_password_email(self.member, request)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("invite@example.com", mail.outbox[0].to)
+
+    def test_email_contains_set_password_link(self):
+        from django.core import mail
+        request = self.factory.get("/")
+        request.META["SERVER_NAME"] = "testserver"
+        request.META["SERVER_PORT"] = "80"
+        send_set_password_email(self.member, request)
+        self.assertIn("/member/set-password/", mail.outbox[0].body)
+
+    def test_creates_password_set_token(self):
+        request = self.factory.get("/")
+        request.META["SERVER_NAME"] = "testserver"
+        request.META["SERVER_PORT"] = "80"
+        send_set_password_email(self.member, request)
+        self.assertEqual(
+            PasswordSetToken.objects.filter(member=self.member, used=False, superseded=False).count(), 1
+        )
+
+    def test_supersedes_prior_tokens(self):
+        token_old = PasswordSetToken.objects.create(member=self.member)
+        request = self.factory.get("/")
+        request.META["SERVER_NAME"] = "testserver"
+        request.META["SERVER_PORT"] = "80"
+        send_set_password_email(self.member, request)
+        token_old.refresh_from_db()
+        self.assertTrue(token_old.superseded)
+
+
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    FROM_EMAIL="noreply@blowcomotion.org",
+)
+class SendEmailChangeConfirmationTests(TestCase):
+    def setUp(self):
+        self.member = make_member(email="original@example.com")
+        self.factory = RequestFactory()
+
+    def test_sends_email_to_new_address(self):
+        from django.core import mail
+        request = self.factory.get("/")
+        request.META["SERVER_NAME"] = "testserver"
+        request.META["SERVER_PORT"] = "80"
+        send_email_change_confirmation(self.member, "newemail@example.com", request)
+        self.assertIn("newemail@example.com", mail.outbox[0].to)
+
+    def test_email_contains_confirm_link(self):
+        from django.core import mail
+        request = self.factory.get("/")
+        request.META["SERVER_NAME"] = "testserver"
+        request.META["SERVER_PORT"] = "80"
+        send_email_change_confirmation(self.member, "newemail@example.com", request)
+        self.assertIn("/member/confirm-email/", mail.outbox[0].body)
+
+    def test_sets_pending_email_on_member(self):
+        request = self.factory.get("/")
+        request.META["SERVER_NAME"] = "testserver"
+        request.META["SERVER_PORT"] = "80"
+        send_email_change_confirmation(self.member, "newemail@example.com", request)
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.pending_email, "newemail@example.com")
