@@ -176,4 +176,7 @@ blowcomotion/settings/local.py
 .vscode/launch.json
 
 # Local migration files
-blowco.json
+blowco.json.superpowers/
+
+# Git worktrees for parallel development
+.worktrees/
