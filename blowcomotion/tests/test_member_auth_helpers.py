@@ -3,6 +3,7 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.test import RequestFactory, TestCase, override_settings
 
+from blowcomotion.member_auth import create_member_user
 from blowcomotion.models import EmailChangeToken, Member, PasswordSetToken
 
 User = get_user_model()
@@ -178,6 +179,20 @@ class CreateMemberUserTests(TestCase):
         self.assertEqual(user1.pk, user2.pk)
         self.assertEqual(User.objects.filter(email="test@example.com").count(), 1)
 
+    def test_raises_for_member_with_no_email(self):
+        member = Member.objects.create(first_name="No", last_name="Email")
+        with self.assertRaises(ValueError):
+            create_member_user(member)
+
+    def test_links_existing_user_when_email_already_taken(self):
+        existing = User.objects.create_user(username="taken@example.com", email="taken@example.com")
+        member = Member.objects.create(first_name="Ex", last_name="Isting", email="taken@example.com")
+        result = create_member_user(member)
+        self.assertEqual(result, existing)
+        member.refresh_from_db()
+        self.assertEqual(member.user_id, existing.pk)
+        self.assertEqual(User.objects.filter(username="taken@example.com").count(), 1)
+
 
 @override_settings(
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
@@ -257,3 +272,5 @@ class SendEmailChangeConfirmationTests(TestCase):
         send_email_change_confirmation(self.member, "newemail@example.com", request)
         self.member.refresh_from_db()
         self.assertEqual(self.member.pending_email, "newemail@example.com")
+
+

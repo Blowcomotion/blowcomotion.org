@@ -26,18 +26,30 @@ def ensure_set_password_flow(member, request):
 
 
 def create_member_user(member):
-    """Create a Django User with unusable password linked to member. Returns existing if already linked."""
+    """Create a Django User with unusable password linked to member.
+
+    Returns the existing linked User if already present. If a User with the
+    member's email already exists in the auth system, links that User rather
+    than raising IntegrityError. Raises ValueError if member has no email.
+    """
     if member.user_id:
         return member.user
 
-    email = member.email or ""
-    user = User.objects.create_user(username=email, email=email)
-    user.set_unusable_password()
-    user.save(update_fields=["password"])
+    email = (member.email or "").strip()
+    if not email:
+        raise ValueError(f"Cannot create user for member {member.pk}: no email address")
+
+    user, created = User.objects.get_or_create(
+        username=email,
+        defaults={"email": email},
+    )
+    if created:
+        user.set_unusable_password()
+        user.save(update_fields=["password"])
 
     member.user = user
     member.save(update_fields=["user"], sync_go3=False)
-    logger.info(f"Created user account for member {member.pk} ({email})")
+    logger.info(f"{'Created' if created else 'Linked existing'} user account for member {member.pk} ({email})")
     return user
 
 

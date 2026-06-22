@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -51,6 +53,13 @@ class ProfileViewTests(TestCase):
         self.user.set_password("Pass123!")
         self.user.save()
         self.client.login(username="robin@example.com", password="Pass123!")
+        self._recaptcha = patch(
+            "blowcomotion.member_views._validate_recaptcha", return_value=(True, None)
+        )
+        self._recaptcha.start()
+
+    def tearDown(self):
+        self._recaptcha.stop()
 
     def test_profile_page_renders(self):
         response = self.client.get(reverse("member-profile"))
@@ -95,6 +104,19 @@ class ProfileViewTests(TestCase):
         self.member.refresh_from_db()
         self.assertEqual(self.member.pending_email, "newemail@example.com")
         self.assertEqual(self.member.email, "robin@example.com")  # unchanged until confirmed
+
+    def test_profile_post_with_recaptcha_failure_returns_error(self):
+        self._recaptcha.stop()
+        with patch(
+            "blowcomotion.member_views._validate_recaptcha",
+            return_value=(False, "reCAPTCHA failed"),
+        ):
+            response = self.client.post(
+                reverse("member-profile"),
+                {"first_name": "Robin", "last_name": "Player", "email": "robin@example.com"},
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["recaptcha_error"], "reCAPTCHA failed")
 
     def test_email_unchanged_does_not_send_confirmation(self):
         from django.core import mail

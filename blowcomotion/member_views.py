@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from django_ratelimit.decorators import ratelimit
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login, views as auth_views
 from django.contrib.auth.decorators import login_required
@@ -138,6 +139,7 @@ class MemberPasswordResetView(auth_views.PasswordResetView):
             logger.info(f"Sent set-password email (via reset flow) for member {member.pk}")
             return redirect("password_reset_done")
 
+        self.from_email = settings.FROM_EMAIL
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -208,6 +210,13 @@ def profile_view(request):
     original_email = member.email  # snapshot before form validation mutates member in place
 
     if request.method == "POST":
+        is_valid_captcha, captcha_error = _validate_recaptcha(request)
+        if not is_valid_captcha:
+            form = MemberProfileForm(instance=member)
+            return render(request, "member/profile.html", {
+                "form": form, "member": member,
+                "include_form_js": True, "recaptcha_error": captcha_error,
+            })
         form = MemberProfileForm(request.POST, request.FILES, instance=member)
         if form.is_valid():
             instance = form.save(commit=False)

@@ -1,14 +1,13 @@
 from django import forms
 
+from blowcomotion.models import Instrument, Member
+
 
 class GetAccessForm(forms.Form):
     email = forms.EmailField(
         label="Your member email address",
         widget=forms.EmailInput(attrs={"class": "form-control", "placeholder": "you@example.com"}),
     )
-
-
-from blowcomotion.models import Instrument, Member
 
 
 class MemberProfileForm(forms.ModelForm):

@@ -240,7 +240,7 @@ class SetPasswordReactivationTests(TestCase):
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
                    FROM_EMAIL="noreply@blowcomotion.org")
-class PasswordResetViewDuplicateEmailTests(TestCase):
+class PasswordResetViewTests(TestCase):
     @recaptcha_pass
     def test_duplicate_email_password_reset_returns_ok(self, mock_recaptcha):
         """Two active members with the same email don't cause a MultipleObjectsReturned 500."""
@@ -251,3 +251,18 @@ class PasswordResetViewDuplicateEmailTests(TestCase):
             {"email": "dupe3@example.com", "best_color": "purple"},
         )
         self.assertIn(response.status_code, [200, 302])
+
+    @recaptcha_pass
+    def test_password_reset_email_uses_from_email_setting(self, mock_recaptcha):
+        """Reset emails for members with usable passwords use FROM_EMAIL, not webmaster@localhost."""
+        from django.core import mail
+        member = make_member(email="haspass@example.com")
+        user = create_member_user(member)
+        user.set_password("HasPass123!")
+        user.save()
+        self.client.post(
+            reverse("member-password-reset"),
+            {"email": "haspass@example.com", "best_color": "purple"},
+        )
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].from_email, "noreply@blowcomotion.org")
