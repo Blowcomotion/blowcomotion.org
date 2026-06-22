@@ -4,10 +4,9 @@ from datetime import timedelta
 from django_ratelimit.decorators import ratelimit
 
 from django.contrib.auth import login, views as auth_views
-from django.contrib.auth.forms import SetPasswordForm
+from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.utils.decorators import method_decorator
 
 from blowcomotion.member_auth import create_member_user, send_set_password_email
 from blowcomotion.member_forms import GetAccessForm
@@ -55,6 +54,8 @@ def set_password_view(request, token_uuid):
         return render(request, "member/set_password.html", {"expired": True})
 
     if request.method == "POST":
+        if request.POST.get("best_color"):
+            return redirect("/")
         is_valid, error = _validate_recaptcha(request)
         if not is_valid:
             form = SetPasswordForm(user=token.member.user)
@@ -148,7 +149,6 @@ def get_access_view(request):
                     logger.info(f"Get-access: sent set-password email to member {member.pk}")
                 else:
                     # Member has account → send password reset email
-                    from django.contrib.auth.forms import PasswordResetForm
                     reset_form = PasswordResetForm({"email": email})
                     if reset_form.is_valid():
                         reset_form.save(request=request, use_https=request.is_secure())
