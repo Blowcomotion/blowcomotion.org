@@ -246,6 +246,16 @@ class SendSetPasswordEmailTests(TestCase):
         token_old.refresh_from_db()
         self.assertTrue(token_old.superseded)
 
+    def test_set_password_email_url_not_qp_wrapped(self):
+        from django.core import mail
+        request = self.factory.get("/")
+        request.META["SERVER_NAME"] = "blowcomotion.org"
+        request.META["SERVER_PORT"] = "443"
+        request.META["wsgi.url_scheme"] = "https"
+        send_set_password_email(self.member, request)
+        raw = mail.outbox[0].message().as_string()
+        self.assertNotIn("=\n", raw)
+
 
 @override_settings(
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
@@ -271,6 +281,16 @@ class SendEmailChangeConfirmationTests(TestCase):
         request.META["SERVER_PORT"] = "80"
         send_email_change_confirmation(self.member, "newemail@example.com", request)
         self.assertIn("/member/confirm-email/", mail.outbox[0].body)
+
+    def test_email_change_confirmation_url_not_qp_wrapped(self):
+        from django.core import mail
+        request = self.factory.get("/")
+        request.META["SERVER_NAME"] = "blowcomotion.org"
+        request.META["SERVER_PORT"] = "443"
+        request.META["wsgi.url_scheme"] = "https"
+        send_email_change_confirmation(self.member, "newemail@example.com", request)
+        raw = mail.outbox[0].message().as_string()
+        self.assertNotIn("=\n", raw)
 
     def test_sets_pending_email_on_member(self):
         request = self.factory.get("/")

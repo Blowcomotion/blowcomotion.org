@@ -1,9 +1,10 @@
+import email.policy
 import logging
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 
 from blowcomotion.models import EmailChangeToken, Member, PasswordSetToken
@@ -11,6 +12,26 @@ from blowcomotion.models import EmailChangeToken, Member, PasswordSetToken
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
+
+# Django 6 uses email.policy.default (max_line_length=78) which triggers
+# quoted-printable encoding for any line over 78 chars — breaking long URLs.
+# RFC 5322 hard limit is 998; using that here so plain-text bodies are sent
+# as 7bit without QP soft-wrapping.
+_EMAIL_POLICY = email.policy.default.clone(max_line_length=998)
+
+
+class _MemberEmail(EmailMessage):
+    def message(self, *, policy=None):
+        return super().message(policy=policy or _EMAIL_POLICY)
+
+
+def _send_mail(subject, body, from_email, recipient):
+    _MemberEmail(
+        subject=subject,
+        body=body,
+        from_email=from_email,
+        to=[recipient],
+    ).send(fail_silently=False)
 
 
 def needs_set_password(member):
@@ -75,13 +96,7 @@ def send_set_password_email(member, request):
         "emails/set_password.txt",
         {"member": member, "set_password_url": set_password_url},
     )
-    send_mail(
-        subject=subject,
-        message=message,
-        from_email=settings.FROM_EMAIL,
-        recipient_list=[member.email],
-        fail_silently=False,
-    )
+    _send_mail(subject, message, settings.FROM_EMAIL, member.email)
     logger.info(f"Sent set-password email to member {member.pk} ({member.email})")
 
 
@@ -96,13 +111,7 @@ def send_email_change_confirmation(member, new_email, request):
         "emails/email_change_confirm.txt",
         {"member": member, "new_email": new_email, "confirm_url": confirm_url},
     )
-    send_mail(
-        subject=subject,
-        message=message,
-        from_email=settings.FROM_EMAIL,
-        recipient_list=[new_email],
-        fail_silently=False,
-    )
+    _send_mail(subject, message, settings.FROM_EMAIL, new_email)
     member.pending_email = new_email
     member.save(update_fields=["pending_email"], sync_go3=False)
     logger.info(f"Sent email-change confirmation to {new_email} for member {member.pk}")
@@ -127,11 +136,5 @@ def send_signup_invite_email(email, request):
         "emails/member_signup_invite.txt",
         {"signup_url": signup_url},
     )
-    send_mail(
-        subject=subject,
-        message=message,
-        from_email=settings.FROM_EMAIL,
-        recipient_list=[email],
-        fail_silently=False,
-    )
+    _send_mail(subject, message, settings.FROM_EMAIL, email)
     logger.info(f"Sent signup invite to non-member address: {email}")

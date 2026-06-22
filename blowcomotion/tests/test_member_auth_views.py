@@ -198,6 +198,15 @@ class GetAccessViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     @recaptcha_pass
+    def test_signup_invite_email_not_qp_wrapped(self, mock_recaptcha):
+        from django.core import mail
+        self.client.post(
+            reverse("member-get-access"), {"email": "newperson2@example.com", "best_color": "purple"}
+        )
+        raw = mail.outbox[0].message().as_string()
+        self.assertNotIn("=\n", raw)
+
+    @recaptcha_pass
     def test_signup_invite_allows_two_sends_then_suppresses(self, mock_recaptcha):
         """Same unknown email gets at most 2 invites per 24h window (re-delivery allowance)."""
         from django.core import mail
