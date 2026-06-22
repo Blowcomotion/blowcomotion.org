@@ -160,6 +160,11 @@ AXES_COOLOFF_TIME = 1800  # seconds (30 minutes)
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_PARAMETERS = ["ip_address"]
 
+# Disable axes rate-limiting during test runs
+# (test client doesn't pass request to authenticate())
+if TESTING:
+    AXES_ENABLED = False
+
 # Session security
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
