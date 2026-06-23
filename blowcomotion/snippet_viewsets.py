@@ -546,8 +546,45 @@ class CachedGigViewSet(SnippetViewSet):
         super().__init__(*args, **kwargs)
 
 
+class EquipmentFilterSet(WagtailFilterSet):
+    class Meta:
+        model = None
+        fields = {
+            'status': ['exact'],
+            'storage_location': ['exact'],
+        }
+
+
+class EquipmentViewSet(SnippetViewSet):
+    model = None
+    menu_label = 'Equipment'
+    menu_name = 'equipment'
+    menu_icon = 'folder-open-inverse'
+    search_fields = ('name', 'notes')
+    list_display = ['name', 'quantity', 'status', 'storage_location', UpdatedAtColumn()]
+    filterset_class = None
+    ordering = ['name']
+    panels = [
+        'name',
+        FieldRowPanel(['quantity', 'status']),
+        'storage_location',
+        'notes',
+    ]
+
+    def __init__(self, *args, **kwargs):
+        from .models import Equipment
+
+        class EquipmentFilterSetWithModel(EquipmentFilterSet):
+            class Meta(EquipmentFilterSet.Meta):
+                model = Equipment
+
+        self.model = Equipment
+        self.filterset_class = EquipmentFilterSetWithModel
+        super().__init__(*args, **kwargs)
+
+
 class BandViewSetGroup(SnippetViewSetGroup):
-    items = (EventViewSet, SectionViewSet, InstrumentViewSet, MemberViewSet, SongViewSet, ChartViewSet, AttendanceRecordViewSet, LibraryInstrumentViewSet, InstrumentHistoryLogViewSet, InstrumentStorageLocationViewSet)
+    items = (EventViewSet, SectionViewSet, InstrumentViewSet, MemberViewSet, SongViewSet, ChartViewSet, AttendanceRecordViewSet, LibraryInstrumentViewSet, InstrumentHistoryLogViewSet, InstrumentStorageLocationViewSet, EquipmentViewSet)
     menu_icon = 'drum'
     menu_label = 'Band Stuff'
     menu_name = 'band'

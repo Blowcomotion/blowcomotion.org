@@ -1698,6 +1698,45 @@ class InstrumentHistoryLog(models.Model):
         return f"{self.library_instrument.instrument.name} - {self.get_event_category_display()} on {self.event_date}"
 
 
+class Equipment(models.Model):
+    """Track non-instrument physical items in the storeroom (tables, canopy, signs, etc.)."""
+
+    STATUS_AVAILABLE = "available"
+    STATUS_NEEDS_REPAIR = "needs_repair"
+    STATUS_DISPOSED = "disposed"
+
+    STATUS_CHOICES = [
+        (STATUS_AVAILABLE, "Available"),
+        (STATUS_NEEDS_REPAIR, "Needs Repair"),
+        (STATUS_DISPOSED, "Disposed"),
+    ]
+
+    name = models.CharField(max_length=255)
+    quantity = models.PositiveIntegerField(default=1)
+    status = models.CharField(
+        max_length=50,
+        choices=STATUS_CHOICES,
+        default=STATUS_AVAILABLE,
+    )
+    storage_location = models.ForeignKey(
+        "blowcomotion.InstrumentStorageLocation",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="equipment",
+        help_text="Where this item is stored (leave blank if location is unknown)",
+    )
+    notes = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "Equipment"
+        verbose_name_plural = "Equipment"
+
+
 class BaseFormSubmission(models.Model):
     """
     Base model for form submissions
