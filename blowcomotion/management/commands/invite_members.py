@@ -6,8 +6,9 @@ Usage:
 """
 import logging
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
-from django.http import HttpRequest
+from django.template.loader import render_to_string
 
 from blowcomotion.member_auth import create_member_user, send_set_password_email
 from blowcomotion.models import Member
@@ -39,12 +40,7 @@ class Command(BaseCommand):
         if member_id:
             qs = qs.filter(pk=member_id)
 
-        # Build a minimal request so build_absolute_uri works
-        request = HttpRequest()
-        request.META["SERVER_NAME"] = "www.blowcomotion.org"
-        request.META["SERVER_PORT"] = "443"
-        request.META["wsgi.url_scheme"] = "https"
-
+        base_url = settings.WAGTAILADMIN_BASE_URL.rstrip("/")
         invited = skipped = errored = 0
 
         for member in qs:
@@ -55,12 +51,18 @@ class Command(BaseCommand):
 
             if dry_run:
                 self.stdout.write(f"  DRY RUN — would invite: {member} <{member.email}>")
+                preview_url = f"{base_url}/member/set-password/00000000-0000-0000-0000-000000000000/"
+                preview = render_to_string(
+                    "emails/set_password.txt",
+                    {"member": member, "set_password_url": preview_url},
+                )
+                self.stdout.write(preview)
                 invited += 1
                 continue
 
             try:
                 create_member_user(member)
-                send_set_password_email(member, request)
+                send_set_password_email(member, base_url)
                 self.stdout.write(f"  Invited: {member} <{member.email}>")
                 invited += 1
             except Exception as exc:

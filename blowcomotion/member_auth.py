@@ -39,11 +39,11 @@ def needs_set_password(member):
     return not member.user_id or not member.user.has_usable_password() or not member.is_active
 
 
-def ensure_set_password_flow(member, request):
+def ensure_set_password_flow(member, base_url):
     """Create a User account if needed, then send the set-password email."""
     if not member.user_id:
         create_member_user(member)
-    send_set_password_email(member, request)
+    send_set_password_email(member, base_url)
 
 
 def create_member_user(member):
@@ -83,14 +83,12 @@ def _supersede_set_password_tokens(member):
     ).update(superseded=True)
 
 
-def send_set_password_email(member, request):
+def send_set_password_email(member, base_url):
     """Generate a PasswordSetToken and email member a direct set-password link."""
     _supersede_set_password_tokens(member)
     token = PasswordSetToken.objects.create(member=member)
 
-    set_password_url = request.build_absolute_uri(
-        f"/member/set-password/{token.uuid}/"
-    )
+    set_password_url = f"{base_url}/member/set-password/{token.uuid}/"
     subject = "Set your Blowcomotion member password"
     message = render_to_string(
         "emails/set_password.txt",
@@ -100,12 +98,12 @@ def send_set_password_email(member, request):
     logger.info(f"Sent set-password email to member {member.pk} ({member.email})")
 
 
-def send_email_change_confirmation(member, new_email, request):
+def send_email_change_confirmation(member, new_email, base_url):
     """Create an EmailChangeToken, set member.pending_email, and email new_email the confirm link."""
     EmailChangeToken.objects.filter(member=member, used=False).update(used=True)
     token = EmailChangeToken.objects.create(member=member, new_email=new_email)
 
-    confirm_url = request.build_absolute_uri(f"/member/confirm-email/{token.uuid}/")
+    confirm_url = f"{base_url}/member/confirm-email/{token.uuid}/"
     subject = "Confirm your new Blowcomotion email address"
     message = render_to_string(
         "emails/email_change_confirm.txt",
@@ -117,7 +115,7 @@ def send_email_change_confirmation(member, new_email, request):
     logger.info(f"Sent email-change confirmation to {new_email} for member {member.pk}")
 
 
-def send_signup_invite_email(email, request):
+def send_signup_invite_email(email, base_url):
     """Send a signup link to an address not found in the member list.
 
     Suppressed for 24 hours after the first send to the same address to prevent
@@ -130,7 +128,7 @@ def send_signup_invite_email(email, request):
         return
     cache.set(cache_key, send_count + 1, timeout=86400)
 
-    signup_url = request.build_absolute_uri("/member-signup/")
+    signup_url = f"{base_url}/member-signup/"
     subject = "Blowcomotion member portal access"
     message = render_to_string(
         "emails/member_signup_invite.txt",

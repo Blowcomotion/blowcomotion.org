@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import RequestFactory, TestCase, override_settings
+from django.test import TestCase, override_settings
 
 from blowcomotion.member_auth import create_member_user
 from blowcomotion.models import EmailChangeToken, Member, PasswordSetToken
@@ -209,50 +209,33 @@ class SendSetPasswordEmailTests(TestCase):
     def setUp(self):
         self.member = make_member(email="invite@example.com")
         create_member_user(self.member)
-        self.factory = RequestFactory()
 
     def test_sends_email_to_member(self):
         from django.core import mail
-        request = self.factory.get("/")
-        request.META["SERVER_NAME"] = "testserver"
-        request.META["SERVER_PORT"] = "80"
-        send_set_password_email(self.member, request)
+        send_set_password_email(self.member, "http://testserver")
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn("invite@example.com", mail.outbox[0].to)
 
     def test_email_contains_set_password_link(self):
         from django.core import mail
-        request = self.factory.get("/")
-        request.META["SERVER_NAME"] = "testserver"
-        request.META["SERVER_PORT"] = "80"
-        send_set_password_email(self.member, request)
+        send_set_password_email(self.member, "http://testserver")
         self.assertIn("/member/set-password/", mail.outbox[0].body)
 
     def test_creates_password_set_token(self):
-        request = self.factory.get("/")
-        request.META["SERVER_NAME"] = "testserver"
-        request.META["SERVER_PORT"] = "80"
-        send_set_password_email(self.member, request)
+        send_set_password_email(self.member, "http://testserver")
         self.assertEqual(
             PasswordSetToken.objects.filter(member=self.member, used=False, superseded=False).count(), 1
         )
 
     def test_supersedes_prior_tokens(self):
         token_old = PasswordSetToken.objects.create(member=self.member)
-        request = self.factory.get("/")
-        request.META["SERVER_NAME"] = "testserver"
-        request.META["SERVER_PORT"] = "80"
-        send_set_password_email(self.member, request)
+        send_set_password_email(self.member, "http://testserver")
         token_old.refresh_from_db()
         self.assertTrue(token_old.superseded)
 
     def test_set_password_email_url_not_qp_wrapped(self):
         from django.core import mail
-        request = self.factory.get("/")
-        request.META["SERVER_NAME"] = "blowcomotion.org"
-        request.META["SERVER_PORT"] = "443"
-        request.META["wsgi.url_scheme"] = "https"
-        send_set_password_email(self.member, request)
+        send_set_password_email(self.member, "https://www.blowcomotion.org")
         raw = mail.outbox[0].message().as_string()
         self.assertNotIn("=\n", raw)
 
@@ -264,39 +247,25 @@ class SendSetPasswordEmailTests(TestCase):
 class SendEmailChangeConfirmationTests(TestCase):
     def setUp(self):
         self.member = make_member(email="original@example.com")
-        self.factory = RequestFactory()
 
     def test_sends_email_to_new_address(self):
         from django.core import mail
-        request = self.factory.get("/")
-        request.META["SERVER_NAME"] = "testserver"
-        request.META["SERVER_PORT"] = "80"
-        send_email_change_confirmation(self.member, "newemail@example.com", request)
+        send_email_change_confirmation(self.member, "newemail@example.com", "http://testserver")
         self.assertIn("newemail@example.com", mail.outbox[0].to)
 
     def test_email_contains_confirm_link(self):
         from django.core import mail
-        request = self.factory.get("/")
-        request.META["SERVER_NAME"] = "testserver"
-        request.META["SERVER_PORT"] = "80"
-        send_email_change_confirmation(self.member, "newemail@example.com", request)
+        send_email_change_confirmation(self.member, "newemail@example.com", "http://testserver")
         self.assertIn("/member/confirm-email/", mail.outbox[0].body)
 
     def test_email_change_confirmation_url_not_qp_wrapped(self):
         from django.core import mail
-        request = self.factory.get("/")
-        request.META["SERVER_NAME"] = "blowcomotion.org"
-        request.META["SERVER_PORT"] = "443"
-        request.META["wsgi.url_scheme"] = "https"
-        send_email_change_confirmation(self.member, "newemail@example.com", request)
+        send_email_change_confirmation(self.member, "newemail@example.com", "https://www.blowcomotion.org")
         raw = mail.outbox[0].message().as_string()
         self.assertNotIn("=\n", raw)
 
     def test_sets_pending_email_on_member(self):
-        request = self.factory.get("/")
-        request.META["SERVER_NAME"] = "testserver"
-        request.META["SERVER_PORT"] = "80"
-        send_email_change_confirmation(self.member, "newemail@example.com", request)
+        send_email_change_confirmation(self.member, "newemail@example.com", "http://testserver")
         self.member.refresh_from_db()
         self.assertEqual(self.member.pending_email, "newemail@example.com")
 

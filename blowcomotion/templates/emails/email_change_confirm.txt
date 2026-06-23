@@ -1,4 +1,4 @@
-Hi {{ member.full_name }},
+Hi {{ member.preferred_name|default:member.first_name }},
 
 You requested to change your Blowcomotion email address to {{ new_email }}.
 

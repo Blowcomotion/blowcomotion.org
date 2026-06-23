@@ -135,7 +135,7 @@ class MemberPasswordResetView(auth_views.PasswordResetView):
             return redirect("password_reset_done")
 
         if needs_set_password(member):
-            ensure_set_password_flow(member, self.request)
+            ensure_set_password_flow(member, f"{self.request.scheme}://{self.request.get_host()}")
             logger.info(f"Sent set-password email (via reset flow) for member {member.pk}")
             return redirect("password_reset_done")
 
@@ -167,7 +167,7 @@ def get_access_view(request):
             try:
                 member = Member.objects.get(email__iexact=email)
                 if needs_set_password(member):
-                    ensure_set_password_flow(member, request)
+                    ensure_set_password_flow(member, f"{request.scheme}://{request.get_host()}")
                     logger.info(f"Get-access: sent set-password email to member {member.pk}")
                 else:
                     reset_form = PasswordResetForm({"email": email})
@@ -180,7 +180,7 @@ def get_access_view(request):
                         )
                     logger.info(f"Get-access: sent reset email to member {member.pk}")
             except Member.DoesNotExist:
-                send_signup_invite_email(email, request)
+                send_signup_invite_email(email, f"{request.scheme}://{request.get_host()}")
             except Member.MultipleObjectsReturned:
                 logger.warning(f"Get-access: ambiguous email match for {email}, no email sent")
             return render(request, "member/get_access.html", {
@@ -248,7 +248,7 @@ def profile_view(request):
                 MemberInstrument.objects.create(member=member, instrument=instrument)
 
             if email_changed:
-                send_email_change_confirmation(member, new_email, request)
+                send_email_change_confirmation(member, new_email, f"{request.scheme}://{request.get_host()}")
                 messages.success(
                     request,
                     f"Profile saved. A confirmation email has been sent to {new_email}.",
