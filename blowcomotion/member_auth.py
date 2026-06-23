@@ -126,7 +126,7 @@ def send_signup_invite_email(email, request):
     cache_key = f"signup_invite:{email.lower()}"
     send_count = cache.get(cache_key, 0)
     if send_count >= 2:
-        logger.debug(f"Signup invite suppressed for {email} (sent {send_count}x in past 24h)")
+        logger.info(f"Signup invite suppressed for {email} (sent {send_count}x in past 24h)")
         return
     cache.set(cache_key, send_count + 1, timeout=86400)
 
