@@ -1,7 +1,10 @@
+argon2-cffi
 Django==6.0.6
+django-axes
 django-compressor==4.6.0
 django-libsass==0.9
 django-livereload-server==0.5.1
+django-ratelimit
 queryish==0.3
 wagtail==7.4.2
 wagtailmedia==0.17.2

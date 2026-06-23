@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Email Confirmation — Blowcomotion{% endblock %}
+{% block content %}
+<div class="container py-5 text-center">
+    {% if confirmed %}
+        <h1 class="mb-3">Email Confirmed</h1>
+        <p class="lead">Your email address has been updated to <strong>{{ new_email }}</strong>.</p>
+        <a href="{% url 'member-profile' %}" class="site-btn mt-3">Go to My Profile</a>
+    {% elif expired %}
+        <h1 class="mb-3">Link Expired</h1>
+        <p>This confirmation link has expired. Please update your email again from your profile.</p>
+        <a href="{% url 'member-profile' %}" class="site-btn mt-3">My Profile</a>
+    {% else %}
+        <h1 class="mb-3">Link Invalid</h1>
+        <p>This confirmation link is invalid or has already been used.</p>
+        <a href="{% url 'member-profile' %}" class="site-btn mt-3">My Profile</a>
+    {% endif %}
+</div>
+{% endblock %}

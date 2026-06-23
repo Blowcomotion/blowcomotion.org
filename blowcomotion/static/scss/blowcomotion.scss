@@ -87,6 +87,88 @@ hr {
     }
 }
 
+// Member auth controls in header nav
+.header__member-auth {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    vertical-align: middle;
+}
+
+.site-btn--small {
+    width: auto;
+    padding: 6px 14px;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    line-height: 1.4;
+}
+
+.site-btn--outline {
+    background: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.65);
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: $white-color;
+        color: $white-color;
+    }
+}
+
+.header__auth-logout {
+    font-family: 'Now Regular', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.65);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+
+    &:hover { color: $white-color; }
+}
+
+// Auth items appended to nav ul for slicknav — hidden inside desktop nav, visible in slicknav clone
+.header__nav .header__nav-auth-mobile {
+    display: none !important;
+}
+
+// Scrollable container for the additional instruments checkbox list
+.instruments-chooser {
+    max-height: 240px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 6px 12px;
+
+    // Outer div rendered by CheckboxSelectMultiple — lay out items in 2 columns
+    > div {
+        columns: 2;
+        column-gap: 16px;
+    }
+
+    // Per-item div
+    > div > div {
+        break-inside: avoid;
+        padding: 1px 0;
+    }
+
+    label {
+        font-size: 0.875rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+    }
+
+    input[type="checkbox"] {
+        width: auto;
+        flex-shrink: 0;
+    }
+}
+
 .feedback-form-modal-button {
     position: fixed;
     bottom: 40px;
