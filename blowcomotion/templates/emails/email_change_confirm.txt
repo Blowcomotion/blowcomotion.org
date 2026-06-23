@@ -1,0 +1,12 @@
+Hi {{ member.preferred_name|default:member.first_name }},
+
+You requested to change your Blowcomotion email address to {{ new_email }}.
+
+Click the link below to confirm this change. This link expires in 24 hours.
+
+{{ confirm_url }}
+
+If you didn't request this change, please log in and check your account.
+
+Start Wearing Purple,
+Blowcomotion
