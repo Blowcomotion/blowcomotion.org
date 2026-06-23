@@ -983,7 +983,7 @@ class Member(ClusterableModel, index.Indexed):
                 logger.error(f"Error syncing member {self.full_name} status to GO3: {e}")
     
     def __str__(self):
-        return f"\"{self.preferred_name}\" {self.first_name} {self.last_name}" if self.preferred_name else f"{self.first_name} {self.last_name}"
+        return f"\"{self.preferred_name}\" {self.first_name} {self.last_name}" if self.preferred_name and self.preferred_name.strip().lower() != self.first_name.strip().lower() else f"{self.first_name} {self.last_name}"
 
 
 class PasswordSetToken(models.Model):
