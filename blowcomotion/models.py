@@ -985,6 +985,12 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
     def __str__(self):
         return f"\"{self.preferred_name}\" {self.first_name} {self.last_name}" if self.preferred_name and self.preferred_name.strip().lower() != self.first_name.strip().lower() else f"{self.first_name} {self.last_name}"
 
+    def display_name(self):
+        # ponytail: __str__ unsortable in Wagtail admin (label_for_field returns builtin str as attr); this wrapper exposes admin_order_field
+        return str(self)
+    display_name.admin_order_field = 'first_name'
+    display_name.short_description = 'Name'
+
 
 class PasswordSetToken(models.Model):
     member = models.ForeignKey(

@@ -768,3 +768,13 @@ class MemberReactivatedDateTests(TestCase):
         self.assertTrue(member.is_active)
         self.assertIsNotNone(member.reactivated_date)
         self.assertEqual(member.reactivated_date, datetime.date.today())
+
+
+class MemberDisplayNameTests(TestCase):
+    def test_display_name_sort_metadata(self):
+        self.assertEqual(Member.display_name.admin_order_field, 'first_name')
+        self.assertEqual(Member.display_name.short_description, 'Name')
+
+    def test_display_name_returns_str(self):
+        member = Member(first_name='Jane', last_name='Smith', email='js@example.com')
+        self.assertEqual(member.display_name(), str(member))

@@ -236,8 +236,8 @@ class MemberViewSet(SnippetViewSet):
     menu_icon = 'group'
     search_fields = ("first_name", "last_name", "preferred_name", "gigomatic_username", "email")
     list_display = [
-        '__str__',
-        'primary_instrument',
+        'display_name',
+        Column('primary_instrument', label='Instrument', sort_key='primary_instrument__name'),
         DateColumn('last_seen', label='Last Seen'),
         'renting',
         DateColumn('join_date', label='Joined'),
