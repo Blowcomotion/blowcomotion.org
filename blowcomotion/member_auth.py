@@ -123,7 +123,7 @@ def send_member_signup_welcome_email(member, base_url):
     subject = "Welcome to Blowcomotion - Next Steps"
     message = render_to_string(
         "emails/member_signup_welcome.txt",
-        {"member": member, "set_password_url": set_password_url},
+        {"member": member, "set_password_url": set_password_url, "site_url": base_url},
     )
     _send_mail(subject, message, settings.FROM_EMAIL, member.email)
     logger.info(f"Sent signup welcome email to member {member.pk} ({member.email})")
