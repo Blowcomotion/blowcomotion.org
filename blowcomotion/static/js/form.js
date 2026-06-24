@@ -1,8 +1,5 @@
 (function ($) {
     $(document).ready(function() {
-        // Set honeypot field value (spam protection)
-        $('.best-color').val("purple");
-        
         // reCAPTCHA v3 form handling
         // For HTMX forms, we need to get the token and add it to the request
         if (typeof grecaptcha !== 'undefined' && window.RECAPTCHA_SITE_KEY) {

@@ -29,7 +29,7 @@ from blowcomotion.models import (
     MemberInstrument,
     PasswordSetToken,
 )
-from blowcomotion.views import _validate_honeypot, _validate_recaptcha
+from blowcomotion.views import _validate_recaptcha
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -43,8 +43,6 @@ class MemberLoginView(auth_views.LoginView):
     template_name = "member/login.html"
 
     def post(self, request, *args, **kwargs):
-        if not _validate_honeypot(request):
-            return redirect("/")
         is_valid, error = _validate_recaptcha(request)
         if not is_valid:
             form = self.get_form_class()()
@@ -73,8 +71,6 @@ def set_password_view(request, token_uuid):
         return render(request, "member/set_password.html", {"expired": True})
 
     if request.method == "POST":
-        if not _validate_honeypot(request):
-            return redirect("/")
         is_valid, error = _validate_recaptcha(request)
         if not is_valid:
             form = SetPasswordForm(user=token.member.user)
@@ -116,8 +112,6 @@ class MemberPasswordResetView(auth_views.PasswordResetView):
     email_template_name = "member/password_reset_email.txt"
 
     def post(self, request, *args, **kwargs):
-        if not _validate_honeypot(request):
-            return redirect("/")
         is_valid, error = _validate_recaptcha(request)
         if not is_valid:
             form = self.get_form_class()()
@@ -153,8 +147,6 @@ class MemberPasswordResetView(auth_views.PasswordResetView):
 @ratelimit(key="ip", rate="10/h", method="POST", block=True)
 def get_access_view(request):
     if request.method == "POST":
-        if not _validate_honeypot(request):
-            return redirect("/")
         is_valid, error = _validate_recaptcha(request)
         if not is_valid:
             form = GetAccessForm(request.POST)

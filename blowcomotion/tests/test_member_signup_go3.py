@@ -264,7 +264,6 @@ class MemberSignupGO3IntegrationTests(TestCase):
         
         form_data = {
             'form_type': 'member_signup_form',
-            'best_color': 'purple',
             'first_name': 'John',
             'last_name': 'Doe',
             'email': 'john@example.com',
@@ -290,7 +289,6 @@ class MemberSignupGO3IntegrationTests(TestCase):
         """Test that signup requires primary_instrument field"""
         form_data = {
             'form_type': 'member_signup_form',
-            'best_color': 'purple',
             'first_name': 'Jane',
             'last_name': 'Doe',
             'email': 'jane@example.com',
@@ -312,7 +310,6 @@ class MemberSignupGO3IntegrationTests(TestCase):
         """Test that signup requires email field (needed for GO3 invite)"""
         form_data = {
             'form_type': 'member_signup_form',
-            'best_color': 'purple',
             'first_name': 'Jane',
             'last_name': 'Doe',
             'primary_instrument': self.instrument.pk
@@ -346,7 +343,6 @@ class MemberSignupGO3IntegrationTests(TestCase):
         
         form_data = {
             'form_type': 'member_signup_form',
-            'best_color': 'purple',
             'first_name': 'Bob',
             'last_name': 'Smith',
             'email': 'bob@example.com',
@@ -395,7 +391,6 @@ class MemberSignupGO3IntegrationTests(TestCase):
         
         form_data = {
             'form_type': 'member_signup_form',
-            'best_color': 'purple',
             'first_name': 'Alice',
             'last_name': 'Johnson',
             'email': 'alice@example.com',
@@ -430,7 +425,6 @@ class MemberSignupGO3IntegrationTests(TestCase):
         
         form_data = {
             'form_type': 'member_signup_form',
-            'best_color': 'purple',
             'first_name': 'Charlie',
             'last_name': 'Brown',
             'email': 'charlie@example.com',
@@ -489,8 +483,7 @@ class MemberSignupCreatesUserTests(TestCase):
             "/process-form/",
             {
                 "form_type": "member_signup_form",
-                "best_color": "purple",
-                "first_name": "Alex",
+                    "first_name": "Alex",
                 "last_name": "Musician",
                 "email": "alex@example.com",
                 "primary_instrument": self.instrument.pk,
