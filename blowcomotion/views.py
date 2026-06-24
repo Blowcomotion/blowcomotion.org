@@ -758,7 +758,7 @@ def _process_member_signup(request, form_data):
         if member.email:
             try:
                 create_member_user(member)
-                send_set_password_email(member, request)
+                send_set_password_email(member, f"{request.scheme}://{request.get_host()}")
                 logger.info(f"Sent set-password email to new member {member.pk}")
             except Exception as e:
                 logger.warning(f"Could not send set-password email to new member {member.pk}: {e}")
