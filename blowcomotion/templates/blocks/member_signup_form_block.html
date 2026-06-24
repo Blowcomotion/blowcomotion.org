@@ -68,7 +68,7 @@
                                 <select class="form-control" id="primary_instrument" name="primary_instrument" required>
                                     <option value="">Select your instrument</option>
                                     {% for instrument in instruments %}
-                                    <option value="{{ instrument.name }}">{{ instrument.name }}</option>
+                                    <option value="{{ instrument.pk }}">{{ instrument.name }}</option>
                                     {% endfor %}
                                 </select>
                                 <small class="form-text text-muted">Select the instrument you play</small>

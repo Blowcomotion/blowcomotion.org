@@ -705,17 +705,7 @@ def _process_member_signup(request, form_data):
     logger.info(f"Processing member signup submission by user {request.user.username}")
     
     try:
-        # Convert primary_instrument string to Instrument object if provided
-        primary_instrument = None
-        if form_data.get('primary_instrument'):
-            instrument_name = form_data['primary_instrument'].strip()
-            # Try to find existing instrument (case-insensitive)
-            try:
-                primary_instrument = Instrument.objects.get(name__iexact=instrument_name)
-            except Instrument.DoesNotExist:
-                # If instrument doesn't exist, create it
-                primary_instrument = Instrument.objects.create(name=instrument_name)
-                logger.info(f"Created new instrument: {instrument_name}")
+        primary_instrument = form_data.get('primary_instrument')  # Already an Instrument object from MemberSignupForm
         
         # Create new member from form data
         member = Member(
@@ -1271,7 +1261,31 @@ def process_form(request):
             return render(request, 'forms/error.html', context)
         
         form_type = request.POST.get('form_type')
-        
+
+        # Member signup uses MemberSignupForm directly for validation
+        if form_type == 'member_signup_form':
+            form = MemberSignupForm(request.POST)
+            if not form.is_valid():
+                required_missing = [
+                    field for field in form.errors
+                    if any(e.code == 'required' for e in form.errors[field].as_data())
+                ]
+                other_errors = [
+                    ', '.join(errs)
+                    for field, errs in form.errors.items()
+                    if field not in required_missing
+                ]
+                error_parts = []
+                if required_missing:
+                    error_parts.append(f'Required fields are missing: {", ".join(required_missing)}')
+                error_parts.extend(other_errors)
+                context['error'] = '. '.join(error_parts)
+                logger.warning(f"Validation failed for member_signup_form by user {request.user.username}: {context['error']}")
+                return render(request, 'forms/error.html', context)
+            result = _process_member_signup(request, form.cleaned_data)
+            context.update({k: v for k, v in result.items() if k in ['message', 'error']})
+            return render(request, result['template'], context)
+
         # Define form configurations
         form_configs = {
             'contact_form': {
@@ -1333,64 +1347,20 @@ def process_form(request):
                     'submitted_from_page': req.POST.get('page_url'),
                 }
             },
-            'member_signup_form': {
-                'required_fields': ['first_name', 'last_name', 'email', 'primary_instrument'],
-                'model': None,  # Member signup doesn't use submission model
-                'field_mapping': lambda req: {
-                    'first_name': req.POST.get('first_name'),
-                    'last_name': req.POST.get('last_name'),
-                    'preferred_name': req.POST.get('preferred_name'),
-                    'primary_instrument': req.POST.get('primary_instrument'),
-                    'birth_month': req.POST.get('birth_month'),
-                    'birth_day': req.POST.get('birth_day'),
-                    'birth_year': req.POST.get('birth_year'),
-                    'email': req.POST.get('email'),
-                    'phone': req.POST.get('phone'),
-                    'address': req.POST.get('address'),
-                    'city': req.POST.get('city'),
-                    'state': req.POST.get('state'),
-                    'zip_code': req.POST.get('zip_code'),
-                    'country': req.POST.get('country'),
-                    'emergency_contact': req.POST.get('emergency_contact'),
-                    'inspired_by': req.POST.get('inspired_by'),
-                    'newsletter_opt_in': req.POST.get('newsletter', False) == 'yes',
-                }
-            }
         }
-        
+
         # Process known form types
         if form_type in form_configs:
             config = form_configs[form_type]
             form_data = config['field_mapping'](request)
-            
+
             # Validate required fields
             missing_fields = [field for field in config['required_fields'] if not form_data.get(field)]
             if missing_fields:
                 logger.warning(f"Validation failed for {form_type} submission by user {request.user.username}. Missing fields: {missing_fields}")
                 context['error'] = f'Required fields are missing: {", ".join(missing_fields)}.'
                 return render(request, 'forms/error.html', context)
-            
-            # Special handling for member signup form (creates Member instead of submission)
-            if form_type == 'member_signup_form':
-                # Validate birthday if birth_day is provided (birth_month is optional)
-                if form_data.get('birth_day'):
-                    from blowcomotion.utils import validate_birthday
-                    try:
-                        birth_day_raw = form_data.get('birth_day')
-                        birth_month_raw = form_data.get('birth_month')
-                        validate_birthday(
-                            int(birth_day_raw),
-                            int(birth_month_raw) if birth_month_raw else None,
-                        )
-                    except Exception as e:
-                        logger.warning(f"Birthday validation failed for member signup: {str(e)}")
-                        context['error'] = f'Invalid birthday: {str(e)}'
-                        return render(request, 'forms/error.html', context)
-                
-                result = _process_member_signup(request, form_data)
-                context.update({k: v for k, v in result.items() if k in ['message', 'error']})
-                return render(request, result['template'], context)
-            
+
             # Process the form using standard submission model
             result = _process_form_submission(request, form_type, form_data, config['model'])
             context.update({k: v for k, v in result.items() if k in ['message', 'error']})
