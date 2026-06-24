@@ -230,12 +230,12 @@ class MemberSignupForm(forms.Form):
     # Instrument selection
     primary_instrument = forms.ModelChoiceField(
         queryset=Instrument.objects.all().order_by('name'),
-        required=False,
+        required=True,
         empty_label='Select your instrument',
         widget=forms.Select(attrs={
             'class': 'form-control'
         }),
-        help_text='Select the instrument you play (optional)'
+        help_text='Select the instrument you play'
     )
     
     # Optional personal information
