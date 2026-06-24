@@ -560,15 +560,18 @@ class EquipmentViewSet(SnippetViewSet):
     menu_label = 'Equipment'
     menu_name = 'equipment'
     menu_icon = 'folder-open-inverse'
-    search_fields = ('name', 'notes')
+    search_fields = ('name', 'serial_number', 'notes')
     list_display = ['name', 'quantity', 'status', 'storage_location', UpdatedAtColumn()]
     filterset_class = None
     ordering = ['name']
     panels = [
         'name',
+        'serial_number',
         FieldRowPanel(['quantity', 'status']),
         'storage_location',
+        FieldRowPanel(['acquisition_cost', 'current_value', 'replacement_cost']),
         'notes',
+        InlinePanel('photos', label="Photos"),
     ]
 
     def __init__(self, *args, **kwargs):
