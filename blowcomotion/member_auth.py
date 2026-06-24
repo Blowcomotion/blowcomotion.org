@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
+from django.urls import reverse
 
 from blowcomotion.models import EmailChangeToken, Member, PasswordSetToken
 
@@ -123,7 +124,11 @@ def send_member_signup_welcome_email(member, base_url):
     subject = "Welcome to Blowcomotion - Next Steps"
     message = render_to_string(
         "emails/member_signup_welcome.txt",
-        {"member": member, "set_password_url": set_password_url, "site_url": base_url},
+        {
+            "member": member,
+            "set_password_url": set_password_url,
+            "get_access_url": f"{base_url}{reverse('member-get-access')}",
+        },
     )
     _send_mail(subject, message, settings.FROM_EMAIL, member.email)
     logger.info(f"Sent signup welcome email to member {member.pk} ({member.email})")

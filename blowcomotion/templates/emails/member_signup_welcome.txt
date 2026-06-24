@@ -9,7 +9,7 @@ Here are your next steps:
    {{ set_password_url }}
 
    This link expires in 24 hours and can only be used once. If it expires,
-   you can request a new one at {{ site_url }}/member/get-access/
+   you can request a new one at {{ get_access_url }}
 
 2. Look for an email from "superuser@gig-o-matic.com" and complete the registration process there.
 
