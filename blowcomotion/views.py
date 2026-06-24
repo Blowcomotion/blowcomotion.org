@@ -1334,7 +1334,7 @@ def process_form(request):
                 }
             },
             'member_signup_form': {
-                'required_fields': ['first_name', 'last_name', 'email'],
+                'required_fields': ['first_name', 'last_name', 'email', 'primary_instrument'],
                 'model': None,  # Member signup doesn't use submission model
                 'field_mapping': lambda req: {
                     'first_name': req.POST.get('first_name'),

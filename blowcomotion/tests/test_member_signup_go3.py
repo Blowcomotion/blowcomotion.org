@@ -286,6 +286,28 @@ class MemberSignupGO3IntegrationTests(TestCase):
         GIGO_BAND_ID_LOCAL=1,
         DEBUG=True
     )
+    def test_signup_without_instrument_fails_validation(self):
+        """Test that signup requires primary_instrument field"""
+        form_data = {
+            'form_type': 'member_signup_form',
+            'best_color': 'purple',
+            'first_name': 'Jane',
+            'last_name': 'Doe',
+            'email': 'jane@example.com',
+        }
+
+        response = self.client.post(reverse('process-form'), form_data)
+
+        self.assertFalse(Member.objects.filter(email='jane@example.com').exists())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('Required fields are missing: primary_instrument', response.content.decode())
+
+    @override_settings(
+        GIGO_API_URL="http://localhost:8001/api",
+        GIGO_API_KEY="test-key",
+        GIGO_BAND_ID_LOCAL=1,
+        DEBUG=True
+    )
     def test_signup_without_email_fails_validation(self):
         """Test that signup requires email field (needed for GO3 invite)"""
         form_data = {
@@ -444,6 +466,9 @@ class MemberSignupCreatesUserTests(TestCase):
             member_signup_notification_recipients='admin@example.com'
         )
 
+        section = Section.objects.create(name="Test Section")
+        self.instrument = Instrument.objects.create(name="Trombone", section=section)
+
     @override_settings(
         EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
         FROM_EMAIL="noreply@blowcomotion.org",
@@ -468,6 +493,7 @@ class MemberSignupCreatesUserTests(TestCase):
                 "first_name": "Alex",
                 "last_name": "Musician",
                 "email": "alex@example.com",
+                "primary_instrument": self.instrument.name,
             },
         )
         # Set-password email should have been sent

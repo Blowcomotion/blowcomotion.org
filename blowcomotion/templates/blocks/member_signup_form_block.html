@@ -63,15 +63,15 @@
 
                             <div class="mb-3">
                                 <label for="primary_instrument" class="form-label">
-                                    Instrument
+                                    Instrument <span class="text-danger">*</span>
                                 </label>
-                                <select class="form-control" id="primary_instrument" name="primary_instrument">
+                                <select class="form-control" id="primary_instrument" name="primary_instrument" required>
                                     <option value="">Select your instrument</option>
                                     {% for instrument in instruments %}
                                     <option value="{{ instrument.name }}">{{ instrument.name }}</option>
                                     {% endfor %}
                                 </select>
-                                <small class="form-text text-muted">Select the instrument you play (optional)</small>
+                                <small class="form-text text-muted">Select the instrument you play</small>
                             </div>
                         </div>
 
