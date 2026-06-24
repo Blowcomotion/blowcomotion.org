@@ -115,6 +115,20 @@ def send_email_change_confirmation(member, new_email, base_url):
     logger.info(f"Sent email-change confirmation to {new_email} for member {member.pk}")
 
 
+def send_member_signup_welcome_email(member, base_url):
+    """Create a PasswordSetToken and email the new member a welcome with both next steps."""
+    _supersede_set_password_tokens(member)
+    token = PasswordSetToken.objects.create(member=member)
+    set_password_url = f"{base_url}/member/set-password/{token.uuid}/"
+    subject = "Welcome to Blowcomotion - Next Steps"
+    message = render_to_string(
+        "emails/member_signup_welcome.txt",
+        {"member": member, "set_password_url": set_password_url},
+    )
+    _send_mail(subject, message, settings.FROM_EMAIL, member.email)
+    logger.info(f"Sent signup welcome email to member {member.pk} ({member.email})")
+
+
 def send_signup_invite_email(email, base_url):
     """Send a signup link to an address not found in the member list.
 

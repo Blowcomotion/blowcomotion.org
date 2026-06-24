@@ -1,0 +1,16 @@
+Hi {{ member.preferred_name|default:member.first_name }},
+
+Thank you for signing up with Blowcomotion! You've been added to our band.
+
+Here are your next steps:
+
+1. Set your password on the Blowcomotion website:
+
+   {{ set_password_url }}
+
+   This link expires in 24 hours and can only be used once.
+
+2. Look for an email from "superuser@gig-o-matic.com" and complete the registration process there.
+
+Start Wearing Purple,
+Blowcomotion
