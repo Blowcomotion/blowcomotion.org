@@ -483,7 +483,7 @@ class MemberSignupCreatesUserTests(TestCase):
             "/process-form/",
             {
                 "form_type": "member_signup_form",
-                    "first_name": "Alex",
+                "first_name": "Alex",
                 "last_name": "Musician",
                 "email": "alex@example.com",
                 "primary_instrument": self.instrument.pk,
