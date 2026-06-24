@@ -29,7 +29,11 @@ from blowcomotion.forms import (
     MemberSignupForm,
     SectionAttendanceForm,
 )
-from blowcomotion.member_auth import create_member_user, send_set_password_email
+from blowcomotion.member_auth import (
+    _MemberEmail,
+    create_member_user,
+    send_set_password_email,
+)
 from blowcomotion.models import (
     AttendanceRecord,
     BookingFormSubmission,
@@ -599,23 +603,15 @@ def _validate_recaptcha(request):
 
 def _send_form_email(subject, message, recipient_list):
     """Send email for form submission."""
-    send_mail(
-        subject=subject,
-        message=message,
-        from_email=settings.FROM_EMAIL,
-        recipient_list=recipient_list,
-        fail_silently=False,
-    )
+    _MemberEmail(
+        subject=subject, body=message, from_email=settings.FROM_EMAIL, to=recipient_list
+    ).send(fail_silently=False)
     # Send a copy for verifying functionality
     extra_email = settings.FORM_TEST_EMAIL if hasattr(settings, 'FORM_TEST_EMAIL') else None
     if extra_email:
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email=settings.FROM_EMAIL,
-            recipient_list=[extra_email],
-            fail_silently=False,
-        )
+        _MemberEmail(
+            subject=subject, body=message, from_email=settings.FROM_EMAIL, to=[extra_email]
+        ).send(fail_silently=False)
 
 
 def _create_email_message(form_type, name, email, **kwargs):
@@ -762,7 +758,7 @@ def _process_member_signup(request, form_data):
         if member.email:
             try:
                 create_member_user(member)
-                send_set_password_email(member, request)
+                send_set_password_email(member, f"{request.scheme}://{request.get_host()}")
                 logger.info(f"Sent set-password email to new member {member.pk}")
             except Exception as e:
                 logger.warning(f"Could not send set-password email to new member {member.pk}: {e}")
