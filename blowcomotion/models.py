@@ -1698,6 +1698,94 @@ class InstrumentHistoryLog(models.Model):
         return f"{self.library_instrument.instrument.name} - {self.get_event_category_display()} on {self.event_date}"
 
 
+class Equipment(ClusterableModel):
+    """Track non-instrument physical items in the storeroom (tables, canopy, signs, etc.)."""
+
+    STATUS_AVAILABLE = "available"
+    STATUS_NEEDS_REPAIR = "needs_repair"
+    STATUS_DISPOSED = "disposed"
+
+    STATUS_CHOICES = [
+        (STATUS_AVAILABLE, "Available"),
+        (STATUS_NEEDS_REPAIR, "Needs Repair"),
+        (STATUS_DISPOSED, "Disposed"),
+    ]
+
+    name = models.CharField(max_length=255)
+    serial_number = models.TextField(blank=True, help_text="Serial number or other identifying marks")
+    quantity = models.PositiveIntegerField(default=1)
+    status = models.CharField(
+        max_length=50,
+        choices=STATUS_CHOICES,
+        default=STATUS_AVAILABLE,
+    )
+    storage_location = models.ForeignKey(
+        "blowcomotion.InstrumentStorageLocation",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="equipment",
+        help_text="Where this item is stored (leave blank if location is unknown)",
+    )
+    acquisition_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Original cost of acquiring this item",
+    )
+    current_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Current estimated value of this item",
+    )
+    replacement_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Estimated cost to replace this item",
+    )
+    notes = models.TextField(blank=True, null=True, help_text="Additional context or maintenance notes")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "Equipment"
+        verbose_name_plural = "Equipment"
+
+
+class EquipmentPhoto(Orderable):
+    equipment = ParentalKey(
+        "blowcomotion.Equipment",
+        related_name="photos",
+        on_delete=models.CASCADE,
+    )
+    image = models.ForeignKey(
+        "blowcomotion.CustomImage",
+        on_delete=models.CASCADE,
+        related_name="+",
+    )
+    caption = models.CharField(max_length=255, blank=True)
+
+    panels = [
+        FieldPanel("image"),
+        FieldPanel("caption"),
+    ]
+
+    def __str__(self):
+        return f"Photo for {self.equipment}"
+
+
 class BaseFormSubmission(models.Model):
     """
     Base model for form submissions
