@@ -514,7 +514,7 @@ class MemberInstrument(Orderable):
     ]
 
 
-class Member(ClusterableModel, index.Indexed):
+class Member(RevisionMixin, ClusterableModel, index.Indexed):
     """
     Model for members of the organization
 

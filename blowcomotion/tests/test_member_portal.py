@@ -1,5 +1,7 @@
 from unittest.mock import patch
 
+from wagtail.models import Revision
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -150,6 +152,24 @@ class ProfileViewTests(TestCase):
                 },
             )
         self.assertEqual(len(mail.outbox), 0)
+
+    def test_profile_save_creates_revision(self):
+        self.client.post(
+            reverse("member-profile"),
+            {
+                "first_name": "Robin",
+                "last_name": "Player",
+                "preferred_name": "Robbie",
+                "email": "robin@example.com",
+                "notify_rental_updates": True,
+                "notify_reminders": True,
+                "notify_announcements": True,
+            },
+        )
+        self.assertEqual(Revision.objects.for_instance(self.member).count(), 1)
+        revision = Revision.objects.for_instance(self.member).first()
+        self.assertEqual(revision.user, self.user)
+        self.assertIn("Robbie", revision.content.get("preferred_name", ""))
 
 
 class ConfirmEmailViewTests(TestCase):

@@ -83,12 +83,14 @@
                     return;
                 }
 
-                // Song header toggle (for parts expansion)
+                // Song header toggle (for parts expansion) or PDF navigation (for single chart)
                 const songHeader = e.target.closest('.accordion-song-header');
-                if (songHeader && !e.target.closest('.song-play-btn') && !e.target.closest('.chart-pdf-btn') && !e.target.closest('.song-video-btn') && !e.target.closest('.video-dropdown')) {
+                if (songHeader && !e.target.closest('.song-play-btn') && !e.target.closest('.song-video-btn') && !e.target.closest('.video-dropdown')) {
                     const songItem = songHeader.closest('.accordion-song');
                     if (songItem.dataset.hasMultiple === 'true') {
                         this.toggleSongParts(songItem);
+                    } else if (songItem.dataset.pdfUrl) {
+                        window.open(songItem.dataset.pdfUrl, '_blank', 'noopener');
                     }
                     return;
                 }
@@ -141,6 +143,19 @@
                     if (songHeader) {
                         e.preventDefault();
                         this.toggleSongParts(songHeader.closest('.accordion-song'));
+                        return;
+                    }
+
+                }
+                // role="link" activates on Enter only (not Space per ARIA spec)
+                if (e.key === 'Enter') {
+                    const songLinkHeader = e.target.closest('.accordion-song-header[role="link"]');
+                    if (songLinkHeader) {
+                        e.preventDefault();
+                        const songItem = songLinkHeader.closest('.accordion-song');
+                        if (songItem.dataset.pdfUrl) {
+                            window.open(songItem.dataset.pdfUrl, '_blank', 'noopener');
+                        }
                         return;
                     }
                 }
@@ -307,10 +322,14 @@
             const html = songs.map(song => {
                 const hasMultipleCharts = song.charts && song.charts.length > 1;
                 const hasSingleChart = song.charts && song.charts.length === 1;
-                const pdfUrl = hasSingleChart ? song.charts[0].pdf_url : '';
+                const pdfUrl = hasSingleChart ? (song.charts[0].pdf_url || '') : '';
                 
+                const songHeaderRole = hasMultipleCharts
+                    ? ' role="button" tabindex="0" aria-expanded="false"'
+                    : (pdfUrl ? ` role="link" tabindex="0" aria-label="Open PDF for ${this.escapeHtml(song.title)}"` : '');
+
                 return `
-                <div class="accordion-song" 
+                <div class="accordion-song"
                      data-song-id="${song.id}"
                      data-song-title="${this.escapeHtml(song.title)}"
                      data-has-recording="${song.has_recording}"
@@ -318,9 +337,10 @@
                      data-has-video="${song.has_video}"
                      data-videos='${JSON.stringify(song.videos || []).replace(/'/g, "&#39;")}'
                      data-has-multiple="${hasMultipleCharts}"
+                     data-pdf-url="${this.escapeHtml(pdfUrl)}"
                      data-charts='${JSON.stringify(song.charts || []).replace(/'/g, "&#39;")}'
                      data-instrument-id="${instrumentId}">
-                    <div class="accordion-song-header"${hasMultipleCharts ? ' role="button" tabindex="0" aria-expanded="false"' : ''}>
+                    <div class="accordion-song-header"${songHeaderRole}>
                         <span class="song-media-icons">
                             <span class="media-icon-slot">
                                 ${song.has_recording ? `
@@ -336,12 +356,7 @@
                         <span class="accordion-song-title">${this.escapeHtml(song.title)}</span>
                         <span class="song-actions">
                             ${hasMultipleCharts ? '<i class="fa fa-chevron-right accordion-icon song-expand-icon"></i>' : ''}
-                            ${pdfUrl ? `
-                                <a href="${this.escapeHtml(pdfUrl)}" class="btn btn-sm btn-primary chart-pdf-btn" target="_blank" rel="noopener" title="Open Chart PDF">
-                                    <i class="fa fa-file-pdf-o"></i>
-                                    PDF
-                                </a>
-                            ` : ''}
+                            ${pdfUrl ? '<span class="song-pdf-indicator" aria-hidden="true"><i class="fa fa-file-pdf-o"></i></span>' : ''}
                         </span>
                     </div>
                     <div class="accordion-song-content">
@@ -411,17 +426,21 @@
                 try {
                     const charts = JSON.parse(songItem.dataset.charts || '[]');
                     if (charts.length > 0) {
-                        const partsHtml = charts.map(chart => `
-                            <div class="accordion-part" data-chart-id="${chart.id}">
-                                <span class="part-name">${this.escapeHtml(chart.part)}</span>
-                                ${chart.pdf_url ? `
-                                    <a href="${this.escapeHtml(chart.pdf_url)}" class="btn btn-sm btn-primary chart-pdf-btn" target="_blank" rel="noopener" title="Open Chart PDF">
-                                        <i class="fa fa-file-pdf-o"></i>
-                                        PDF
+                        const partsHtml = charts.map(chart => {
+                            if (chart.pdf_url) {
+                                return `
+                                    <a href="${this.escapeHtml(chart.pdf_url || '')}" class="accordion-part" data-chart-id="${chart.id}" target="_blank" rel="noopener" aria-label="Open PDF for ${this.escapeHtml(chart.part)}">
+                                        <span class="part-name">${this.escapeHtml(chart.part)}</span>
+                                        <span class="part-pdf-icon" aria-hidden="true"><i class="fa fa-file-pdf-o"></i></span>
                                     </a>
-                                ` : ''}
-                            </div>
-                        `).join('');
+                                `;
+                            }
+                            return `
+                                <div class="accordion-part" data-chart-id="${chart.id}">
+                                    <span class="part-name">${this.escapeHtml(chart.part)}</span>
+                                </div>
+                            `;
+                        }).join('');
                         content.innerHTML = `<div class="accordion-parts">${partsHtml}</div>`;
                     }
                 } catch (error) {

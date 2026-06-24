@@ -247,6 +247,8 @@ def profile_view(request):
             for instrument in form.cleaned_data.get("additional_instruments", []):
                 MemberInstrument.objects.create(member=member, instrument=instrument)
 
+            instance.save_revision(user=request.user, log_action="wagtail.edit", clean=False)
+
             if email_changed:
                 send_email_change_confirmation(member, new_email, f"{request.scheme}://{request.get_host()}")
                 messages.success(
