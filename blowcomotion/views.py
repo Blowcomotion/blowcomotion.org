@@ -32,7 +32,7 @@ from blowcomotion.forms import (
 from blowcomotion.member_auth import (
     _MemberEmail,
     create_member_user,
-    send_set_password_email,
+    send_member_signup_welcome_email,
 )
 from blowcomotion.models import (
     AttendanceRecord,
@@ -748,14 +748,14 @@ def _process_member_signup(request, form_data):
                 # Log the error but don't fail the signup
                 logger.warning(f"Error sending GO3 band invite: {str(e)}")
 
-        # Create a User account and send set-password email if the member has an email
+        # Create a User account and send welcome email with set-password link and next steps
         if member.email:
             try:
                 create_member_user(member)
-                send_set_password_email(member, f"{request.scheme}://{request.get_host()}")
-                logger.info(f"Sent set-password email to new member {member.pk}")
+                send_member_signup_welcome_email(member, f"{request.scheme}://{request.get_host()}")
+                logger.info(f"Sent signup welcome email to new member {member.pk}")
             except Exception as e:
-                logger.warning(f"Could not send set-password email to new member {member.pk}: {e}")
+                logger.warning(f"Could not send welcome email to new member {member.pk}: {e}")
 
         # Send email notification to admin
         if recipients:
@@ -814,27 +814,6 @@ Name: {member.first_name} {member.last_name}"""
                 logger.error(f"Error sending admin notification email: {str(e)}")
         else:
             logger.warning("No member signup notification recipients configured in site settings.")
-        
-        # Send confirmation email to new member if they provided an email
-        if member.email:
-            try:
-                confirmation_message = f"""Hello {member.first_name},
-
-Thank you for signing up with Blowcomotion! You've been added to our band.
-
-Please check your email, look for an email from "superuser@gig-o-matic.com" and complete the registration process there.
-
-Start Wearing Purple,
-Blowcomotion"""
-                
-                _send_form_email(
-                    subject='Welcome to Blowcomotion - Application Received',
-                    message=confirmation_message,
-                    recipient_list=[member.email, "info@blowcomotion.com"]
-                )
-                logger.info(f"Confirmation email sent to {member.email}")
-            except Exception as e:
-                logger.error(f"Error sending confirmation email: {str(e)}")
         
         return {
             'message': 'Thank you for signing up! We have received your information and will be in touch soon. Please check your email for next steps.',

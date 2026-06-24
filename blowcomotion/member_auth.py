@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
+from django.urls import reverse
 
 from blowcomotion.models import EmailChangeToken, Member, PasswordSetToken
 
@@ -113,6 +114,24 @@ def send_email_change_confirmation(member, new_email, base_url):
     member.pending_email = new_email
     member.save(update_fields=["pending_email"], sync_go3=False)
     logger.info(f"Sent email-change confirmation to {new_email} for member {member.pk}")
+
+
+def send_member_signup_welcome_email(member, base_url):
+    """Create a PasswordSetToken and email the new member a welcome with both next steps."""
+    _supersede_set_password_tokens(member)
+    token = PasswordSetToken.objects.create(member=member)
+    set_password_url = f"{base_url}/member/set-password/{token.uuid}/"
+    subject = "Welcome to Blowcomotion - Next Steps"
+    message = render_to_string(
+        "emails/member_signup_welcome.txt",
+        {
+            "member": member,
+            "set_password_url": set_password_url,
+            "get_access_url": f"{base_url}{reverse('member-get-access')}",
+        },
+    )
+    _send_mail(subject, message, settings.FROM_EMAIL, member.email)
+    logger.info(f"Sent signup welcome email to member {member.pk} ({member.email})")
 
 
 def send_signup_invite_email(email, base_url):

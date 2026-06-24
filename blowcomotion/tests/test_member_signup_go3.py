@@ -434,16 +434,10 @@ class MemberSignupGO3IntegrationTests(TestCase):
         
         response = self.client.post(reverse('process-form'), form_data)
         
-        # Verify emails were sent
-        self.assertEqual(mock_email.call_count, 2)  # One to admin, one to member
-        
-        # Verify first call was admin notification
+        # Only admin notification goes via _send_form_email; member welcome uses _MemberEmail
+        self.assertEqual(mock_email.call_count, 1)
         first_call_args = mock_email.call_args_list[0]
         self.assertEqual(first_call_args[1]['subject'], 'New Member Signup')
-        
-        # Verify second call was member confirmation
-        second_call_args = mock_email.call_args_list[1]
-        self.assertEqual(second_call_args[1]['subject'], 'Welcome to Blowcomotion - Application Received')
 
 
 class MemberSignupCreatesUserTests(TestCase):
@@ -489,11 +483,14 @@ class MemberSignupCreatesUserTests(TestCase):
                 "primary_instrument": self.instrument.pk,
             },
         )
-        # Set-password email should have been sent
-        self.assertTrue(
-            any("/member/set-password/" in m.body for m in mail.outbox),
-            "Expected a set-password email but none found",
-        )
+        # Welcome email with set-password link should have been sent to member only
+        welcome_emails = [m for m in mail.outbox if "http://testserver/member/set-password/" in m.body]
+        self.assertTrue(welcome_emails, "Expected a welcome email with a valid set-password URL but none found")
+        welcome = welcome_emails[0]
+        self.assertEqual(welcome.to, ["alex@example.com"])
+        self.assertNotIn("info@blowcomotion.com", welcome.to)
+        # Both steps should be present
+        self.assertIn("gig-o-matic.com", welcome.body)
         # A User linked to the new Member should exist
         from blowcomotion.models import Member
         member = Member.objects.get(email="alex@example.com")
