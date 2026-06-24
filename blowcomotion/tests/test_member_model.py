@@ -772,8 +772,7 @@ class MemberReactivatedDateTests(TestCase):
 
 class MemberDisplayNameTests(TestCase):
     def test_display_name_sort_metadata(self):
-        from django.db.models import Case
-        self.assertIsInstance(Member.display_name.admin_order_field, Case)
+        self.assertEqual(Member.display_name.admin_order_field, 'first_name')
         self.assertEqual(Member.display_name.short_description, 'Name')
 
     def test_display_name_returns_str(self):

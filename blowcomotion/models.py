@@ -24,7 +24,6 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import Case, CharField, F, When
 
 from blowcomotion import blocks as blowcomotion_blocks
 from blowcomotion.utils import validate_birthday
@@ -989,11 +988,7 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
     def display_name(self):
         # ponytail: __str__ unsortable in Wagtail admin (label_for_field returns builtin str as attr); this wrapper exposes admin_order_field
         return str(self)
-    display_name.admin_order_field = Case(
-        When(preferred_name__gt='', then=F('preferred_name')),
-        default=F('first_name'),
-        output_field=CharField(),
-    )
+    display_name.admin_order_field = 'first_name'
     display_name.short_description = 'Name'
 
 
