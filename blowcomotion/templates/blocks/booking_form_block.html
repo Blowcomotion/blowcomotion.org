@@ -8,7 +8,6 @@
             <form hx-post="{% url 'process-form' %}" name="booking-form" hx-indicator="#booking-form-spinner">
                 <div class="input__list row">
                     {% csrf_token %}
-                    <input type="text" class="best-color" name="best_color" value="" style="display:none;">
                     <div class="form-group col-sm-6">
                         <label for="name">{{ value.name_field_label|default:"Your Name:" }} <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="name" name="name" placeholder="Your Name" required>

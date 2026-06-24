@@ -522,12 +522,6 @@ def _get_form_recipients(site_settings, form_type):
     return recipient_mapping.get(form_type)
 
 
-def _validate_honeypot(request):
-    """Validate honeypot field."""
-    honeypot = request.POST.get('best_color')
-    return honeypot == 'purple'
-
-
 def _validate_recaptcha(request):
     """
     Validate reCAPTCHA v3 token from the request.
@@ -1240,15 +1234,8 @@ def process_form(request):
     Process the form submission.
     """
     context = {}
-    honeypot_message = 'Honeypot triggered. Form submission failed. Is your javascript enabled?'
-    
+
     if request.method == 'POST':
-        # Validate honeypot field
-        if not _validate_honeypot(request):
-            logger.warning(f"Honeypot triggered by user {request.user.username}")
-            context['error'] = honeypot_message
-            return render(request, 'forms/error.html', context)
-        
         # Validate reCAPTCHA
         recaptcha_valid, recaptcha_error = _validate_recaptcha(request)
         if not recaptcha_valid:
@@ -1365,10 +1352,6 @@ def process_form(request):
         else:
             # Handle unknown form types
             logger.info(f"Processing unknown form type submission by user {request.user.username}")
-            if not _validate_honeypot(request):
-                logger.warning(f"Honeypot triggered by user {request.user.username}")
-                context['error'] = honeypot_message
-                return render(request, 'forms/error.html', context)
             context['message'] = 'Form submitted successfully!'
     
     else:

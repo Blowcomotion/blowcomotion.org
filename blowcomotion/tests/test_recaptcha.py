@@ -225,7 +225,6 @@ class ProcessFormRecaptchaIntegrationTests(TestCase):
             'form_type': 'feedback_form',
             'name': 'Test User',
             'message': 'Test message',
-            'best_color': 'purple',  # Honeypot
         })
         
         # Should succeed (render success template)
@@ -240,7 +239,6 @@ class ProcessFormRecaptchaIntegrationTests(TestCase):
             'form_type': 'feedback_form',
             'name': 'Test User',
             'message': 'Test message',
-            'best_color': 'purple',
         })
         
         self.assertEqual(response.status_code, 200)
@@ -253,7 +251,6 @@ class ProcessFormRecaptchaIntegrationTests(TestCase):
             'form_type': 'feedback_form',
             'name': 'Test User',
             'message': 'Test message',
-            'best_color': 'purple',
             # No g-recaptcha-response
         })
         
@@ -277,7 +274,6 @@ class ProcessFormRecaptchaIntegrationTests(TestCase):
             'form_type': 'feedback_form',
             'name': 'Test User',
             'message': 'Test message',
-            'best_color': 'purple',
             'g-recaptcha-response': 'test-token',
         })
         
@@ -301,7 +297,6 @@ class ProcessFormRecaptchaIntegrationTests(TestCase):
             'form_type': 'feedback_form',
             'name': 'Test User',
             'message': 'Test message',
-            'best_color': 'purple',
             'g-recaptcha-response': 'test-token',
         })
         

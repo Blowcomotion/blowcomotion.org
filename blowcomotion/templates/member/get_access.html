@@ -13,7 +13,6 @@
                 <p class="text-muted mb-4">Enter your member email address and we'll send you a link to set up your account.</p>
                 <form method="post" id="member-form">
                     {% csrf_token %}
-                    <input type="text" name="best_color" class="best-color" style="display:none;" tabindex="-1" autocomplete="off">
                     <input type="hidden" name="g-recaptcha-response" value="">
                     <div class="mb-3">
                         <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>

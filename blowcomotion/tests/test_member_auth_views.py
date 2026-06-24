@@ -38,16 +38,10 @@ class LoginViewTests(TestCase):
     def test_valid_login_redirects_to_profile(self, mock_recaptcha):
         response = self.client.post(
             reverse("member-login"),
-            {"username": "sam@example.com", "password": "Str0ngP@ss!", "best_color": "purple"},
+            {"username": "sam@example.com", "password": "Str0ngP@ss!"},
         )
         self.assertRedirects(response, "/member/profile/", fetch_redirect_response=False)
 
-    def test_honeypot_filled_redirects_silently(self):
-        response = self.client.post(
-            reverse("member-login"),
-            {"username": "sam@example.com", "password": "x", "best_color": "red"},
-        )
-        self.assertEqual(response.status_code, 302)
 
     def test_recaptcha_fail_stays_on_login(self):
         with patch(
@@ -56,7 +50,7 @@ class LoginViewTests(TestCase):
         ):
             response = self.client.post(
                 reverse("member-login"),
-                {"username": "sam@example.com", "password": "Str0ngP@ss!", "best_color": "purple"},
+                {"username": "sam@example.com", "password": "Str0ngP@ss!"},
             )
         self.assertEqual(response.status_code, 200)
 
@@ -113,7 +107,7 @@ class SetPasswordViewTests(TestCase):
         token = self._make_token()
         response = self.client.post(
             reverse("member-set-password", kwargs={"token_uuid": token.uuid}),
-            {"new_password1": "NewStr0ng@Pass!", "new_password2": "NewStr0ng@Pass!", "best_color": "purple"},
+            {"new_password1": "NewStr0ng@Pass!", "new_password2": "NewStr0ng@Pass!"},
         )
         self.assertRedirects(response, "/member/profile/", fetch_redirect_response=False)
         token.refresh_from_db()
@@ -130,7 +124,7 @@ class GetAccessViewTests(TestCase):
     @recaptcha_pass
     def test_unknown_email_receives_signup_invite(self, mock_recaptcha):
         response = self.client.post(
-            reverse("member-get-access"), {"email": "nobody@example.com", "best_color": "purple"}
+            reverse("member-get-access"), {"email": "nobody@example.com"}
         )
         self.assertEqual(response.status_code, 200)
         from django.core import mail
@@ -141,7 +135,7 @@ class GetAccessViewTests(TestCase):
     def test_member_without_user_creates_account_and_sends_email(self, mock_recaptcha):
         make_member(email="newbie@example.com")
         response = self.client.post(
-            reverse("member-get-access"), {"email": "newbie@example.com", "best_color": "purple"}
+            reverse("member-get-access"), {"email": "newbie@example.com"}
         )
         self.assertEqual(response.status_code, 200)
         from django.core import mail
@@ -156,7 +150,7 @@ class GetAccessViewTests(TestCase):
         user.set_password("SomePass123!")
         user.save()
         response = self.client.post(
-            reverse("member-get-access"), {"email": "existing@example.com", "best_color": "purple"}
+            reverse("member-get-access"), {"email": "existing@example.com"}
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 1)
@@ -166,7 +160,7 @@ class GetAccessViewTests(TestCase):
         from django.core import mail
         make_member(email="inactive@example.com", is_active=False)
         response = self.client.post(
-            reverse("member-get-access"), {"email": "inactive@example.com", "best_color": "purple"}
+            reverse("member-get-access"), {"email": "inactive@example.com"}
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 1)
@@ -181,7 +175,7 @@ class GetAccessViewTests(TestCase):
         user.set_password("OldPass123!")
         user.save()
         response = self.client.post(
-            reverse("member-get-access"), {"email": "oldmember@example.com", "best_color": "purple"}
+            reverse("member-get-access"), {"email": "oldmember@example.com"}
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 1)
@@ -193,7 +187,7 @@ class GetAccessViewTests(TestCase):
         make_member(email="dupe@example.com")
         make_member(first_name="Other", last_name="Also", email="dupe@example.com")
         response = self.client.post(
-            reverse("member-get-access"), {"email": "dupe@example.com", "best_color": "purple"}
+            reverse("member-get-access"), {"email": "dupe@example.com"}
         )
         self.assertEqual(response.status_code, 200)
 
@@ -201,7 +195,7 @@ class GetAccessViewTests(TestCase):
     def test_signup_invite_email_not_qp_wrapped(self, mock_recaptcha):
         from django.core import mail
         self.client.post(
-            reverse("member-get-access"), {"email": "newperson2@example.com", "best_color": "purple"}
+            reverse("member-get-access"), {"email": "newperson2@example.com"}
         )
         raw = mail.outbox[0].message().as_string()
         self.assertNotIn("=\n", raw)
@@ -212,7 +206,7 @@ class GetAccessViewTests(TestCase):
         from django.core import mail
         for _ in range(3):
             self.client.post(
-                reverse("member-get-access"), {"email": "newperson@example.com", "best_color": "purple"}
+                reverse("member-get-access"), {"email": "newperson@example.com"}
             )
         self.assertEqual(len(mail.outbox), 2)
 
@@ -227,7 +221,7 @@ class SetPasswordReactivationTests(TestCase):
             token = PasswordSetToken.objects.create(member=member)
             response = self.client.post(
                 reverse("member-set-password", kwargs={"token_uuid": token.uuid}),
-                {"new_password1": "FreshP@ss1!", "new_password2": "FreshP@ss1!", "best_color": "purple"},
+                {"new_password1": "FreshP@ss1!", "new_password2": "FreshP@ss1!"},
             )
             self.assertRedirects(response, "/member/profile/", fetch_redirect_response=False)
             member.refresh_from_db()
@@ -240,7 +234,7 @@ class SetPasswordReactivationTests(TestCase):
             token = PasswordSetToken.objects.create(member=member)
             response = self.client.post(
                 reverse("member-set-password", kwargs={"token_uuid": token.uuid}),
-                {"new_password1": "FreshP@ss1!", "new_password2": "FreshP@ss1!", "best_color": "purple"},
+                {"new_password1": "FreshP@ss1!", "new_password2": "FreshP@ss1!"},
             )
             self.assertRedirects(response, "/member/profile/", fetch_redirect_response=False)
             member.refresh_from_db()
@@ -257,7 +251,7 @@ class PasswordResetViewTests(TestCase):
         make_member(first_name="Other3", last_name="Also", email="dupe3@example.com")
         response = self.client.post(
             reverse("member-password-reset"),
-            {"email": "dupe3@example.com", "best_color": "purple"},
+            {"email": "dupe3@example.com"},
         )
         self.assertIn(response.status_code, [200, 302])
 
@@ -271,7 +265,7 @@ class PasswordResetViewTests(TestCase):
         user.save()
         self.client.post(
             reverse("member-password-reset"),
-            {"email": "haspass@example.com", "best_color": "purple"},
+            {"email": "haspass@example.com"},
         )
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].from_email, "noreply@blowcomotion.org")

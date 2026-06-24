@@ -28,7 +28,6 @@
                 <div class="card-body p-4">
                     <form hx-post="{% url 'process-form' %}" name="member-signup-form">
                         {% csrf_token %}
-                        <input type="text" class="best-color" name="best_color" value="" style="display:none;">
                         <input type="hidden" name="form_type" value="member_signup_form">
 
                         <!-- Personal Information Section -->
