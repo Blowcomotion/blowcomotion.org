@@ -169,6 +169,7 @@ class ProfileViewTests(TestCase):
         self.assertEqual(Revision.objects.for_instance(self.member).count(), 1)
         revision = Revision.objects.for_instance(self.member).first()
         self.assertEqual(revision.user, self.user)
+        self.assertIn("Robbie", revision.content.get("preferred_name", ""))
 
 
 class ConfirmEmailViewTests(TestCase):
