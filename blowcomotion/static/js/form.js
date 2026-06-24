@@ -1,21 +1,21 @@
 (function ($) {
     $(document).ready(function() {
-        // reCAPTCHA v3 form handling
-        // For HTMX forms, we need to get the token and add it to the request
+        // reCAPTCHA disclosure notice (required when hiding the badge)
+        $('form[hx-post*="process-form"], form[action*="process-form"], form#member-form').each(function() {
+            var $form = $(this);
+            if ($form.find('.recaptcha-notice').length === 0) {
+                $form.append('<div class="recaptcha-notice" style="display: block; width: 100%; font-size: 0.75rem; color: #888; margin-top: 0.5rem; text-align: center;">This site is protected by reCAPTCHA.</div>');
+            }
+        });
+
+        // reCAPTCHA v3 token injection and form handling
         if (typeof grecaptcha !== 'undefined' && window.RECAPTCHA_SITE_KEY) {
-            
-            // Add hidden inputs and reCAPTCHA notice to all forms that post to process-form
-            $('form[hx-post*="process-form"], form[action*="process-form"]').each(function() {
+
+            // Add hidden token inputs to all reCAPTCHA-protected forms
+            $('form[hx-post*="process-form"], form[action*="process-form"], form#member-form').each(function() {
                 var $form = $(this);
-                
                 if ($form.find('input[name="g-recaptcha-response"]').length === 0) {
                     $form.append('<input type="hidden" name="g-recaptcha-response" class="recaptcha-token" value="">');
-                }
-                
-                // Add reCAPTCHA notice after submit buttons (required when hiding the badge)
-                // Check if form already has a notice to avoid duplicates
-                if ($form.find('.recaptcha-notice').length === 0) {
-                    $form.append('<div class="recaptcha-notice" style="display: block; width: 100%; font-size: 0.75rem; color: #888; margin-top: 0.5rem; text-align: center;">This site is protected by reCAPTCHA.</div>');
                 }
             });
             
