@@ -234,7 +234,7 @@ class MemberViewSet(SnippetViewSet):
     menu_label = 'Members'
     menu_name = 'members'
     menu_icon = 'group'
-    search_fields = ("first_name", "last_name", "preferred_name", "gigomatic_username", "email")
+    search_fields = None  # Use model's index.SearchField definitions; string names break SQLite FTS
     list_display = [
         'display_name',
         Column('primary_instrument', label='Instrument', sort_key='primary_instrument__name'),
