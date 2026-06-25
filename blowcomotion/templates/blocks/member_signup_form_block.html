@@ -218,6 +218,123 @@
                             </div>
                         </div>
 
+                        <!-- Shirt Size Section -->
+                        <div class="mb-4">
+                            <h4 class="border-bottom pb-2 mb-3">
+                                <i class="fa fa-shopping-bag"></i> Shirt Size
+                            </h4>
+                            <div class="mb-3">
+                                <label for="shirt_size" class="form-label">All Adult UniSex</label>
+                                <select class="form-control" id="shirt_size" name="shirt_size">
+                                    <option value="">Select a size</option>
+                                    <option value="S">S</option>
+                                    <option value="M">M</option>
+                                    <option value="L">L</option>
+                                    <option value="XL">XL</option>
+                                    <option value="2XL">2XL</option>
+                                    <option value="3XL">3XL</option>
+                                    <option value="4XL">4XL</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Dietary Preferences Section -->
+                        <div class="mb-4">
+                            <h4 class="border-bottom pb-2 mb-3">
+                                <i class="fa fa-cutlery"></i> Dietary Preferences/Practices
+                            </h4>
+                            <p class="text-muted small mb-3">Select all that apply.</p>
+                            <div class="row">
+                                {% for value_label in dietary_choices %}
+                                <div class="col-md-6 mb-1">
+                                    <div class="form-check">
+                                        <input class="form-check-input dietary-checkbox" type="checkbox"
+                                               id="diet_{{ forloop.counter }}"
+                                               name="dietary_preferences"
+                                               value="{{ value_label.0 }}"
+                                               {% if value_label.0 == 'Other' %}data-reveals="dietary-other-box"{% endif %}>
+                                        <label class="form-check-label" for="diet_{{ forloop.counter }}">
+                                            {{ value_label.1 }}
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mb-3 mt-2" id="dietary-other-box" style="display:none;">
+                                <label for="dietary_other" class="form-label">Please describe your dietary preference</label>
+                                <input type="text" class="form-control" id="dietary_other" name="dietary_other" placeholder="Describe your dietary preference">
+                            </div>
+                        </div>
+
+                        <!-- Allergy Section -->
+                        <div class="mb-4">
+                            <h4 class="border-bottom pb-2 mb-3">
+                                <i class="fa fa-exclamation-triangle"></i> Allergies
+                            </h4>
+                            <div class="mb-3">
+                                <label for="has_allergies" class="form-label">Do you have any allergies?</label>
+                                <select class="form-control" id="has_allergies" name="has_allergies">
+                                    <option value="">Select</option>
+                                    <option value="yes">Yes</option>
+                                    <option value="no">No</option>
+                                </select>
+                            </div>
+
+                            <div id="allergens-section" style="display:none;">
+                                <div class="mb-3">
+                                    <label class="form-label">Allergens (select all that apply)</label>
+                                    <div class="row">
+                                        {% for value_label in allergen_choices %}
+                                        <div class="col-md-6 mb-1">
+                                            <div class="form-check">
+                                                <input class="form-check-input allergen-checkbox" type="checkbox"
+                                                       id="allergen_{{ forloop.counter }}"
+                                                       name="allergens"
+                                                       value="{{ value_label.0 }}"
+                                                       {% if value_label.0 == 'Other' %}data-reveals="allergens-other-box"{% endif %}>
+                                                <label class="form-check-label" for="allergen_{{ forloop.counter }}">
+                                                    {{ value_label.1 }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div class="mb-3" id="allergens-other-box" style="display:none;">
+                                    <label for="allergens_other" class="form-label">Please describe your allergen</label>
+                                    <input type="text" class="form-control" id="allergens_other" name="allergens_other" placeholder="Describe your allergen">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="has_epipen" class="form-label">Do you carry an Epi-Pen or other intervention?</label>
+                                    <select class="form-control" id="has_epipen" name="has_epipen">
+                                        <option value="">Select</option>
+                                        <option value="yes">Yes</option>
+                                        <option value="no">No</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="allergy_details" class="form-label">Allergy/Intervention Details</label>
+                                    <textarea class="form-control" id="allergy_details" name="allergy_details" rows="3" placeholder="Additional details about your allergies or interventions"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Confidential Medical Notes Section -->
+                        <div class="mb-4">
+                            <h4 class="border-bottom pb-2 mb-3">
+                                <i class="fa fa-lock"></i> Confidential Medical Information
+                            </h4>
+                            <div class="mb-3">
+                                <label for="medical_notes" class="form-label">
+                                    CONFIDENTIAL: Any medical concerns or allergies
+                                </label>
+                                <textarea class="form-control" id="medical_notes" name="medical_notes" rows="3" placeholder="Any medical concerns or allergies we should know about (confidential, admin only)"></textarea>
+                                <small class="form-text text-muted">This information is strictly confidential and will only be accessible to band administrators.</small>
+                            </div>
+                        </div>
+
                         {% if value.newsletter_opt_in %}
                         <div class="mb-4">
                             <div class="form-check">
@@ -237,6 +354,33 @@
                             </button>
                         </div>
                     </form>
+
+                    <script>
+                    (function () {
+                        // Show/hide allergens section based on has_allergies select
+                        var hasAllergiesSelect = document.getElementById('has_allergies');
+                        var allergensSection = document.getElementById('allergens-section');
+                        if (hasAllergiesSelect && allergensSection) {
+                            hasAllergiesSelect.addEventListener('change', function () {
+                                allergensSection.style.display = this.value === 'yes' ? '' : 'none';
+                            });
+                        }
+
+                        // Show/hide "Other" text boxes for checkboxes with data-reveals
+                        document.querySelectorAll('[data-reveals]').forEach(function (cb) {
+                            var targetId = cb.getAttribute('data-reveals');
+                            var target = document.getElementById(targetId);
+                            if (!target) return;
+                            cb.addEventListener('change', function () {
+                                target.style.display = this.checked ? '' : 'none';
+                                if (!this.checked) {
+                                    var input = target.querySelector('input, textarea');
+                                    if (input) input.value = '';
+                                }
+                            });
+                        });
+                    }());
+                    </script>
                 </div>
             </div>
 

@@ -706,6 +706,14 @@ def _process_member_signup(request, form_data):
                 'template': 'forms/signup_duplicate_email.html',
             }
 
+        # Map yes/no strings to booleans for allergy/epipen fields
+        def _yesno_to_bool(val):
+            if val == 'yes':
+                return True
+            if val == 'no':
+                return False
+            return None
+
         # Create new member from form data
         member = Member(
             first_name=form_data['first_name'],
@@ -724,6 +732,15 @@ def _process_member_signup(request, form_data):
             country=form_data.get('country') or None,
             emergency_contact=form_data.get('emergency_contact') or None,
             inspired_by=form_data.get('inspired_by') or None,
+            shirt_size=form_data.get('shirt_size') or '',
+            dietary_preferences=form_data.get('dietary_preferences') or [],
+            dietary_other=form_data.get('dietary_other') or '',
+            has_allergies=_yesno_to_bool(form_data.get('has_allergies')),
+            allergens=form_data.get('allergens') or [],
+            allergens_other=form_data.get('allergens_other') or '',
+            has_epipen=_yesno_to_bool(form_data.get('has_epipen')),
+            allergy_details=form_data.get('allergy_details') or '',
+            medical_notes=form_data.get('medical_notes') or '',
             is_active=True,
             instructor=False,
             board_member=False,
@@ -810,7 +827,30 @@ Name: {member.first_name} {member.last_name}"""
                 
                 if member.inspired_by:
                     email_message += f"\n\nWhat inspired them to join:\n{member.inspired_by}"
-                
+
+                if member.shirt_size:
+                    email_message += f"\n\nShirt Size: {member.shirt_size}"
+
+                if member.dietary_preferences:
+                    prefs = ', '.join(member.dietary_preferences)
+                    email_message += f"\nDietary Preferences: {prefs}"
+                    if member.dietary_other:
+                        email_message += f"\nDietary Other: {member.dietary_other}"
+
+                if member.has_allergies is not None:
+                    email_message += f"\nHas Allergies: {'Yes' if member.has_allergies else 'No'}"
+                    if member.has_allergies and member.allergens:
+                        allergens_list = ', '.join(member.allergens)
+                        email_message += f"\nAllergens: {allergens_list}"
+                        if member.allergens_other:
+                            email_message += f"\nAllergens Other: {member.allergens_other}"
+
+                if member.has_epipen is not None:
+                    email_message += f"\nCarries Epi-Pen: {'Yes' if member.has_epipen else 'No'}"
+
+                if member.allergy_details:
+                    email_message += f"\nAllergy Details: {member.allergy_details}"
+
                 email_message += "\n\nStart Wearing Purple,\nBlowcomotion Website"
                 
                 _send_form_email(
