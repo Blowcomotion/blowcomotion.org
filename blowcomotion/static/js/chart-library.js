@@ -350,6 +350,13 @@
                                 ` : ''}
                             </span>
                             <span class="media-icon-slot">
+                                ${song.has_recording ? `
+                                    <a href="${this.escapeHtml(song.recording_url)}" download="${this.escapeHtml(song.title)}.mp3" class="song-download-btn" title="Download ${this.escapeHtml(song.title)}" aria-label="Download ${this.escapeHtml(song.title)}">
+                                        <i class="fa fa-download"></i>
+                                    </a>
+                                ` : ''}
+                            </span>
+                            <span class="media-icon-slot">
                                 ${this.renderVideoButtons(song)}
                             </span>
                         </span>

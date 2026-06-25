@@ -241,6 +241,22 @@
   padding-top: 25px;
 }
 
+.jp-download-btn-wrap {
+  float: left;
+  padding-top: 20px;
+}
+
+.jp-download-btn {
+  color: $heading-color;
+  font-size: 18px;
+  text-decoration: none;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: $primary-color;
+  }
+}
+
 .single_player_container {
   overflow: hidden;
   margin-bottom: 40px;
