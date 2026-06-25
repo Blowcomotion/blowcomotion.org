@@ -307,7 +307,7 @@ a.accordion-part:hover .part-pdf-icon {
 .song-media-icons {
     display: flex;
     flex-shrink: 0;
-    width: 56px;
+    width: 84px;
     margin-right: 8px;
 }
 
@@ -337,6 +337,25 @@ a.accordion-part:hover .part-pdf-icon {
 
 .song-play-btn.playing {
     color: #28a745;
+}
+
+/* ===== Download Button ===== */
+.song-download-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    color: #666;
+    font-size: 16px;
+    line-height: 1;
+    text-decoration: none;
+    transition: color 0.15s ease, transform 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+.song-download-btn:hover {
+    color: #5b1a76;
+    transform: scale(1.1);
 }
 
 /* ===== Video Button ===== */
@@ -550,15 +569,16 @@ a.accordion-part:hover .part-pdf-icon {
     }
     
     .song-media-icons {
-        width: 48px;
+        width: 72px;
         margin-right: 6px;
     }
-    
+
     .media-icon-slot {
         width: 24px;
     }
-    
+
     .song-play-btn,
+    .song-download-btn,
     .song-video-btn {
         font-size: 16px;
     }
