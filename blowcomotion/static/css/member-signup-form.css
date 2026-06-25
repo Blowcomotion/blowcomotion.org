@@ -28,13 +28,3 @@
 .member-signup-form h4 i {
     margin-right: 0.5rem;
 }
-
-/* Submit spinner — shown while HTMX request is in flight */
-.member-signup-form .htmx-request .htmx-indicator {
-    display: inline-block !important;
-}
-
-.member-signup-form .htmx-request button[type="submit"] {
-    opacity: 0.6;
-    pointer-events: none;
-}
