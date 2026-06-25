@@ -20,11 +20,7 @@ If this exits 0, there are no pending model changes — confirm with the user be
 python manage.py makemigrations
 ```
 
-Open the generated migration file and check:
-- Any `RunPython` operations have a `reverse_code` argument (or `atomic=False` if truly irreversible)
-- `StreamField` changes preserve existing block types — removing a block type silently drops data
-- New non-nullable fields have a `default` or `migrations.AddField` with `preserve_default=False`
-- The migration does not reference Wagtail's internal content types directly (use model references instead)
+Spawn the `wagtail-migration-reviewer` agent on the generated file. Stop and fix any BLOCKING issues before continuing.
 
 ## 3. Apply locally
 
