@@ -132,3 +132,104 @@ class InstrumentRentalRequestFormTest(TestCase):
         form = InstrumentRentalRequestForm()
         pks = list(form.fields["instrument"].queryset.values_list("pk", flat=True))
         self.assertNotIn(other.pk, pks)
+
+
+from unittest.mock import patch
+
+from django.urls import reverse
+
+from blowcomotion.member_auth import create_member_user
+
+
+class InstrumentRentalRequestViewTest(TestCase):
+    def setUp(self):
+        self.instrument = make_instrument("Trumpet")
+        self.li = make_library_instrument(self.instrument, status=LibraryInstrument.STATUS_AVAILABLE)
+        self.member = make_member()
+        self.user = create_member_user(self.member)
+        self.user.set_password("Pass123!")
+        self.user.save()
+        self.client.login(username="sam@example.com", password="Pass123!")
+
+    def test_get_redirects_anonymous(self):
+        self.client.logout()
+        response = self.client.get(reverse("member-instrument-rental"))
+        self.assertRedirects(
+            response,
+            "/member/login/?next=/member/instrument-rental/",
+            fetch_redirect_response=False,
+        )
+
+    def test_get_returns_200(self):
+        response = self.client.get(reverse("member-instrument-rental"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_context_has_member_and_form(self):
+        response = self.client.get(reverse("member-instrument-rental"))
+        self.assertEqual(response.context["member"], self.member)
+        self.assertIn("form", response.context)
+
+    def _post(self, extra=None):
+        data = {"instrument": self.instrument.pk, "policy_acknowledged": True}
+        if extra:
+            data.update(extra)
+        return self.client.post(reverse("member-instrument-rental"), data)
+
+    def test_post_creates_submission(self):
+        self._post()
+        self.assertEqual(InstrumentRentalRequestSubmission.objects.count(), 1)
+
+    def test_post_active_request_not_waitlisted(self):
+        self._post()
+        sub = InstrumentRentalRequestSubmission.objects.first()
+        self.assertFalse(sub.is_waitlist)
+
+    def test_post_sets_waitlist_when_none_available(self):
+        self.li.status = LibraryInstrument.STATUS_RENTED
+        self.li.save()
+        self._post()
+        sub = InstrumentRentalRequestSubmission.objects.first()
+        self.assertTrue(sub.is_waitlist)
+
+    def test_post_snapshots_member_contact_info(self):
+        self._post({"notes": "any note"})
+        sub = InstrumentRentalRequestSubmission.objects.first()
+        self.assertEqual(sub.name, self.member.full_name)
+        self.assertEqual(sub.email, self.member.email)
+        self.assertEqual(sub.phone, self.member.phone)
+        self.assertEqual(sub.address, self.member.address)
+
+    def test_post_stores_notes_in_message(self):
+        self._post({"notes": "prefer small bore"})
+        sub = InstrumentRentalRequestSubmission.objects.first()
+        self.assertEqual(sub.message, "prefer small bore")
+
+    @patch("blowcomotion.member_views._MemberEmail")
+    def test_post_sends_two_emails(self, mock_email_cls):
+        mock_email_cls.return_value.send.return_value = None
+        with patch("blowcomotion.member_views.SiteSettings.for_request") as mock_settings:
+            mock_settings.return_value.instrument_rental_notification_recipients = "test@example.com"
+            mock_settings.return_value.instrument_rental_policy = ""
+            mock_settings.return_value.patreon_url = ""
+            self._post()
+        self.assertEqual(mock_email_cls.call_count, 2)
+
+    def test_post_renders_success_state(self):
+        response = self._post()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["submitted"])
+        self.assertEqual(response.context["instrument"], self.instrument)
+
+    def test_invalid_post_rerenders_form_with_errors(self):
+        response = self.client.post(reverse("member-instrument-rental"), {"policy_acknowledged": True})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context.get("submitted", False))
+        self.assertIn("instrument", response.context["form"].errors)
+
+    def test_user_without_member_profile_redirects(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        staff = User.objects.create_user(username="staff@example.com", password="StaffP@ss!")
+        self.client.login(username="staff@example.com", password="StaffP@ss!")
+        response = self.client.get(reverse("member-instrument-rental"))
+        self.assertEqual(response.status_code, 302)

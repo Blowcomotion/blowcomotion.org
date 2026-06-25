@@ -31,5 +31,6 @@ urlpatterns = [
     path("confirm-email/<uuid:token_uuid>/", member_views.confirm_email_view, name="member-confirm-email"),
     path("profile/", member_views.profile_view, name="member-profile"),
     path("requests/", member_views.requests_view, name="member-requests"),
+    path("instrument-rental/", member_views.instrument_rental_request, name="member-instrument-rental"),
     path("", member_views.member_home, name="member-home"),
 ]
