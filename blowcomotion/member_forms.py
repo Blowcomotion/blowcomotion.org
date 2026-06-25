@@ -2,6 +2,48 @@ from django import forms
 
 from blowcomotion.models import Instrument, Member
 
+# Choices reused in profile template rendering (mirror MemberSignupForm)
+SHIRT_SIZE_CHOICES = [
+    ('', 'Select a size'),
+    ('S', 'S'),
+    ('M', 'M'),
+    ('L', 'L'),
+    ('XL', 'XL'),
+    ('2XL', '2XL'),
+    ('3XL', '3XL'),
+    ('4XL', '4XL'),
+]
+
+DIETARY_CHOICES = [
+    ('No Dietary Restrictions', 'No Dietary Restrictions'),
+    ('Vegetarian', 'Vegetarian'),
+    ('Vegan', 'Vegan'),
+    ('Gluten-Free', 'Gluten-Free'),
+    ('Dairy-Free / Lactose Intolerance', 'Dairy-Free / Lactose Intolerance'),
+    ('Nut-Allergies', 'Nut-Allergies'),
+    ('FODMAP Diet', 'FODMAP Diet'),
+    ('Ovo-Vegetarian', 'Ovo-Vegetarian'),
+    ('Lacto-Vegetarian', 'Lacto-Vegetarian'),
+    ('Lacto-Ovo Vegetarians', 'Lacto-Ovo Vegetarians'),
+    ('Pescetarians', 'Pescetarians'),
+    ('Kosher', 'Kosher'),
+    ('Halal', 'Halal'),
+    ('Ital', 'Ital'),
+    ('Other', 'Other'),
+]
+
+ALLERGEN_CHOICES = [
+    ('Tree Nut', 'Tree Nut'),
+    ('Peanut', 'Peanut'),
+    ('Milk', 'Milk'),
+    ('Egg', 'Egg'),
+    ('Wheat', 'Wheat'),
+    ('Soy', 'Soy'),
+    ('Fish', 'Fish'),
+    ('Shellfish', 'Shellfish'),
+    ('Other', 'Other'),
+]
+
 
 class GetAccessForm(forms.Form):
     email = forms.EmailField(

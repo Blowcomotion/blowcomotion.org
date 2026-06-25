@@ -21,7 +21,13 @@ from blowcomotion.member_auth import (
     send_set_password_email,
     send_signup_invite_email,
 )
-from blowcomotion.member_forms import GetAccessForm, MemberProfileForm
+from blowcomotion.member_forms import (
+    ALLERGEN_CHOICES,
+    DIETARY_CHOICES,
+    SHIRT_SIZE_CHOICES,
+    GetAccessForm,
+    MemberProfileForm,
+)
 from blowcomotion.models import (
     CustomImage,
     EmailChangeToken,
@@ -195,6 +201,16 @@ def member_home(request):
     return redirect("member-profile")
 
 
+def _yesno_to_bool(val):
+    """Map yes/no form strings to True/False/None (matches signup form semantics)."""
+    if val == "yes":
+        return True
+    if val == "no":
+        return False
+    return None
+
+
+
 @login_required
 def profile_view(request):
     if not hasattr(request.user, "member"):
@@ -202,14 +218,26 @@ def profile_view(request):
     member = request.user.member
     original_email = member.email  # snapshot before form validation mutates member in place
 
+    def _profile_context(form, extra=None):
+        ctx = {
+            "form": form,
+            "member": member,
+            "include_form_js": True,
+            "shirt_size_choices": SHIRT_SIZE_CHOICES,
+            "dietary_choices": DIETARY_CHOICES,
+            "allergen_choices": ALLERGEN_CHOICES,
+        }
+        if extra:
+            ctx.update(extra)
+        return ctx
+
     if request.method == "POST":
         is_valid_captcha, captcha_error = _validate_recaptcha(request)
         if not is_valid_captcha:
             form = MemberProfileForm(request.POST, request.FILES, instance=member)
-            return render(request, "member/profile.html", {
-                "form": form, "member": member,
-                "include_form_js": True, "recaptcha_error": captcha_error,
-            })
+            return render(request, "member/profile.html", _profile_context(
+                form, {"recaptcha_error": captcha_error}
+            ))
         form = MemberProfileForm(request.POST, request.FILES, instance=member)
         if form.is_valid():
             instance = form.save(commit=False)
@@ -228,6 +256,18 @@ def profile_view(request):
                 )
                 img.save()
                 instance.image = img
+
+            # Save health & preferences fields manually (JSON/nullable-bool don't
+            # round-trip cleanly through ModelForm; mirrors the signup handler)
+            instance.shirt_size = request.POST.get("shirt_size") or ""
+            instance.dietary_preferences = request.POST.getlist("dietary_preferences")
+            instance.dietary_other = request.POST.get("dietary_other") or ""
+            instance.has_allergies = _yesno_to_bool(request.POST.get("has_allergies"))
+            instance.allergens = request.POST.getlist("allergens")
+            instance.allergens_other = request.POST.get("allergens_other") or ""
+            instance.has_epipen = _yesno_to_bool(request.POST.get("has_epipen"))
+            instance.allergy_details = request.POST.get("allergy_details") or ""
+            instance.medical_notes = request.POST.get("medical_notes") or ""
 
             instance.save(sync_go3=False)
 
@@ -250,14 +290,10 @@ def profile_view(request):
             else:
                 messages.success(request, "Profile saved.")
             return redirect("member-profile")
-        return render(request, "member/profile.html", {
-            "form": form, "member": member, "include_form_js": True,
-        })
+        return render(request, "member/profile.html", _profile_context(form))
 
     form = MemberProfileForm(instance=member)
-    return render(request, "member/profile.html", {
-        "form": form, "member": member, "include_form_js": True,
-    })
+    return render(request, "member/profile.html", _profile_context(form))
 
 
 @login_required
