@@ -27,6 +27,7 @@ from blowcomotion.member_forms import (
     SHIRT_SIZE_CHOICES,
     GetAccessForm,
     MemberProfileForm,
+    _yesno_to_bool,
 )
 from blowcomotion.models import (
     CustomImage,
@@ -201,16 +202,6 @@ def member_home(request):
     return redirect("member-profile")
 
 
-def _yesno_to_bool(val):
-    """Map yes/no form strings to True/False/None (matches signup form semantics)."""
-    if val == "yes":
-        return True
-    if val == "no":
-        return False
-    return None
-
-
-
 @login_required
 def profile_view(request):
     if not hasattr(request.user, "member"):
@@ -218,8 +209,8 @@ def profile_view(request):
     member = request.user.member
     original_email = member.email  # snapshot before form validation mutates member in place
 
-    def _profile_context(form, extra=None):
-        ctx = {
+    def _profile_context(form):
+        return {
             "form": form,
             "member": member,
             "include_form_js": True,
@@ -227,17 +218,14 @@ def profile_view(request):
             "dietary_choices": DIETARY_CHOICES,
             "allergen_choices": ALLERGEN_CHOICES,
         }
-        if extra:
-            ctx.update(extra)
-        return ctx
 
     if request.method == "POST":
         is_valid_captcha, captcha_error = _validate_recaptcha(request)
         if not is_valid_captcha:
             form = MemberProfileForm(request.POST, request.FILES, instance=member)
-            return render(request, "member/profile.html", _profile_context(
-                form, {"recaptcha_error": captcha_error}
-            ))
+            ctx = _profile_context(form)
+            ctx["recaptcha_error"] = captcha_error
+            return render(request, "member/profile.html", ctx)
         form = MemberProfileForm(request.POST, request.FILES, instance=member)
         if form.is_valid():
             instance = form.save(commit=False)

@@ -34,6 +34,7 @@ from blowcomotion.member_auth import (
     create_member_user,
     send_member_signup_welcome_email,
 )
+from blowcomotion.member_forms import _yesno_to_bool
 from blowcomotion.models import (
     AttendanceRecord,
     BookingFormSubmission,
@@ -705,14 +706,6 @@ def _process_member_signup(request, form_data):
             return {
                 'template': 'forms/signup_duplicate_email.html',
             }
-
-        # Map yes/no strings to booleans for allergy/epipen fields
-        def _yesno_to_bool(val):
-            if val == 'yes':
-                return True
-            if val == 'no':
-                return False
-            return None
 
         # Create new member from form data
         member = Member(

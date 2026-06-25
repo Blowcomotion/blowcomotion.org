@@ -226,14 +226,9 @@
                             <div class="mb-3">
                                 <label for="shirt_size" class="form-label">All Adult UniSex</label>
                                 <select class="form-control" id="shirt_size" name="shirt_size">
-                                    <option value="">Select a size</option>
-                                    <option value="S">S</option>
-                                    <option value="M">M</option>
-                                    <option value="L">L</option>
-                                    <option value="XL">XL</option>
-                                    <option value="2XL">2XL</option>
-                                    <option value="3XL">3XL</option>
-                                    <option value="4XL">4XL</option>
+                                    {% for val, label in shirt_size_choices %}
+                                    <option value="{{ val }}">{{ label }}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
                         </div>

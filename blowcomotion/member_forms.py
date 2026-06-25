@@ -1,48 +1,19 @@
 from django import forms
 
+from blowcomotion.forms import MemberSignupForm
 from blowcomotion.models import Instrument, Member
 
-# Choices reused in profile template rendering (mirror MemberSignupForm)
-SHIRT_SIZE_CHOICES = [
-    ('', 'Select a size'),
-    ('S', 'S'),
-    ('M', 'M'),
-    ('L', 'L'),
-    ('XL', 'XL'),
-    ('2XL', '2XL'),
-    ('3XL', '3XL'),
-    ('4XL', '4XL'),
-]
+SHIRT_SIZE_CHOICES = MemberSignupForm.SHIRT_SIZE_CHOICES
+DIETARY_CHOICES = MemberSignupForm.DIETARY_CHOICES
+ALLERGEN_CHOICES = MemberSignupForm.ALLERGEN_CHOICES
 
-DIETARY_CHOICES = [
-    ('No Dietary Restrictions', 'No Dietary Restrictions'),
-    ('Vegetarian', 'Vegetarian'),
-    ('Vegan', 'Vegan'),
-    ('Gluten-Free', 'Gluten-Free'),
-    ('Dairy-Free / Lactose Intolerance', 'Dairy-Free / Lactose Intolerance'),
-    ('Nut-Allergies', 'Nut-Allergies'),
-    ('FODMAP Diet', 'FODMAP Diet'),
-    ('Ovo-Vegetarian', 'Ovo-Vegetarian'),
-    ('Lacto-Vegetarian', 'Lacto-Vegetarian'),
-    ('Lacto-Ovo Vegetarians', 'Lacto-Ovo Vegetarians'),
-    ('Pescetarians', 'Pescetarians'),
-    ('Kosher', 'Kosher'),
-    ('Halal', 'Halal'),
-    ('Ital', 'Ital'),
-    ('Other', 'Other'),
-]
 
-ALLERGEN_CHOICES = [
-    ('Tree Nut', 'Tree Nut'),
-    ('Peanut', 'Peanut'),
-    ('Milk', 'Milk'),
-    ('Egg', 'Egg'),
-    ('Wheat', 'Wheat'),
-    ('Soy', 'Soy'),
-    ('Fish', 'Fish'),
-    ('Shellfish', 'Shellfish'),
-    ('Other', 'Other'),
-]
+def _yesno_to_bool(val):
+    if val == "yes":
+        return True
+    if val == "no":
+        return False
+    return None
 
 
 class GetAccessForm(forms.Form):
