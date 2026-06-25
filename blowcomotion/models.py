@@ -118,6 +118,10 @@ class SiteSettings(BaseSiteSetting):
         null=True,
         help_text="Comma-separated list of email addresses to receive instrument rental notifications",
     )
+    instrument_rental_policy = RichTextField(
+        blank=True,
+        help_text="Lending policy text displayed on the instrument rental request form.",
+    )
     venmo_donate_url = models.URLField(
         blank=True,
         null=True,
@@ -190,7 +194,11 @@ class SiteSettings(BaseSiteSetting):
             FieldPanel('attendance_report_notification_recipients'),
             FieldPanel('member_signup_notification_recipients'),
         ], heading="Form Email Recipients"),
-        
+
+        MultiFieldPanel([
+            FieldPanel('instrument_rental_policy'),
+        ], heading="Instrument Rental Policy"),
+
         MultiFieldPanel([
             FieldPanel('venmo_donate_url'),
             FieldPanel('square_donate_url'),
@@ -1993,3 +2001,33 @@ class DonateFormSubmission(BaseFormSubmission):
 
     def __str__(self):
         return f"Donate Form Submission from {self.name} on {self.date_submitted}"
+
+
+class InstrumentRentalRequestSubmission(BaseFormSubmission):
+    """Member portal instrument rental requests. `message` field stores optional notes."""
+
+    member = models.ForeignKey(
+        "blowcomotion.Member",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="rental_requests",
+    )
+    instrument = models.ForeignKey(
+        "blowcomotion.Instrument",
+        on_delete=models.PROTECT,
+        related_name="rental_requests",
+    )
+    is_waitlist = models.BooleanField(default=False)
+    phone = models.CharField(max_length=255, blank=True, null=True)
+    address = models.CharField(max_length=255, blank=True, null=True)
+    policy_acknowledged = models.BooleanField(default=False)
+
+    def __str__(self):
+        status = "waitlist" if self.is_waitlist else "request"
+        return f"{self.name} — {self.instrument} ({status}) on {self.date_submitted:%Y-%m-%d}"
+
+    class Meta:
+        ordering = ["-date_submitted"]
+        verbose_name = "Instrument Rental Request"
+        verbose_name_plural = "Instrument Rental Requests"
