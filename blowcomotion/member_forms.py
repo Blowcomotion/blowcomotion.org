@@ -1,7 +1,8 @@
 from django import forms
+from django.db.models import Count, Q
 
 from blowcomotion.forms import MemberSignupForm
-from blowcomotion.models import Instrument, Member
+from blowcomotion.models import Instrument, LibraryInstrument, Member
 
 SHIRT_SIZE_CHOICES = MemberSignupForm.SHIRT_SIZE_CHOICES
 DIETARY_CHOICES = MemberSignupForm.DIETARY_CHOICES
@@ -77,3 +78,43 @@ class MemberProfileForm(forms.ModelForm):
                 field.widget.attrs.setdefault("class", "form-check-input")
             else:
                 field.widget.attrs.setdefault("class", "form-control")
+
+
+class InstrumentRentalRequestForm(forms.Form):
+    instrument = forms.ModelChoiceField(
+        queryset=Instrument.objects.none(),
+        empty_label="Select an instrument",
+        label="Instrument",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    notes = forms.CharField(
+        required=False,
+        label="Notes",
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+    )
+    policy_acknowledged = forms.BooleanField(
+        required=True,
+        label="I have read and agree to the Instrument Lending Policy",
+        error_messages={"required": "You must acknowledge the policy to submit this request."},
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        qs = (
+            Instrument.objects.annotate(
+                available_count=Count(
+                    "library_inventory",
+                    filter=Q(library_inventory__status=LibraryInstrument.STATUS_AVAILABLE),
+                )
+            )
+            .filter(library_inventory__isnull=False)
+            .distinct()
+            .order_by("name")
+        )
+        self.fields["instrument"].queryset = qs
+        self.fields["instrument"].label_from_instance = lambda obj: (
+            f"{obj.name} ({obj.available_count} available)"
+            if obj.available_count > 0
+            else f"{obj.name} (waitlist — 0 available)"
+        )
