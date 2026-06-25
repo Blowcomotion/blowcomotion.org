@@ -128,7 +128,7 @@
     </div>
 
     <div class="mb-3">
-        <label for="has_allergies" class="form-label">Do you have any allergies?</label>
+        <label for="has_allergies" class="form-label">Do you have any food allergies?</label>
         <select class="form-control" id="has_allergies" name="has_allergies">
             <option value=""{% if member.has_allergies is None %} selected{% endif %}>Select</option>
             <option value="yes"{% if member.has_allergies == True %} selected{% endif %}>Yes</option>
