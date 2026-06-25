@@ -1,3 +1,5 @@
+from wagtail.models import Site
+
 from django.db.models import Count, Q
 from django.test import TestCase
 
@@ -7,6 +9,7 @@ from blowcomotion.models import (
     InstrumentRentalRequestSubmission,
     LibraryInstrument,
     Member,
+    SiteSettings,
 )
 
 
@@ -207,11 +210,10 @@ class InstrumentRentalRequestViewTest(TestCase):
     @patch("blowcomotion.member_views._MemberEmail")
     def test_post_sends_two_emails(self, mock_email_cls):
         mock_email_cls.return_value.send.return_value = None
-        with patch("blowcomotion.member_views.SiteSettings.for_request") as mock_settings:
-            mock_settings.return_value.instrument_rental_notification_recipients = "test@example.com"
-            mock_settings.return_value.instrument_rental_policy = ""
-            mock_settings.return_value.patreon_url = ""
-            self._post()
+        site_settings = SiteSettings.for_site(Site.objects.get(is_default_site=True))
+        site_settings.instrument_rental_notification_recipients = "test@example.com"
+        site_settings.save()
+        self._post()
         self.assertEqual(mock_email_cls.call_count, 2)
 
     def test_post_renders_success_state(self):

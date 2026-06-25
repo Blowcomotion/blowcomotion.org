@@ -1,0 +1,23 @@
+Hi {{ member.preferred_name|default:member.first_name }},
+
+Your instrument rental request has been received.
+
+Request details:
+  Instrument: {{ instrument.name }}
+  Status: {% if is_waitlist %}Waitlist (no units currently available){% else %}Active request{% endif %}
+{% if notes %}  Notes: {{ notes }}
+{% endif %}
+Contact information on file:
+  Name: {{ member.full_name }}
+  Email: {{ member.email }}
+  Phone: {{ member.phone|default:"not provided" }}
+  Address: {{ member.address|default:"not provided" }}{% if member.city %}, {{ member.city }}{% endif %}{% if member.state %}, {{ member.state }}{% endif %}{% if member.zip_code %} {{ member.zip_code }}{% endif %}
+
+{% if is_waitlist %}You are on the waitlist for {{ instrument.name }}. A library manager will reach out when a unit becomes available.
+{% else %}A library manager will be in touch soon to complete your rental.
+{% endif %}
+{% if patreon_url %}To support the instrument library, please ensure your Patreon membership is active:
+{{ patreon_url }}
+
+{% endif %}Start Wearing Purple,
+Blowcomotion
