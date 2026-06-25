@@ -497,3 +497,71 @@ class MemberSignupCreatesUserTests(TestCase):
         self.assertIsNotNone(member.user_id)
         user = User.objects.get(pk=member.user_id)
         self.assertFalse(user.has_usable_password())
+
+
+class MemberSignupDuplicateEmailTests(TestCase):
+    """Signing up with an email that already belongs to a member shows a login prompt."""
+
+    def setUp(self):
+        self.client = Client()
+        site = Site.objects.get(is_default_site=True)
+        SiteSettings.objects.create(
+            site=site,
+            member_signup_notification_recipients='admin@example.com',
+        )
+        section = Section.objects.create(name="Test Section")
+        self.instrument = Instrument.objects.create(name="Trumpet", section=section)
+        # Pre-existing member with this email
+        Member.objects.create(
+            first_name="Existing",
+            last_name="Member",
+            email="existing@example.com",
+            is_active=True,
+        )
+
+    @override_settings(
+        GIGO_API_URL=None,
+        DEBUG=True,
+        RECAPTCHA_PUBLIC_KEY=None,
+        RECAPTCHA_PRIVATE_KEY=None,
+    )
+    def test_duplicate_email_shows_login_prompt(self):
+        """A signup attempt with a registered email renders the login-prompt partial."""
+        response = self.client.post(
+            reverse('process-form'),
+            {
+                'form_type': 'member_signup_form',
+                'first_name': 'New',
+                'last_name': 'Person',
+                'email': 'existing@example.com',
+                'primary_instrument': self.instrument.pk,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn('An account with this email already exists', content)
+        self.assertIn('/member/login/', content)
+        # No second Member record should have been created
+        self.assertEqual(Member.objects.filter(email='existing@example.com').count(), 1)
+
+    @override_settings(
+        GIGO_API_URL=None,
+        DEBUG=True,
+        RECAPTCHA_PUBLIC_KEY=None,
+        RECAPTCHA_PRIVATE_KEY=None,
+    )
+    def test_duplicate_email_case_insensitive(self):
+        """Duplicate email check is case-insensitive."""
+        response = self.client.post(
+            reverse('process-form'),
+            {
+                'form_type': 'member_signup_form',
+                'first_name': 'New',
+                'last_name': 'Person',
+                'email': 'EXISTING@EXAMPLE.COM',
+                'primary_instrument': self.instrument.pk,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('An account with this email already exists', response.content.decode())
+        self.assertEqual(Member.objects.filter(email__iexact='existing@example.com').count(), 1)

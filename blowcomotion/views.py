@@ -696,7 +696,16 @@ def _process_member_signup(request, form_data):
     
     try:
         primary_instrument = form_data.get('primary_instrument')  # Already an Instrument object from MemberSignupForm
-        
+
+        # Check for duplicate email before attempting to create a member.
+        # Email is the login identifier, so a match means the person already has an account.
+        email = form_data.get('email')
+        if email and Member.objects.filter(email__iexact=email).exists():
+            logger.info(f"Member signup rejected: email already registered ({email})")
+            return {
+                'template': 'forms/signup_duplicate_email.html',
+            }
+
         # Create new member from form data
         member = Member(
             first_name=form_data['first_name'],
