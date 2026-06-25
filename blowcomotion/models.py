@@ -634,6 +634,65 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
         help_text="What event or person inspired this member to join the band",
     )
 
+    # Shirt size
+    SHIRT_SIZE_CHOICES = [
+        ('S', 'S'),
+        ('M', 'M'),
+        ('L', 'L'),
+        ('XL', 'XL'),
+        ('2XL', '2XL'),
+        ('3XL', '3XL'),
+        ('4XL', '4XL'),
+    ]
+    shirt_size = models.CharField(
+        max_length=10,
+        blank=True,
+        choices=SHIRT_SIZE_CHOICES,
+        help_text="Adult unisex shirt size",
+    )
+
+    # Dietary preferences (multi-select stored as JSON list)
+    dietary_preferences = models.JSONField(
+        blank=True,
+        default=list,
+        help_text="List of dietary preferences/practices",
+    )
+    dietary_other = models.TextField(
+        blank=True,
+        help_text="Other dietary preference details",
+    )
+
+    # Allergy information
+    has_allergies = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text="Does the member have food/substance allergies?",
+    )
+    allergens = models.JSONField(
+        blank=True,
+        default=list,
+        help_text="List of allergens the member has",
+    )
+    allergens_other = models.TextField(
+        blank=True,
+        help_text="Other allergen details",
+    )
+    has_epipen = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text="Does the member carry an Epi-Pen or other intervention?",
+    )
+    allergy_details = models.TextField(
+        blank=True,
+        help_text="Additional details about allergies or interventions",
+    )
+
+    # Confidential medical notes
+    medical_notes = models.TextField(
+        blank=True,
+        help_text="CONFIDENTIAL: Any medical concerns or allergies (not shared outside admin)",
+    )
+
     # Auth
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,

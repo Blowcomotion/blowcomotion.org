@@ -277,6 +277,15 @@ class MemberViewSet(SnippetViewSet):
         "country",
         "notes",
         "emergency_contact",
+        "shirt_size",
+        "dietary_preferences",
+        "dietary_other",
+        "has_allergies",
+        "allergens",
+        "allergens_other",
+        "has_epipen",
+        "allergy_details",
+        "medical_notes",
     ]
 
     def __init__(self, *args, **kwargs):

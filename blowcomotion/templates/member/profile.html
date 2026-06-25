@@ -91,6 +91,98 @@
     <div class="form-check mb-2">{{ form.notify_reminders }}<label class="form-check-label" for="{{ form.notify_reminders.id_for_label }}">Operational reminders</label></div>
     <div class="form-check mb-2">{{ form.notify_announcements }}<label class="form-check-label" for="{{ form.notify_announcements.id_for_label }}">Band announcements</label></div>
 
+    <h5 class="mt-4 mb-3">Health &amp; Preferences</h5>
+
+    <div class="mb-3">
+        <label for="shirt_size" class="form-label">Shirt Size (Adult Unisex)</label>
+        <select class="form-control" id="shirt_size" name="shirt_size">
+            {% for val, label in shirt_size_choices %}
+            <option value="{{ val }}"{% if member.shirt_size == val %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Dietary Preferences (select all that apply)</label>
+        <div class="row">
+            {% for val, label in dietary_choices %}
+            <div class="col-md-6 mb-1">
+                <div class="form-check">
+                    <input class="form-check-input dietary-checkbox" type="checkbox"
+                           id="diet_{{ forloop.counter }}"
+                           name="dietary_preferences"
+                           value="{{ val }}"
+                           {% if val in member.dietary_preferences %}checked{% endif %}
+                           {% if val == 'Other' %}data-reveals="dietary-other-box"{% endif %}>
+                    <label class="form-check-label" for="diet_{{ forloop.counter }}">{{ label }}</label>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="mb-3 mt-2" id="dietary-other-box"{% if 'Other' not in member.dietary_preferences %} style="display:none;"{% endif %}>
+            <label for="dietary_other" class="form-label">Please describe your dietary preference</label>
+            <input type="text" class="form-control" id="dietary_other" name="dietary_other"
+                   placeholder="Describe your dietary preference"
+                   value="{{ member.dietary_other }}">
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="has_allergies" class="form-label">Do you have any allergies?</label>
+        <select class="form-control" id="has_allergies" name="has_allergies">
+            <option value=""{% if member.has_allergies is None %} selected{% endif %}>Select</option>
+            <option value="yes"{% if member.has_allergies == True %} selected{% endif %}>Yes</option>
+            <option value="no"{% if member.has_allergies == False %} selected{% endif %}>No</option>
+        </select>
+    </div>
+
+    <div id="allergens-section"{% if not member.has_allergies %} style="display:none;"{% endif %}>
+        <div class="mb-3">
+            <label class="form-label">Allergens (select all that apply)</label>
+            <div class="row">
+                {% for val, label in allergen_choices %}
+                <div class="col-md-6 mb-1">
+                    <div class="form-check">
+                        <input class="form-check-input allergen-checkbox" type="checkbox"
+                               id="allergen_{{ forloop.counter }}"
+                               name="allergens"
+                               value="{{ val }}"
+                               {% if val in member.allergens %}checked{% endif %}
+                               {% if val == 'Other' %}data-reveals="allergens-other-box"{% endif %}>
+                        <label class="form-check-label" for="allergen_{{ forloop.counter }}">{{ label }}</label>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="mb-3" id="allergens-other-box"{% if 'Other' not in member.allergens %} style="display:none;"{% endif %}>
+            <label for="allergens_other" class="form-label">Please describe your allergen</label>
+            <input type="text" class="form-control" id="allergens_other" name="allergens_other"
+                   placeholder="Describe your allergen"
+                   value="{{ member.allergens_other }}">
+        </div>
+        <div class="mb-3">
+            <label for="has_epipen" class="form-label">Do you carry an Epi-Pen or other intervention?</label>
+            <select class="form-control" id="has_epipen" name="has_epipen">
+                <option value=""{% if member.has_epipen is None %} selected{% endif %}>Select</option>
+                <option value="yes"{% if member.has_epipen == True %} selected{% endif %}>Yes</option>
+                <option value="no"{% if member.has_epipen == False %} selected{% endif %}>No</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="allergy_details" class="form-label">Allergy/Intervention Details</label>
+            <textarea class="form-control" id="allergy_details" name="allergy_details" rows="3"
+                      placeholder="Additional details about your allergies or interventions">{{ member.allergy_details }}</textarea>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="medical_notes" class="form-label">Confidential Medical Notes</label>
+        <textarea class="form-control" id="medical_notes" name="medical_notes" rows="3"
+                  placeholder="Any medical concerns or allergies we should know about (confidential, admin only)">{{ member.medical_notes }}</textarea>
+        <div class="form-text">This information is strictly confidential and will only be accessible to band administrators.</div>
+    </div>
+
     <div class="mt-4">
         <button type="submit" class="site-btn">Save Profile</button>
     </div>
@@ -99,22 +191,46 @@
 
 {% block extra_js %}
 {{ block.super }}
-{% if include_form_js %}
 <script>
-(function() {
-    var form = document.getElementById('member-form');
-    if (!form || typeof grecaptcha === 'undefined' || !window.RECAPTCHA_SITE_KEY) return;
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        var self = this;
-        grecaptcha.ready(function() {
-            grecaptcha.execute(window.RECAPTCHA_SITE_KEY, {action: 'submit'}).then(function(token) {
-                self.querySelector('input[name="g-recaptcha-response"]').value = token;
-                self.submit();
-            }).catch(function() { self.submit(); });
+(function () {
+    // Show/hide allergens section based on has_allergies select
+    var hasAllergiesSelect = document.getElementById('has_allergies');
+    var allergensSection = document.getElementById('allergens-section');
+    if (hasAllergiesSelect && allergensSection) {
+        hasAllergiesSelect.addEventListener('change', function () {
+            allergensSection.style.display = this.value === 'yes' ? '' : 'none';
+        });
+    }
+
+    // Show/hide "Other" text boxes for checkboxes with data-reveals
+    document.querySelectorAll('[data-reveals]').forEach(function (cb) {
+        var targetId = cb.getAttribute('data-reveals');
+        var target = document.getElementById(targetId);
+        if (!target) return;
+        cb.addEventListener('change', function () {
+            target.style.display = this.checked ? '' : 'none';
+            if (!this.checked) {
+                var input = target.querySelector('input, textarea');
+                if (input) input.value = '';
+            }
         });
     });
-})();
-</script>
+
+{% if include_form_js %}
+    var form = document.getElementById('member-form');
+    if (form && typeof grecaptcha !== 'undefined' && window.RECAPTCHA_SITE_KEY) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var self = this;
+            grecaptcha.ready(function() {
+                grecaptcha.execute(window.RECAPTCHA_SITE_KEY, {action: 'submit'}).then(function(token) {
+                    self.querySelector('input[name="g-recaptcha-response"]').value = token;
+                    self.submit();
+                }).catch(function() { self.submit(); });
+            });
+        });
+    }
 {% endif %}
+}());
+</script>
 {% endblock %}

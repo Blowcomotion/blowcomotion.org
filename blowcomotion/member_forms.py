@@ -1,6 +1,19 @@
 from django import forms
 
+from blowcomotion.forms import MemberSignupForm
 from blowcomotion.models import Instrument, Member
+
+SHIRT_SIZE_CHOICES = MemberSignupForm.SHIRT_SIZE_CHOICES
+DIETARY_CHOICES = MemberSignupForm.DIETARY_CHOICES
+ALLERGEN_CHOICES = MemberSignupForm.ALLERGEN_CHOICES
+
+
+def _yesno_to_bool(val):
+    if val == "yes":
+        return True
+    if val == "no":
+        return False
+    return None
 
 
 class GetAccessForm(forms.Form):
