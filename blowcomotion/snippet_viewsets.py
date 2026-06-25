@@ -712,8 +712,33 @@ class DonateFormSubmissionViewset(SnippetViewSet):
         super().__init__(*args, **kwargs)
 
 
+class InstrumentRentalRequestSubmissionViewset(SnippetViewSet):
+    model = None
+    menu_label = "Instrument Rental Requests"
+    menu_name = "instrument_rental_requests"
+    menu_icon = "bi-music-note-beamed"
+    list_display = ["name", "email", "instrument", "is_waitlist", "date_submitted"]
+    search_fields = ("name", "email")
+    panels = [
+        "member",
+        "name",
+        "email",
+        "phone",
+        "address",
+        "instrument",
+        "is_waitlist",
+        "message",
+        "policy_acknowledged",
+    ]
+
+    def __init__(self, *args, **kwargs):
+        from .models import InstrumentRentalRequestSubmission
+        self.model = InstrumentRentalRequestSubmission
+        super().__init__(*args, **kwargs)
+
+
 class FormsViewSetGroup(SnippetViewSetGroup):
-    items = (ContactFormSubmissionViewset, FeedbackFormSubmissionViewset, JoinBandFormSubmissionViewset, BookingFormSubmissionViewset, DonateFormSubmissionViewset, )
+    items = (ContactFormSubmissionViewset, FeedbackFormSubmissionViewset, JoinBandFormSubmissionViewset, BookingFormSubmissionViewset, DonateFormSubmissionViewset, InstrumentRentalRequestSubmissionViewset, )
     menu_icon = 'clipboard-list'
     menu_label = 'Form Submissions'
     menu_name = 'forms'
