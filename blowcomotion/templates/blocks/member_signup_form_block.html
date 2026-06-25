@@ -26,7 +26,7 @@
 
             <div class="card shadow-sm">
                 <div class="card-body p-4">
-                    <form hx-post="{% url 'process-form' %}" name="member-signup-form">
+                    <form hx-post="{% url 'process-form' %}" name="member-signup-form" hx-indicator="#signup-submit-spinner">
                         {% csrf_token %}
                         <input type="hidden" name="form_type" value="member_signup_form">
 
@@ -232,7 +232,7 @@
                         <!-- Submit Button -->
                         <div class="text-center">
                             <button type="submit" class="site-btn btn-lg px-5">
-                                <span class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
+                                <span id="signup-submit-spinner" class="htmx-indicator spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                                 <i class="fa fa-paper-plane"></i> {{ value.button_text|default:"Submit Application" }}
                             </button>
                         </div>
