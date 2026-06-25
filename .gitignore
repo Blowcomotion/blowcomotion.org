@@ -180,3 +180,7 @@ blowco.json.superpowers/
 
 # Git worktrees for parallel development
 .worktrees/
+
+# Claude Code — local overrides and ephemeral state
+.claude/settings.local.json
+.claude/worktrees/
