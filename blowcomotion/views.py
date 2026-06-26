@@ -2408,6 +2408,42 @@ def _send_rental_denied_email(request, submission):
     ).send(fail_silently=True)
 
 
+def _send_rental_returned_email(request, submission, condition_notes):
+    site_settings = SiteSettings.for_request(request)
+    admin_recipients = [
+        e.strip()
+        for e in (site_settings.instrument_rental_notification_recipients or "").split(",")
+        if e.strip()
+    ]
+    ctx = {
+        "member": submission.member,
+        "instrument": submission.instrument,
+        "assigned_unit": submission.assigned_unit,
+        "condition_notes": condition_notes,
+        "contact_emails": site_settings.instrument_rental_notification_recipients,
+    }
+    if submission.member and submission.member.email:
+        body = render_to_string("emails/instrument_rental_request_returned.txt", ctx)
+        _MemberEmail(
+            subject=f"Your {submission.instrument.name} rental has been returned",
+            body=body,
+            from_email=settings.FROM_EMAIL,
+            to=[submission.member.email],
+        ).send(fail_silently=True)
+    if admin_recipients:
+        lines = [
+            f"{submission.name} has returned {submission.assigned_unit or submission.instrument.name}.",
+        ]
+        if condition_notes:
+            lines.append(f"\nCondition notes: {condition_notes}")
+        _MemberEmail(
+            subject=f"Instrument returned: {submission.instrument.name} — {submission.name}",
+            body="\n".join(lines),
+            from_email=settings.FROM_EMAIL,
+            to=admin_recipients,
+        ).send(fail_silently=True)
+
+
 def rental_requests_dashboard(request):
     from django.db.models import Case, IntegerField, Value, When
     submissions = (
@@ -2512,6 +2548,8 @@ def rental_request_return(request, pk):
 
         submission.status = InstrumentRentalRequestSubmission.STATUS_RETURNED
         submission.save()
+
+        _send_rental_returned_email(request, submission, condition_notes)
 
         messages.success(request, f"Instrument returned from {submission.name}.")
         return redirect("rental_requests_dashboard")

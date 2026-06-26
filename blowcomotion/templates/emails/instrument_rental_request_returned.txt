@@ -1,0 +1,11 @@
+Dear {{ member.full_name }},
+
+This email confirms that your {{ instrument.name }} rental has been returned and processed.
+
+{% if condition_notes %}Notes from the library team:
+{{ condition_notes }}
+
+{% endif %}Thank you for participating in the Blowcomotion Instrument Library. If you have any questions, please reach out to the library team:
+{{ contact_emails }}
+
+— Blowcomotion Instrument Library
