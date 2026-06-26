@@ -194,6 +194,7 @@ from blowcomotion.member_auth import create_member_user
 
 class InstrumentRentalRequestViewTest(TestCase):
     def setUp(self):
+        from wagtail.models import Site
         self.instrument = make_instrument("Trumpet")
         self.li = make_library_instrument(self.instrument, status=LibraryInstrument.STATUS_AVAILABLE)
         self.member = make_member()
@@ -201,6 +202,9 @@ class InstrumentRentalRequestViewTest(TestCase):
         self.user.set_password("Pass123!")
         self.user.save()
         self.client.login(username="sam@example.com", password="Pass123!")
+        self.site_settings = SiteSettings.for_site(Site.objects.get(is_default_site=True))
+        self.site_settings.instrument_rental_policy = "You must return the instrument."
+        self.site_settings.save()
 
     def test_get_redirects_anonymous(self):
         self.client.logout()
@@ -283,6 +287,55 @@ class InstrumentRentalRequestViewTest(TestCase):
         self.client.login(username="staff@example.com", password="StaffP@ss!")
         response = self.client.get(reverse("member-instrument-rental"))
         self.assertEqual(response.status_code, 302)
+
+    def test_get_shows_coming_soon_when_policy_not_set(self):
+        self.site_settings.instrument_rental_policy = ""
+        self.site_settings.save()
+        response = self.client.get(reverse("member-instrument-rental"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["rental_not_configured"])
+
+    def test_post_blocked_when_policy_not_set(self):
+        self.site_settings.instrument_rental_policy = ""
+        self.site_settings.save()
+        self._post()
+        self.assertEqual(InstrumentRentalRequestSubmission.objects.count(), 0)
+
+    def test_get_redirects_when_profile_incomplete(self):
+        self.member.phone = ""
+        self.member.save(sync_go3=False)
+        response = self.client.get(reverse("member-instrument-rental"))
+        self.assertRedirects(response, reverse("member-profile"), fetch_redirect_response=False)
+
+    def test_post_redirects_when_profile_incomplete(self):
+        self.member.address = ""
+        self.member.save(sync_go3=False)
+        response = self._post()
+        self.assertRedirects(response, reverse("member-profile"), fetch_redirect_response=False)
+
+    def test_post_saves_second_and_third_choice(self):
+        second = make_instrument("Trombone")
+        make_library_instrument(second)
+        third = make_instrument("Tuba")
+        make_library_instrument(third)
+        self.client.post(reverse("member-instrument-rental"), {
+            "instrument": self.instrument.pk,
+            "second_choice": second.pk,
+            "third_choice": third.pk,
+            "policy_acknowledged": True,
+        })
+        sub = InstrumentRentalRequestSubmission.objects.first()
+        self.assertEqual(sub.second_choice, second)
+        self.assertEqual(sub.third_choice, third)
+
+    def test_post_sets_status_pending(self):
+        self._post()
+        sub = InstrumentRentalRequestSubmission.objects.first()
+        self.assertEqual(sub.status, InstrumentRentalRequestSubmission.STATUS_PENDING)
+
+    def test_post_success_no_patreon_in_context(self):
+        response = self._post()
+        self.assertNotIn("patreon_url", response.context)
 
 
 class InstrumentRentalFormV2Test(TestCase):

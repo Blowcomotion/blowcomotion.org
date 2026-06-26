@@ -304,10 +304,26 @@ def instrument_rental_request(request):
     member = request.user.member
     site_settings = SiteSettings.for_request(request)
 
+    if not site_settings.instrument_rental_policy:
+        return render(request, "member/instrument_rental_request.html", {
+            "member": member,
+            "rental_not_configured": True,
+        })
+
+    required = [member.full_name, member.email, member.phone, member.address]
+    if not all(required):
+        messages.warning(
+            request,
+            "Please complete your contact information before requesting an instrument rental.",
+        )
+        return redirect("member-profile")
+
     if request.method == "POST":
         form = InstrumentRentalRequestForm(request.POST)
         if form.is_valid():
             instrument = form.cleaned_data["instrument"]
+            second_choice = form.cleaned_data.get("second_choice")
+            third_choice = form.cleaned_data.get("third_choice")
             available = instrument.library_inventory.filter(
                 status=LibraryInstrument.STATUS_AVAILABLE
             ).count()
@@ -320,9 +336,12 @@ def instrument_rental_request(request):
                 phone=member.phone or "",
                 address=member.address or "",
                 instrument=instrument,
+                second_choice=second_choice,
+                third_choice=third_choice,
                 is_waitlist=is_waitlist,
                 message=form.cleaned_data.get("notes") or "",
                 policy_acknowledged=True,
+                status=InstrumentRentalRequestSubmission.STATUS_PENDING,
             )
 
             recipients = [
@@ -331,16 +350,21 @@ def instrument_rental_request(request):
                 if r.strip()
             ]
             if recipients:
-                status_label = "WAITLIST" if is_waitlist else "ACTIVE REQUEST"
+                choices_text = f"1st choice: {instrument.name}"
+                if second_choice:
+                    choices_text += f"\n2nd choice: {second_choice.name}"
+                if third_choice:
+                    choices_text += f"\n3rd choice: {third_choice.name}"
+                review_url = request.build_absolute_uri(f"/admin/rental-requests/{submission.pk}/")
                 manager_body = (
-                    f"Instrument Rental Request [{status_label}]\n\n"
+                    f"Instrument Rental Request [PENDING]\n\n"
                     f"Member: {member.full_name}\n"
                     f"Email: {member.email}\n"
                     f"Phone: {member.phone or 'not provided'}\n"
                     f"Address: {member.address or 'not provided'}\n"
-                    f"Instrument requested: {instrument.name}\n"
-                    f"Waitlist: {'Yes' if is_waitlist else 'No'}\n"
-                    f"Notes: {submission.message or '—'}\n"
+                    f"{choices_text}\n"
+                    f"Notes: {submission.message or '—'}\n\n"
+                    f"Review and approve/deny:\n{review_url}\n"
                 )
                 _MemberEmail(
                     subject=f"Instrument Rental Request — {member.full_name} ({instrument.name})",
@@ -350,19 +374,19 @@ def instrument_rental_request(request):
                 ).send(fail_silently=True)
 
             if member.email:
-                confirmation_body = render_to_string(
-                    "emails/instrument_rental_request_confirmation.txt",
+                pending_body = render_to_string(
+                    "emails/instrument_rental_request_pending.txt",
                     {
                         "member": member,
                         "instrument": instrument,
-                        "is_waitlist": is_waitlist,
+                        "second_choice": second_choice,
+                        "third_choice": third_choice,
                         "notes": submission.message,
-                        "patreon_url": site_settings.patreon_url,
                     },
                 )
                 _MemberEmail(
                     subject=f"Your instrument rental request — {instrument.name}",
-                    body=confirmation_body,
+                    body=pending_body,
                     from_email=settings.FROM_EMAIL,
                     to=[member.email],
                 ).send(fail_silently=True)
@@ -372,7 +396,6 @@ def instrument_rental_request(request):
                 "submitted": True,
                 "is_waitlist": is_waitlist,
                 "instrument": instrument,
-                "patreon_url": site_settings.patreon_url,
             })
 
         return render(request, "member/instrument_rental_request.html", {
