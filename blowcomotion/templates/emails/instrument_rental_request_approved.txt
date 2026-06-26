@@ -1,0 +1,16 @@
+Dear {{ member.full_name }},
+
+Great news — your instrument rental request has been approved.
+
+Instrument assigned: {{ assigned_unit.instrument.name }} (Serial: {{ assigned_unit.serial_number }})
+
+Message from the library team:
+{{ admin_message }}
+
+{% if patreon_url %}To support the instrument library, please ensure your Patreon membership is active before pickup, select "Instrument Rental (Band Members Only) - you have the option to donate more, but we require this for rentals:
+{{ patreon_url }}
+
+{% endif %}If you have any questions about your rental, please reach out to the instrument library team:
+{{ contact_emails }}
+
+— Blowcomotion Instrument Library

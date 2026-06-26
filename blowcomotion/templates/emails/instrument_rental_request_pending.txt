@@ -1,0 +1,13 @@
+Dear {{ member.full_name }},
+
+Thank you for submitting an instrument rental request. We have received your request for the following:
+
+First choice: {{ instrument.name }}{% if second_choice %}
+Second choice: {{ second_choice.name }}{% endif %}{% if third_choice %}
+Third choice: {{ third_choice.name }}{% endif %}
+
+{% if notes %}Notes you provided: {{ notes }}
+
+{% endif %}Our library team will review your request and follow up soon. If you have any questions, please reach out.
+
+— Blowcomotion Instrument Library

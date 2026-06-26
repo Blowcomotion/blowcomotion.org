@@ -16,8 +16,9 @@ from blowcomotion.views import (
     fetch_embed_data,
     instrument_library_available,
     instrument_library_needs_repair,
-    instrument_library_quick_rent,
     instrument_library_rented,
+    rental_request_review,
+    rental_requests_dashboard,
     sync_gigs_admin,
 )
 
@@ -66,11 +67,14 @@ def register_admin_urls():
             instrument_library_needs_repair,
             name="instrument_library_needs_repair",
         ),
-        path(
-            "instrument-library/manage/",
-            instrument_library_quick_rent,
-            name="instrument_library_quick_rent",
-        ),
+        # TODO(#250): delete — replaced by Rental Requests dashboard
+        # path(
+        #     "instrument-library/manage/",
+        #     instrument_library_quick_rent,
+        #     name="instrument_library_quick_rent",
+        # ),
+        path("rental-requests/", rental_requests_dashboard, name="rental_requests_dashboard"),
+        path("rental-requests/<int:pk>/", rental_request_review, name="rental_request_review"),
     ]
 
 
@@ -101,12 +105,23 @@ def register_management_menu_item():
     return SubmenuMenuItem('Utilities', submenu, icon_name='cogs', order=10000)
 
 
+# TODO(#250): delete — replaced by Rental Requests dashboard
+# @hooks.register("register_admin_menu_item")
+# def register_library_quick_rent_menu_item():
+#     return MenuItem(
+#         'Library: Quick Rent',
+#         reverse('instrument_library_quick_rent'),
+#         icon_name='french-horn',
+#         order=295,
+#     )
+
+
 @hooks.register("register_admin_menu_item")
-def register_library_quick_rent_menu_item():
+def register_rental_requests_menu_item():
     return MenuItem(
-        'Library: Quick Rent',
-        reverse('instrument_library_quick_rent'),
-        icon_name='french-horn',
+        "Rental Requests",
+        reverse("rental_requests_dashboard"),
+        icon_name="french-horn",
         order=295,
     )
 

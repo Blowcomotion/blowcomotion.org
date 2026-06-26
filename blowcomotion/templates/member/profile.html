@@ -3,7 +3,7 @@
 {% block title %}My Profile — Blowcomotion{% endblock %}
 {% block portal_content %}
 <h2 class="mb-4">My Profile</h2>
-{% if messages %}{% for msg in messages %}<div class="alert alert-success">{{ msg }}</div>{% endfor %}{% endif %}
+{% if messages %}{% for msg in messages %}<div class="alert alert-{{ msg.tags }}">{{ msg }}</div>{% endfor %}{% endif %}
 {% if recaptcha_error %}<div class="alert alert-danger">{{ recaptcha_error }}</div>{% endif %}
 {% if member.pending_email %}
 <div class="alert alert-info">

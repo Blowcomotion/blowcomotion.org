@@ -10,10 +10,12 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 
 from blowcomotion.member_auth import (
+    _MemberEmail,
     create_member_user,
     ensure_set_password_flow,
     needs_set_password,
@@ -26,15 +28,19 @@ from blowcomotion.member_forms import (
     DIETARY_CHOICES,
     SHIRT_SIZE_CHOICES,
     GetAccessForm,
+    InstrumentRentalRequestForm,
     MemberProfileForm,
     _yesno_to_bool,
 )
 from blowcomotion.models import (
     CustomImage,
     EmailChangeToken,
+    InstrumentRentalRequestSubmission,
+    LibraryInstrument,
     Member,
     MemberInstrument,
     PasswordSetToken,
+    SiteSettings,
 )
 from blowcomotion.views import _validate_recaptcha
 
@@ -289,6 +295,148 @@ def requests_view(request):
     if not hasattr(request.user, "member"):
         return redirect("/")
     return render(request, "member/requests.html", {"member": request.user.member})
+
+
+@login_required
+def instrument_rental_request(request):
+    if not hasattr(request.user, "member"):
+        return redirect("/")
+    member = request.user.member
+    site_settings = SiteSettings.for_request(request)
+
+    if not site_settings.instrument_rental_policy:
+        return render(request, "member/instrument_rental_request.html", {
+            "member": member,
+            "rental_not_configured": True,
+            "include_form_js": True,
+        })
+
+    missing = [
+        label
+        for label, val in [
+            ("name", member.full_name),
+            ("email", member.email),
+            ("phone", member.phone),
+            ("street address", member.address),
+            ("city", member.city),
+            ("state", member.state),
+            ("zip code", member.zip_code),
+            ("country", member.country),
+        ]
+        if not val
+    ]
+    if missing:
+        messages.warning(
+            request,
+            f"Please add your {', '.join(missing)} before requesting an instrument rental.",
+        )
+        return redirect("member-profile")
+
+    if request.method == "POST":
+        is_valid_captcha, captcha_error = _validate_recaptcha(request)
+        if not is_valid_captcha:
+            form = InstrumentRentalRequestForm()
+            return render(request, "member/instrument_rental_request.html", {
+                "member": member,
+                "form": form,
+                "policy_text": site_settings.instrument_rental_policy,
+                "recaptcha_error": captcha_error,
+                "include_form_js": True,
+            })
+        form = InstrumentRentalRequestForm(request.POST)
+        if form.is_valid():
+            instrument = form.cleaned_data["instrument"]
+            second_choice = form.cleaned_data.get("second_choice")
+            third_choice = form.cleaned_data.get("third_choice")
+            available = instrument.library_inventory.filter(
+                status=LibraryInstrument.STATUS_AVAILABLE
+            ).count()
+            is_waitlist = available == 0
+
+            submission = InstrumentRentalRequestSubmission.objects.create(
+                member=member,
+                name=member.full_name,
+                email=member.email,
+                phone=member.phone or "",
+                address=member.address or "",
+                instrument=instrument,
+                second_choice=second_choice,
+                third_choice=third_choice,
+                is_waitlist=is_waitlist,
+                message=form.cleaned_data.get("notes") or "",
+                policy_acknowledged=True,
+                status=InstrumentRentalRequestSubmission.STATUS_PENDING,
+            )
+
+            recipients = [
+                r.strip()
+                for r in (site_settings.instrument_rental_notification_recipients or "").split(",")
+                if r.strip()
+            ]
+            if recipients:
+                choices_text = f"1st choice: {instrument.name}"
+                if second_choice:
+                    choices_text += f"\n2nd choice: {second_choice.name}"
+                if third_choice:
+                    choices_text += f"\n3rd choice: {third_choice.name}"
+                review_url = request.build_absolute_uri(f"/admin/rental-requests/{submission.pk}/")
+                manager_body = (
+                    f"Instrument Rental Request [PENDING]\n\n"
+                    f"Member: {member.full_name}\n"
+                    f"Email: {member.email}\n"
+                    f"Phone: {member.phone or 'not provided'}\n"
+                    f"Address: {member.address or 'not provided'}\n"
+                    f"{choices_text}\n"
+                    f"Notes: {submission.message or '—'}\n\n"
+                    f"Review and approve/deny:\n{review_url}\n"
+                )
+                _MemberEmail(
+                    subject=f"Instrument Rental Request — {member.full_name} ({instrument.name})",
+                    body=manager_body,
+                    from_email=settings.FROM_EMAIL,
+                    to=recipients,
+                ).send(fail_silently=True)
+
+            if member.email:
+                pending_body = render_to_string(
+                    "emails/instrument_rental_request_pending.txt",
+                    {
+                        "member": member,
+                        "instrument": instrument,
+                        "second_choice": second_choice,
+                        "third_choice": third_choice,
+                        "notes": submission.message,
+                    },
+                )
+                _MemberEmail(
+                    subject=f"Your instrument rental request — {instrument.name}",
+                    body=pending_body,
+                    from_email=settings.FROM_EMAIL,
+                    to=[member.email],
+                ).send(fail_silently=True)
+
+            return render(request, "member/instrument_rental_request.html", {
+                "member": member,
+                "submitted": True,
+                "is_waitlist": is_waitlist,
+                "instrument": instrument,
+                "include_form_js": True,
+            })
+
+        return render(request, "member/instrument_rental_request.html", {
+            "member": member,
+            "form": form,
+            "policy_text": site_settings.instrument_rental_policy,
+            "include_form_js": True,
+        })
+
+    form = InstrumentRentalRequestForm()
+    return render(request, "member/instrument_rental_request.html", {
+        "member": member,
+        "form": form,
+        "policy_text": site_settings.instrument_rental_policy,
+        "include_form_js": True,
+    })
 
 
 def confirm_email_view(request, token_uuid):

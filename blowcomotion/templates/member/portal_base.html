@@ -6,6 +6,7 @@
             <nav class="list-group">
                 <a href="{% url 'member-profile' %}" class="list-group-item list-group-item-action{% if request.resolver_match.url_name == 'member-profile' %} active{% endif %}">My Profile</a>
                 <a href="{% url 'member-requests' %}" class="list-group-item list-group-item-action{% if request.resolver_match.url_name == 'member-requests' %} active{% endif %}">My Requests</a>
+                <a href="{% url 'member-instrument-rental' %}" class="list-group-item list-group-item-action{% if request.resolver_match.url_name == 'member-instrument-rental' %} active{% endif %}">Request an Instrument</a>
                 <form method="post" action="{% url 'member-logout' %}" style="margin:0;">
                     {% csrf_token %}
                     <button type="submit" class="list-group-item list-group-item-action text-start border-0 bg-transparent">Log Out</button>

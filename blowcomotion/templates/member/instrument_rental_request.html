@@ -1,0 +1,82 @@
+{% extends "member/portal_base.html" %}
+{% load wagtailcore_tags %}
+{% block title %}Request an Instrument — Blowcomotion{% endblock %}
+{% block portal_content %}
+<h2 class="mb-4">Request an Instrument</h2>
+
+{% if rental_not_configured %}
+  <div class="alert alert-info">
+    <strong>Coming soon.</strong> The instrument rental request form will be available once the rental policy is configured.
+  </div>
+{% elif submitted %}
+  <div class="alert alert-success">
+    {% if is_waitlist %}
+      You've been added to the waitlist for <strong>{{ instrument.name }}</strong>. The library team will be in touch when one becomes available.
+    {% else %}
+      Your request for <strong>{{ instrument.name }}</strong> has been received. The library team will review it and be in touch soon.
+    {% endif %}
+  </div>
+{% else %}
+  <p>Your contact information on file will be included with this request.
+    <a href="{% url 'member-profile' %}">Need to update it?</a>
+  </p>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-sm-3">Name</dt><dd class="col-sm-2"><a href="{% url 'member-profile' %}">Update</a></dd><dd class="col-sm-7">{{ member.full_name }}</dd>
+        <dt class="col-sm-3">Email</dt><dd class="col-sm-2"><a href="{% url 'member-profile' %}">Update</a></dd><dd class="col-sm-7">{{ member.email }}</dd>
+        <dt class="col-sm-3">Phone</dt><dd class="col-sm-2"><a href="{% url 'member-profile' %}">Update</a></dd><dd class="col-sm-7">{{ member.phone }}</dd>
+        <dt class="col-sm-3">Address</dt><dd class="col-sm-2"><a href="{% url 'member-profile' %}">Update</a></dd><dd class="col-sm-7">{{ member.address }}, {{ member.city }}, {{ member.state }} {{ member.zip_code }}, {{ member.country }}</dd>
+      </dl>
+    </div>
+  </div>
+
+  <form method="post" id="member-form">
+    {% csrf_token %}
+
+    <div class="mb-3">
+      <label class="form-label fw-semibold" for="{{ form.instrument.id_for_label }}">Instrument *</label>
+      {{ form.instrument }}
+      {% if form.instrument.errors %}<div class="text-danger small mt-1">{{ form.instrument.errors }}</div>{% endif %}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="{{ form.second_choice.id_for_label }}">Second choice (optional)</label>
+      {{ form.second_choice }}
+      {% if form.second_choice.errors %}<div class="text-danger small mt-1">{{ form.second_choice.errors }}</div>{% endif %}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="{{ form.third_choice.id_for_label }}">Third choice (optional)</label>
+      {{ form.third_choice }}
+      {% if form.third_choice.errors %}<div class="text-danger small mt-1">{{ form.third_choice.errors }}</div>{% endif %}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="{{ form.notes.id_for_label }}">Notes (optional)</label>
+      {{ form.notes }}
+      {% if form.notes.errors %}<div class="text-danger small mt-1">{{ form.notes.errors }}</div>{% endif %}
+    </div>
+
+    {% if policy_text %}
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Instrument Lending Policy</label>
+      <div class="border rounded p-3" style="max-height:300px;overflow-y:auto;background:#f8f9fa;">
+        {{ policy_text|richtext }}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="mb-4 form-check">
+      {{ form.policy_acknowledged }}
+      <label class="form-check-label" for="{{ form.policy_acknowledged.id_for_label }}">
+        I have read and agree to the Instrument Lending Policy
+      </label>
+      {% if form.policy_acknowledged.errors %}<div class="text-danger small mt-1">{{ form.policy_acknowledged.errors }}</div>{% endif %}
+    </div>
+
+    <button type="submit" class="site-btn">Submit Request</button>
+  </form>
+{% endif %}
+{% endblock %}

@@ -187,7 +187,7 @@ def create_rental_history_logs():
             instrument.status = LibraryInstrument.STATUS_RENTED
             instrument.member = member
             instrument.rental_date = rental_date
-            instrument.agreement_signed_date = agreement_date
+            # instrument.agreement_signed_date = agreement_date  # removed in rental v2
             instrument.patreon_active = idx % 2 == 0  # Alternate Patreon status
             if instrument.patreon_active:
                 instrument.patreon_amount = 5.00 + (idx * 2.50)
