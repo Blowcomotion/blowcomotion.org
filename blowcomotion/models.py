@@ -2005,10 +2005,12 @@ class InstrumentRentalRequestSubmission(BaseFormSubmission):
     STATUS_PENDING = "pending"
     STATUS_APPROVED = "approved"
     STATUS_DENIED = "denied"
+    STATUS_RETURNED = "returned"
     STATUS_CHOICES = [
         (STATUS_PENDING, "Pending"),
         (STATUS_APPROVED, "Approved"),
         (STATUS_DENIED, "Denied"),
+        (STATUS_RETURNED, "Returned"),
     ]
 
     member = models.ForeignKey(

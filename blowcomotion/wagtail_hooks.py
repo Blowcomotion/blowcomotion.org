@@ -17,6 +17,7 @@ from blowcomotion.views import (
     instrument_library_available,
     instrument_library_needs_repair,
     instrument_library_rented,
+    rental_request_return,
     rental_request_review,
     rental_requests_dashboard,
     sync_gigs_admin,
@@ -75,6 +76,7 @@ def register_admin_urls():
         # ),
         path("rental-requests/", rental_requests_dashboard, name="rental_requests_dashboard"),
         path("rental-requests/<int:pk>/", rental_request_review, name="rental_request_review"),
+        path("rental-requests/<int:pk>/return/", rental_request_return, name="rental_request_return"),
     ]
 
 
