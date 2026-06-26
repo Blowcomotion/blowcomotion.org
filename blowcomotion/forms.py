@@ -229,7 +229,7 @@ class MemberSignupForm(forms.Form):
     
     # Instrument selection
     primary_instrument = forms.ModelChoiceField(
-        queryset=Instrument.objects.all().order_by('name'),
+        queryset=Instrument.objects.filter(hide_from_member_forms=False).order_by('name'),
         required=True,
         empty_label='Select your instrument',
         widget=forms.Select(attrs={

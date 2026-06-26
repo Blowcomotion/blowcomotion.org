@@ -26,7 +26,7 @@ class GetAccessForm(forms.Form):
 
 class MemberProfileForm(forms.ModelForm):
     additional_instruments = forms.ModelMultipleChoiceField(
-        queryset=Instrument.objects.all().order_by("name"),
+        queryset=Instrument.objects.filter(hide_from_member_forms=False).order_by("name"),
         required=False,
         widget=forms.CheckboxSelectMultiple,
         label="Additional instruments",
@@ -65,6 +65,9 @@ class MemberProfileForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["primary_instrument"].queryset = Instrument.objects.filter(
+            hide_from_member_forms=False
+        ).order_by("name")
         if self.instance and self.instance.pk:
             self.fields["additional_instruments"].initial = list(
                 self.instance.additional_instruments.values_list("instrument_id", flat=True)
@@ -87,6 +90,20 @@ class InstrumentRentalRequestForm(forms.Form):
         label="Instrument",
         widget=forms.Select(attrs={"class": "form-select"}),
     )
+    second_choice = forms.ModelChoiceField(
+        queryset=Instrument.objects.none(),
+        required=False,
+        empty_label="No second choice",
+        label="Second choice (optional)",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    third_choice = forms.ModelChoiceField(
+        queryset=Instrument.objects.none(),
+        required=False,
+        empty_label="No third choice",
+        label="Third choice (optional)",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
     notes = forms.CharField(
         required=False,
         label="Notes",
@@ -102,7 +119,8 @@ class InstrumentRentalRequestForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         qs = (
-            Instrument.objects.annotate(
+            Instrument.objects.filter(hide_from_rental=False)
+            .annotate(
                 available_count=Count(
                     "library_inventory",
                     filter=Q(library_inventory__status=LibraryInstrument.STATUS_AVAILABLE),
@@ -112,9 +130,14 @@ class InstrumentRentalRequestForm(forms.Form):
             .distinct()
             .order_by("name")
         )
-        self.fields["instrument"].queryset = qs
-        self.fields["instrument"].label_from_instance = lambda obj: (
-            f"{obj.name} ({obj.available_count} available)"
-            if obj.available_count > 0
-            else f"{obj.name} (waitlist — 0 available)"
-        )
+
+        def label_fn(obj):
+            return (
+                f"{obj.name} ({obj.available_count} available)"
+                if obj.available_count > 0
+                else f"{obj.name} (waitlist — 0 available)"
+            )
+
+        for field_name in ("instrument", "second_choice", "third_choice"):
+            self.fields[field_name].queryset = qs
+            self.fields[field_name].label_from_instance = label_fn

@@ -283,3 +283,41 @@ class InstrumentRentalRequestViewTest(TestCase):
         self.client.login(username="staff@example.com", password="StaffP@ss!")
         response = self.client.get(reverse("member-instrument-rental"))
         self.assertEqual(response.status_code, 302)
+
+
+class InstrumentRentalFormV2Test(TestCase):
+    def setUp(self):
+        self.visible = make_instrument("Trumpet")
+        make_library_instrument(self.visible)
+        self.hidden = Instrument.objects.create(name="Vintage Sousaphone", hide_from_rental=True)
+        make_library_instrument(self.hidden, serial="RARE001")
+
+    def test_hidden_instrument_excluded_from_rental_form(self):
+        form = InstrumentRentalRequestForm()
+        pks = list(form.fields["instrument"].queryset.values_list("pk", flat=True))
+        self.assertNotIn(self.hidden.pk, pks)
+        self.assertIn(self.visible.pk, pks)
+
+    def test_second_choice_optional(self):
+        form = InstrumentRentalRequestForm(data={
+            "instrument": self.visible.pk,
+            "policy_acknowledged": True,
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertIsNone(form.cleaned_data["second_choice"])
+
+    def test_second_choice_accepts_valid_instrument(self):
+        second = make_instrument("Trombone")
+        make_library_instrument(second)
+        form = InstrumentRentalRequestForm(data={
+            "instrument": self.visible.pk,
+            "second_choice": second.pk,
+            "policy_acknowledged": True,
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["second_choice"], second)
+
+    def test_hidden_instrument_excluded_from_second_choice(self):
+        form = InstrumentRentalRequestForm()
+        pks = list(form.fields["second_choice"].queryset.values_list("pk", flat=True))
+        self.assertNotIn(self.hidden.pk, pks)
