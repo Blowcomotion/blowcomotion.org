@@ -28,6 +28,12 @@
         </div>
     </section>
 
+    {% if submission.status == 'approved' and submission.assigned_unit %}
+    <p style="margin-top:1rem;">
+        <a href="{% url 'rental_request_return' submission.pk %}" class="button button-secondary">Return Instrument</a>
+    </p>
+    {% endif %}
+
     {% if submission.status == 'pending' %}
     <section class="w-panel" style="margin-top:1.5rem;">
         <header class="w-panel__header"><h2 class="w-panel__heading">Approve or Deny</h2></header>

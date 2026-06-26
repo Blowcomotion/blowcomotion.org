@@ -2419,7 +2419,7 @@ def rental_requests_dashboard(request):
             )
         )
         .order_by("status_order", "-date_submitted")
-        .select_related("member", "instrument", "second_choice", "third_choice")
+        .select_related("member", "instrument", "second_choice", "third_choice", "assigned_unit")
     )
     return render(request, "wagtailadmin/rental_requests_dashboard.html", {
         "submissions": submissions,
@@ -2468,4 +2468,54 @@ def rental_request_review(request, pk):
     return render(request, "wagtailadmin/rental_request_review.html", {
         "submission": submission,
         "form": form,
+    })
+
+
+def rental_request_return(request, pk):
+    submission = get_object_or_404(
+        InstrumentRentalRequestSubmission,
+        pk=pk,
+        status=InstrumentRentalRequestSubmission.STATUS_APPROVED,
+    )
+    unit = submission.assigned_unit
+    if not unit or unit.status != LibraryInstrument.STATUS_RENTED:
+        messages.error(request, "This instrument is not currently rented out.")
+        return redirect("rental_request_review", pk=pk)
+
+    if request.method == "POST":
+        condition_notes = request.POST.get("condition_notes", "").strip()
+        previous_member = unit.member
+
+        unit.status = LibraryInstrument.STATUS_AVAILABLE
+        unit.member = None
+        unit.rental_date = None
+        unit.patreon_active = False
+        unit.patreon_amount = None
+        unit.save()
+
+        if previous_member:
+            still_renting = LibraryInstrument.objects.filter(
+                member=previous_member, status=LibraryInstrument.STATUS_RENTED
+            ).exists()
+            if not still_renting:
+                previous_member.renting = False
+                previous_member.save()
+
+        if condition_notes:
+            InstrumentHistoryLog.objects.create(
+                library_instrument=unit,
+                event_category=InstrumentHistoryLog.EVENT_RETURN_NOTE,
+                event_date=timezone.localdate(),
+                notes=f"Return notes: {condition_notes}",
+                user=request.user,
+            )
+
+        submission.status = InstrumentRentalRequestSubmission.STATUS_RETURNED
+        submission.save()
+
+        messages.success(request, f"Instrument returned from {submission.name}.")
+        return redirect("rental_requests_dashboard")
+
+    return render(request, "wagtailadmin/rental_request_return.html", {
+        "submission": submission,
     })

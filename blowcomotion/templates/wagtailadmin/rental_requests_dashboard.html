@@ -24,11 +24,14 @@
                 <td>{{ sub.third_choice|default:"—" }}</td>
                 <td>{{ sub.date_submitted|date:"Y-m-d" }}</td>
                 <td>{{ sub.get_status_display }}</td>
-                <td>
+                <td style="display:flex;gap:0.5rem;align-items:center;">
                     <a href="{% url 'rental_request_review' sub.pk %}"
                        class="button button-small{% if sub.status != 'pending' %} button-secondary{% endif %}">
                         {% if sub.status == 'pending' %}Review{% else %}View{% endif %}
                     </a>
+                    {% if sub.status == 'approved' and sub.assigned_unit %}
+                    <a href="{% url 'rental_request_return' sub.pk %}" class="button button-small button-secondary">Return</a>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}
