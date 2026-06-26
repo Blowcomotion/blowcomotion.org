@@ -491,6 +491,21 @@ class Instrument(models.Model, index.Indexed):
         on_delete=models.SET_NULL,
         related_name="+",
     )
+    hide_from_rental = models.BooleanField(
+        default=False,
+        help_text=(
+            "Hide from the instrument rental request form. Use for instruments too rare "
+            "or unavailable to offer — e.g. a vintage sousaphone kept as a display piece."
+        ),
+    )
+    hide_from_member_forms = models.BooleanField(
+        default=False,
+        help_text=(
+            "Hide from member profile and signup instrument selectors. Use for instruments "
+            "that members don't play but exist in inventory — e.g. a prop instrument or "
+            "one not assigned to any section."
+        ),
+    )
     image = models.ForeignKey(
         "blowcomotion.CustomImage",
         null=True,
@@ -1440,11 +1455,6 @@ class LibraryInstrument(DraftStateMixin, RevisionMixin, LockableMixin, Clusterab
         blank=True,
         help_text="Date the instrument was lent to the current member",
     )
-    agreement_signed_date = models.DateField(
-        null=True,
-        blank=True,
-        help_text="Date the rental agreement was signed",
-    )
     acquisition_cost = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -1668,35 +1678,6 @@ class LibraryInstrumentPhoto(Orderable):
 
     def __str__(self):
         return f"Photo for {self.library_instrument}"
-
-
-class LibraryInstrumentDocument(Orderable):
-    """Rental documents (agreements, receipts, etc.) attached to a library instrument."""
-    
-    library_instrument = ParentalKey(
-        "blowcomotion.LibraryInstrument",
-        related_name="rental_documents",
-        on_delete=models.CASCADE,
-    )
-    document = models.ForeignKey(
-        "wagtaildocs.Document",
-        on_delete=models.CASCADE,
-        related_name="+",
-    )
-    description = models.CharField(
-        max_length=255,
-        blank=True,
-        help_text="e.g. 'Rental Agreement', 'Receipt', 'Return Inspection Form'"
-    )
-    uploaded_date = models.DateField(auto_now_add=True)
-
-    panels = [
-        FieldPanel("document"),
-        FieldPanel("description"),
-    ]
-
-    def __str__(self):
-        return f"Document for {self.library_instrument}: {self.description or self.document.title}"
 
 
 class InstrumentHistoryLog(models.Model):
@@ -2006,6 +1987,15 @@ class DonateFormSubmission(BaseFormSubmission):
 class InstrumentRentalRequestSubmission(BaseFormSubmission):
     """Member portal instrument rental requests. `message` field stores optional notes."""
 
+    STATUS_PENDING = "pending"
+    STATUS_APPROVED = "approved"
+    STATUS_DENIED = "denied"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_APPROVED, "Approved"),
+        (STATUS_DENIED, "Denied"),
+    ]
+
     member = models.ForeignKey(
         "blowcomotion.Member",
         null=True,
@@ -2018,14 +2008,40 @@ class InstrumentRentalRequestSubmission(BaseFormSubmission):
         on_delete=models.PROTECT,
         related_name="rental_requests",
     )
+    second_choice = models.ForeignKey(
+        "blowcomotion.Instrument",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="rental_requests_second_choice",
+    )
+    third_choice = models.ForeignKey(
+        "blowcomotion.Instrument",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="rental_requests_third_choice",
+    )
     is_waitlist = models.BooleanField(default=False)
     phone = models.CharField(max_length=255, blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
     policy_acknowledged = models.BooleanField(default=False)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+    )
+    admin_message = models.TextField(blank=True)
+    assigned_unit = models.ForeignKey(
+        "blowcomotion.LibraryInstrument",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="rental_assignments",
+    )
 
     def __str__(self):
-        status = "waitlist" if self.is_waitlist else "request"
-        return f"{self.name} — {self.instrument} ({status}) on {self.date_submitted:%Y-%m-%d}"
+        return f"{self.name} — {self.instrument} ({self.status}) on {self.date_submitted:%Y-%m-%d}"
 
     class Meta:
         ordering = ["-date_submitted"]

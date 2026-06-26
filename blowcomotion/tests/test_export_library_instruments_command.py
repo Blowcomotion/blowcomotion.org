@@ -30,7 +30,6 @@ class ExportLibraryInstrumentsToCSVCommandTest(TestCase):
             serial_number="SN123",
             member=member,
             rental_date=datetime.date(2026, 1, 2),
-            agreement_signed_date=datetime.date(2026, 1, 3),
             acquisition_cost=Decimal("0.00"),
             current_value=Decimal("123.45"),
             replacement_cost=Decimal("0.00"),
@@ -67,7 +66,6 @@ class ExportLibraryInstrumentsToCSVCommandTest(TestCase):
                     'member_id',
                     'member_name',
                     'rental_date',
-                    'agreement_signed_date',
                     'acquisition_cost',
                     'current_value',
                     'replacement_cost',
@@ -170,7 +168,6 @@ class ExportLibraryInstrumentsToCSVCommandTest(TestCase):
                 'member_id',
                 'member_name',
                 'rental_date',
-                'agreement_signed_date',
                 'acquisition_cost',
                 'current_value',
                 'replacement_cost',
@@ -207,7 +204,6 @@ class ExportLibraryInstrumentsToCSVCommandTest(TestCase):
                     'member_id',
                     'member_name',
                     'rental_date',
-                    'agreement_signed_date',
                     'acquisition_cost',
                     'current_value',
                     'replacement_cost',
@@ -219,7 +215,7 @@ class ExportLibraryInstrumentsToCSVCommandTest(TestCase):
                     'created_at',
                     'updated_at',
                 ]
-                
+
                 for header in required_headers:
                     self.assertIn(header, headers)
 

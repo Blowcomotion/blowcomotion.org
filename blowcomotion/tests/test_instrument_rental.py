@@ -41,10 +41,9 @@ class InstrumentRentalRequestSubmissionModelTest(TestCase):
             email="sam@example.com",
             instrument=self.instrument,
             member=self.member,
-            is_waitlist=False,
             policy_acknowledged=True,
         )
-        self.assertIn("request", str(sub))
+        self.assertIn("pending", str(sub))
         self.assertIn("Trumpet", str(sub))
 
     def test_str_waitlist(self):
@@ -56,7 +55,7 @@ class InstrumentRentalRequestSubmissionModelTest(TestCase):
             is_waitlist=True,
             policy_acknowledged=True,
         )
-        self.assertIn("waitlist", str(sub))
+        self.assertIn("pending", str(sub))
 
     def test_member_deletion_nulls_fk(self):
         sub = InstrumentRentalRequestSubmission.objects.create(
@@ -70,6 +69,55 @@ class InstrumentRentalRequestSubmissionModelTest(TestCase):
         self.member.delete()
         sub.refresh_from_db()
         self.assertIsNone(sub.member)
+
+
+class InstrumentHideFieldsTest(TestCase):
+    def test_hide_from_rental_default_false(self):
+        instr = Instrument.objects.create(name="Piccolo")
+        self.assertFalse(instr.hide_from_rental)
+
+    def test_hide_from_member_forms_default_false(self):
+        instr = Instrument.objects.create(name="Piccolo")
+        self.assertFalse(instr.hide_from_member_forms)
+
+
+class RentalSubmissionStatusTest(TestCase):
+    def setUp(self):
+        self.instrument = make_instrument()
+        self.member = make_member()
+
+    def test_default_status_is_pending(self):
+        sub = InstrumentRentalRequestSubmission.objects.create(
+            name="Sam Player", email="sam@example.com",
+            instrument=self.instrument, member=self.member, policy_acknowledged=True,
+        )
+        self.assertEqual(sub.status, InstrumentRentalRequestSubmission.STATUS_PENDING)
+
+    def test_str_includes_status(self):
+        sub = InstrumentRentalRequestSubmission.objects.create(
+            name="Sam Player", email="sam@example.com",
+            instrument=self.instrument, member=self.member, policy_acknowledged=True,
+        )
+        self.assertIn("pending", str(sub))
+        self.assertIn("Trumpet", str(sub))
+
+    def test_second_and_third_choice_nullable(self):
+        sub = InstrumentRentalRequestSubmission.objects.create(
+            name="Sam Player", email="sam@example.com",
+            instrument=self.instrument, member=self.member, policy_acknowledged=True,
+        )
+        self.assertIsNone(sub.second_choice)
+        self.assertIsNone(sub.third_choice)
+
+    def test_second_choice_can_be_set(self):
+        other = Instrument.objects.create(name="Tuba")
+        sub = InstrumentRentalRequestSubmission.objects.create(
+            name="Sam Player", email="sam@example.com",
+            instrument=self.instrument, member=self.member,
+            second_choice=other, policy_acknowledged=True,
+        )
+        sub.refresh_from_db()
+        self.assertEqual(sub.second_choice, other)
 
 
 class InstrumentRentalRequestFormTest(TestCase):

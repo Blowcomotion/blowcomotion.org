@@ -204,6 +204,8 @@ class InstrumentViewSet(SnippetViewSet):
         "section",
         "description",
         "image",
+        "hide_from_rental",
+        "hide_from_member_forms",
     ]
 
     def __init__(self, *args, **kwargs):
@@ -399,11 +401,8 @@ class LibraryInstrumentViewSet(SnippetViewSet):
             'storage_location',
         ], heading="Basic Information"),
         MultiFieldPanel([
-            FieldRowPanel([
-                'rental_date',
-                'agreement_signed_date',
-            ]),
-        ], heading="Rental Dates"),
+            'rental_date',
+        ], heading="Rental Date"),
         MultiFieldPanel([
             FieldRowPanel([
                 'acquisition_cost',
@@ -417,7 +416,6 @@ class LibraryInstrumentViewSet(SnippetViewSet):
         ], heading="Patreon Support"),
         FieldPanel('comments'),
         InlinePanel('photos', label="Photos"),
-        InlinePanel('rental_documents', label="Rental Documents"),
         InlinePanel('history_logs', label="History Log", help_text="Event history for this instrument"),
     ]
 
@@ -717,7 +715,7 @@ class InstrumentRentalRequestSubmissionViewset(SnippetViewSet):
     menu_label = "Instrument Rental Requests"
     menu_name = "instrument_rental_requests"
     menu_icon = "bi-music-note-beamed"
-    list_display = ["name", "email", "instrument", "is_waitlist", "date_submitted"]
+    list_display = ["name", "email", "instrument", "status", "is_waitlist", "date_submitted"]
     search_fields = ("name", "email")
     panels = [
         "member",
@@ -726,7 +724,12 @@ class InstrumentRentalRequestSubmissionViewset(SnippetViewSet):
         "phone",
         "address",
         "instrument",
+        "second_choice",
+        "third_choice",
         "is_waitlist",
+        "status",
+        "admin_message",
+        "assigned_unit",
         "message",
         "policy_acknowledged",
     ]

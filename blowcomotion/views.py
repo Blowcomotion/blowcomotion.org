@@ -46,7 +46,6 @@ from blowcomotion.models import (
     InstrumentHistoryLog,
     JoinBandFormSubmission,
     LibraryInstrument,
-    LibraryInstrumentDocument,
     Member,
     MemberInstrument,
     Section,
@@ -163,9 +162,10 @@ def instrument_library_quick_rent(request):
                     instrument.rental_date = (
                         rent_form.cleaned_data['rental_date'] or timezone.localdate()
                     )
-                    instrument.agreement_signed_date = rent_form.cleaned_data[
-                        'agreement_signed_date'
-                    ]
+                    # TODO(#250): remove — agreement_signed_date dropped in rental v2
+                    # instrument.agreement_signed_date = rent_form.cleaned_data[
+                    #     'agreement_signed_date'
+                    # ]
                     instrument.patreon_active = rent_form.cleaned_data['patreon_active']
                     instrument.patreon_amount = rent_form.cleaned_data['patreon_amount']
                     comments = rent_form.cleaned_data['comments']
@@ -178,14 +178,14 @@ def instrument_library_quick_rent(request):
                     member.renting = True
                     member.save()
 
-                    # Handle rental document if provided
-                    rental_document = rent_form.cleaned_data.get('rental_document')
-                    if rental_document:
-                        LibraryInstrumentDocument.objects.create(
-                            library_instrument=instrument,
-                            document=rental_document,
-                            description=rent_form.cleaned_data.get('document_description', ''),
-                        )
+                    # TODO(#250): remove — LibraryInstrumentDocument dropped in rental v2
+                    # rental_document = rent_form.cleaned_data.get('rental_document')
+                    # if rental_document:
+                    #     LibraryInstrumentDocument.objects.create(
+                    #         library_instrument=instrument,
+                    #         document=rental_document,
+                    #         description=rent_form.cleaned_data.get('document_description', ''),
+                    #     )
 
                     if comments:
                         InstrumentHistoryLog.objects.create(
@@ -215,7 +215,7 @@ def instrument_library_quick_rent(request):
                     instrument.status = LibraryInstrument.STATUS_AVAILABLE
                     instrument.member = None
                     instrument.rental_date = None
-                    instrument.agreement_signed_date = None
+                    # instrument.agreement_signed_date = None  # TODO(#250): remove
                     instrument.patreon_active = False
                     instrument.patreon_amount = None
                     instrument.save()
