@@ -118,18 +118,14 @@ class InstrumentRentalRequestForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        qs = (
-            Instrument.objects.filter(hide_from_rental=False)
-            .annotate(
-                available_count=Count(
-                    "library_inventory",
-                    filter=Q(library_inventory__status=LibraryInstrument.STATUS_AVAILABLE),
-                )
+        base_qs = Instrument.objects.filter(hide_from_rental=False).annotate(
+            available_count=Count(
+                "library_inventory",
+                filter=Q(library_inventory__status=LibraryInstrument.STATUS_AVAILABLE),
             )
-            .filter(library_inventory__isnull=False)
-            .distinct()
-            .order_by("name")
         )
+        qs_first = base_qs.filter(library_inventory__isnull=False).distinct().order_by("name")
+        qs_optional = base_qs.order_by("name")
 
         def label_fn(obj):
             return (
@@ -138,6 +134,8 @@ class InstrumentRentalRequestForm(forms.Form):
                 else f"{obj.name} (waitlist — 0 available)"
             )
 
-        for field_name in ("instrument", "second_choice", "third_choice"):
-            self.fields[field_name].queryset = qs
+        self.fields["instrument"].queryset = qs_first
+        self.fields["instrument"].label_from_instance = label_fn
+        for field_name in ("second_choice", "third_choice"):
+            self.fields[field_name].queryset = qs_optional
             self.fields[field_name].label_from_instance = label_fn

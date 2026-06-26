@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from wagtail.models import Site
 
 from django.db.models import Count, Q
@@ -205,6 +207,9 @@ class InstrumentRentalRequestViewTest(TestCase):
         self.client.login(username="sam@example.com", password="Pass123!")
         self.site_settings = SiteSettings.for_site(Site.objects.get(is_default_site=True))
         self.site_settings.instrument_rental_policy = "You must return the instrument."
+        patcher = patch("blowcomotion.member_views._validate_recaptcha", return_value=(True, None))
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.site_settings.save()
 
     def test_get_redirects_anonymous(self):
@@ -390,6 +395,9 @@ class InstrumentRentalTemplateTest(TestCase):
         self.site_settings = SiteSettings.for_site(Site.objects.get(is_default_site=True))
         self.site_settings.instrument_rental_policy = "You must return it."
         self.site_settings.save()
+        patcher = patch("blowcomotion.member_views._validate_recaptcha", return_value=(True, None))
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_form_shows_coming_soon_when_policy_not_set(self):
         self.site_settings.instrument_rental_policy = ""

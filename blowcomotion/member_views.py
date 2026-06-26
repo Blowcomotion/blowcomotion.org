@@ -308,6 +308,7 @@ def instrument_rental_request(request):
         return render(request, "member/instrument_rental_request.html", {
             "member": member,
             "rental_not_configured": True,
+            "include_form_js": True,
         })
 
     missing = [
@@ -332,6 +333,16 @@ def instrument_rental_request(request):
         return redirect("member-profile")
 
     if request.method == "POST":
+        is_valid_captcha, captcha_error = _validate_recaptcha(request)
+        if not is_valid_captcha:
+            form = InstrumentRentalRequestForm()
+            return render(request, "member/instrument_rental_request.html", {
+                "member": member,
+                "form": form,
+                "policy_text": site_settings.instrument_rental_policy,
+                "recaptcha_error": captcha_error,
+                "include_form_js": True,
+            })
         form = InstrumentRentalRequestForm(request.POST)
         if form.is_valid():
             instrument = form.cleaned_data["instrument"]
@@ -409,12 +420,14 @@ def instrument_rental_request(request):
                 "submitted": True,
                 "is_waitlist": is_waitlist,
                 "instrument": instrument,
+                "include_form_js": True,
             })
 
         return render(request, "member/instrument_rental_request.html", {
             "member": member,
             "form": form,
             "policy_text": site_settings.instrument_rental_policy,
+            "include_form_js": True,
         })
 
     form = InstrumentRentalRequestForm()
@@ -422,6 +435,7 @@ def instrument_rental_request(request):
         "member": member,
         "form": form,
         "policy_text": site_settings.instrument_rental_policy,
+        "include_form_js": True,
     })
 
 
