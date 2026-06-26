@@ -1,0 +1,40 @@
+{% extends "wagtailadmin/base.html" %}
+{% block titletag %}Rental Requests{% endblock %}
+{% block content %}
+<div class="nice-padding">
+    <h1>Rental Requests</h1>
+    <table class="listing">
+        <thead>
+            <tr>
+                <th>Member</th>
+                <th>1st Choice</th>
+                <th>2nd Choice</th>
+                <th>3rd Choice</th>
+                <th>Submitted</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sub in submissions %}
+            <tr>
+                <td>{{ sub.name }}<br><small>{{ sub.email }}</small></td>
+                <td>{{ sub.instrument }}</td>
+                <td>{{ sub.second_choice|default:"—" }}</td>
+                <td>{{ sub.third_choice|default:"—" }}</td>
+                <td>{{ sub.date_submitted|date:"Y-m-d" }}</td>
+                <td>{{ sub.get_status_display }}</td>
+                <td>
+                    <a href="{% url 'rental_request_review' sub.pk %}"
+                       class="button button-small{% if sub.status != 'pending' %} button-secondary{% endif %}">
+                        {% if sub.status == 'pending' %}Review{% else %}View{% endif %}
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="no-results-message">No rental requests yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

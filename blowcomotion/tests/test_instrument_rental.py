@@ -374,3 +374,101 @@ class InstrumentRentalFormV2Test(TestCase):
         form = InstrumentRentalRequestForm()
         pks = list(form.fields["second_choice"].queryset.values_list("pk", flat=True))
         self.assertNotIn(self.hidden.pk, pks)
+
+
+class RentalRequestsAdminViewTest(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.instrument = make_instrument("Trumpet")
+        self.li = make_library_instrument(self.instrument)
+        self.member = make_member()
+        self.submission = InstrumentRentalRequestSubmission.objects.create(
+            name=self.member.full_name,
+            email=self.member.email,
+            instrument=self.instrument,
+            member=self.member,
+            status=InstrumentRentalRequestSubmission.STATUS_PENDING,
+            policy_acknowledged=True,
+        )
+        self.admin_user = User.objects.create_superuser(
+            username="admin@example.com",
+            email="admin@example.com",
+            password="AdminP@ss!",
+        )
+        self.client.force_login(self.admin_user)
+
+    def test_dashboard_returns_200(self):
+        response = self.client.get(reverse("rental_requests_dashboard"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_review_get_returns_200(self):
+        response = self.client.get(reverse("rental_request_review", args=[self.submission.pk]))
+        self.assertEqual(response.status_code, 200)
+
+    def test_dashboard_requires_login(self):
+        self.client.logout()
+        response = self.client.get(reverse("rental_requests_dashboard"))
+        self.assertIn(response.status_code, [302, 403])
+
+    @patch("blowcomotion.views._MemberEmail")
+    def test_approve_updates_submission_and_unit(self, mock_email_cls):
+        mock_email_cls.return_value.send.return_value = None
+        self.client.post(
+            reverse("rental_request_review", args=[self.submission.pk]),
+            {"action": "approve", "unit": self.li.pk, "message": "Pick up Tuesday."},
+        )
+        self.submission.refresh_from_db()
+        self.assertEqual(self.submission.status, InstrumentRentalRequestSubmission.STATUS_APPROVED)
+        self.assertEqual(self.submission.assigned_unit, self.li)
+        self.li.refresh_from_db()
+        self.assertEqual(self.li.status, LibraryInstrument.STATUS_RENTED)
+        self.assertEqual(self.li.member, self.member)
+
+    @patch("blowcomotion.views._MemberEmail")
+    def test_approve_sets_member_renting(self, mock_email_cls):
+        mock_email_cls.return_value.send.return_value = None
+        self.client.post(
+            reverse("rental_request_review", args=[self.submission.pk]),
+            {"action": "approve", "unit": self.li.pk, "message": "Go ahead."},
+        )
+        self.member.refresh_from_db()
+        self.assertTrue(self.member.renting)
+
+    @patch("blowcomotion.views._MemberEmail")
+    def test_approve_sends_email(self, mock_email_cls):
+        mock_email_cls.return_value.send.return_value = None
+        self.client.post(
+            reverse("rental_request_review", args=[self.submission.pk]),
+            {"action": "approve", "unit": self.li.pk, "message": "Approved."},
+        )
+        self.assertEqual(mock_email_cls.call_count, 1)
+
+    @patch("blowcomotion.views._MemberEmail")
+    def test_deny_updates_submission(self, mock_email_cls):
+        mock_email_cls.return_value.send.return_value = None
+        self.client.post(
+            reverse("rental_request_review", args=[self.submission.pk]),
+            {"action": "deny", "message": "No units available."},
+        )
+        self.submission.refresh_from_db()
+        self.assertEqual(self.submission.status, InstrumentRentalRequestSubmission.STATUS_DENIED)
+        self.assertEqual(self.submission.admin_message, "No units available.")
+
+    def test_approve_without_unit_stays_pending(self):
+        self.client.post(
+            reverse("rental_request_review", args=[self.submission.pk]),
+            {"action": "approve", "message": "Approved."},
+        )
+        self.submission.refresh_from_db()
+        self.assertEqual(self.submission.status, InstrumentRentalRequestSubmission.STATUS_PENDING)
+
+    def test_action_on_non_pending_submission_does_nothing(self):
+        self.submission.status = InstrumentRentalRequestSubmission.STATUS_APPROVED
+        self.submission.save()
+        self.client.post(
+            reverse("rental_request_review", args=[self.submission.pk]),
+            {"action": "deny", "message": "Denied."},
+        )
+        self.submission.refresh_from_db()
+        self.assertEqual(self.submission.status, InstrumentRentalRequestSubmission.STATUS_APPROVED)
