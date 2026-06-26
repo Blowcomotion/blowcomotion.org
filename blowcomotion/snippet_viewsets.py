@@ -388,6 +388,8 @@ class LibraryInstrumentViewSet(SnippetViewSet):
         'storage_location',
         DateColumn('rental_date', label='Rental Date'),
         'patreon_active',
+        'hide_from_rental',
+        'hide_from_member_forms',
         UpdatedAtColumn()
     ]
     filterset_class = None  # Set in __init__
@@ -414,6 +416,10 @@ class LibraryInstrumentViewSet(SnippetViewSet):
             'patreon_active',
             'patreon_amount',
         ], heading="Patreon Support"),
+        MultiFieldPanel([
+            'hide_from_rental',
+            'hide_from_member_forms',
+        ], heading="Visibility"),
         FieldPanel('comments'),
         InlinePanel('photos', label="Photos"),
         InlinePanel('history_logs', label="History Log", help_text="Event history for this instrument"),

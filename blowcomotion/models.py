@@ -494,16 +494,17 @@ class Instrument(models.Model, index.Indexed):
     hide_from_rental = models.BooleanField(
         default=False,
         help_text=(
-            "Hide from the instrument rental request form. Use for instruments too rare "
-            "or unavailable to offer — e.g. a vintage sousaphone kept as a display piece."
+            "Hide this instrument type from the rental request form. Use for instruments "
+            "we carry but don't offer for general rental — e.g. a bass clarinet added to "
+            "inventory because a member brought their own, but too rare to offer to others."
         ),
     )
     hide_from_member_forms = models.BooleanField(
         default=False,
         help_text=(
-            "Hide from member profile and signup instrument selectors. Use for instruments "
-            "that members don't play but exist in inventory — e.g. a prop instrument or "
-            "one not assigned to any section."
+            "Hide this instrument type from member profile and signup instrument selectors. "
+            "Use for instruments members don't play but exist in inventory — e.g. a prop "
+            "instrument or one not assigned to any section."
         ),
     )
     image = models.ForeignKey(
@@ -1442,6 +1443,20 @@ class LibraryInstrument(DraftStateMixin, RevisionMixin, LockableMixin, Clusterab
         help_text="Current availability of this instrument",
     )
     serial_number = models.TextField(help_text="Serial number or other identifying marks")
+    hide_from_rental = models.BooleanField(
+        default=False,
+        help_text=(
+            "Hide this specific unit from the rental request form. Use when a unit is "
+            "damaged, reserved, or otherwise unavailable without removing it from inventory."
+        ),
+    )
+    hide_from_member_forms = models.BooleanField(
+        default=False,
+        help_text=(
+            "Hide this specific unit from member-facing instrument selectors. Use when "
+            "a unit should not be visible to members but remains in admin inventory."
+        ),
+    )
     member = models.ForeignKey(
         "blowcomotion.Member",
         null=True,
