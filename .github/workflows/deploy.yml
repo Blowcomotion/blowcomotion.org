@@ -1,0 +1,32 @@
+name: Deploy to production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull, migrate, collectstatic
+        env:
+          SSH_KEY: ${{ secrets.PA_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan ssh.pythonanywhere.com >> ~/.ssh/known_hosts
+          ssh ${{ secrets.PA_USERNAME }}@ssh.pythonanywhere.com << 'EOF'
+            set -e
+            cd ~/blowcomotion.org
+            git pull origin main
+            python manage.py migrate --noinput
+            python manage.py collectstatic --noinput
+          EOF
+
+      - name: Reload web app
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" -X POST \
+            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}" \
+            https://www.pythonanywhere.com/api/v0/user/${{ secrets.PA_USERNAME }}/webapps/${{ secrets.PA_DOMAIN }}/reload/ \
+          | grep -q "^200$"
