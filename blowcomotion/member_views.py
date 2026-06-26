@@ -310,11 +310,20 @@ def instrument_rental_request(request):
             "rental_not_configured": True,
         })
 
-    required = [member.full_name, member.email, member.phone, member.address]
-    if not all(required):
+    missing = [
+        label
+        for label, val in [
+            ("name", member.full_name),
+            ("email", member.email),
+            ("phone", member.phone),
+            ("address", member.address),
+        ]
+        if not val
+    ]
+    if missing:
         messages.warning(
             request,
-            "Please complete your contact information before requesting an instrument rental.",
+            f"Please add your {', '.join(missing)} before requesting an instrument rental.",
         )
         return redirect("member-profile")
 
