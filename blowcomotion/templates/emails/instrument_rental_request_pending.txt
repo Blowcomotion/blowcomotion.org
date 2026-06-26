@@ -9,5 +9,6 @@ Third choice: {{ third_choice.name }}{% endif %}
 {% if notes %}Notes you provided: {{ notes }}
 
 {% endif %}Our library team will review your request and follow up soon. If you have any questions, please reach out.
+{{ contact_emails }}
 
 — Blowcomotion Instrument Library
