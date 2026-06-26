@@ -25,7 +25,8 @@ def make_library_instrument(instrument, status=LibraryInstrument.STATUS_AVAILABL
 
 def make_member(**kwargs):
     defaults = dict(first_name="Sam", last_name="Player", email="sam@example.com",
-                    phone="512-555-0100", address="123 Main St")
+                    phone="512-555-0100", address="123 Main St",
+                    city="Austin", state="TX", zip_code="78701", country="US")
     defaults.update(kwargs)
     return Member.objects.create(**defaults)
 

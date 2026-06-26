@@ -316,7 +316,11 @@ def instrument_rental_request(request):
             ("name", member.full_name),
             ("email", member.email),
             ("phone", member.phone),
-            ("address", member.address),
+            ("street address", member.address),
+            ("city", member.city),
+            ("state", member.state),
+            ("zip code", member.zip_code),
+            ("country", member.country),
         ]
         if not val
     ]
