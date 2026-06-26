@@ -376,6 +376,49 @@ class InstrumentRentalFormV2Test(TestCase):
         self.assertNotIn(self.hidden.pk, pks)
 
 
+class InstrumentRentalTemplateTest(TestCase):
+    def setUp(self):
+        from wagtail.models import Site
+        self.instrument = make_instrument("Trumpet")
+        make_library_instrument(self.instrument)
+        self.member = make_member()
+        self.user = create_member_user(self.member)
+        self.user.set_password("Pass123!")
+        self.user.save()
+        self.client.login(username="sam@example.com", password="Pass123!")
+        self.site_settings = SiteSettings.for_site(Site.objects.get(is_default_site=True))
+        self.site_settings.instrument_rental_policy = "You must return it."
+        self.site_settings.save()
+
+    def test_form_shows_coming_soon_when_policy_not_set(self):
+        self.site_settings.instrument_rental_policy = ""
+        self.site_settings.save()
+        response = self.client.get(reverse("member-instrument-rental"))
+        self.assertContains(response, "Coming soon")
+
+    def test_form_shows_second_and_third_choice_fields(self):
+        response = self.client.get(reverse("member-instrument-rental"))
+        self.assertContains(response, "Second choice")
+        self.assertContains(response, "Third choice")
+
+    def test_success_state_has_no_patreon_prompt(self):
+        with patch("blowcomotion.member_views._MemberEmail"):
+            response = self.client.post(reverse("member-instrument-rental"), {
+                "instrument": self.instrument.pk,
+                "policy_acknowledged": True,
+            })
+        self.assertNotContains(response, "Patreon")
+        self.assertNotContains(response, "patreon")
+
+    def test_success_state_shows_in_touch(self):
+        with patch("blowcomotion.member_views._MemberEmail"):
+            response = self.client.post(reverse("member-instrument-rental"), {
+                "instrument": self.instrument.pk,
+                "policy_acknowledged": True,
+            })
+        self.assertContains(response, "in touch")
+
+
 class RentalRequestsAdminViewTest(TestCase):
     def setUp(self):
         from django.contrib.auth import get_user_model
