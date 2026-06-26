@@ -2376,6 +2376,7 @@ def _send_rental_approved_email(request, submission):
             "assigned_unit": submission.assigned_unit,
             "admin_message": submission.admin_message,
             "patreon_url": site_settings.patreon_url,
+            "contact_emails": site_settings.instrument_rental_notification_recipients,
         },
     )
     _MemberEmail(
@@ -2386,15 +2387,17 @@ def _send_rental_approved_email(request, submission):
     ).send(fail_silently=True)
 
 
-def _send_rental_denied_email(submission):
+def _send_rental_denied_email(request, submission):
     if not (submission.member and submission.member.email):
         return
+    site_settings = SiteSettings.for_request(request)
     body = render_to_string(
         "emails/instrument_rental_request_denied.txt",
         {
             "member": submission.member,
             "instrument": submission.instrument,
             "admin_message": submission.admin_message,
+            "contact_emails": site_settings.instrument_rental_notification_recipients,
         },
     )
     _MemberEmail(
@@ -2458,7 +2461,7 @@ def rental_request_review(request, pk):
                 submission.status = InstrumentRentalRequestSubmission.STATUS_DENIED
                 submission.admin_message = message
                 submission.save()
-                _send_rental_denied_email(submission)
+                _send_rental_denied_email(request, submission)
                 messages.success(request, f"Denied — {submission.name} has been notified.")
                 return redirect("rental_requests_dashboard")
 
