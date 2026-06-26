@@ -24,10 +24,10 @@
   <div class="card mb-4">
     <div class="card-body">
       <dl class="row mb-0">
-        <dt class="col-sm-3">Name</dt><dd class="col-sm-9">{{ member.full_name }}</dd>
-        <dt class="col-sm-3">Email</dt><dd class="col-sm-9">{{ member.email }}</dd>
-        <dt class="col-sm-3">Phone</dt><dd class="col-sm-9">{{ member.phone|default:"not provided" }}</dd>
-        <dt class="col-sm-3">Address</dt><dd class="col-sm-9">{{ member.address|default:"not provided" }}</dd>
+        <dt class="col-sm-3">Name</dt><dd class="col-sm-2"><a href="{% url 'member-profile' %}">Update</a></dd><dd class="col-sm-7">{{ member.full_name }}</dd>
+        <dt class="col-sm-3">Email</dt><dd class="col-sm-2"><a href="{% url 'member-profile' %}">Update</a></dd><dd class="col-sm-7">{{ member.email }}</dd>
+        <dt class="col-sm-3">Phone</dt><dd class="col-sm-2"><a href="{% url 'member-profile' %}">Update</a></dd><dd class="col-sm-7">{{ member.phone }}</dd>
+        <dt class="col-sm-3">Address</dt><dd class="col-sm-2"><a href="{% url 'member-profile' %}">Update</a></dd><dd class="col-sm-7">{{ member.address }}, {{ member.city }}, {{ member.state }} {{ member.zip_code }}, {{ member.country }}</dd>
       </dl>
     </div>
   </div>
