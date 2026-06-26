@@ -193,7 +193,7 @@ class SectionViewSet(SnippetViewSet):
 
 class InstrumentViewSet(SnippetViewSet):
     model = None
-    menu_label = 'Instruments'
+    menu_label = 'Instrument Types'
     menu_name = 'instruments'
     icon = 'french-horn'
     list_display = ["name", "section", "hide_from_rental", "hide_from_member_forms", UpdatedAtColumn()]

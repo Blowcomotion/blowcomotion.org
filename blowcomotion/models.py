@@ -525,8 +525,8 @@ class Instrument(models.Model, index.Indexed):
         return self.name
 
     class Meta:
-        verbose_name = "Instrument"
-        verbose_name_plural = "Instruments"
+        verbose_name = "Instrument Type"
+        verbose_name_plural = "Instrument Types"
 
 
 class MemberInstrument(Orderable):
