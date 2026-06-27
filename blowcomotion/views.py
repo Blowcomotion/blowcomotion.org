@@ -992,7 +992,7 @@ def dump_data(request):
         '-e', 'wagtailcore.groupcollectionpermission', '-e', 'wagtailcore.grouppagepermission', '-e', 'wagtailcore.referenceindex',
         '-e', 'wagtailimages.rendition', '-e', 'blowcomotion.customrendition',
         '-e', 'sessions', '-e', 'wagtailsearch', '-e', 'wagtailcore.pagelogentry', '-e', 'wagtailcore.revision', '-e', 'wagtailcore.taskstate', '-e', 'wagtailcore.workflowstate', '-e', 'wagtailcore.comment',
-        '-e', 'auth.user', '-e', 'blowcomotion.sitesettings',
+        '-e', 'auth.user',
         '-e', 'admin.logentry', '-e', 'axes.accesslog',
         '-e', 'wagtailcore.modellogentry', '-e', 'wagtailcore.pagesubscription',
         '-e', 'wagtailadmin.editingsession', '-e', 'wagtailadmin.formstate',
@@ -1077,6 +1077,22 @@ def dump_data(request):
                     scrubbed_count += 1
             
             logger.info(f'Scrubbed {scrubbed_count} member records in data dump')
+
+        # Always scrub SiteSettings sensitive fields regardless of include_real_data
+        sitesettings_sensitive = {
+            'attendance_password', 'birthdays_password',
+            'contact_form_email_recipients', 'join_band_form_email_recipients',
+            'booking_form_email_recipients', 'feedback_form_email_recipients',
+            'donate_form_email_recipients', 'birthday_summary_email_recipients',
+            'instrument_rental_notification_recipients',
+            'attendance_report_notification_recipients',
+            'member_signup_notification_recipients',
+        }
+        for item in data:
+            if item.get('model') == 'blowcomotion.sitesettings':
+                for field in sitesettings_sensitive:
+                    if field in item.get('fields', {}):
+                        item['fields'][field] = None
 
         logger.info(f"Data dump completed successfully by user {request.user.username}")
         # Return the data as a JSON response with pretty formatting
