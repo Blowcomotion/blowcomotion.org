@@ -241,13 +241,10 @@
   padding-top: 25px;
 }
 
-.jp-download-btn-wrap {
-  float: left;
-  padding-left: 12px;
-  padding-top: 25px;
-}
-
 .jp-download-btn {
+  display: block;
+  padding-left: 16px;
+  margin-top: 6px;
   color: $heading-color;
   font-size: 18px;
   text-decoration: none;
