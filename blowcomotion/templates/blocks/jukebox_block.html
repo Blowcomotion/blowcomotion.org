@@ -1,5 +1,6 @@
 {% load wagtailimages_tags %}
 {% load static %}
+{% load blowco_tags %}
 <section class="track spad">
     <div class="container">
         <div class="row">
@@ -58,7 +59,7 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div class="jp-duration ml-auto" role="timer" aria-label="duration">00:00</div>
+                                            <div class="jp-duration ml-auto" role="timer" aria-label="duration">{{ track.recording.duration|duration_mmss }}</div>
                                         </div>
                                         <!-- Volume Controls -->
                                         <div class="jp-volume-controls">

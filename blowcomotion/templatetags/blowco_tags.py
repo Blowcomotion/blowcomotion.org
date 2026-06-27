@@ -15,6 +15,15 @@ def datestring_format(value):
     except ValueError:
         return value
     
+@register.filter
+def duration_mmss(value):
+    try:
+        seconds = int(float(value))
+        return f"{seconds // 60}:{seconds % 60:02d}"
+    except (TypeError, ValueError):
+        return "0:00"
+
+
 @register.simple_tag
 def is_url(string):
     validate = URLValidator()
