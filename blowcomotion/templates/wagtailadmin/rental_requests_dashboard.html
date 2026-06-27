@@ -18,7 +18,14 @@
         <tbody>
             {% for sub in submissions %}
             <tr>
-                <td>{{ sub.name }}<br><small>{{ sub.email }}</small></td>
+                <td>
+                    {% if sub.member %}
+                    <a href="{% url 'wagtailsnippets_blowcomotion_member:edit' pk=sub.member.pk %}">{{ sub.name }}</a>
+                    {% else %}
+                    {{ sub.name }}
+                    {% endif %}
+                    <br><small>{{ sub.email }}</small>
+                </td>
                 <td>{{ sub.instrument }}</td>
                 <td>{{ sub.second_choice|default:"—" }}</td>
                 <td>{{ sub.third_choice|default:"—" }}</td>
