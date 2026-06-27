@@ -94,7 +94,7 @@
             });
             
             // Handle regular (non-HTMX) form submissions
-            $('form[action*="process-form"]').not('[hx-post]').on('submit', function(event) {
+            $('form[action*="process-form"], form#member-form').not('[hx-post]').on('submit', function(event) {
                 var $form = $(this);
                 var $tokenInput = $form.find('input[name="g-recaptcha-response"]');
                 
