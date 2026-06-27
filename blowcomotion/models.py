@@ -153,7 +153,14 @@ class SiteSettings(BaseSiteSetting):
     )
     attendance_cleanup_days = models.IntegerField(
         default=90,
-        help_text="Number of days since last seeing a member to automatically mark them inactive when cleaning attendance records for the attendance system.",
+        help_text=(
+            "Number of days since last seeing a member before they are marked inactive "
+            "(attendance cleanup) and before instrument renters receive a nag email."
+        ),
+    )
+    nag_cooldown_days = models.IntegerField(
+        default=7,
+        help_text="Days to wait before sending another nag email to the same renter.",
     )
     attendance_report_notification_recipients = models.CharField(
         max_length=1024,
@@ -212,6 +219,7 @@ class SiteSettings(BaseSiteSetting):
 
         MultiFieldPanel([
             FieldPanel('attendance_cleanup_days'),
+            FieldPanel('nag_cooldown_days'),
         ], heading="Attendance Cleanup Notifications", help_text="Configure attendance cleanup settings."),
     ]
 
@@ -1506,6 +1514,11 @@ class LibraryInstrument(DraftStateMixin, RevisionMixin, LockableMixin, Clusterab
         validators=[MinValueValidator(0)],
         help_text="Monthly Patreon support amount",
     )
+    last_nag_sent = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date the most recent nag email was sent to this renter.",
+    )
     storage_location = models.ForeignKey(
         "blowcomotion.InstrumentStorageLocation",
         null=True,
@@ -1609,6 +1622,10 @@ class LibraryInstrument(DraftStateMixin, RevisionMixin, LockableMixin, Clusterab
                 )
 
         if old_status and old_status != self.status:
+            if old_status == self.STATUS_RENTED and self.status != self.STATUS_RENTED:
+                self.last_nag_sent = None
+                # Use update to avoid recursion; save() already called above via super()
+                LibraryInstrument.objects.filter(pk=self.pk).update(last_nag_sent=None)
             self._create_status_change_log(old_status, self.status)
         elif (
             self.status == self.STATUS_RENTED
@@ -1693,6 +1710,27 @@ class LibraryInstrumentPhoto(Orderable):
 
     def __str__(self):
         return f"Photo for {self.library_instrument}"
+
+
+class InstrumentRentalNagLog(models.Model):
+    library_instrument = models.ForeignKey(
+        "blowcomotion.LibraryInstrument",
+        on_delete=models.CASCADE,
+        related_name="nag_logs",
+    )
+    member_name = models.CharField(max_length=255)
+    member_email = models.EmailField()
+    reasons = models.CharField(
+        max_length=255,
+        help_text='Comma-separated trigger reasons: "attendance", "patreon", or "attendance+patreon"',
+    )
+    sent_at = models.DateField()
+
+    class Meta:
+        ordering = ["-sent_at"]
+
+    def __str__(self):
+        return f"{self.member_name} — {self.sent_at} ({self.reasons})"
 
 
 class InstrumentHistoryLog(models.Model):
