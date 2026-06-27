@@ -604,12 +604,6 @@ def _send_form_email(subject, message, recipient_list):
     _MemberEmail(
         subject=subject, body=message, from_email=settings.FROM_EMAIL, to=recipient_list
     ).send(fail_silently=False)
-    # Send a copy for verifying functionality
-    extra_email = settings.FORM_TEST_EMAIL if hasattr(settings, 'FORM_TEST_EMAIL') else None
-    if extra_email:
-        _MemberEmail(
-            subject=subject, body=message, from_email=settings.FROM_EMAIL, to=[extra_email]
-        ).send(fail_silently=False)
 
 
 def _create_email_message(form_type, name, email, **kwargs):
@@ -2385,14 +2379,6 @@ def _send_rental_approved_email(request, submission):
         from_email=settings.FROM_EMAIL,
         to=[submission.member.email],
     ).send(fail_silently=True)
-    extra_email = settings.FORM_TEST_EMAIL if hasattr(settings, "FORM_TEST_EMAIL") else None
-    if extra_email:
-        _MemberEmail(
-            subject=f"Your instrument rental request has been approved — {submission.instrument.name}",
-            body=body,
-            from_email=settings.FROM_EMAIL,
-            to=[extra_email],
-        ).send(fail_silently=True)
 
 
 def _send_rental_denied_email(request, submission):
@@ -2414,14 +2400,6 @@ def _send_rental_denied_email(request, submission):
         from_email=settings.FROM_EMAIL,
         to=[submission.member.email],
     ).send(fail_silently=True)
-    extra_email = settings.FORM_TEST_EMAIL if hasattr(settings, "FORM_TEST_EMAIL") else None
-    if extra_email:
-        _MemberEmail(
-            subject=f"Your instrument rental request — {submission.instrument.name}",
-            body=body,
-            from_email=settings.FROM_EMAIL,
-            to=[extra_email],
-        ).send(fail_silently=True)
 
 
 def _send_rental_returned_email(request, submission, condition_notes):
@@ -2446,14 +2424,6 @@ def _send_rental_returned_email(request, submission, condition_notes):
             from_email=settings.FROM_EMAIL,
             to=[submission.member.email],
         ).send(fail_silently=True)
-        extra_email = settings.FORM_TEST_EMAIL if hasattr(settings, "FORM_TEST_EMAIL") else None
-        if extra_email:
-            _MemberEmail(
-                subject=f"Your {submission.instrument.name} rental has been returned",
-                body=body,
-                from_email=settings.FROM_EMAIL,
-                to=[extra_email],
-            ).send(fail_silently=True)
     if admin_recipients:
         lines = [
             f"{submission.name} has returned {submission.assigned_unit or submission.instrument.name}.",
@@ -2466,14 +2436,6 @@ def _send_rental_returned_email(request, submission, condition_notes):
             from_email=settings.FROM_EMAIL,
             to=admin_recipients,
         ).send(fail_silently=True)
-        extra_email = settings.FORM_TEST_EMAIL if hasattr(settings, "FORM_TEST_EMAIL") else None
-        if extra_email:
-            _MemberEmail(
-                subject=f"Instrument returned: {submission.instrument.name} — {submission.name}",
-                body="\n".join(lines),
-                from_email=settings.FROM_EMAIL,
-                to=[extra_email],
-            ).send(fail_silently=True)
 
 
 def rental_requests_dashboard(request):
