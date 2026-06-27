@@ -76,7 +76,17 @@
       {% if form.policy_acknowledged.errors %}<div class="text-danger small mt-1">{{ form.policy_acknowledged.errors }}</div>{% endif %}
     </div>
 
-    <button type="submit" class="site-btn">Submit Request</button>
+    <button type="submit" class="site-btn" id="rental-submit-btn">
+      <span class="spinner-border spinner-border-sm me-2 d-none" id="rental-submit-spinner" aria-hidden="true"></span>Submit Request
+    </button>
   </form>
 {% endif %}
+{% block extra_js %}
+<script>
+document.getElementById('member-form').addEventListener('submit', function() {
+  document.getElementById('rental-submit-spinner').classList.remove('d-none');
+  document.getElementById('rental-submit-btn').disabled = true;
+});
+</script>
+{% endblock %}
 {% endblock %}
