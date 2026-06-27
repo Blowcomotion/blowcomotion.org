@@ -36,20 +36,6 @@
             }
         }
 
-        // Preload metadata for all tracks to show duration without full initialization
-        $('.lazy-player').each(function() {
-            var url = $(this).data('url');
-            var trackId = $(this).data('track-id');
-            var audio = new Audio();
-            audio.preload = 'metadata';
-            audio.addEventListener('loadedmetadata', function() {
-                var d = audio.duration;
-                var mins = Math.floor(d / 60);
-                var secs = Math.floor(d % 60);
-                $('.jp_container_' + trackId + ' .jp-duration').text(mins + ':' + (secs < 10 ? '0' : '') + secs);
-            });
-            audio.src = url;
-        });
     }
     
     function initializePlayer(player, trackId, clickedBtn, isPreload = false) {
