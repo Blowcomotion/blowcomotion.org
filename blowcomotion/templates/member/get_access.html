@@ -10,7 +10,8 @@
                 <div class="alert alert-success">Check your email for next steps.</div>
             {% else %}
                 {% if recaptcha_error %}<div class="alert alert-danger">{{ recaptcha_error }}</div>{% endif %}
-                <p class="text-muted mb-4">Enter your member email address and we'll send you a link to set up your account.</p>
+                <p class="text-muted mb-2">This page is for existing members who were part of the band before member logins were introduced. If that's you, enter your email address below and we'll send you a link to set up your account.</p>
+                <p class="text-muted mb-4">New to the band? <a href="/member-signup/">Sign up here</a> instead.</p>
                 <form method="post" id="member-form">
                     {% csrf_token %}
                     <input type="hidden" name="g-recaptcha-response" value="">
