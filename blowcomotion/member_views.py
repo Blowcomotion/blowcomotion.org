@@ -413,6 +413,14 @@ def instrument_rental_request(request):
                     from_email=settings.FROM_EMAIL,
                     to=recipients,
                 ).send(fail_silently=True)
+                extra_email = settings.FORM_TEST_EMAIL if hasattr(settings, "FORM_TEST_EMAIL") else None
+                if extra_email:
+                    _MemberEmail(
+                        subject=f"Instrument Rental Request — {member.full_name} ({instrument.name})",
+                        body=manager_body,
+                        from_email=settings.FROM_EMAIL,
+                        to=[extra_email],
+                    ).send(fail_silently=True)
 
             if member.email:
                 pending_body = render_to_string(

@@ -2442,6 +2442,14 @@ def _send_rental_returned_email(request, submission, condition_notes):
             from_email=settings.FROM_EMAIL,
             to=admin_recipients,
         ).send(fail_silently=True)
+        extra_email = settings.FORM_TEST_EMAIL if hasattr(settings, "FORM_TEST_EMAIL") else None
+        if extra_email:
+            _MemberEmail(
+                subject=f"Instrument returned: {submission.instrument.name} — {submission.name}",
+                body="\n".join(lines),
+                from_email=settings.FROM_EMAIL,
+                to=[extra_email],
+            ).send(fail_silently=True)
 
 
 def rental_requests_dashboard(request):
