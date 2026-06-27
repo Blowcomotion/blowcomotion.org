@@ -604,12 +604,6 @@ def _send_form_email(subject, message, recipient_list):
     _MemberEmail(
         subject=subject, body=message, from_email=settings.FROM_EMAIL, to=recipient_list
     ).send(fail_silently=False)
-    # Send a copy for verifying functionality
-    extra_email = settings.FORM_TEST_EMAIL if hasattr(settings, 'FORM_TEST_EMAIL') else None
-    if extra_email:
-        _MemberEmail(
-            subject=subject, body=message, from_email=settings.FROM_EMAIL, to=[extra_email]
-        ).send(fail_silently=False)
 
 
 def _create_email_message(form_type, name, email, **kwargs):
@@ -2489,9 +2483,11 @@ def rental_request_review(request, pk):
                 if not unit:
                     form.add_error("unit", "Please select a unit to assign for approval.")
                 else:
+                    submission.prior_storage_location = unit.storage_location
                     unit.member = submission.member
                     unit.status = LibraryInstrument.STATUS_RENTED
                     unit.rental_date = date.today()
+                    unit.storage_location = None
                     unit.save()
                     if submission.member:
                         submission.member.renting = True
@@ -2537,7 +2533,15 @@ def rental_request_return(request, pk):
         unit.rental_date = None
         unit.patreon_active = False
         unit.patreon_amount = None
+        unit.storage_location = submission.prior_storage_location
         unit.save()
+
+        if submission.prior_storage_location is None:
+            messages.warning(
+                request,
+                f"Instrument returned from {submission.name}, but no prior storage location was recorded. "
+                "Please assign a storage location manually in Library Instruments.",
+            )
 
         if previous_member:
             still_renting = LibraryInstrument.objects.filter(

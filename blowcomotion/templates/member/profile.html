@@ -216,21 +216,6 @@
         });
     });
 
-{% if include_form_js %}
-    var form = document.getElementById('member-form');
-    if (form && typeof grecaptcha !== 'undefined' && window.RECAPTCHA_SITE_KEY) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            var self = this;
-            grecaptcha.ready(function() {
-                grecaptcha.execute(window.RECAPTCHA_SITE_KEY, {action: 'submit'}).then(function(token) {
-                    self.querySelector('input[name="g-recaptcha-response"]').value = token;
-                    self.submit();
-                }).catch(function() { self.submit(); });
-            });
-        });
-    }
-{% endif %}
 }());
 </script>
 {% endblock %}
