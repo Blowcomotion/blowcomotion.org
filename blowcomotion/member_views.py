@@ -422,6 +422,7 @@ def instrument_rental_request(request):
                         "second_choice": second_choice,
                         "third_choice": third_choice,
                         "notes": submission.message,
+                        "contact_emails": site_settings.instrument_rental_notification_recipients,
                     },
                 )
                 _MemberEmail(
