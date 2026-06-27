@@ -149,6 +149,7 @@ USE_TZ = True
 # Member auth
 LOGIN_URL = "/member/login/"
 LOGIN_REDIRECT_URL = "/member/profile/"
+WAGTAIL_FRONTEND_LOGIN_URL = "/member/login/"
 LOGOUT_REDIRECT_URL = "/"
 
 AUTHENTICATION_BACKENDS = [
