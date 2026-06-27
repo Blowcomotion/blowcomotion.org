@@ -46,7 +46,7 @@ status-change hook).
    a. **Cooldown check:** skip if `last_nag_sent` is set and `today - last_nag_sent < nag_cooldown_days`
    b. **Attendance check:** `member.last_seen` is older than `attendance_cleanup_days` ago, OR `member.is_active == False`
    c. **Patreon check (stub):** `patreon_active == False` — reads existing field; no API call (see stub note below)
-   d. If either check (b or c) triggers: send renter nag email; set `last_nag_sent = today` unless `--dry-run`
+   d. If either check (b or c) triggers: send renter nag email; set `last_nag_sent = today`; create `InstrumentRentalNagLog` entry (both skipped under `--dry-run`)
 5. After all instruments: send admin summary email listing every renter nagged and which condition(s) triggered
 6. Send `FORM_TEST_EMAIL` copy of admin summary (consistent with other commands)
 7. If no renters qualify: log "Nothing to nag today", no emails sent
@@ -132,12 +132,26 @@ Add a comment to issue #246 documenting what the stub does and what the real imp
 must replace: update `LibraryInstrument.patreon_active` via Patreon API v2 before
 `nag_instrument_renters` runs each day (or as part of the same command).
 
+## Audit Log Model: `InstrumentRentalNagLog`
+
+New model in `models.py` to record every nag email sent.
+
+| Field | Type | Notes |
+|---|---|---|
+| `library_instrument` | `ForeignKey(LibraryInstrument, CASCADE)` | |
+| `member_name` | `CharField(255)` | Snapshot at send time |
+| `member_email` | `EmailField` | Snapshot at send time |
+| `reasons` | `CharField(255)` | `"attendance"`, `"patreon"`, or `"attendance+patreon"` |
+| `sent_at` | `DateField` | Date the nag was sent |
+
+`Meta.ordering = ['-sent_at']`
+
 ## Files Changed
 
 | File | Change |
 |---|---|
-| `blowcomotion/models.py` | Add `nag_cooldown_days` to `SiteSettings`; add `last_nag_sent` to `LibraryInstrument`; clear `last_nag_sent` on status change in `save()` |
-| `blowcomotion/migrations/0113_*.py` | Migration for new fields |
+| `blowcomotion/models.py` | Add `nag_cooldown_days` to `SiteSettings`; add `last_nag_sent` to `LibraryInstrument`; clear `last_nag_sent` on status change in `save()`; add `InstrumentRentalNagLog` model |
+| `blowcomotion/migrations/0114_*.py` | Migration for new fields and model |
 | `blowcomotion/management/commands/nag_instrument_renters.py` | New command |
 | `blowcomotion/views.py` | Add `instrument_rental_staying` and `instrument_rental_return` views |
 | `blowcomotion/urls.py` | Wire up two new URLs |
@@ -150,4 +164,3 @@ must replace: update `LibraryInstrument.patreon_active` via Patreon API v2 befor
 - HTML email formatting (plain text only)
 - Patreon API calls (stub only, see #246)
 - Member portal authentication on CTA views (unauthenticated by design — link is the credential)
-- Logging nag events to a separate audit table (not requested)
