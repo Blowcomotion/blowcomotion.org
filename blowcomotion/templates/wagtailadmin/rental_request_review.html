@@ -1,0 +1,62 @@
+{% extends "wagtailadmin/base.html" %}
+{% block titletag %}Review Rental Request{% endblock %}
+{% block content %}
+<div class="nice-padding">
+    <h1>Review Rental Request</h1>
+    <p><a href="{% url 'rental_requests_dashboard' %}" class="button button-secondary">Back to Rental Requests</a></p>
+
+    <section class="w-panel">
+        <header class="w-panel__header"><h2 class="w-panel__heading">Request Details</h2></header>
+        <div class="w-panel__content">
+            <dl class="dl-horizontal">
+                <dt>Member</dt><dd>{{ submission.name }} ({{ submission.email }})</dd>
+                <dt>Phone</dt><dd>{{ submission.phone|default:"—" }}</dd>
+                <dt>Address</dt><dd>{{ submission.address|default:"—" }}</dd>
+                <dt>1st Choice</dt><dd>{{ submission.instrument }}</dd>
+                <dt>2nd Choice</dt><dd>{{ submission.second_choice|default:"—" }}</dd>
+                <dt>3rd Choice</dt><dd>{{ submission.third_choice|default:"—" }}</dd>
+                <dt>Notes</dt><dd>{{ submission.message|default:"—" }}</dd>
+                <dt>Submitted</dt><dd>{{ submission.date_submitted|date:"Y-m-d H:i" }}</dd>
+                <dt>Status</dt><dd>{{ submission.get_status_display }}</dd>
+                {% if submission.admin_message %}
+                <dt>Admin Message</dt><dd>{{ submission.admin_message }}</dd>
+                {% endif %}
+                {% if submission.assigned_unit %}
+                <dt>Assigned Unit</dt><dd>{{ submission.assigned_unit }}</dd>
+                {% endif %}
+            </dl>
+        </div>
+    </section>
+
+    {% if submission.status == 'approved' and submission.assigned_unit %}
+    <p style="margin-top:1rem;">
+        <a href="{% url 'rental_request_return' submission.pk %}" class="button button-secondary">Return Instrument</a>
+    </p>
+    {% endif %}
+
+    {% if submission.status == 'pending' %}
+    <section class="w-panel" style="margin-top:1.5rem;">
+        <header class="w-panel__header"><h2 class="w-panel__heading">Approve or Deny</h2></header>
+        <div class="w-panel__content">
+            <form method="post">
+                {% csrf_token %}
+                <div class="field">
+                    <label class="field__label">Assign Instrument Unit</label>
+                    <div class="field-content">{{ form.unit }}</div>
+                    {% if form.unit.errors %}<p class="error-message"><span>{{ form.unit.errors|join:", " }}</span></p>{% endif %}
+                </div>
+                <div class="field">
+                    <label class="field__label required">Message to Member</label>
+                    <div class="field-content">{{ form.message }}</div>
+                    {% if form.message.errors %}<p class="error-message"><span>{{ form.message.errors|join:", " }}</span></p>{% endif %}
+                </div>
+                <div style="display:flex;gap:1rem;margin-top:1rem;">
+                    <button type="submit" name="action" value="approve" class="button">Approve</button>
+                    <button type="submit" name="action" value="deny" class="button warning">Deny</button>
+                </div>
+            </form>
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

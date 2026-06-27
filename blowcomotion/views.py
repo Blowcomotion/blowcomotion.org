@@ -10,6 +10,7 @@ from io import StringIO
 
 import requests
 
+from django import forms as django_forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
@@ -19,6 +20,7 @@ from django.core.management import call_command
 from django.db.models import Count, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
@@ -44,9 +46,9 @@ from blowcomotion.models import (
     FeedbackFormSubmission,
     Instrument,
     InstrumentHistoryLog,
+    InstrumentRentalRequestSubmission,
     JoinBandFormSubmission,
     LibraryInstrument,
-    LibraryInstrumentDocument,
     Member,
     MemberInstrument,
     Section,
@@ -163,9 +165,10 @@ def instrument_library_quick_rent(request):
                     instrument.rental_date = (
                         rent_form.cleaned_data['rental_date'] or timezone.localdate()
                     )
-                    instrument.agreement_signed_date = rent_form.cleaned_data[
-                        'agreement_signed_date'
-                    ]
+                    # TODO(#250): remove — agreement_signed_date dropped in rental v2
+                    # instrument.agreement_signed_date = rent_form.cleaned_data[
+                    #     'agreement_signed_date'
+                    # ]
                     instrument.patreon_active = rent_form.cleaned_data['patreon_active']
                     instrument.patreon_amount = rent_form.cleaned_data['patreon_amount']
                     comments = rent_form.cleaned_data['comments']
@@ -178,14 +181,14 @@ def instrument_library_quick_rent(request):
                     member.renting = True
                     member.save()
 
-                    # Handle rental document if provided
-                    rental_document = rent_form.cleaned_data.get('rental_document')
-                    if rental_document:
-                        LibraryInstrumentDocument.objects.create(
-                            library_instrument=instrument,
-                            document=rental_document,
-                            description=rent_form.cleaned_data.get('document_description', ''),
-                        )
+                    # TODO(#250): remove — LibraryInstrumentDocument dropped in rental v2
+                    # rental_document = rent_form.cleaned_data.get('rental_document')
+                    # if rental_document:
+                    #     LibraryInstrumentDocument.objects.create(
+                    #         library_instrument=instrument,
+                    #         document=rental_document,
+                    #         description=rent_form.cleaned_data.get('document_description', ''),
+                    #     )
 
                     if comments:
                         InstrumentHistoryLog.objects.create(
@@ -215,7 +218,7 @@ def instrument_library_quick_rent(request):
                     instrument.status = LibraryInstrument.STATUS_AVAILABLE
                     instrument.member = None
                     instrument.rental_date = None
-                    instrument.agreement_signed_date = None
+                    # instrument.agreement_signed_date = None  # TODO(#250): remove
                     instrument.patreon_active = False
                     instrument.patreon_amount = None
                     instrument.save()
@@ -2325,3 +2328,232 @@ def fetch_embed_data(request):
     except Exception as e:
         logger.error(f"Unexpected error fetching embed data for URL {url}: {e}", exc_info=True)
         return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
+
+
+# ── Rental Request Admin Views ──────────────────────────────────────────────────
+
+
+class RentalRequestReviewForm(django_forms.Form):
+    unit = django_forms.ModelChoiceField(
+        queryset=LibraryInstrument.objects.none(),
+        required=False,
+        empty_label="Select a unit to assign",
+        label="Assign instrument unit",
+    )
+    message = django_forms.CharField(
+        widget=django_forms.Textarea(attrs={"rows": 4}),
+        label="Message to member",
+        required=True,
+    )
+
+    def __init__(self, *args, submission=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if submission:
+            choices = [submission.instrument]
+            if submission.second_choice:
+                choices.append(submission.second_choice)
+            if submission.third_choice:
+                choices.append(submission.third_choice)
+            qs = LibraryInstrument.objects.filter(
+                status=LibraryInstrument.STATUS_AVAILABLE,
+                instrument__in=choices,
+            ).select_related("instrument")
+            self.fields["unit"].queryset = qs
+            self.fields["unit"].label_from_instance = (
+                lambda obj: f"{obj.instrument.name} — {obj.serial_number}"
+            )
+
+
+def _send_rental_approved_email(request, submission):
+    if not (submission.member and submission.member.email):
+        return
+    site_settings = SiteSettings.for_request(request)
+    body = render_to_string(
+        "emails/instrument_rental_request_approved.txt",
+        {
+            "member": submission.member,
+            "instrument": submission.instrument,
+            "assigned_unit": submission.assigned_unit,
+            "admin_message": submission.admin_message,
+            "patreon_url": site_settings.patreon_url,
+            "contact_emails": site_settings.instrument_rental_notification_recipients,
+        },
+    )
+    _MemberEmail(
+        subject=f"Your instrument rental request has been approved — {submission.instrument.name}",
+        body=body,
+        from_email=settings.FROM_EMAIL,
+        to=[submission.member.email],
+    ).send(fail_silently=True)
+
+
+def _send_rental_denied_email(request, submission):
+    if not (submission.member and submission.member.email):
+        return
+    site_settings = SiteSettings.for_request(request)
+    body = render_to_string(
+        "emails/instrument_rental_request_denied.txt",
+        {
+            "member": submission.member,
+            "instrument": submission.instrument,
+            "admin_message": submission.admin_message,
+            "contact_emails": site_settings.instrument_rental_notification_recipients,
+        },
+    )
+    _MemberEmail(
+        subject=f"Your instrument rental request — {submission.instrument.name}",
+        body=body,
+        from_email=settings.FROM_EMAIL,
+        to=[submission.member.email],
+    ).send(fail_silently=True)
+
+
+def _send_rental_returned_email(request, submission, condition_notes):
+    site_settings = SiteSettings.for_request(request)
+    admin_recipients = [
+        e.strip()
+        for e in (site_settings.instrument_rental_notification_recipients or "").split(",")
+        if e.strip()
+    ]
+    ctx = {
+        "member": submission.member,
+        "instrument": submission.instrument,
+        "assigned_unit": submission.assigned_unit,
+        "condition_notes": condition_notes,
+        "contact_emails": site_settings.instrument_rental_notification_recipients,
+    }
+    if submission.member and submission.member.email:
+        body = render_to_string("emails/instrument_rental_request_returned.txt", ctx)
+        _MemberEmail(
+            subject=f"Your {submission.instrument.name} rental has been returned",
+            body=body,
+            from_email=settings.FROM_EMAIL,
+            to=[submission.member.email],
+        ).send(fail_silently=True)
+    if admin_recipients:
+        lines = [
+            f"{submission.name} has returned {submission.assigned_unit or submission.instrument.name}.",
+        ]
+        if condition_notes:
+            lines.append(f"\nCondition notes: {condition_notes}")
+        _MemberEmail(
+            subject=f"Instrument returned: {submission.instrument.name} — {submission.name}",
+            body="\n".join(lines),
+            from_email=settings.FROM_EMAIL,
+            to=admin_recipients,
+        ).send(fail_silently=True)
+
+
+def rental_requests_dashboard(request):
+    from django.db.models import Case, IntegerField, Value, When
+    submissions = (
+        InstrumentRentalRequestSubmission.objects.annotate(
+            status_order=Case(
+                When(status=InstrumentRentalRequestSubmission.STATUS_PENDING, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField(),
+            )
+        )
+        .order_by("status_order", "-date_submitted")
+        .select_related("member", "instrument", "second_choice", "third_choice", "assigned_unit")
+    )
+    return render(request, "wagtailadmin/rental_requests_dashboard.html", {
+        "submissions": submissions,
+    })
+
+
+def rental_request_review(request, pk):
+    submission = get_object_or_404(InstrumentRentalRequestSubmission, pk=pk)
+    form = RentalRequestReviewForm(submission=submission)
+
+    if (
+        request.method == "POST"
+        and submission.status == InstrumentRentalRequestSubmission.STATUS_PENDING
+    ):
+        action = request.POST.get("action")
+        form = RentalRequestReviewForm(request.POST, submission=submission)
+        if form.is_valid():
+            unit = form.cleaned_data.get("unit")
+            message = form.cleaned_data["message"]
+            if action == "approve":
+                if not unit:
+                    form.add_error("unit", "Please select a unit to assign for approval.")
+                else:
+                    unit.member = submission.member
+                    unit.status = LibraryInstrument.STATUS_RENTED
+                    unit.rental_date = date.today()
+                    unit.save()
+                    if submission.member:
+                        submission.member.renting = True
+                        submission.member.save()
+                    submission.status = InstrumentRentalRequestSubmission.STATUS_APPROVED
+                    submission.admin_message = message
+                    submission.assigned_unit = unit
+                    submission.save()
+                    _send_rental_approved_email(request, submission)
+                    messages.success(request, f"Approved — {submission.name} has been notified.")
+                    return redirect("rental_requests_dashboard")
+            elif action == "deny":
+                submission.status = InstrumentRentalRequestSubmission.STATUS_DENIED
+                submission.admin_message = message
+                submission.save()
+                _send_rental_denied_email(request, submission)
+                messages.success(request, f"Denied — {submission.name} has been notified.")
+                return redirect("rental_requests_dashboard")
+
+    return render(request, "wagtailadmin/rental_request_review.html", {
+        "submission": submission,
+        "form": form,
+    })
+
+
+def rental_request_return(request, pk):
+    submission = get_object_or_404(
+        InstrumentRentalRequestSubmission,
+        pk=pk,
+        status=InstrumentRentalRequestSubmission.STATUS_APPROVED,
+    )
+    unit = submission.assigned_unit
+    if not unit or unit.status != LibraryInstrument.STATUS_RENTED:
+        messages.error(request, "This instrument is not currently rented out.")
+        return redirect("rental_request_review", pk=pk)
+
+    if request.method == "POST":
+        condition_notes = request.POST.get("condition_notes", "").strip()
+        previous_member = unit.member
+
+        unit.status = LibraryInstrument.STATUS_AVAILABLE
+        unit.member = None
+        unit.rental_date = None
+        unit.patreon_active = False
+        unit.patreon_amount = None
+        unit.save()
+
+        if previous_member:
+            still_renting = LibraryInstrument.objects.filter(
+                member=previous_member, status=LibraryInstrument.STATUS_RENTED
+            ).exists()
+            if not still_renting:
+                previous_member.renting = False
+                previous_member.save()
+
+        if condition_notes:
+            InstrumentHistoryLog.objects.create(
+                library_instrument=unit,
+                event_category=InstrumentHistoryLog.EVENT_RETURN_NOTE,
+                event_date=timezone.localdate(),
+                notes=f"Return notes: {condition_notes}",
+                user=request.user,
+            )
+
+        submission.status = InstrumentRentalRequestSubmission.STATUS_RETURNED
+        submission.save()
+
+        _send_rental_returned_email(request, submission, condition_notes)
+
+        messages.success(request, f"Instrument returned from {submission.name}.")
+        return redirect("rental_requests_dashboard")
+
+    return render(request, "wagtailadmin/rental_request_return.html", {
+        "submission": submission,
+    })

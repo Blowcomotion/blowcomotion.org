@@ -193,10 +193,10 @@ class SectionViewSet(SnippetViewSet):
 
 class InstrumentViewSet(SnippetViewSet):
     model = None
-    menu_label = 'Instruments'
+    menu_label = 'Instrument Types'
     menu_name = 'instruments'
     icon = 'french-horn'
-    list_display = ["name", "section", UpdatedAtColumn()]
+    list_display = ["name", "section", "hide_from_rental", "hide_from_member_forms", UpdatedAtColumn()]
     list_filter = ["section"]
     search_fields = ("name", "description")
     panels = [
@@ -204,6 +204,8 @@ class InstrumentViewSet(SnippetViewSet):
         "section",
         "description",
         "image",
+        "hide_from_rental",
+        "hide_from_member_forms",
     ]
 
     def __init__(self, *args, **kwargs):
@@ -386,6 +388,8 @@ class LibraryInstrumentViewSet(SnippetViewSet):
         'storage_location',
         DateColumn('rental_date', label='Rental Date'),
         'patreon_active',
+        'hide_from_rental',
+        'hide_from_member_forms',
         UpdatedAtColumn()
     ]
     filterset_class = None  # Set in __init__
@@ -399,11 +403,8 @@ class LibraryInstrumentViewSet(SnippetViewSet):
             'storage_location',
         ], heading="Basic Information"),
         MultiFieldPanel([
-            FieldRowPanel([
-                'rental_date',
-                'agreement_signed_date',
-            ]),
-        ], heading="Rental Dates"),
+            'rental_date',
+        ], heading="Rental Date"),
         MultiFieldPanel([
             FieldRowPanel([
                 'acquisition_cost',
@@ -415,9 +416,12 @@ class LibraryInstrumentViewSet(SnippetViewSet):
             'patreon_active',
             'patreon_amount',
         ], heading="Patreon Support"),
+        MultiFieldPanel([
+            'hide_from_rental',
+            'hide_from_member_forms',
+        ], heading="Visibility"),
         FieldPanel('comments'),
         InlinePanel('photos', label="Photos"),
-        InlinePanel('rental_documents', label="Rental Documents"),
         InlinePanel('history_logs', label="History Log", help_text="Event history for this instrument"),
     ]
 
@@ -712,8 +716,39 @@ class DonateFormSubmissionViewset(SnippetViewSet):
         super().__init__(*args, **kwargs)
 
 
+class InstrumentRentalRequestSubmissionViewset(SnippetViewSet):
+    model = None
+    menu_label = "Instrument Rental Requests"
+    menu_name = "instrument_rental_requests"
+    menu_icon = "bi-music-note-beamed"
+    list_display = ["name", "email", "instrument", "status", "is_waitlist", "date_submitted"]
+    search_fields = ("name", "email")
+    panels = [
+        "member",
+        "name",
+        "email",
+        "phone",
+        "address",
+        "instrument",
+        "second_choice",
+        "third_choice",
+        "is_waitlist",
+        "status",
+        "patreon_validated",
+        "admin_message",
+        "assigned_unit",
+        "message",
+        "policy_acknowledged",
+    ]
+
+    def __init__(self, *args, **kwargs):
+        from .models import InstrumentRentalRequestSubmission
+        self.model = InstrumentRentalRequestSubmission
+        super().__init__(*args, **kwargs)
+
+
 class FormsViewSetGroup(SnippetViewSetGroup):
-    items = (ContactFormSubmissionViewset, FeedbackFormSubmissionViewset, JoinBandFormSubmissionViewset, BookingFormSubmissionViewset, DonateFormSubmissionViewset, )
+    items = (ContactFormSubmissionViewset, FeedbackFormSubmissionViewset, JoinBandFormSubmissionViewset, BookingFormSubmissionViewset, DonateFormSubmissionViewset, InstrumentRentalRequestSubmissionViewset, )
     menu_icon = 'clipboard-list'
     menu_label = 'Form Submissions'
     menu_name = 'forms'

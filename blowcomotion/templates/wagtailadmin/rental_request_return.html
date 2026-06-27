@@ -1,0 +1,30 @@
+{% extends "wagtailadmin/base.html" %}
+{% block titletag %}Return Instrument{% endblock %}
+{% block content %}
+<div class="nice-padding">
+    <h1>Return Instrument</h1>
+    <p><a href="{% url 'rental_request_review' submission.pk %}" class="button button-secondary">Back</a></p>
+
+    <section class="w-panel">
+        <header class="w-panel__header"><h2 class="w-panel__heading">Confirm Return</h2></header>
+        <div class="w-panel__content">
+            <dl class="dl-horizontal">
+                <dt>Member</dt><dd>{{ submission.name }}</dd>
+                <dt>Instrument</dt><dd>{{ submission.assigned_unit }}</dd>
+            </dl>
+            <form method="post">
+                {% csrf_token %}
+                <div class="field">
+                    <label class="field__label">Condition notes (optional)</label>
+                    <div class="field-content">
+                        <textarea name="condition_notes" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div style="margin-top:1rem;">
+                    <button type="submit" class="button warning">Confirm Return</button>
+                </div>
+            </form>
+        </div>
+    </section>
+</div>
+{% endblock %}

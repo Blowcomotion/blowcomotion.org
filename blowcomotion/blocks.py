@@ -342,7 +342,7 @@ class MemberSignupFormBlock(blocks.StructBlock):
         # Import here to avoid circular imports
         from blowcomotion.forms import MemberSignupForm
         from blowcomotion.models import Instrument
-        context['instruments'] = Instrument.objects.all().order_by('name')
+        context['instruments'] = Instrument.objects.filter(hide_from_member_forms=False).order_by('name')
         context['shirt_size_choices'] = MemberSignupForm.SHIRT_SIZE_CHOICES
         context['dietary_choices'] = MemberSignupForm.DIETARY_CHOICES
         context['allergen_choices'] = MemberSignupForm.ALLERGEN_CHOICES

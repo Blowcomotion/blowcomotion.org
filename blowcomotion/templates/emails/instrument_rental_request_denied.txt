@@ -1,0 +1,13 @@
+Dear {{ member.full_name }},
+
+Thank you for your interest in renting a {{ instrument.name }}.
+
+After reviewing your request, we are unable to fulfill it at this time.
+
+Message from the library team:
+{{ admin_message }}
+
+If you have any questions, please reach out to the instrument library team:
+{{ contact_emails }}
+
+— Blowcomotion Instrument Library

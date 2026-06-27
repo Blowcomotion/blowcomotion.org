@@ -1,7 +1,8 @@
 from django import forms
+from django.db.models import Count, Q
 
 from blowcomotion.forms import MemberSignupForm
-from blowcomotion.models import Instrument, Member
+from blowcomotion.models import Instrument, LibraryInstrument, Member
 
 SHIRT_SIZE_CHOICES = MemberSignupForm.SHIRT_SIZE_CHOICES
 DIETARY_CHOICES = MemberSignupForm.DIETARY_CHOICES
@@ -25,7 +26,7 @@ class GetAccessForm(forms.Form):
 
 class MemberProfileForm(forms.ModelForm):
     additional_instruments = forms.ModelMultipleChoiceField(
-        queryset=Instrument.objects.all().order_by("name"),
+        queryset=Instrument.objects.filter(hide_from_member_forms=False).order_by("name"),
         required=False,
         widget=forms.CheckboxSelectMultiple,
         label="Additional instruments",
@@ -64,6 +65,9 @@ class MemberProfileForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["primary_instrument"].queryset = Instrument.objects.filter(
+            hide_from_member_forms=False
+        ).order_by("name")
         if self.instance and self.instance.pk:
             self.fields["additional_instruments"].initial = list(
                 self.instance.additional_instruments.values_list("instrument_id", flat=True)
@@ -77,3 +81,61 @@ class MemberProfileForm(forms.ModelForm):
                 field.widget.attrs.setdefault("class", "form-check-input")
             else:
                 field.widget.attrs.setdefault("class", "form-control")
+
+
+class InstrumentRentalRequestForm(forms.Form):
+    instrument = forms.ModelChoiceField(
+        queryset=Instrument.objects.none(),
+        empty_label="Select an instrument",
+        label="Instrument",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    second_choice = forms.ModelChoiceField(
+        queryset=Instrument.objects.none(),
+        required=False,
+        empty_label="No second choice",
+        label="Second choice (optional)",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    third_choice = forms.ModelChoiceField(
+        queryset=Instrument.objects.none(),
+        required=False,
+        empty_label="No third choice",
+        label="Third choice (optional)",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    notes = forms.CharField(
+        required=False,
+        label="Notes",
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+    )
+    policy_acknowledged = forms.BooleanField(
+        required=True,
+        label="I have read and agree to the Instrument Lending Policy",
+        error_messages={"required": "You must acknowledge the policy to submit this request."},
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        base_qs = Instrument.objects.filter(hide_from_rental=False).annotate(
+            available_count=Count(
+                "library_inventory",
+                filter=Q(library_inventory__status=LibraryInstrument.STATUS_AVAILABLE),
+            )
+        )
+        qs_first = base_qs.filter(library_inventory__isnull=False).distinct().order_by("name")
+        qs_optional = base_qs.order_by("name")
+
+        def label_fn(obj):
+            return (
+                f"{obj.name} ({obj.available_count} available)"
+                if obj.available_count > 0
+                else f"{obj.name} (waitlist — 0 available)"
+            )
+
+        self.fields["instrument"].queryset = qs_first
+        self.fields["instrument"].label_from_instance = label_fn
+        for field_name in ("second_choice", "third_choice"):
+            self.fields[field_name].queryset = qs_optional
+            self.fields[field_name].label_from_instance = label_fn

@@ -118,6 +118,10 @@ class SiteSettings(BaseSiteSetting):
         null=True,
         help_text="Comma-separated list of email addresses to receive instrument rental notifications",
     )
+    instrument_rental_policy = RichTextField(
+        blank=True,
+        help_text="Lending policy text displayed on the instrument rental request form.",
+    )
     venmo_donate_url = models.URLField(
         blank=True,
         null=True,
@@ -190,7 +194,11 @@ class SiteSettings(BaseSiteSetting):
             FieldPanel('attendance_report_notification_recipients'),
             FieldPanel('member_signup_notification_recipients'),
         ], heading="Form Email Recipients"),
-        
+
+        MultiFieldPanel([
+            FieldPanel('instrument_rental_policy'),
+        ], heading="Instrument Rental Policy"),
+
         MultiFieldPanel([
             FieldPanel('venmo_donate_url'),
             FieldPanel('square_donate_url'),
@@ -483,6 +491,22 @@ class Instrument(models.Model, index.Indexed):
         on_delete=models.SET_NULL,
         related_name="+",
     )
+    hide_from_rental = models.BooleanField(
+        default=False,
+        help_text=(
+            "Hide this instrument type from the rental request form. Use for instruments "
+            "we carry but don't offer for general rental — e.g. a bass clarinet added to "
+            "inventory because a member brought their own, but too rare to offer to others."
+        ),
+    )
+    hide_from_member_forms = models.BooleanField(
+        default=False,
+        help_text=(
+            "Hide this instrument type from member profile and signup instrument selectors. "
+            "Use for instruments members don't play but exist in inventory — e.g. a prop "
+            "instrument or one not assigned to any section."
+        ),
+    )
     image = models.ForeignKey(
         "blowcomotion.CustomImage",
         null=True,
@@ -501,8 +525,8 @@ class Instrument(models.Model, index.Indexed):
         return self.name
 
     class Meta:
-        verbose_name = "Instrument"
-        verbose_name_plural = "Instruments"
+        verbose_name = "Instrument Type"
+        verbose_name_plural = "Instrument Types"
 
 
 class MemberInstrument(Orderable):
@@ -1419,6 +1443,20 @@ class LibraryInstrument(DraftStateMixin, RevisionMixin, LockableMixin, Clusterab
         help_text="Current availability of this instrument",
     )
     serial_number = models.TextField(help_text="Serial number or other identifying marks")
+    hide_from_rental = models.BooleanField(
+        default=False,
+        help_text=(
+            "Hide this specific unit from the rental request form. Use when a unit is "
+            "damaged, reserved, or otherwise unavailable without removing it from inventory."
+        ),
+    )
+    hide_from_member_forms = models.BooleanField(
+        default=False,
+        help_text=(
+            "Hide this specific unit from member-facing instrument selectors. Use when "
+            "a unit should not be visible to members but remains in admin inventory."
+        ),
+    )
     member = models.ForeignKey(
         "blowcomotion.Member",
         null=True,
@@ -1431,11 +1469,6 @@ class LibraryInstrument(DraftStateMixin, RevisionMixin, LockableMixin, Clusterab
         null=True,
         blank=True,
         help_text="Date the instrument was lent to the current member",
-    )
-    agreement_signed_date = models.DateField(
-        null=True,
-        blank=True,
-        help_text="Date the rental agreement was signed",
     )
     acquisition_cost = models.DecimalField(
         max_digits=10,
@@ -1660,35 +1693,6 @@ class LibraryInstrumentPhoto(Orderable):
 
     def __str__(self):
         return f"Photo for {self.library_instrument}"
-
-
-class LibraryInstrumentDocument(Orderable):
-    """Rental documents (agreements, receipts, etc.) attached to a library instrument."""
-    
-    library_instrument = ParentalKey(
-        "blowcomotion.LibraryInstrument",
-        related_name="rental_documents",
-        on_delete=models.CASCADE,
-    )
-    document = models.ForeignKey(
-        "wagtaildocs.Document",
-        on_delete=models.CASCADE,
-        related_name="+",
-    )
-    description = models.CharField(
-        max_length=255,
-        blank=True,
-        help_text="e.g. 'Rental Agreement', 'Receipt', 'Return Inspection Form'"
-    )
-    uploaded_date = models.DateField(auto_now_add=True)
-
-    panels = [
-        FieldPanel("document"),
-        FieldPanel("description"),
-    ]
-
-    def __str__(self):
-        return f"Document for {self.library_instrument}: {self.description or self.document.title}"
 
 
 class InstrumentHistoryLog(models.Model):
@@ -1993,3 +1997,75 @@ class DonateFormSubmission(BaseFormSubmission):
 
     def __str__(self):
         return f"Donate Form Submission from {self.name} on {self.date_submitted}"
+
+
+class InstrumentRentalRequestSubmission(BaseFormSubmission):
+    """Member portal instrument rental requests. `message` field stores optional notes."""
+
+    STATUS_PENDING = "pending"
+    STATUS_APPROVED = "approved"
+    STATUS_DENIED = "denied"
+    STATUS_RETURNED = "returned"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_APPROVED, "Approved"),
+        (STATUS_DENIED, "Denied"),
+        (STATUS_RETURNED, "Returned"),
+    ]
+
+    member = models.ForeignKey(
+        "blowcomotion.Member",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="rental_requests",
+    )
+    instrument = models.ForeignKey(
+        "blowcomotion.Instrument",
+        on_delete=models.PROTECT,
+        related_name="rental_requests",
+    )
+    second_choice = models.ForeignKey(
+        "blowcomotion.Instrument",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="rental_requests_second_choice",
+    )
+    third_choice = models.ForeignKey(
+        "blowcomotion.Instrument",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="rental_requests_third_choice",
+    )
+    is_waitlist = models.BooleanField(default=False)
+    phone = models.CharField(max_length=255, blank=True, null=True)
+    address = models.CharField(max_length=255, blank=True, null=True)
+    policy_acknowledged = models.BooleanField(default=False)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+    )
+    patreon_validated = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text="Set automatically via Patreon API at submission time. Active = confirmed; Inactive = not found or inactive; Unknown = API not configured or check failed.",
+    )
+    admin_message = models.TextField(blank=True)
+    assigned_unit = models.ForeignKey(
+        "blowcomotion.LibraryInstrument",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="rental_assignments",
+    )
+
+    def __str__(self):
+        return f"{self.name} — {self.instrument} ({self.status}) on {self.date_submitted:%Y-%m-%d}"
+
+    class Meta:
+        ordering = ["-date_submitted"]
+        verbose_name = "Instrument Rental Request"
+        verbose_name_plural = "Instrument Rental Requests"
