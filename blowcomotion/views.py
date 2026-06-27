@@ -987,11 +987,16 @@ def dump_data(request):
     # Base arguments for `dumpdata`
     # Always exclude auth users and site settings (may contain credentials and other sensitive data)
     base_args = [
-        '--natural-primary', '--natural-foreign', '--indent', '2',
-        '-e', 'contenttypes', '-e', 'auth.permission', 
-        '-e', 'wagtailcore.groupcollectionpermission', '-e', 'wagtailcore.grouppagepermission', '-e', 'wagtailcore.referenceindex', 
-        '-e', 'wagtailimages.rendition', '-e', 'sessions', '-e', 'wagtailsearch', '-e', 'wagtailcore.pagelogentry', '-e', 'wagtailcore.revision', '-e', 'wagtailcore.taskstate', '-e', 'wagtailcore.workflowstate', '-e', 'wagtailcore.comment',
+        '--natural-foreign', '--indent', '2',
+        '-e', 'contenttypes', '-e', 'auth.permission',
+        '-e', 'wagtailcore.groupcollectionpermission', '-e', 'wagtailcore.grouppagepermission', '-e', 'wagtailcore.referenceindex',
+        '-e', 'wagtailimages.rendition', '-e', 'blowcomotion.customrendition',
+        '-e', 'sessions', '-e', 'wagtailsearch', '-e', 'wagtailcore.pagelogentry', '-e', 'wagtailcore.revision', '-e', 'wagtailcore.taskstate', '-e', 'wagtailcore.workflowstate', '-e', 'wagtailcore.comment',
         '-e', 'auth.user', '-e', 'blowcomotion.sitesettings',
+        '-e', 'admin.logentry', '-e', 'axes.accesslog',
+        '-e', 'wagtailcore.modellogentry', '-e', 'wagtailcore.pagesubscription',
+        '-e', 'wagtailadmin.editingsession', '-e', 'wagtailadmin.formstate',
+        '-e', 'wagtailusers.userprofile',
     ]
     
     args = base_args
@@ -1021,12 +1026,17 @@ def dump_data(request):
         # Clear user FKs that would otherwise reference excluded `auth.user` records
         # (e.g. wagtailimages.Image.uploaded_by_user, LibraryInstrument.locked_by, InstrumentHistoryLog.user)
         user_fk_field_names = {'uploaded_by_user', 'user', 'locked_by', 'owner'}
+        # Optional FileFields serialized as "" instead of null cause DeserializationError on load
+        empty_string_file_fields = {'thumbnail', 'avatar'}
         for item in data:
             fields = item.get('fields')
             if not fields:
                 continue
             for field_name in user_fk_field_names:
                 if field_name in fields:
+                    fields[field_name] = None
+            for field_name in empty_string_file_fields:
+                if fields.get(field_name) == '':
                     fields[field_name] = None
 
         # Scrub member data in-place if not including real data
