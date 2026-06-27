@@ -440,6 +440,14 @@ def instrument_rental_request(request):
                     from_email=settings.FROM_EMAIL,
                     to=[member.email],
                 ).send(fail_silently=True)
+                extra_email = settings.FORM_TEST_EMAIL if hasattr(settings, "FORM_TEST_EMAIL") else None
+                if extra_email:
+                    _MemberEmail(
+                        subject=f"Your instrument rental request — {instrument.name}",
+                        body=pending_body,
+                        from_email=settings.FROM_EMAIL,
+                        to=[extra_email],
+                    ).send(fail_silently=True)
 
             return render(request, "member/instrument_rental_request.html", {
                 "member": member,
