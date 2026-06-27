@@ -11,6 +11,8 @@ ALLOWED_HOSTS = ["*"]
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
+MEDIA_URL = "https://blowcomotion.org/media/"
+
 # GO3 Local Development Settings
 GIGO_API_URL = None
 # Set a test API key (you'll need to generate this in GO3)
