@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_GET
 
 from blowcomotion.member_auth import (
     _MemberEmail,
@@ -294,7 +295,22 @@ def profile_view(request):
 def requests_view(request):
     if not hasattr(request.user, "member"):
         return redirect("/")
-    return render(request, "member/requests.html", {"member": request.user.member})
+    member = request.user.member
+    rental_requests = member.rental_requests.select_related("instrument")
+    return render(request, "member/requests.html", {"member": member, "rental_requests": rental_requests})
+
+
+@login_required
+@require_GET
+def rental_request_detail(request, pk):
+    if not hasattr(request.user, "member"):
+        return redirect("/")
+    rental_request = get_object_or_404(
+        InstrumentRentalRequestSubmission.objects.select_related("instrument", "second_choice", "third_choice"),
+        pk=pk,
+        member=request.user.member,
+    )
+    return render(request, "member/rental_request_detail.html", {"rental_request": rental_request})
 
 
 @login_required

@@ -1,0 +1,53 @@
+{% extends "member/portal_base.html" %}
+{% block title %}Rental Request — Blowcomotion{% endblock %}
+{% block portal_content %}
+<a href="{% url 'member-requests' %}" class="text-muted text-decoration-none d-block mb-3">&larr; My Requests</a>
+<h2 class="mb-4">{{ rental_request.instrument }}</h2>
+
+{% if rental_request.status == "pending" and rental_request.patreon_validated == False %}
+<div class="alert alert-warning">
+    We were unable to confirm your active Patreon membership. Please make sure you have completed your Patreon membership before an admin can finalize your rental. If you believe this is an error, contact us.
+</div>
+{% endif %}
+
+<dl class="row">
+    <dt class="col-sm-4">Status</dt>
+    <dd class="col-sm-8">
+        {% if rental_request.status == "pending" %}
+            <span class="badge bg-warning text-dark">Pending</span>
+        {% elif rental_request.status == "approved" %}
+            <span class="badge bg-success">Approved</span>
+        {% elif rental_request.status == "denied" %}
+            <span class="badge bg-danger">Denied</span>
+        {% elif rental_request.status == "returned" %}
+            <span class="badge bg-secondary">Returned</span>
+        {% else %}
+            <span class="badge bg-light text-dark">{{ rental_request.get_status_display }}</span>
+        {% endif %}
+    </dd>
+
+    <dt class="col-sm-4">Date Submitted</dt>
+    <dd class="col-sm-8">{{ rental_request.date_submitted|date:"N j, Y" }}</dd>
+
+    <dt class="col-sm-4">First Choice</dt>
+    <dd class="col-sm-8">
+        {{ rental_request.instrument }}
+        {% if rental_request.is_waitlist %}<span class="badge bg-secondary ms-1">Waitlist</span>{% endif %}
+    </dd>
+
+    {% if rental_request.second_choice %}
+    <dt class="col-sm-4">Second Choice</dt>
+    <dd class="col-sm-8">{{ rental_request.second_choice }}</dd>
+    {% endif %}
+
+    {% if rental_request.third_choice %}
+    <dt class="col-sm-4">Third Choice</dt>
+    <dd class="col-sm-8">{{ rental_request.third_choice }}</dd>
+    {% endif %}
+
+    {% if rental_request.admin_message %}
+    <dt class="col-sm-4">Message from Admin</dt>
+    <dd class="col-sm-8">{{ rental_request.admin_message }}</dd>
+    {% endif %}
+</dl>
+{% endblock %}

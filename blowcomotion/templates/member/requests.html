@@ -2,7 +2,49 @@
 {% block title %}My Requests — Blowcomotion{% endblock %}
 {% block portal_content %}
 <h2 class="mb-4">My Requests</h2>
-<div class="alert alert-info">
-    <strong>Coming soon.</strong> Your instrument rental requests will appear here once the rental system is updated.
+{% if rental_requests %}
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Instrument</th>
+                <th>Submitted</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for req in rental_requests %}
+            <tr>
+                <td>
+                    {{ req.instrument }}
+                    {% if req.is_waitlist %}<span class="badge bg-secondary ms-1">Waitlist</span>{% endif %}
+                </td>
+                <td>{{ req.date_submitted|date:"N j, Y" }}</td>
+                <td>
+                    {% if req.status == "pending" %}
+                        <span class="badge bg-warning text-dark">Pending</span>
+                    {% elif req.status == "approved" %}
+                        <span class="badge bg-success">Approved</span>
+                    {% elif req.status == "denied" %}
+                        <span class="badge bg-danger">Denied</span>
+                    {% elif req.status == "returned" %}
+                        <span class="badge bg-secondary">Returned</span>
+                    {% else %}
+                        <span class="badge bg-light text-dark">{{ req.get_status_display }}</span>
+                    {% endif %}
+                    {% if req.status == "pending" and req.patreon_validated == False %}
+                        <br><span class="badge bg-warning text-dark mt-1" title="Patreon membership not confirmed">Patreon pending</span>
+                    {% endif %}
+                </td>
+                <td><a href="{% url 'member-rental-request-detail' req.pk %}" class="btn btn-sm site-btn">Details</a></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
 </div>
+{% else %}
+<p class="text-muted">You have not submitted any instrument rental requests yet.</p>
+<a href="{% url 'member-instrument-rental' %}" class="site-btn">Request an Instrument</a>
+{% endif %}
 {% endblock %}
