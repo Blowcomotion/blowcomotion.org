@@ -990,7 +990,6 @@ def dump_data(request):
         '--natural-foreign', '--indent', '2',
         '-e', 'contenttypes', '-e', 'auth.permission',
         '-e', 'wagtailcore.groupcollectionpermission', '-e', 'wagtailcore.grouppagepermission', '-e', 'wagtailcore.referenceindex',
-        '-e', 'wagtailimages.rendition', '-e', 'blowcomotion.customrendition',
         '-e', 'sessions', '-e', 'wagtailsearch', '-e', 'wagtailcore.pagelogentry', '-e', 'wagtailcore.revision', '-e', 'wagtailcore.taskstate', '-e', 'wagtailcore.workflowstate', '-e', 'wagtailcore.comment',
         '-e', 'auth.user',
         '-e', 'admin.logentry', '-e', 'axes.accesslog',
