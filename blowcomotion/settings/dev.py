@@ -11,8 +11,6 @@ ALLOWED_HOSTS = ["*"]
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-MEDIA_URL = "https://blowcomotion.org/media/"
-
 # GO3 Local Development Settings
 GIGO_API_URL = None
 # Set a test API key (you'll need to generate this in GO3)
@@ -30,3 +28,6 @@ try:
     from .local import *
 except ImportError:
     pass
+
+# Must come after local.py import — local.py re-imports base.py which resets MEDIA_URL
+MEDIA_URL = "https://www.blowcomotion.org/media/"
