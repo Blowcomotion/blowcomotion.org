@@ -316,6 +316,7 @@ def rental_request_detail(request, pk):
 @login_required
 def instrument_rental_request(request):
     if not hasattr(request.user, "member"):
+        logger.info(f"User without member attribute attempted to access instrument rental request: {request.user}")
         return redirect("/")
     member = request.user.member
     site_settings = SiteSettings.for_request(request)
