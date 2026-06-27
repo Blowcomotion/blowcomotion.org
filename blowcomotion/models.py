@@ -2061,6 +2061,14 @@ class InstrumentRentalRequestSubmission(BaseFormSubmission):
         on_delete=models.SET_NULL,
         related_name="rental_assignments",
     )
+    prior_storage_location = models.ForeignKey(
+        "blowcomotion.InstrumentStorageLocation",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text="Storage location the instrument was in before being rented out. Restored on return.",
+    )
 
     def __str__(self):
         return f"{self.name} — {self.instrument} ({self.status}) on {self.date_submitted:%Y-%m-%d}"
