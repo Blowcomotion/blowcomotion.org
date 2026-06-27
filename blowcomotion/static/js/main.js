@@ -44,7 +44,7 @@
         items: 3,
         dots: false,
         nav: true,
-        navText: ["<i class='fa fa-angle-left'></i>","<i class='fa fa-angle-right'></i>"],
+        navText: ["<i class='fa fa-angle-left' aria-hidden='true'></i>","<i class='fa fa-angle-right' aria-hidden='true'></i>"],
         smartSpeed: 1200,
         autoHeight: false,
         autoplay: true,
@@ -60,6 +60,8 @@
             },
         }
     });
+    $(".event__slider .owl-prev").attr("aria-label", "Previous");
+    $(".event__slider .owl-next").attr("aria-label", "Next");
     
     /*--------------------------
         Videos Slider
@@ -70,7 +72,7 @@
         items: 4,
         dots: false,
         nav: true,
-        navText: ["<i class='fa fa-angle-left'></i>","<i class='fa fa-angle-right'></i>"],
+        navText: ["<i class='fa fa-angle-left' aria-hidden='true'></i>","<i class='fa fa-angle-right' aria-hidden='true'></i>"],
         smartSpeed: 1200,
         autoHeight: false,
         autoplay: true,
@@ -89,6 +91,8 @@
             }
         }
     });
+    $(".videos__slider .owl-prev").attr("aria-label", "Previous");
+    $(".videos__slider .owl-next").attr("aria-label", "Next");
 
     /*--------------------------
         Image Carousel Slider
@@ -107,7 +111,7 @@
             dots: showDots,
             dotsEach: false,
             nav: true,
-            navText: ["<i class='fa fa-angle-left'></i>","<i class='fa fa-angle-right'></i>"],
+            navText: ["<i class='fa fa-angle-left' aria-hidden='true'></i>","<i class='fa fa-angle-right' aria-hidden='true'></i>"],
             smartSpeed: 1200,
             autoHeight: false,
             autoplay: autoplay,
@@ -134,6 +138,11 @@
         };
         
         $slider.owlCarousel(owlConfig);
+        $slider.find(".owl-prev").attr("aria-label", "Previous");
+        $slider.find(".owl-next").attr("aria-label", "Next");
+        $slider.find(".owl-dot").each(function(i) {
+            $(this).attr("aria-label", "Slide " + (i + 1));
+        });
     });
 
     /*------------------

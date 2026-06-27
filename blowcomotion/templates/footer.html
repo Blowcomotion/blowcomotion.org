@@ -9,7 +9,7 @@
                             <li>
                                 <i class="fa fa-envelope"></i>
                                 <p>Email</p>
-                                <h6>{{ settings.blowcomotion.SiteSettings.email }}</h6>
+                                <p class="h6">{{ settings.blowcomotion.SiteSettings.email }}</p>
                             </li>
                         </ul>
                     </div>
@@ -19,9 +19,9 @@
                 <div class="footer__social">
                     {% if settings.blowcomotion.SiteSettings.footer_text %}<h2>{{ settings.blowcomotion.SiteSettings.footer_text }}</h2>{% endif %}
                     <div class="footer__social__links">
-                        {% if settings.blowcomotion.SiteSettings.facebook %}<a href="{{ settings.blowcomotion.SiteSettings.facebook }}"><i class="fa fa-facebook"></i></a>{% endif %}
-                        {% if settings.blowcomotion.SiteSettings.twitter %}<a href="{{ settings.blowcomotion.SiteSettings.twitter }}"><i class="fa fa-twitter"></i></a>{% endif %}
-                        {% if settings.blowcomotion.SiteSettings.instagram %}<a href="{{ settings.blowcomotion.SiteSettings.instagram }}"><i class="fa fa-instagram"></i></a>{% endif %}
+                        {% if settings.blowcomotion.SiteSettings.facebook %}<a href="{{ settings.blowcomotion.SiteSettings.facebook }}" aria-label="Facebook"><i class="fa fa-facebook"></i></a>{% endif %}
+                        {% if settings.blowcomotion.SiteSettings.twitter %}<a href="{{ settings.blowcomotion.SiteSettings.twitter }}" aria-label="Twitter"><i class="fa fa-twitter"></i></a>{% endif %}
+                        {% if settings.blowcomotion.SiteSettings.instagram %}<a href="{{ settings.blowcomotion.SiteSettings.instagram }}" aria-label="Instagram"><i class="fa fa-instagram"></i></a>{% endif %}
                     </div>
                 </div>
             </div>

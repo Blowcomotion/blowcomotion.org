@@ -13,7 +13,7 @@
                     <h2 class="text-uppercase text-muted">{{ value.subtitle }}</h2>
                     {% endif %}
                     {% if value.title %}
-                    <h1>{{ value.title }}</h1>
+                    <span class="section-bg-text">{{ value.title }}</span>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -36,11 +36,11 @@
                         {% else %}
                             <div class="video-feed__thumbnail-placeholder bg-dark" style="padding-top: 56.25%;"></div>
                         {% endif %}
-                        <a href="#" class="play-btn"><i class="fa fa-play"></i></a>
+                        <a href="#" class="play-btn" aria-label="Play {{ featured_video.overrides.title_override|default:featured_video.title }}"><i class="fa fa-play"></i></a>
                         {% if featured_video.overrides.title_override or featured_video.title or featured_video.overrides.description %}
                         <div class="video-feed__featured-text">
                             {% if featured_video.overrides.title_override or featured_video.title %}
-                            <h4>{{ featured_video.overrides.title_override|default:featured_video.title }}</h4>
+                            <h3>{{ featured_video.overrides.title_override|default:featured_video.title }}</h3>
                             {% endif %}
                             {% if featured_video.overrides.description %}
                             <ul>
@@ -75,12 +75,12 @@
                                     {% else %}
                                         <div class="video-feed__thumbnail-placeholder bg-dark" style="padding-top: 56.25%;"></div>
                                     {% endif %}
-                                    <a href="#" class="play-btn"><i class="fa fa-play"></i></a>
+                                    <a href="#" class="play-btn" aria-label="Play {{ video.overrides.title_override|default:video.title }}"><i class="fa fa-play"></i></a>
                                 </div>
                                 {% if video.overrides.title_override or video.title or video.overrides.description %}
                                 <div class="video-feed__item-text">
                                     {% if video.overrides.title_override or video.title %}
-                                    <h5>{{ video.overrides.title_override|default:video.title }}</h5>
+                                    <h3>{{ video.overrides.title_override|default:video.title }}</h3>
                                     {% endif %}
                                     {% if video.overrides.description %}
                                     <ul>
