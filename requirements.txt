@@ -1,5 +1,6 @@
 argon2-cffi
 Django==6.0.6
+requests
 django-axes
 django-compressor==4.6.0
 django-libsass==0.9
