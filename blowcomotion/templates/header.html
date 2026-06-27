@@ -5,7 +5,7 @@
             <div class="col-lg-2 col-md-2">
                 <div class="header__logo">
                     {% with logo=settings.blowcomotion.SiteSettings.logo %}
-                        <a href='/'>{% image logo original class="img-fluid" %}</a>
+                        <a href='/' aria-label="Home">{% image logo original class="img-fluid" %}</a>
                     {% endwith %}
                 </div>
             </div>
@@ -47,8 +47,8 @@
                     </nav>
                     {% if settings.blowcomotion.SiteSettings.facebook or settings.blowcomotion.SiteSettings.instagram %}
                         <div class="header__right__social">
-                            {% if settings.blowcomotion.SiteSettings.facebook %}<a href="{{ settings.blowcomotion.SiteSettings.facebook }}"><i class="fa fa-facebook"></i></a>{% endif %}
-                            {% if settings.blowcomotion.SiteSettings.instagram %}<a href="{{ settings.blowcomotion.SiteSettings.instagram }}"><i class="fa fa-instagram"></i></a>{% endif %}
+                            {% if settings.blowcomotion.SiteSettings.facebook %}<a href="{{ settings.blowcomotion.SiteSettings.facebook }}" aria-label="Facebook"><i class="fa fa-facebook"></i></a>{% endif %}
+                            {% if settings.blowcomotion.SiteSettings.instagram %}<a href="{{ settings.blowcomotion.SiteSettings.instagram }}" aria-label="Instagram"><i class="fa fa-instagram"></i></a>{% endif %}
                         </div>
                     {% endif %}
                     <div class="header__member-auth ms-3">

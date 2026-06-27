@@ -10,7 +10,7 @@
                         {% if value.middle_line %}<h1>{{ value.middle_line }}</h1>{% endif %}
                         {% if value.bottom_line %}<p>{{ value.bottom_line }}</p>{% endif %}
                         {% if value.youtube_url %}
-                            <a href="#" class="play-btn video-popup-trigger" data-video-url="{{ youtube_embed_url }}"><i class="fa fa-play"></i></a>
+                            <a href="#" class="play-btn video-popup-trigger" data-video-url="{{ youtube_embed_url }}" aria-label="Play video"><i class="fa fa-play"></i></a>
                         {% endif %}
                     </div>
                 </div>
