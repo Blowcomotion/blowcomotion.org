@@ -7,7 +7,12 @@ from django.test import TestCase
 from django.urls import reverse
 
 from blowcomotion.member_auth import create_member_user
-from blowcomotion.models import EmailChangeToken, Member
+from blowcomotion.models import (
+    EmailChangeToken,
+    Instrument,
+    InstrumentRentalRequestSubmission,
+    Member,
+)
 
 User = get_user_model()
 
@@ -224,15 +229,76 @@ class ConfirmEmailViewTests(TestCase):
         self.assertContains(response, "expired")
 
 
-class RequestsStubTests(TestCase):
+class RentalRequestsViewTests(TestCase):
     def setUp(self):
-        member = make_member()
-        user = create_member_user(member)
-        user.set_password("Pass123!")
-        user.save()
+        self.member = make_member()
+        self.user = create_member_user(self.member)
+        self.user.set_password("Pass123!")
+        self.user.save()
         self.client.login(username="robin@example.com", password="Pass123!")
+        self.instrument = Instrument.objects.create(name="Trumpet")
 
-    def test_requests_page_renders(self):
+    def _make_request(self, **kwargs):
+        defaults = dict(
+            member=self.member,
+            instrument=self.instrument,
+            name=self.member.full_name,
+            email=self.member.email,
+        )
+        defaults.update(kwargs)
+        return InstrumentRentalRequestSubmission.objects.create(**defaults)
+
+    def test_empty_state_shows_link(self):
         response = self.client.get(reverse("member-requests"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Coming soon")
+        self.assertContains(response, "Request an Instrument")
+
+    def test_request_row_shows_instrument_and_status(self):
+        self._make_request(status=InstrumentRentalRequestSubmission.STATUS_PENDING)
+        response = self.client.get(reverse("member-requests"))
+        self.assertContains(response, "Trumpet")
+        self.assertContains(response, "Pending")
+
+    def test_waitlist_badge_shown(self):
+        self._make_request(is_waitlist=True)
+        response = self.client.get(reverse("member-requests"))
+        self.assertContains(response, "Waitlist")
+
+    def test_patreon_pending_badge_shown_when_validated_false(self):
+        self._make_request(status=InstrumentRentalRequestSubmission.STATUS_PENDING, patreon_validated=False)
+        response = self.client.get(reverse("member-requests"))
+        self.assertContains(response, "Patreon pending")
+
+    def test_patreon_badge_not_shown_when_validated_null(self):
+        self._make_request(status=InstrumentRentalRequestSubmission.STATUS_PENDING, patreon_validated=None)
+        response = self.client.get(reverse("member-requests"))
+        self.assertNotContains(response, "Patreon pending")
+
+    def test_only_own_requests_shown(self):
+        other = Member.objects.create(first_name="Other", last_name="Person", email="other@example.com")
+        InstrumentRentalRequestSubmission.objects.create(
+            member=other, instrument=self.instrument, name="Other Person", email="other@example.com"
+        )
+        response = self.client.get(reverse("member-requests"))
+        self.assertNotContains(response, "Other Person")
+
+    def test_detail_view_shows_all_choices(self):
+        second = Instrument.objects.create(name="Tuba")
+        req = self._make_request(second_choice=second)
+        response = self.client.get(reverse("member-rental-request-detail", kwargs={"pk": req.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Trumpet")
+        self.assertContains(response, "Tuba")
+
+    def test_detail_view_blocked_for_other_member(self):
+        other = Member.objects.create(first_name="Other", last_name="Person", email="other2@example.com")
+        req = InstrumentRentalRequestSubmission.objects.create(
+            member=other, instrument=self.instrument, name="Other Person", email="other2@example.com"
+        )
+        response = self.client.get(reverse("member-rental-request-detail", kwargs={"pk": req.pk}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_detail_patreon_warning_shown(self):
+        req = self._make_request(status=InstrumentRentalRequestSubmission.STATUS_PENDING, patreon_validated=False)
+        response = self.client.get(reverse("member-rental-request-detail", kwargs={"pk": req.pk}))
+        self.assertContains(response, "Patreon membership")

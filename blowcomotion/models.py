@@ -2048,6 +2048,11 @@ class InstrumentRentalRequestSubmission(BaseFormSubmission):
         choices=STATUS_CHOICES,
         default=STATUS_PENDING,
     )
+    patreon_validated = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text="Set automatically via Patreon API at submission time. Active = confirmed; Inactive = not found or inactive; Unknown = API not configured or check failed.",
+    )
     admin_message = models.TextField(blank=True)
     assigned_unit = models.ForeignKey(
         "blowcomotion.LibraryInstrument",

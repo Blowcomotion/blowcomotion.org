@@ -734,6 +734,7 @@ class InstrumentRentalRequestSubmissionViewset(SnippetViewSet):
         "third_choice",
         "is_waitlist",
         "status",
+        "patreon_validated",
         "admin_message",
         "assigned_unit",
         "message",
