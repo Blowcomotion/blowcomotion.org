@@ -195,3 +195,29 @@ class NagInstrumentRentersCommandTest(TestCase):
         call_command("nag_instrument_renters", f"--day-to-run={TODAY_WEEKDAY}", stdout=out)
         # Only old_li should be nagged, not no_email instrument
         self.assertEqual(InstrumentRentalNagLog.objects.count(), 1)
+
+    def test_inactive_member_triggers_nag(self):
+        self.recent_member.is_active = False
+        self.recent_member.save()
+        out = StringIO()
+        call_command(
+            "nag_instrument_renters",
+            f"--day-to-run={TODAY_WEEKDAY}",
+            stdout=out,
+        )
+        self.recent_li.refresh_from_db()
+        self.assertEqual(self.recent_li.last_nag_sent, datetime.date.today())
+        log = InstrumentRentalNagLog.objects.get(library_instrument=self.recent_li)
+        self.assertIn("attendance", log.reasons)
+
+    def test_renter_email_is_sent(self):
+        from django.core import mail
+        call_command(
+            "nag_instrument_renters",
+            f"--day-to-run={TODAY_WEEKDAY}",
+            stdout=StringIO(),
+        )
+        # old_member is attendance-inactive and should receive a nag
+        renter_emails = [m for m in mail.outbox if self.old_member.email in m.to]
+        self.assertTrue(renter_emails, "No nag email sent to renter")
+        self.assertIn("instrument", renter_emails[0].subject.lower())

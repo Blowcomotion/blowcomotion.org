@@ -2597,7 +2597,7 @@ def _get_site_settings_for_view():
 
 
 def instrument_rental_staying(request):
-    from django.core.signing import BadSignature, TimestampSigner
+    from django.core.signing import TimestampSigner
     token = request.GET.get("t", "")
     try:
         signer = TimestampSigner()
@@ -2627,7 +2627,7 @@ def instrument_rental_staying(request):
 
 
 def instrument_rental_return(request):
-    from django.core.signing import BadSignature, TimestampSigner
+    from django.core.signing import TimestampSigner
     token = request.GET.get("t", "")
     try:
         signer = TimestampSigner()
