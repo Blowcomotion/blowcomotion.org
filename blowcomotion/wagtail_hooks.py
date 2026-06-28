@@ -3,9 +3,11 @@ from wagtail.admin.menu import Menu, MenuItem, SubmenuMenuItem
 from wagtail.admin.ui.components import Component
 from wagtail.snippets.models import register_snippet
 
+from django.conf import settings as django_settings
 from django.templatetags.static import static
 from django.urls import path, reverse
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
 from blowcomotion.views import (
     dump_data,
@@ -175,6 +177,12 @@ class NotificationBannerPanel(Component):
 def add_notification_banner_panel(request, panels):
     """Add notification banner shortcut to the admin homepage."""
     panels.append(NotificationBannerPanel())
+
+
+@hooks.register('insert_global_admin_css')
+def admin_env_sidebar_css():
+    color = '#1a5c2e' if django_settings.DEBUG else '#5b1a76'
+    return mark_safe(f'<style>.sidebar,.sidebar-loading,.sidebar__inner{{background-color:{color}!important}}</style>')
 
 
 @hooks.register('insert_global_admin_js')

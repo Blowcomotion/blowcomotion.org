@@ -16,6 +16,12 @@
     <body class="{% block body_class %}{% endblock %}">
         {% wagtailuserbar %}
 
+        {% if debug %}
+        <div style="background:#ff0;color:#000;text-align:center;padding:12px 0;font-size:1.2rem;font-weight:700;letter-spacing:.05em;position:sticky;top:0;z-index:9999;border-bottom:3px solid #e6c200;">
+            LOCAL DEVELOPMENT — you are NOT on production
+        </div>
+        {% endif %}
+
         <!-- Page Preloder -->
         <div id="preloder">
             <div class="loader"></div>
