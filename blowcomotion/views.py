@@ -1078,8 +1078,8 @@ def dump_data(request):
             logger.info(f'Scrubbed {scrubbed_count} member records in data dump')
 
         # Always scrub SiteSettings sensitive fields regardless of include_real_data
-        sitesettings_sensitive = {
-            'attendance_password', 'birthdays_password',
+        sitesettings_passwords = {'attendance_password', 'birthdays_password'}
+        sitesettings_recipients = {
             'contact_form_email_recipients', 'join_band_form_email_recipients',
             'booking_form_email_recipients', 'feedback_form_email_recipients',
             'donate_form_email_recipients', 'birthday_summary_email_recipients',
@@ -1089,9 +1089,13 @@ def dump_data(request):
         }
         for item in data:
             if item.get('model') == 'blowcomotion.sitesettings':
-                for field in sitesettings_sensitive:
-                    if field in item.get('fields', {}):
-                        item['fields'][field] = None
+                fields = item.get('fields', {})
+                for field in sitesettings_passwords:
+                    if field in fields:
+                        fields[field] = None
+                for field in sitesettings_recipients:
+                    if field in fields:
+                        fields[field] = 'local@example.com'
 
         logger.info(f"Data dump completed successfully by user {request.user.username}")
         # Return the data as a JSON response with pretty formatting
