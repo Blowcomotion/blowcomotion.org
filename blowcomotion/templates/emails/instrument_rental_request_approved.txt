@@ -5,7 +5,7 @@ Great news — your instrument rental request has been approved.
 Instrument assigned: {{ assigned_unit.instrument.name }} (Serial: {{ assigned_unit.serial_number }})
 
 Message from the library team:
-{{ admin_message }}
+{% autoescape off %}{{ admin_message }}{% endautoescape %}
 
 {% if patreon_url %}To support the instrument library, please ensure your Patreon {{ patreon_url }} membership is active before pickup, select "Instrument Rental (Band Members Only) - you have the option to donate more, but we require this for rentals:
 
