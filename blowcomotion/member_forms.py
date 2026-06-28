@@ -1,5 +1,5 @@
 from django import forms
-from django.db.models import Count, Q
+from django.db.models import Count, Exists, OuterRef, Q
 
 from blowcomotion.forms import MemberSignupForm
 from blowcomotion.models import Instrument, LibraryInstrument, Member
@@ -121,10 +121,11 @@ class InstrumentRentalRequestForm(forms.Form):
         base_qs = Instrument.objects.filter(hide_from_rental=False).annotate(
             available_count=Count(
                 "library_inventory",
-                filter=Q(library_inventory__status=LibraryInstrument.STATUS_AVAILABLE),
+                filter=(Q(library_inventory__hide_from_rental=False) & Q(library_inventory__status=LibraryInstrument.STATUS_AVAILABLE)),
             )
         )
-        qs_first = base_qs.filter(library_inventory__isnull=False).distinct().order_by("name")
+        has_visible_inventory = LibraryInstrument.objects.filter(instrument=OuterRef("pk"), hide_from_rental=False)
+        qs_first = base_qs.filter(Exists(has_visible_inventory)).order_by("name")
         qs_optional = base_qs.order_by("name")
 
         def label_fn(obj):
