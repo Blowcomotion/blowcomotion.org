@@ -36,6 +36,9 @@ urlpatterns = [
     path("charts/instruments/<int:song_id>/", chart_api.instruments_for_song, name="chart-instruments"),
     path("charts/parts/<int:song_id>/<int:instrument_id>/", chart_api.charts_for_song_instrument, name="chart-parts"),
 
+    path("instrument-rental/staying/", blowcomotion_views.instrument_rental_staying, name="instrument-rental-staying"),
+    path("instrument-rental/return/", blowcomotion_views.instrument_rental_return, name="instrument-rental-return"),
+
     path("member/", include(member_urls)),
 ]
 

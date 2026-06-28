@@ -2586,3 +2586,72 @@ def rental_request_return(request, pk):
     return render(request, "wagtailadmin/rental_request_return.html", {
         "submission": submission,
     })
+
+
+def _get_site_settings_for_view():
+    from wagtail.models import Site
+    site = Site.objects.filter(is_default_site=True).first() or Site.objects.first()
+    if not site:
+        return None
+    return SiteSettings.for_site(site)
+
+
+def instrument_rental_staying(request):
+    from django.core.signing import BadSignature, TimestampSigner
+    token = request.GET.get("t", "")
+    try:
+        signer = TimestampSigner()
+        instrument_pk = signer.unsign(token, max_age=30 * 24 * 3600)
+        li = LibraryInstrument.objects.select_related("member", "instrument").get(pk=instrument_pk)
+    except Exception:
+        return render(request, "instrument_rental_token_error.html", status=400)
+
+    site_settings = _get_site_settings_for_view()
+    if site_settings and li.member:
+        raw = site_settings.instrument_rental_notification_recipients or ""
+        recipients = [r.strip() for r in raw.replace("\n", ",").split(",") if r.strip()]
+        if recipients:
+            _MemberEmail(
+                subject=f"Instrument Renter Confirmed: Returning to Rehearsal — {li.member.full_name}",
+                body=(
+                    f"Renter {li.member.full_name} confirmed they are returning to rehearsal soon.\n\n"
+                    f"Instrument: {li.instrument.name}\n"
+                    f"Serial: {li.serial_number}\n"
+                    f"Member email: {li.member.email}"
+                ),
+                from_email=settings.FROM_EMAIL,
+                to=recipients,
+            ).send(fail_silently=True)
+
+    return render(request, "instrument_rental_staying.html", {"instrument": li})
+
+
+def instrument_rental_return(request):
+    from django.core.signing import BadSignature, TimestampSigner
+    token = request.GET.get("t", "")
+    try:
+        signer = TimestampSigner()
+        instrument_pk = signer.unsign(token, max_age=30 * 24 * 3600)
+        li = LibraryInstrument.objects.select_related("member", "instrument").get(pk=instrument_pk)
+    except Exception:
+        return render(request, "instrument_rental_token_error.html", status=400)
+
+    site_settings = _get_site_settings_for_view()
+    if site_settings and li.member:
+        raw = site_settings.instrument_rental_notification_recipients or ""
+        recipients = [r.strip() for r in raw.replace("\n", ",").split(",") if r.strip()]
+        if recipients:
+            _MemberEmail(
+                subject=f"Instrument Return Request — {li.member.full_name}",
+                body=(
+                    f"Renter {li.member.full_name} would like to return their instrument — please follow up.\n\n"
+                    f"Instrument: {li.instrument.name}\n"
+                    f"Serial: {li.serial_number}\n"
+                    f"Member email: {li.member.email}\n"
+                    f"Member phone: {li.member.phone or 'N/A'}"
+                ),
+                from_email=settings.FROM_EMAIL,
+                to=recipients,
+            ).send(fail_silently=True)
+
+    return render(request, "instrument_rental_return.html", {"instrument": li})
