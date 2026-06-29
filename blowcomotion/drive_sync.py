@@ -63,7 +63,17 @@ def parse_filename(name: str) -> ParsedFile:
     if any(phrase in lower for phrase in _SCORE_PHRASES) or any(tok in tokens_lower for tok in _SCORE_TOKENS):
         return ParsedFile(instrument_hint="", part_ordinal="", is_score=True)
 
-    tokens = re.split(r"[-_\s]+", stem)
+    # If a dash separates a space-containing song name from the instrument portion
+    # (e.g. "Grazin in the Grass-Alto_Saxophone_2"), restrict token search to the
+    # instrument portion so multi-word names like "Alto Saxophone" resolve correctly.
+    if "-" in stem and " " in stem.split("-", 1)[0]:
+        search_stem = stem.split("-", 1)[1]
+        instrument_portion_isolated = True
+    else:
+        search_stem = stem
+        instrument_portion_isolated = False
+
+    tokens = re.split(r"[-_\s]+", search_stem)
 
     instrument_hint = ""
     part_ordinal = ""
@@ -84,11 +94,22 @@ def parse_filename(name: str) -> ParsedFile:
             break
 
     if not instrument_hint:
-        # Use the last non-ordinal token as a raw hint (catches plain instrument names)
-        for tok in reversed(tokens):
-            if tok.lower() not in _ORDINAL_MAP:
-                instrument_hint = tok
-                break
+        if instrument_portion_isolated:
+            # Instrument portion is clean — all non-ordinal tokens form the name
+            hint_tokens = []
+            for tok in reversed(tokens):
+                if tok.lower() in _ORDINAL_MAP:
+                    if not part_ordinal:
+                        part_ordinal = _ORDINAL_MAP[tok.lower()]
+                else:
+                    hint_tokens.insert(0, tok)
+            return ParsedFile(instrument_hint=" ".join(hint_tokens), part_ordinal=part_ordinal, is_score=False)
+        else:
+            # No clear separator — use last non-ordinal token only
+            for tok in reversed(tokens):
+                if tok.lower() not in _ORDINAL_MAP:
+                    instrument_hint = tok
+                    break
 
     # Extract ordinal from tokens after the matched instrument
     for tok in tokens[instrument_token_end:]:

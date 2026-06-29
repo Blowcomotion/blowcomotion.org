@@ -108,6 +108,18 @@ class TestParseFilename(TestCase):
         r = self._p("Song_Trombone.pdf")
         self.assertNotIn(".pdf", r.instrument_hint)
 
+    def test_dash_separated_song_name_alto_saxophone(self):
+        # "Song Name-Instrument_Part.pdf" format: instrument portion after dash
+        r = self._p("Grazin in the Grass-Alto_Saxophone_2.pdf")
+        self.assertEqual(r.instrument_hint, "Alto Saxophone")
+        self.assertEqual(r.part_ordinal, "2nd")
+        self.assertFalse(r.is_score)
+
+    def test_dash_separated_single_instrument(self):
+        r = self._p("Soul Finger-Trumpet_1.pdf")
+        self.assertEqual(r.instrument_hint, "Trumpet")
+        self.assertEqual(r.part_ordinal, "1st")
+
     def test_fullerton_not_a_score(self):
         # "full" alone must not trigger score detection; only "full score" as a phrase
         r = self._p("Fullerton_March_Trumpet_1.pdf")
