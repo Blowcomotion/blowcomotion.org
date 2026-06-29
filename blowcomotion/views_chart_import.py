@@ -47,6 +47,8 @@ def picker(request):
                 continue
             archived = any(name.startswith(ar) for ar in ARCHIVE_FOLDERS)
             matched_song, score = match_song(name, songs)
+            if score < 0.6:
+                matched_song = None
             folders.append({
                 "id": f["id"],
                 "name": name,
@@ -71,10 +73,14 @@ def review(request):
 
     if request.method == "POST":
         song_id = request.POST.get("song_id")
-        if not song_id:
+        folder_name = request.POST.get("folder_name", "").strip()
+        if song_id == "new":
+            song = Song.objects.create(title=folder_name)
+        elif song_id:
+            song = Song.objects.get(id=song_id)
+        else:
             messages.error(request, "Please select a song.")
             return redirect(request.get_full_path())
-        song = Song.objects.get(id=song_id)
         selected_rows = request.POST.getlist("rows")
 
         for idx in selected_rows:
@@ -123,7 +129,10 @@ def review(request):
     folder_id = request.GET.get("folder_id")
     folder_name = request.GET.get("folder_name", "")
     song_id = request.GET.get("song_id")
-    song = Song.objects.get(id=song_id) if song_id else None
+    try:
+        song = Song.objects.get(id=song_id) if song_id else None
+    except Song.DoesNotExist:
+        song = None
 
     drive_files = list_pdfs_in_folder(folder_id) if folder_id else []
     existing_charts = (
