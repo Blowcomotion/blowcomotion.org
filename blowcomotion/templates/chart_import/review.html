@@ -13,7 +13,6 @@
         <div style="margin-bottom:1rem">
             <label><strong>Song:</strong>
                 <select name="song_id">
-                    <option value="">— create new song "{{ folder_name }}" —</option>
                     {% for s in songs %}
                     <option value="{{ s.id }}" {% if song and song.id == s.id %}selected{% endif %}>{{ s.title }}</option>
                     {% endfor %}

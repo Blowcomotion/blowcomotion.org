@@ -72,6 +72,9 @@ def review(request):
 
     if request.method == "POST":
         song_id = request.POST.get("song_id")
+        if not song_id:
+            messages.error(request, "Please select a song.")
+            return redirect(request.get_full_path())
         song = Song.objects.get(id=song_id)
         selected_rows = request.POST.getlist("rows")
 
@@ -137,15 +140,15 @@ def review(request):
             match_instrument(hint, instruments) if hint else (None, "low")
         )
 
-        tuple_charts = [
-            c for c in existing_charts
-            if matched_inst and c.instrument_id == matched_inst.id
-        ]
-        result = reconcile_file(drive_file, parsed, tuple_charts)
-
         part = ""
         if matched_inst and parsed.part_ordinal:
             part = f"{parsed.part_ordinal} {matched_inst.name}"
+
+        tuple_charts = [
+            c for c in existing_charts
+            if matched_inst and c.instrument_id == matched_inst.id and (c.part or "") == part
+        ]
+        result = reconcile_file(drive_file, parsed, tuple_charts)
 
         rows.append({
             "drive_file": drive_file,

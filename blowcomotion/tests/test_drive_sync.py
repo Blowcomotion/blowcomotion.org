@@ -108,6 +108,16 @@ class TestParseFilename(TestCase):
         r = self._p("Song_Trombone.pdf")
         self.assertNotIn(".pdf", r.instrument_hint)
 
+    def test_fullerton_not_a_score(self):
+        # "full" alone must not trigger score detection; only "full score" as a phrase
+        r = self._p("Fullerton_March_Trumpet_1.pdf")
+        self.assertFalse(r.is_score)
+
+    def test_encore_not_a_score(self):
+        # "core" is a substring of "encore" but not a token — must not trigger score detection
+        r = self._p("Encore_Trumpet_1.pdf")
+        self.assertFalse(r.is_score)
+
 
 import datetime
 from unittest.mock import MagicMock
@@ -252,6 +262,38 @@ class TestReconcileFile(TestCase):
         result = reconcile_file(self._drive_file("brand_new"), self._parsed(), [])
         self.assertEqual(result.apply, "review")
         self.assertEqual(result.reason, "New")
+
+    def test_brick_house_multiple_files_same_tuple_needs_review(self):
+        """Two drive files map to the same (song, instrument, part) tuple — both should route to review."""
+        file_a = {
+            "id": "bh_2025_01",
+            "name": "Brick_House_1-15-25_Tmpt_1.pdf",
+            "modifiedTime": "2025-01-15T12:00:00.000Z",
+            "relative_path": "Brick_House_1-15-25_Tmpt_1.pdf",
+        }
+        file_b = {
+            "id": "bh_2025_02",
+            "name": "Brick_House_2-26-25_Tmpt_1.pdf",
+            "modifiedTime": "2025-02-26T12:00:00.000Z",
+            "relative_path": "Brick_House_2-26-25_Tmpt_1.pdf",
+        }
+        parsed = ParsedFile(instrument_hint="Trumpet", part_ordinal="1st", is_score=False)
+
+        # Simulate: one existing 1st-Trumpet chart in the DB
+        existing_chart = self._chart(file_id=None, modified=None)
+
+        # Each file alone with one existing chart -> auto/High (reconcile_file contract)
+        result_a = reconcile_file(file_a, parsed, [existing_chart])
+        result_b = reconcile_file(file_b, parsed, [existing_chart])
+        self.assertEqual(result_a.apply, "auto")
+        self.assertEqual(result_a.reason, "High")
+        self.assertEqual(result_b.apply, "auto")
+        self.assertEqual(result_b.reason, "High")
+
+        # When both files are passed together (simulating two existing charts), routes to review
+        result_multi = reconcile_file(file_a, parsed, [existing_chart, existing_chart])
+        self.assertEqual(result_multi.apply, "review")
+        self.assertEqual(result_multi.reason, "Needs review")
 
 
 from unittest.mock import patch

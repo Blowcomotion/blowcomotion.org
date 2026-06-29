@@ -66,14 +66,37 @@ class Command(BaseCommand):
                 self.stderr.write(f"Drive error for {song.title}: {e}")
                 raise SystemExit(1)
 
+            # Pre-group drive files by their resolved (instrument_id, part) tuple.
+            # If multiple files map to the same tuple, flag all as review-needed.
+            tuple_map = {}  # (inst_id_or_None, part) -> list of (drive_file, parsed, matched_inst)
             for drive_file in drive_files:
                 parsed = parse_filename(drive_file["name"])
                 hint = "Conductor" if parsed.is_score else parsed.instrument_hint
                 matched_inst, _ = match_instrument(hint, instruments) if hint else (None, "low")
+                if parsed.is_score:
+                    part = ""
+                elif matched_inst and parsed.part_ordinal:
+                    part = f"{parsed.part_ordinal} {matched_inst.name}"
+                else:
+                    part = ""
+                key = (matched_inst.id if matched_inst else None, part)
+                tuple_map.setdefault(key, []).append((drive_file, parsed, matched_inst, part))
 
+            for key, file_entries in tuple_map.items():
+                if len(file_entries) > 1:
+                    for drive_file, parsed, matched_inst, part in file_entries:
+                        review_needed += 1
+                        logger.info(
+                            "Multiple drive files map to same tuple %s — needs review: %s",
+                            key,
+                            drive_file["name"],
+                        )
+                    continue
+
+                drive_file, parsed, matched_inst, part = file_entries[0]
                 tuple_charts = [
                     c for c in song_charts
-                    if matched_inst and c.instrument_id == matched_inst.id
+                    if matched_inst and c.instrument_id == matched_inst.id and (c.part or "") == part
                 ]
                 result = reconcile_file(drive_file, parsed, tuple_charts)
 

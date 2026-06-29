@@ -26,7 +26,8 @@ _ALIAS_MAP = {
     "4 piece drum kit": "Drum Set",
 }
 
-_SCORE_KEYWORDS = {"score", "conductor", "full", "all parts"}
+_SCORE_PHRASES = {"full score", "all parts"}
+_SCORE_TOKENS = {"score", "conductor"}
 
 _ORDINAL_MAP = {
     "1": "1st", "1st": "1st",
@@ -49,7 +50,8 @@ def parse_filename(name: str) -> ParsedFile:
     normalized = re.sub(r"[-_]+", " ", stem).strip()
     lower = normalized.lower()
 
-    if any(kw in lower for kw in _SCORE_KEYWORDS):
+    tokens_lower = re.split(r"[\s_-]+", lower)
+    if any(phrase in lower for phrase in _SCORE_PHRASES) or any(tok in tokens_lower for tok in _SCORE_TOKENS):
         return ParsedFile(instrument_hint="", part_ordinal="", is_score=True)
 
     tokens = re.split(r"[-_\s]+", stem)
