@@ -1,6 +1,8 @@
+import difflib
 import io
 import re
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from django.conf import settings
 
@@ -129,11 +131,6 @@ def _download_pdf(file_id: str) -> bytes:
         _, done = dl.next_chunk()
     return buf.getvalue()
 
-
-import difflib
-from datetime import datetime, timezone
-
-from wagtail.documents import get_document_model
 
 AMBIGUOUS_HINTS = {"baritone"}  # always route to review; ambiguous across 3 DB instruments
 
