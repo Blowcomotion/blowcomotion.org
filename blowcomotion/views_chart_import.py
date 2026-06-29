@@ -81,7 +81,7 @@ def review(request):
             song = Song.objects.get(id=song_id)
         else:
             messages.error(request, "Please select a song.")
-            return redirect(request.get_full_path())
+            return redirect("chart_import_picker")
         selected_rows = request.POST.getlist("rows")
 
         for idx in selected_rows:
