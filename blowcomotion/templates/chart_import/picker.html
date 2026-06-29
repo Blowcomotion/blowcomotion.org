@@ -1,0 +1,38 @@
+{% extends "wagtailadmin/base.html" %}
+{% load i18n %}
+
+{% block titletag %}Import Charts from Drive{% endblock %}
+
+{% block content %}
+<div class="nice-padding">
+    <h1>Import Charts from Google Drive</h1>
+    <p>Select a Drive song folder to scan and review its PDF charts before importing.</p>
+    <table class="listing">
+        <thead>
+            <tr>
+                <th>Drive folder</th>
+                <th>Matched song</th>
+                <th>Score</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for folder in folders %}
+            <tr{% if folder.archived %} style="opacity:0.55" title="Archive"{% endif %}>
+                <td>{{ folder.name }}{% if folder.archived %} <em>(archive)</em>{% endif %}</td>
+                <td>{{ folder.matched_song.title|default:"— new song —" }}</td>
+                <td>{{ folder.match_score }}</td>
+                <td>
+                    <a href="{% url 'chart_import_review' %}?folder_id={{ folder.id }}&folder_name={{ folder.name|urlencode }}&song_id={{ folder.matched_song.id|default:'' }}"
+                       class="button button-small">Review</a>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="4">No folders found. Ensure <code>GDRIVE_CHARTS_FOLDER_ID</code> is set in <code>local.py</code>.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

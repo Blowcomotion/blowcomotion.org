@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from blowcomotion.drive_sync import ParsedFile, parse_filename
 
@@ -252,3 +252,29 @@ class TestReconcileFile(TestCase):
         result = reconcile_file(self._drive_file("brand_new"), self._parsed(), [])
         self.assertEqual(result.apply, "review")
         self.assertEqual(result.reason, "New")
+
+
+from unittest.mock import patch
+
+from django.contrib.auth import get_user_model
+from django.test import Client
+
+
+class TestPickerView(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_superuser("admin", "admin@test.com", "password")
+        self.client = Client()
+        self.client.login(username="admin", password="password")
+
+    @patch("blowcomotion.views_chart_import.list_song_folders")
+    @override_settings(GDRIVE_CHARTS_FOLDER_ID="root_folder_id")
+    def test_picker_lists_folders(self, mock_list):
+        mock_list.return_value = [{"id": "f1", "name": "Soul Finger"}]
+        response = self.client.get("/cms/chart-import/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Soul Finger")
+
+    def test_picker_requires_login(self):
+        response = Client().get("/cms/chart-import/")
+        self.assertNotEqual(response.status_code, 200)
