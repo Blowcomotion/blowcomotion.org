@@ -196,6 +196,37 @@ class TestParseFilename(TestCase):
         r = self._p("Encore_Trumpet_1.pdf")
         self.assertFalse(r.is_score)
 
+    def test_camelcase_alto_sax(self):
+        r = self._p("CaravanAltoSax.pdf")
+        self.assertFalse(r.is_score)
+        self.assertEqual(r.instrument_hint, "Alto Saxophone")
+
+    def test_camelcase_bari_sax(self):
+        r = self._p("CaravanBariSax.pdf")
+        self.assertEqual(r.instrument_hint, "Baritone Saxophone")
+
+    def test_camelcase_tenor_sax(self):
+        r = self._p("CaravanTenorSax.pdf")
+        self.assertEqual(r.instrument_hint, "Tenor Saxophone")
+
+    def test_camelcase_tuba(self):
+        r = self._p("CaravanTuba.pdf")
+        self.assertEqual(r.instrument_hint, "Tuba/Sousaphone")
+
+    def test_camelcase_tpet_with_ordinal(self):
+        r = self._p("CaravanTpet1.pdf")
+        self.assertEqual(r.instrument_hint, "Trumpet")
+        self.assertEqual(r.part_ordinal, "1st")
+
+    def test_camelcase_full_score(self):
+        r = self._p("CaravanFullScore.pdf")
+        self.assertTrue(r.is_score)
+
+    def test_parenthetical_ordinal_in_alt_hint(self):
+        # "Caravan - Horn in F(1).pdf" — post-dash "(1)" must not block alias lookup
+        r = self._p("Caravan - Horn in F(1).pdf")
+        self.assertEqual(r.alt_hint, "Horn in F(1)")
+
 
 import datetime
 from unittest.mock import MagicMock

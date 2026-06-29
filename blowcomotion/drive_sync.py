@@ -68,10 +68,19 @@ class ParsedFile:
     alt_hint: str = ""   # post-dash side for "Song - Instrument" format; resolved if primary is low-confidence
 
 
+def _split_camel(text: str) -> str:
+    """Split CamelCase and letter→digit boundaries: "CaravanAltoSax" → "Caravan Alto Sax"."""
+    text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
+    text = re.sub(r"([a-zA-Z])(\d)", r"\1 \2", text)
+    return text.strip()
+
+
 def parse_filename(name: str) -> ParsedFile:
     stem = re.sub(r"\.pdf$", "", name, flags=re.IGNORECASE)
-    # Normalize separators to spaces for keyword matching
-    normalized = re.sub(r"[-_]+", " ", stem).strip()
+    # Normalize separators to spaces, then split CamelCase for score-phrase detection.
+    # CamelCase splitting only affects normalized (for score detection) and the no-separator
+    # else branch; the separator-based branches use stem directly for reliable split points.
+    normalized = _split_camel(re.sub(r"[-_]+", " ", stem).strip())
     lower = normalized.lower()
 
     tokens_lower = re.split(r"[\s_-]+", lower)
@@ -83,6 +92,7 @@ def parse_filename(name: str) -> ParsedFile:
     # "Instrument - Song Name" or "Song Name - Instrument" (space-dash-space): ambiguous;
     #   try pre-dash as primary, store post-dash as alt_hint for fallback in resolve_drive_file.
     # "Song Name-Instrument" (no spaces around dash, pre-dash has spaces): post-dash is the instrument.
+    # No separator: apply CamelCase splitting so "CaravanAltoSax" → tokens ["Caravan","Alto","Sax"].
     _alt_hint = ""
     if " - " in stem:
         pre, post = stem.split(" - ", 1)
@@ -96,7 +106,7 @@ def parse_filename(name: str) -> ParsedFile:
         search_stem = stem.split("-", 1)[1]
         instrument_portion_isolated = True
     else:
-        search_stem = stem
+        search_stem = _split_camel(stem)
         instrument_portion_isolated = False
 
     tokens = re.split(r"[-_\s]+", search_stem)
@@ -251,6 +261,8 @@ def _resolve_alt_hint(text: str) -> tuple:
     Song names never appear in the alias map, so via_alias=True means the post-dash
     side is almost certainly the instrument (not the song title).
     """
+    # Normalize parenthetical ordinals: "Horn in F(1)" → "Horn in F 1"
+    text = re.sub(r"\((\d+)\)", r" \1", text).strip()
     tokens = re.split(r"[-_\s]+", text.strip())
     ordinal = ""
     for start in range(len(tokens)):
