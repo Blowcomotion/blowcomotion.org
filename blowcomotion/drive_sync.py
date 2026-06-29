@@ -15,6 +15,7 @@ _ALIAS_MAP = {
     "f horn": "French Horn",
     "fhorn": "French Horn",
     "tuba": "Tuba/Sousaphone",
+    "sousa": "Tuba/Sousaphone",
     "cowbell": "Cow Bell",
     "tmpt": "Trumpet",
     "tpet": "Trumpet",
@@ -23,6 +24,7 @@ _ALIAS_MAP = {
     "bari": "Baritone Saxophone",
     "clrnt": "Clarinet",
     "tnr": "Tenor Saxophone",
+    "tenor sax": "Tenor Saxophone",
     "4 piece drum kit": "Drum Set",
 }
 
@@ -63,6 +65,7 @@ class ParsedFile:
     part_ordinal: str     # "1st", "2nd", "" etc.
     is_score: bool
     is_key: bool = False  # True when filename encodes a transposition key shared across instruments
+    alt_hint: str = ""   # post-dash side for "Song - Instrument" format; resolved if primary is low-confidence
 
 
 def parse_filename(name: str) -> ParsedFile:
@@ -77,8 +80,10 @@ def parse_filename(name: str) -> ParsedFile:
 
     # Detect filename format and isolate the instrument portion.
     # "Song Name - Key" (post-dash is a single key label like Bb/Eb/C): key-based chart.
-    # "Instrument - Song Name" (space-dash-space, post-dash is multi-word): pre-dash is the instrument.
+    # "Instrument - Song Name" or "Song Name - Instrument" (space-dash-space): ambiguous;
+    #   try pre-dash as primary, store post-dash as alt_hint for fallback in resolve_drive_file.
     # "Song Name-Instrument" (no spaces around dash, pre-dash has spaces): post-dash is the instrument.
+    _alt_hint = ""
     if " - " in stem:
         pre, post = stem.split(" - ", 1)
         post_stripped = post.strip()
@@ -86,6 +91,7 @@ def parse_filename(name: str) -> ParsedFile:
             return ParsedFile(instrument_hint=post_stripped, part_ordinal="", is_score=False, is_key=True)
         search_stem = pre
         instrument_portion_isolated = True
+        _alt_hint = post_stripped  # may be the actual instrument (Song - Instrument format)
     elif "-" in stem and " " in stem.split("-", 1)[0]:
         search_stem = stem.split("-", 1)[1]
         instrument_portion_isolated = True
@@ -154,8 +160,8 @@ def parse_filename(name: str) -> ParsedFile:
             hint = " ".join(hint_tokens)
             # If the "instrument" portion has no letters it's a date/version, not an instrument
             if not any(c.isalpha() for c in hint):
-                return ParsedFile(instrument_hint="", part_ordinal="", is_score=True)
-            return ParsedFile(instrument_hint=hint, part_ordinal=part_ordinal, is_score=False)
+                return ParsedFile(instrument_hint="", part_ordinal="", is_score=True, alt_hint=_alt_hint)
+            return ParsedFile(instrument_hint=hint, part_ordinal=part_ordinal, is_score=False, alt_hint=_alt_hint)
         else:
             # No clear separator — use last non-ordinal token only
             for tok in reversed(tokens):
@@ -169,7 +175,7 @@ def parse_filename(name: str) -> ParsedFile:
             part_ordinal = _ORDINAL_MAP[tok.lower()]
             break
 
-    return ParsedFile(instrument_hint=instrument_hint, part_ordinal=part_ordinal, is_score=False)
+    return ParsedFile(instrument_hint=instrument_hint, part_ordinal=part_ordinal, is_score=False, alt_hint=_alt_hint)
 
 
 def _get_drive_service():
@@ -238,6 +244,31 @@ def match_song(folder_name: str, songs: list) -> tuple:
     return songs[best_idx], best_score
 
 
+def _resolve_alt_hint(text: str) -> tuple:
+    """Resolve a raw post-dash string to (canonical_hint, ordinal) applying alias map and ordinal extraction."""
+    tokens = re.split(r"[-_\s]+", text.strip())
+    ordinal = ""
+    for start in range(len(tokens)):
+        for length in (4, 3, 2, 1):
+            end = start + length
+            if end > len(tokens):
+                continue
+            candidate = " ".join(tokens[start:end]).lower()
+            if candidate in _ALIAS_MAP:
+                for tok in tokens[end:]:
+                    if tok.lower() in _ORDINAL_MAP and not ordinal:
+                        ordinal = _ORDINAL_MAP[tok.lower()]
+                return _ALIAS_MAP[candidate], ordinal
+    hint_tokens = []
+    for tok in tokens:
+        if tok.lower() in _ORDINAL_MAP:
+            if not ordinal:
+                ordinal = _ORDINAL_MAP[tok.lower()]
+        else:
+            hint_tokens.append(tok)
+    return " ".join(hint_tokens), ordinal
+
+
 def resolve_drive_file(drive_file: dict, instruments: list) -> "ResolvedFile":
     parsed = parse_filename(drive_file["name"])
     if parsed.is_key:
@@ -245,6 +276,16 @@ def resolve_drive_file(drive_file: dict, instruments: list) -> "ResolvedFile":
     hint = "Conductor" if parsed.is_score else parsed.instrument_hint
     matched_inst, inst_conf = match_instrument(hint, instruments) if hint else (None, "low")
     part = f"{parsed.part_ordinal} {matched_inst.name}".strip() if (matched_inst and parsed.part_ordinal) else ""
+
+    # If primary hint gave low confidence and there's an alt_hint (post-dash side of "X - Y" filenames),
+    # try the alt as the instrument — handles "Song - Instrument" format alongside "Instrument - Song".
+    if inst_conf == "low" and parsed.alt_hint:
+        alt_canonical, alt_ordinal = _resolve_alt_hint(parsed.alt_hint)
+        alt_inst, alt_conf = match_instrument(alt_canonical, instruments) if alt_canonical else (None, "low")
+        if alt_conf != "low":
+            matched_inst, inst_conf = alt_inst, alt_conf
+            part = f"{alt_ordinal} {matched_inst.name}".strip() if (matched_inst and alt_ordinal) else ""
+
     return ResolvedFile(drive_file=drive_file, parsed=parsed, matched_inst=matched_inst, inst_conf=inst_conf, part=part)
 
 

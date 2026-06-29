@@ -461,7 +461,7 @@ class TestSyncChartsCommand(TestCase):
 
     @patch("blowcomotion.management.commands.sync_charts.list_pdfs_in_folder")
     @patch("blowcomotion.management.commands.sync_charts._get_drive_service")
-    @override_settings(GDRIVE_CHARTS_FOLDER_ID="root_id")
+    @override_settings(GDRIVE_CHARTS_FOLDER_ID="root_id", GDRIVE_API_KEY="test-key")
     def test_dry_run_makes_no_writes(self, mock_service, mock_list):
         mock_list.return_value = []
         mock_service.return_value = MagicMock()
@@ -471,7 +471,7 @@ class TestSyncChartsCommand(TestCase):
 
     @patch("blowcomotion.management.commands.sync_charts.list_pdfs_in_folder")
     @patch("blowcomotion.management.commands.sync_charts._get_drive_service")
-    @override_settings(GDRIVE_CHARTS_FOLDER_ID="root_id")
+    @override_settings(GDRIVE_CHARTS_FOLDER_ID="root_id", GDRIVE_API_KEY="test-key")
     def test_exact_match_updates_chart(self, mock_service, mock_list):
         import datetime
 
