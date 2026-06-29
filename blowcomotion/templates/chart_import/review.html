@@ -81,23 +81,40 @@
                     </span>
                 </td>
                 <td>
-                    {% if row.inst_conf == "high" %}
-                        <span style="color:green;font-weight:bold;margin-right:4px" title="High confidence">✓</span>
-                    {% elif row.inst_conf == "ambiguous" %}
-                        <span style="color:#c4780a;font-weight:bold;margin-right:4px" title="Ambiguous — review required">⚠</span>
+                    {% if row.inst_conf == "key" %}
+                        <input type="hidden" name="row_{{ i }}_is_key" value="1">
+                        <span style="color:#6f42c1;font-weight:bold;margin-right:4px" title="Key-based chart — select all instruments that use this key">♪</span>
+                        <strong>{{ row.parsed.instrument_hint }}</strong> key —
+                        <details style="display:inline-block;vertical-align:top">
+                            <summary style="cursor:pointer">Select instruments</summary>
+                            <div style="max-height:200px;overflow-y:auto;border:1px solid rgba(128,128,128,.35);border-radius:4px;padding:.4rem .6rem;margin-top:.25rem">
+                            {% for inst in instruments %}
+                                <label style="display:block;white-space:nowrap">
+                                    <input type="checkbox" name="row_{{ i }}_instrument_ids" value="{{ inst.id }}">
+                                    {{ inst.name }}
+                                </label>
+                            {% endfor %}
+                            </div>
+                        </details>
                     {% else %}
-                        <span style="color:#c0392b;font-weight:bold;margin-right:4px" title="Low confidence — review required">?</span>
+                        {% if row.inst_conf == "high" %}
+                            <span style="color:green;font-weight:bold;margin-right:4px" title="High confidence">✓</span>
+                        {% elif row.inst_conf == "ambiguous" %}
+                            <span style="color:#c4780a;font-weight:bold;margin-right:4px" title="Ambiguous — review required">⚠</span>
+                        {% else %}
+                            <span style="color:#c0392b;font-weight:bold;margin-right:4px" title="Low confidence — review required">?</span>
+                        {% endif %}
+                        <select name="row_{{ i }}_instrument_id">
+                            {% for inst in instruments %}
+                            <option value="{{ inst.id }}"
+                                {% if row.instrument and row.instrument.id == inst.id %}selected{% endif %}>
+                                {{ inst.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
                     {% endif %}
-                    <select name="row_{{ i }}_instrument_id">
-                        {% for inst in instruments %}
-                        <option value="{{ inst.id }}"
-                            {% if row.instrument and row.instrument.id == inst.id %}selected{% endif %}>
-                            {{ inst.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
                 </td>
-                <td><input type="text" name="row_{{ i }}_part" value="{{ row.part }}"></td>
+                <td>{% if row.inst_conf != "key" %}<input type="text" name="row_{{ i }}_part" value="{{ row.part }}">{% endif %}</td>
                 <td>{% if row.existing_chart %}update{% else %}new{% endif %}</td>
                 <input type="hidden" name="row_{{ i }}_file_id" value="{{ row.drive_file.id }}">
                 <input type="hidden" name="row_{{ i }}_filename" value="{{ row.drive_file.name }}">

@@ -29,6 +29,9 @@ _ALIAS_MAP = {
 _SCORE_PHRASES = {"full score", "all parts"}
 _SCORE_TOKENS = {"score", "conductor"}
 
+# Transposition key labels — filenames like "Song Name - Bb.pdf" share one PDF across instruments
+_KEY_LABELS = {"bb", "eb", "ab", "db", "gb", "fb", "cb", "f", "g", "c", "d", "a", "e", "b", "bass", "concert"}
+
 _ORDINAL_MAP = {
     "1": "1st", "1st": "1st",
     "2": "2nd", "2nd": "2nd",
@@ -48,9 +51,10 @@ class ResolvedFile:
 
 @dataclass
 class ParsedFile:
-    instrument_hint: str  # alias-normalized name for instrument matching
+    instrument_hint: str  # alias-normalized name or transposition key (e.g. "Bb", "Eb")
     part_ordinal: str     # "1st", "2nd", "" etc.
     is_score: bool
+    is_key: bool = False  # True when filename encodes a transposition key shared across instruments
 
 
 def parse_filename(name: str) -> ParsedFile:
@@ -64,10 +68,15 @@ def parse_filename(name: str) -> ParsedFile:
         return ParsedFile(instrument_hint="", part_ordinal="", is_score=True)
 
     # Detect filename format and isolate the instrument portion.
-    # "Instrument - Song Name" (space-dash-space): pre-dash is the instrument.
+    # "Song Name - Key" (post-dash is a single key label like Bb/Eb/C): key-based chart.
+    # "Instrument - Song Name" (space-dash-space, post-dash is multi-word): pre-dash is the instrument.
     # "Song Name-Instrument" (no spaces around dash, pre-dash has spaces): post-dash is the instrument.
     if " - " in stem:
-        search_stem = stem.split(" - ", 1)[0]
+        pre, post = stem.split(" - ", 1)
+        post_stripped = post.strip()
+        if " " not in post_stripped and post_stripped.lower() in _KEY_LABELS:
+            return ParsedFile(instrument_hint=post_stripped, part_ordinal="", is_score=False, is_key=True)
+        search_stem = pre
         instrument_portion_isolated = True
     elif "-" in stem and " " in stem.split("-", 1)[0]:
         search_stem = stem.split("-", 1)[1]
@@ -191,6 +200,8 @@ def match_song(folder_name: str, songs: list) -> tuple:
 
 def resolve_drive_file(drive_file: dict, instruments: list) -> "ResolvedFile":
     parsed = parse_filename(drive_file["name"])
+    if parsed.is_key:
+        return ResolvedFile(drive_file=drive_file, parsed=parsed, matched_inst=None, inst_conf="key", part="")
     hint = "Conductor" if parsed.is_score else parsed.instrument_hint
     matched_inst, inst_conf = match_instrument(hint, instruments) if hint else (None, "low")
     part = f"{parsed.part_ordinal} {matched_inst.name}".strip() if (matched_inst and parsed.part_ordinal) else ""

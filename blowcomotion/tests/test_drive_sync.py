@@ -140,6 +140,33 @@ class TestParseFilename(TestCase):
         self.assertEqual(r.instrument_hint, "Baritone Saxophone")
         self.assertEqual(r.part_ordinal, "")
 
+    def test_key_based_bb(self):
+        r = self._p("The Saints - Bb.pdf")
+        self.assertTrue(r.is_key)
+        self.assertEqual(r.instrument_hint, "Bb")
+        self.assertFalse(r.is_score)
+
+    def test_key_based_eb(self):
+        r = self._p("The Saints - Eb.pdf")
+        self.assertTrue(r.is_key)
+        self.assertEqual(r.instrument_hint, "Eb")
+
+    def test_key_based_c(self):
+        r = self._p("The Saints - C.pdf")
+        self.assertTrue(r.is_key)
+        self.assertEqual(r.instrument_hint, "C")
+
+    def test_key_based_bass(self):
+        r = self._p("The Saints - Bass.pdf")
+        self.assertTrue(r.is_key)
+        self.assertEqual(r.instrument_hint, "Bass")
+
+    def test_instrument_dash_song_not_confused_with_key(self):
+        # "Rock Lobster" is multi-word — should be instrument format, not key
+        r = self._p("Tuba - Rock Lobster.pdf")
+        self.assertFalse(r.is_key)
+        self.assertEqual(r.instrument_hint, "Tuba/Sousaphone")
+
     def test_fullerton_not_a_score(self):
         # "full" alone must not trigger score detection; only "full score" as a phrase
         r = self._p("Fullerton_March_Trumpet_1.pdf")

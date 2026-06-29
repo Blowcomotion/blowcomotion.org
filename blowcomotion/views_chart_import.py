@@ -84,12 +84,24 @@ def review(request):
             instrument_id = request.POST.get(f"row_{idx}_instrument_id")
             part = request.POST.get(f"row_{idx}_part", "")
             chart_id = request.POST.get(f"row_{idx}_chart_id")
+            is_key = request.POST.get(f"row_{idx}_is_key") == "1"
             drive_pdf_url = f"https://drive.google.com/file/d/{file_id}/view"
 
             try:
                 drive_time = datetime.fromisoformat(modified_str.replace("Z", "+00:00"))
 
-                if chart_id:
+                if is_key:
+                    instrument_ids = request.POST.getlist(f"row_{idx}_instrument_ids")
+                    for inst_id in instrument_ids:
+                        Chart.objects.create(
+                            song=song,
+                            instrument=Instrument.objects.get(id=inst_id),
+                            part="",
+                            drive_pdf_url=drive_pdf_url,
+                            drive_file_id=file_id,
+                            drive_modified_time=drive_time,
+                        )
+                elif chart_id:
                     chart = Chart.objects.get(id=chart_id)
                     chart.drive_pdf_url = drive_pdf_url
                     chart.drive_file_id = file_id
