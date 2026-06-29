@@ -128,3 +128,80 @@ def _download_pdf(file_id: str) -> bytes:
     while not done:
         _, done = dl.next_chunk()
     return buf.getvalue()
+
+
+import difflib
+from datetime import datetime, timezone
+
+from wagtail.documents import get_document_model
+
+AMBIGUOUS_HINTS = {"baritone"}  # always route to review; ambiguous across 3 DB instruments
+
+
+def match_song(folder_name: str, songs: list) -> tuple:
+    if not songs:
+        return None, 0.0
+    names = [s.title for s in songs]
+    scores = [(difflib.SequenceMatcher(None, folder_name.lower(), n.lower()).ratio(), i)
+               for i, n in enumerate(names)]
+    best_score, best_idx = max(scores)
+    return songs[best_idx], best_score
+
+
+def match_instrument(hint: str, instruments: list) -> tuple:
+    if hint.lower() in AMBIGUOUS_HINTS:
+        return None, "ambiguous"
+    names = [i.name for i in instruments]
+    # Exact case-insensitive match first
+    lower_names = [n.lower() for n in names]
+    if hint.lower() in lower_names:
+        return instruments[lower_names.index(hint.lower())], "high"
+    # Fuzzy fallback
+    matches = difflib.get_close_matches(hint, names, n=1, cutoff=0.6)
+    if matches:
+        return instruments[names.index(matches[0])], "high"
+    return None, "low"
+
+
+@dataclass
+class ReconcileResult:
+    drive_file: dict
+    parsed: ParsedFile
+    apply: str          # "auto", "review", "noop"
+    reason: str         # "Exact", "High", "Needs review", "New", ""
+    existing_chart: object  # Chart instance or None
+
+
+def _parse_drive_time(s: str) -> datetime:
+    return datetime.fromisoformat(s.replace("Z", "+00:00"))
+
+
+def reconcile_file(drive_file: dict, parsed: ParsedFile, existing_charts: list) -> ReconcileResult:
+    drive_time = _parse_drive_time(drive_file["modifiedTime"])
+    file_id = drive_file["id"]
+
+    for chart in existing_charts:
+        if chart.drive_file_id == file_id:
+            stored = chart.drive_modified_time
+            if stored:
+                stored_utc = stored if stored.tzinfo else stored.replace(tzinfo=timezone.utc)
+                if stored_utc >= drive_time:
+                    return ReconcileResult(drive_file, parsed, "noop", "", chart)
+            return ReconcileResult(drive_file, parsed, "auto", "Exact", chart)
+
+    if len(existing_charts) == 1:
+        return ReconcileResult(drive_file, parsed, "auto", "High", existing_charts[0])
+
+    if len(existing_charts) > 1:
+        return ReconcileResult(drive_file, parsed, "review", "Needs review", None)
+
+    return ReconcileResult(drive_file, parsed, "review", "New", None)
+
+
+def _safe_delete_document(doc):
+    from blowcomotion.models import Chart
+
+    # ponytail: skip rich-text usage scan — Chart PDFs are never embedded in rich text
+    if not Chart.objects.filter(pdf=doc).exists():
+        doc.file.delete(save=False)
+        doc.delete()
