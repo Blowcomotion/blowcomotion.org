@@ -108,12 +108,16 @@ def _get_drive_service():
     return build("drive", "v3", developerKey=api_key)
 
 
+_SHARED_DRIVE_KWARGS = dict(supportsAllDrives=True, includeItemsFromAllDrives=True)
+
+
 def list_song_folders(folder_id: str) -> list:
     service = _get_drive_service()
     results = service.files().list(
         q=f"'{folder_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false",
         fields="files(id, name)",
         pageSize=1000,
+        **_SHARED_DRIVE_KWARGS,
     ).execute()
     return results.get("files", [])
 
@@ -124,6 +128,7 @@ def list_pdfs_in_folder(folder_id: str, _prefix: str = "") -> list:
         q=f"'{folder_id}' in parents and trashed=false",
         fields="files(id, name, mimeType, modifiedTime)",
         pageSize=1000,
+        **_SHARED_DRIVE_KWARGS,
     ).execute()
     files = []
     for item in results.get("files", []):

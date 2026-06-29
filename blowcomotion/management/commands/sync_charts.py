@@ -58,7 +58,7 @@ class Command(BaseCommand):
                 continue
 
             try:
-                meta = service.files().get(fileId=first_file_id, fields="parents").execute()
+                meta = service.files().get(fileId=first_file_id, fields="parents", supportsAllDrives=True).execute()
                 parents = meta.get("parents", [])
                 if not parents:
                     logger.warning("No parent folder found for %s", song.title)
