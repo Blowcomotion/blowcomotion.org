@@ -358,17 +358,15 @@ class TestImportView(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Soul_Finger_Tmpt_1.pdf")
 
-    @patch("blowcomotion.views_chart_import._download_pdf")
     @patch("blowcomotion.views_chart_import.list_pdfs_in_folder")
-    def test_import_post_creates_chart(self, mock_list, mock_dl):
+    def test_import_post_creates_chart(self, mock_list):
         mock_list.return_value = [{
             "id": "f1", "name": "Soul_Finger_Tmpt_1.pdf",
             "modifiedTime": "2025-01-15T12:00:00.000Z",
             "relative_path": "Soul_Finger_Tmpt_1.pdf",
         }]
-        mock_dl.return_value = b"%PDF-1.4 test content"
 
-        response = self.client.post("/admin/chart-import/review/", {
+        self.client.post("/admin/chart-import/review/", {
             "song_id": self.song.id,
             "folder_id": "abc",
             "rows": ["0"],
@@ -379,7 +377,9 @@ class TestImportView(TestCase):
             "row_0_part": "1st Trumpet",
             "row_0_chart_id": "",
         })
-        self.assertEqual(Chart.objects.filter(song=self.song, instrument=self.instrument).count(), 1)
+        chart = Chart.objects.get(song=self.song, instrument=self.instrument)
+        self.assertEqual(chart.drive_pdf_url, "https://drive.google.com/file/d/f1/view")
+        self.assertIsNone(chart.pdf)
 
 
 from io import StringIO
@@ -394,36 +394,27 @@ class TestSyncChartsCommand(TestCase):
         self.instrument = Instrument.objects.create(name="Trumpet")
 
     @patch("blowcomotion.management.commands.sync_charts.list_pdfs_in_folder")
-    @patch("blowcomotion.management.commands.sync_charts._download_pdf")
     @patch("blowcomotion.management.commands.sync_charts._get_drive_service")
     @override_settings(GDRIVE_CHARTS_FOLDER_ID="root_id")
-    def test_dry_run_makes_no_writes(self, mock_service, mock_dl, mock_list):
+    def test_dry_run_makes_no_writes(self, mock_service, mock_list):
         mock_list.return_value = []
         mock_service.return_value = MagicMock()
         initial = Chart.objects.count()
         call_command("sync_charts", "--dry-run", stdout=StringIO())
-        mock_dl.assert_not_called()
         self.assertEqual(Chart.objects.count(), initial)
 
     @patch("blowcomotion.management.commands.sync_charts.list_pdfs_in_folder")
-    @patch("blowcomotion.management.commands.sync_charts._download_pdf")
     @patch("blowcomotion.management.commands.sync_charts._get_drive_service")
     @override_settings(GDRIVE_CHARTS_FOLDER_ID="root_id")
-    def test_exact_match_updates_chart(self, mock_service, mock_dl, mock_list):
+    def test_exact_match_updates_chart(self, mock_service, mock_list):
         import datetime
 
-        from wagtail.documents.models import Document as WagtailDocument
-
-        mock_dl.return_value = b"%PDF-1.4 updated"
-
-        old_doc = WagtailDocument(title="old.pdf")
-        old_doc.file.save("old.pdf", ContentFile(b"%PDF-1.4 old"), save=True)
         old_time = datetime.datetime(2025, 1, 1, tzinfo=datetime.timezone.utc)
         chart = Chart.objects.create(
             song=self.song,
             instrument=self.instrument,
             part="1st Trumpet",
-            pdf=old_doc,
+            drive_pdf_url="https://drive.google.com/file/d/file123/view",
             drive_file_id="file123",
             drive_modified_time=old_time,
         )
@@ -442,4 +433,5 @@ class TestSyncChartsCommand(TestCase):
 
         call_command("sync_charts", stdout=StringIO())
         chart.refresh_from_db()
-        self.assertNotEqual(chart.pdf_id, old_doc.id)
+        self.assertEqual(chart.drive_pdf_url, "https://drive.google.com/file/d/file123/view")
+        self.assertEqual(chart.drive_file_id, "file123")

@@ -1,16 +1,11 @@
 import logging
 from datetime import datetime
 
-from wagtail.documents import get_document_model
-
 from django.conf import settings
-from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 
 from blowcomotion.drive_sync import (
-    _download_pdf,
     _get_drive_service,
-    _safe_delete_document,
     list_pdfs_in_folder,
     reconcile_file,
     resolve_drive_file,
@@ -38,7 +33,6 @@ class Command(BaseCommand):
             self.stderr.write("GDRIVE_CHARTS_FOLDER_ID not configured in local.py")
             raise SystemExit(1)
 
-        Document = get_document_model()
         instruments = list(Instrument.objects.all())
         charts_qs = Chart.objects.exclude(drive_file_id=None).select_related("song", "instrument", "pdf")
         if song_id:
@@ -112,19 +106,13 @@ class Command(BaseCommand):
                     continue
 
                 try:
-                    content = _download_pdf(drive_file["id"])
-                    doc = Document(title=drive_file["name"])
-                    doc.file.save(drive_file["name"], ContentFile(content), save=True)
                     chart = result.existing_chart
-                    old_doc = chart.pdf
-                    chart.pdf = doc
+                    chart.drive_pdf_url = f"https://drive.google.com/file/d/{drive_file['id']}/view"
                     chart.drive_file_id = drive_file["id"]
                     chart.drive_modified_time = datetime.fromisoformat(
                         drive_file["modifiedTime"].replace("Z", "+00:00")
                     )
                     chart.save()
-                    if old_doc:
-                        _safe_delete_document(old_doc)
                     self.stdout.write(f"Updated: {drive_file['name']} ({result.reason})")
                 except Exception as e:
                     logger.error("Failed to update %s: %s", drive_file["name"], e)

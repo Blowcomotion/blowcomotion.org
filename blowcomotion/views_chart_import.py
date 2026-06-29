@@ -1,21 +1,15 @@
 import logging
-import time
 from datetime import datetime
-
-from wagtail.documents import get_document_model
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.files.base import ContentFile
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
 
 from blowcomotion.drive_sync import (
     ARCHIVE_FOLDERS,
     EXCLUDE_FOLDERS,
-    _download_pdf,
-    _safe_delete_document,
     list_pdfs_in_folder,
     list_song_folders,
     match_song,
@@ -69,7 +63,6 @@ def review(request):
     if not _admin_required(request):
         return HttpResponseForbidden()
 
-    Document = get_document_model()
     instruments = list(Instrument.objects.all())
 
     if request.method == "POST":
@@ -91,22 +84,17 @@ def review(request):
             instrument_id = request.POST.get(f"row_{idx}_instrument_id")
             part = request.POST.get(f"row_{idx}_part", "")
             chart_id = request.POST.get(f"row_{idx}_chart_id")
+            drive_pdf_url = f"https://drive.google.com/file/d/{file_id}/view"
 
             try:
-                content = _download_pdf(file_id)
-                doc = Document(title=filename)
-                doc.file.save(filename, ContentFile(content), save=True)
                 drive_time = datetime.fromisoformat(modified_str.replace("Z", "+00:00"))
 
                 if chart_id:
                     chart = Chart.objects.get(id=chart_id)
-                    old_doc = chart.pdf
-                    chart.pdf = doc
+                    chart.drive_pdf_url = drive_pdf_url
                     chart.drive_file_id = file_id
                     chart.drive_modified_time = drive_time
                     chart.save()
-                    if old_doc:
-                        _safe_delete_document(old_doc)
                 else:
                     # ponytail: if an existing chart has a non-conforming part string it won't match
                     # the tuple filter and will appear as "New" here — creating a duplicate. Run a
@@ -115,14 +103,13 @@ def review(request):
                         song=song,
                         instrument=Instrument.objects.get(id=instrument_id),
                         part=part,
-                        pdf=doc,
+                        drive_pdf_url=drive_pdf_url,
                         drive_file_id=file_id,
                         drive_modified_time=drive_time,
                     )
             except Exception as e:
                 logger.error("Failed to import %s: %s", filename, e)
                 messages.error(request, f"Failed to import {filename}: {e}")
-            time.sleep(0.5)
 
         messages.success(request, "Import complete.")
         return redirect("chart_import_picker")

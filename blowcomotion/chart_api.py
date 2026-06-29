@@ -112,7 +112,7 @@ def songs_for_instrument(request, instrument_id):
             charts_data.append({
                 'id': chart.id,
                 'part': part_name,
-                'pdf_url': chart.pdf.url if chart.pdf else None,
+                'pdf_url': (chart.pdf.url if chart.pdf else None) or chart.drive_pdf_url,
                 'pdf_title': chart.pdf.title if chart.pdf else None,
             })
         
@@ -235,7 +235,7 @@ def instruments_for_song(request, song_id):
             charts_data.append({
                 'id': chart.id,
                 'part': part_name,
-                'pdf_url': chart.pdf.url if chart.pdf else None,
+                'pdf_url': (chart.pdf.url if chart.pdf else None) or chart.drive_pdf_url,
                 'pdf_title': chart.pdf.title if chart.pdf else None,
             })
         
