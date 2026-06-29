@@ -55,7 +55,7 @@
         <table class="listing">
             <thead>
                 <tr>
-                    <th><button type="button" onclick="document.querySelectorAll('input[name=rows]').forEach(c=>c.checked=true)">Select all</button></th>
+                    <th><button type="button" id="select-all-top" onclick="toggleAll(this)">Select all</button></th>
                     <th>File</th>
                     <th>Status</th>
                     <th>Instrument</th>
@@ -111,10 +111,23 @@
         </table>
 
         <div style="margin-top:1rem;display:flex;align-items:center;gap:1rem">
-            <button type="button" onclick="document.querySelectorAll('input[name=rows]').forEach(c=>c.checked=true)">Select all</button>
+            <button type="button" id="select-all-bottom" onclick="toggleAll(this)">Select all</button>
             <button type="submit" class="button">Import selected</button>
             <a href="{% url 'chart_import_picker' %}" class="button button-secondary">Cancel</a>
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleAll(btn) {
+    const boxes = document.querySelectorAll('input[name=rows]');
+    const allChecked = Array.from(boxes).every(c => c.checked);
+    boxes.forEach(c => c.checked = !allChecked);
+    const label = allChecked ? 'Select all' : 'Deselect all';
+    document.getElementById('select-all-top').textContent = label;
+    document.getElementById('select-all-bottom').textContent = label;
+}
+</script>
 {% endblock %}
