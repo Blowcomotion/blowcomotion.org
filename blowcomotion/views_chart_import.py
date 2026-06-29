@@ -63,7 +63,7 @@ def review(request):
     if not _admin_required(request):
         return HttpResponseForbidden()
 
-    instruments = list(Instrument.objects.all())
+    instruments = list(Instrument.objects.order_by("name"))
 
     if request.method == "POST":
         song_id = request.POST.get("song_id")
