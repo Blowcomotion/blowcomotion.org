@@ -47,7 +47,7 @@ arrangers with inconsistent update habits.
 | Folder scope | Recurse + flatten; skip `01 -Warmups`/`03 - Resources`; `ZZArchive` shown but de-emphasized. |
 | Full scores / conductor sheets | Map to existing `Conductor` instrument, blank part. Multiple allowed per song. |
 | PDF update | New Wagtail Document per change, repoint Chart, **delete old Document + file**. |
-| Refresh identity | Combination of `file_id`/`md5` (exact) + `(song, instrument, part)` tuple (fallback), with confidence. |
+| Refresh identity | Combination of `file_id`/`modifiedTime` (exact) + `(song, instrument, part)` tuple (fallback), with confidence. |
 | Drive client | `google-api-python-client` (new dependency), API-key mode (no OAuth). |
 
 ## Architecture (Approach 1: shared module + admin view + command)
@@ -75,8 +75,15 @@ In `local.py` (secrets, not committed), mirroring the existing `GIGO_*` pattern:
 ```python
 GDRIVE_API_KEY = "AIza..."                                # restricted to Drive API
 GDRIVE_CHARTS_FOLDER_ID = "1i4K4ifpAtCPmjIa-uK74Q3RG-v5D4Jqr"
-GDRIVE_EXCLUDE_FOLDERS = ["01 -Warmups and Exercises", "03 - Resources-Reference"]
-GDRIVE_ARCHIVE_FOLDERS = ["ZZArchive - INACTIVE"]         # shown but de-emphasized
+```
+
+Folder-scoping rules (which top-level folders are skipped / archived) are
+module constants in `drive_sync.py`, not settings — they don't change per
+environment:
+
+```python
+EXCLUDE_FOLDERS = ["01 -Warmups and Exercises", "03 - Resources-Reference"]
+ARCHIVE_FOLDERS = ["ZZArchive - INACTIVE"]   # shown but de-emphasized
 ```
 
 Drive client is created with `build('drive', 'v3', developerKey=GDRIVE_API_KEY)`
@@ -85,15 +92,16 @@ API-key path for the public folder.)
 
 ## Model changes (`Chart`)
 
-Add three nullable fields to anchor refresh; one migration:
+Add two nullable fields to anchor refresh; one migration:
 
 - `drive_file_id` — `CharField(max_length=255, null=True, blank=True, db_index=True)`
   The Drive file last imported for this chart. Exact fast-path anchor.
-- `drive_md5` — `CharField(max_length=64, null=True, blank=True)`
-  Last-synced `md5Checksum`; a change means the file content changed in place.
 - `drive_modified_time` — `DateTimeField(null=True, blank=True)`
-  Drive `modifiedTime` of the imported file; the newest-wins tiebreaker when
-  several files map to one `(song, instrument, part)` tuple.
+  Drive `modifiedTime` of the imported file. Serves double duty: a value newer
+  than the stored one means the file changed (re-export bumps `modifiedTime`),
+  and it is the newest-wins tiebreaker when several files map to one
+  `(song, instrument, part)` tuple. No separate checksum field — worst case a
+  metadata-only touch triggers one redundant re-download, never data loss.
 
 No `is_conductor_chart` field (out of scope). The `(song, instrument, part)`
 fallback identity uses the existing FK + CharField fields.
@@ -129,18 +137,20 @@ No new dependency for matching — `difflib` is stdlib.
 Arrangers behave inconsistently: some overwrite files in place, some drop a new
 dated set alongside the old (e.g. `Brick House 1-15-...` and `Brick House
 2-26-25-...` coexisting in one folder), some rename, some drop individual files.
-The reconciler keys on **both** anchors and emits a proposed action + confidence
-per Drive file:
+The reconciler keys on **both** anchors and returns, per Drive file, an
+`(apply: auto | review, reason)` result. The `reason` carries a label used as a
+badge on the review screen; the engine itself only branches on `auto` vs
+`review`:
 
-| Situation | Action | Confidence |
+| Situation | Action | Result (badge) |
 |---|---|---|
-| Stored `file_id` exists, **md5 changed** | refresh PDF (in-place edit) | **Exact** |
-| Stored `file_id` gone, **one** new file parses to same `(song, instrument, part)` | refresh PDF (rename/re-export) | **High** |
-| **Multiple** files map to one tuple | newest `modifiedTime` wins; others flagged | **Needs review** |
-| New file, no matching tuple | create new chart | **Manual only** |
-| Stored `file_id` exists, md5 unchanged | no-op | — |
+| Stored `file_id` exists, **`modifiedTime` newer** | refresh PDF (in-place edit) | auto (Exact) |
+| Stored `file_id` gone, **one** new file parses to same `(song, instrument, part)` | refresh PDF (rename/re-export) | auto (High) |
+| **Multiple** files map to one tuple | newest `modifiedTime` wins; others flagged | review (Needs review) |
+| New file, no matching tuple | create new chart | review (New) |
+| Stored `file_id` exists, `modifiedTime` unchanged | no-op | — |
 
-Confidence is the gate between automatic and review (below).
+`apply` is the gate between automatic and review (below).
 
 ## Data flow — manual sync (admin)
 
@@ -161,7 +171,7 @@ Confidence is the gate between automatic and review (below).
    - per-row **skip** checkbox; newest-wins pre-selected among duplicate tuples
    - song match confirmed/overridden at top (existing `Song` dropdown or "create new")
 4. **Import.** For each non-skipped row: download the PDF, create a Wagtail
-   Document, create/update the `Chart`, store `drive_file_id`/`drive_md5`/
+   Document, create/update the `Chart`, store `drive_file_id`/
    `drive_modified_time`. On update: repoint the Chart to the new Document, then
    delete the old Document **and its file** — **only after** the new Document is
    confirmed saved, and **only if** the old Document is not referenced elsewhere
@@ -176,11 +186,10 @@ Confidence is the gate between automatic and review (below).
 
 - **Auto-applies** only **Exact** and unambiguous **High** confidence actions
   (refresh PDF: new Document, repoint, delete old per the same guard above).
-- **Never** creates new charts, creates instruments, or applies "Needs review" /
-  "Manual only" actions. These are **logged** as "N charts need review" for the
-  next manual sync.
-- Flags: `--song "Title"` to scope; `--dry-run` to print proposed actions
-  without writing.
+- **Never** creates new charts, creates instruments, or applies `review`
+  actions. These are **logged** as "N charts need review" for the next manual
+  sync.
+- Flag: `--dry-run` to print proposed actions without writing.
 - Failure handling: Drive unreachable / quota error -> log + non-zero exit, no
   partial writes. Runs as a PythonAnywhere scheduled task.
 
@@ -203,8 +212,8 @@ Confidence is the gate between automatic and review (below).
   Brick House multi-dated-set case.
 - **Import test** — mocked Drive `files.list`/`files.get`/download responses;
   asserts Document creation, Chart create/update, old-Document deletion + guard.
-- **Parser validation against production data** — a `--validate` mode (or a
-  one-off script) that dry-runs the parser over the local Drive copy and reports
+- **Parser validation against production data** — a throwaway scratchpad script
+  (deleted after) that dry-runs the parser over the local Drive copy and reports
   what fraction of parsed `(instrument, part)` reproduces the 915 existing
   production charts. This measures whether the heuristic actually works far
   better than a hand-picked unit table; run it before trusting auto-refresh.
@@ -222,5 +231,4 @@ Confidence is the gate between automatic and review (below).
 
 - `google-api-python-client` (new) — official Drive client, API-key mode.
 - `difflib` (stdlib) — fuzzy matching.
-- No other new dependencies; `requests` already present if a REST fallback is
-  ever needed.
+- No other new dependencies.
