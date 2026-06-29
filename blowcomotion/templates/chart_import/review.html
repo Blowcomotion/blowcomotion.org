@@ -23,7 +23,8 @@
         <table class="listing">
             <thead>
                 <tr>
-                    <th>Import?</th>
+                    <th><input type="checkbox" id="select-all-top" title="Select all" checked
+                        onchange="document.querySelectorAll('input[name=rows]').forEach(c=>c.checked=this.checked);document.getElementById('select-all-bottom').checked=this.checked"></th>
                     <th>File</th>
                     <th>Status</th>
                     <th>Instrument</th>
@@ -78,7 +79,9 @@
             </tbody>
         </table>
 
-        <div style="margin-top:1rem">
+        <div style="margin-top:1rem;display:flex;align-items:center;gap:1rem">
+            <label><input type="checkbox" id="select-all-bottom" title="Select all" checked
+                onchange="document.querySelectorAll('input[name=rows]').forEach(c=>c.checked=this.checked);document.getElementById('select-all-top').checked=this.checked"> Select all</label>
             <button type="submit" class="button">Import selected</button>
             <a href="{% url 'chart_import_picker' %}" class="button button-secondary">Cancel</a>
         </div>
