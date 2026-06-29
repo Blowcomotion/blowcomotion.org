@@ -32,6 +32,14 @@ _SCORE_TOKENS = {"score", "conductor"}
 # Transposition key labels — filenames like "Song Name - Bb.pdf" share one PDF across instruments
 _KEY_LABELS = {"bb", "eb", "ab", "db", "gb", "fb", "cb", "f", "g", "c", "d", "a", "e", "b", "bass", "concert"}
 
+# Default instrument names per transposition key, derived from production chart data
+_KEY_INSTRUMENT_MAP = {
+    "bb": ["Trumpet", "Clarinet", "Tenor Saxophone"],
+    "eb": ["Alto Saxophone", "Baritone Saxophone"],
+    "c": ["Flute", "Trombone", "Tuba/Sousaphone", "Baritone/Euphonium", "Bells, Marching"],
+    "bass": ["Tuba/Sousaphone"],
+}
+
 _ORDINAL_MAP = {
     "1": "1st", "1st": "1st",
     "2": "2nd", "2nd": "2nd",

@@ -90,7 +90,8 @@
                             <div style="max-height:200px;overflow-y:auto;border:1px solid rgba(128,128,128,.35);border-radius:4px;padding:.4rem .6rem;margin-top:.25rem">
                             {% for inst in instruments %}
                                 <label style="display:block;white-space:nowrap">
-                                    <input type="checkbox" name="row_{{ i }}_instrument_ids" value="{{ inst.id }}">
+                                    <input type="checkbox" name="row_{{ i }}_instrument_ids" value="{{ inst.id }}"
+                                        {% if inst.id in row.key_instrument_ids %}checked{% endif %}>
                                     {{ inst.name }}
                                 </label>
                             {% endfor %}

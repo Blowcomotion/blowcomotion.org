@@ -8,6 +8,7 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
 
 from blowcomotion.drive_sync import (
+    _KEY_INSTRUMENT_MAP,
     ARCHIVE_FOLDERS,
     EXCLUDE_FOLDERS,
     list_pdfs_in_folder,
@@ -149,6 +150,12 @@ def review(request):
         part = resolved.part
         parsed = resolved.parsed
 
+        key_instrument_ids = set()
+        if parsed.is_key:
+            default_names = _KEY_INSTRUMENT_MAP.get(parsed.instrument_hint.lower(), [])
+            name_set = {n.lower() for n in default_names}
+            key_instrument_ids = {inst.id for inst in instruments if inst.name.lower() in name_set}
+
         tuple_charts = [
             c for c in existing_charts
             if matched_inst and c.instrument_id == matched_inst.id and (c.part or "") == part
@@ -163,6 +170,7 @@ def review(request):
             "part": part,
             "reconcile": result,
             "existing_chart": result.existing_chart,
+            "key_instrument_ids": key_instrument_ids,
         })
 
     return render(request, "chart_import/review.html", {
