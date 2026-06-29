@@ -13,6 +13,7 @@
                 <th>Drive folder</th>
                 <th>Matched song</th>
                 <th>Score</th>
+                <th>Last imported</th>
                 <th></th>
             </tr>
         </thead>
@@ -30,6 +31,7 @@
                         {% endif %}
                     {% endif %}
                 </td>
+                <td>{{ folder.last_imported|date:"Y-m-d"|default:"—" }}</td>
                 <td>
                     <a href="{% url 'chart_import_review' %}?folder_id={{ folder.id }}&folder_name={{ folder.name|urlencode }}&song_id={{ folder.matched_song.id|default:'' }}"
                        class="button button-small">Review</a>

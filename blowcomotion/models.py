@@ -262,6 +262,7 @@ class Chart(models.Model):
     instrument = models.ForeignKey("blowcomotion.Instrument", on_delete=models.CASCADE)
     drive_file_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     drive_modified_time = models.DateTimeField(null=True, blank=True)
+    drive_imported_at = models.DateTimeField(null=True, blank=True)
 
     # Index song and instrument fields for searchability in the chart library
     search_fields = [

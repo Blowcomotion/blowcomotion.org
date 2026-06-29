@@ -5,8 +5,10 @@ from datetime import datetime
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Max
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
+from django.utils import timezone
 
 from blowcomotion.drive_sync import (
     _KEY_INSTRUMENT_MAP,
@@ -37,6 +39,10 @@ def picker(request):
     folders = []
 
     if folder_id:
+        last_imported_by_song = {
+            row["song_id"]: row["last_imported"]
+            for row in Chart.objects.values("song_id").annotate(last_imported=Max("drive_imported_at"))
+        }
         raw = list_song_folders(folder_id)
         for f in raw:
             name = f["name"]
@@ -46,12 +52,14 @@ def picker(request):
             matched_song, score = match_song(name, songs)
             if score < 0.6:
                 matched_song = None
+            last_imported = last_imported_by_song.get(matched_song.id) if matched_song else None
             folders.append({
                 "id": f["id"],
                 "name": name,
                 "matched_song": matched_song,
                 "match_score": round(score, 2),
                 "archived": archived,
+                "last_imported": last_imported,
             })
 
     return render(request, "chart_import/picker.html", {
@@ -92,6 +100,7 @@ def review(request):
             try:
                 drive_time = datetime.fromisoformat(modified_str.replace("Z", "+00:00"))
 
+                now = timezone.now()
                 if is_key:
                     instrument_ids = request.POST.getlist(f"row_{idx}_instrument_ids")
                     for inst_id in instrument_ids:
@@ -102,12 +111,14 @@ def review(request):
                             drive_pdf_url=drive_pdf_url,
                             drive_file_id=file_id,
                             drive_modified_time=drive_time,
+                            drive_imported_at=now,
                         )
                 elif chart_id:
                     chart = Chart.objects.get(id=chart_id)
                     chart.drive_pdf_url = drive_pdf_url
                     chart.drive_file_id = file_id
                     chart.drive_modified_time = drive_time
+                    chart.drive_imported_at = now
                     chart.save()
                 else:
                     # ponytail: if an existing chart has a non-conforming part string it won't match
@@ -120,6 +131,7 @@ def review(request):
                         drive_pdf_url=drive_pdf_url,
                         drive_file_id=file_id,
                         drive_modified_time=drive_time,
+                        drive_imported_at=now,
                     )
             except Exception as e:
                 logger.error("Failed to import %s: %s", filename, e)
