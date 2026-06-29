@@ -82,6 +82,17 @@ def register_admin_urls():
     ]
 
 
+@hooks.register("register_admin_urls")
+def register_chart_import_urls():
+    from django.urls import path
+
+    from blowcomotion import views_chart_import
+    return [
+        path("chart-import/", views_chart_import.picker, name="chart_import_picker"),
+        path("chart-import/review/", views_chart_import.review, name="chart_import_review"),
+    ]
+
+
 @hooks.register("register_admin_menu_item")
 def register_management_menu_item():
     """
@@ -127,6 +138,17 @@ def register_rental_requests_menu_item():
         reverse("rental_requests_dashboard"),
         icon_name="french-horn",
         order=295,
+    )
+
+
+@hooks.register("register_admin_menu_item")
+def register_chart_import_menu_item():
+    from wagtail.admin.menu import MenuItem
+    return MenuItem(
+        "Import Charts from Drive",
+        reverse("chart_import_picker"),
+        icon_name="doc-full",
+        order=901,
     )
 
 

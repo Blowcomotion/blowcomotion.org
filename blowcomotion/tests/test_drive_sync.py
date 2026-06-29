@@ -271,12 +271,12 @@ class TestPickerView(TestCase):
     @override_settings(GDRIVE_CHARTS_FOLDER_ID="root_folder_id")
     def test_picker_lists_folders(self, mock_list):
         mock_list.return_value = [{"id": "f1", "name": "Soul Finger"}]
-        response = self.client.get("/cms/chart-import/")
+        response = self.client.get("/admin/chart-import/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Soul Finger")
 
     def test_picker_requires_login(self):
-        response = Client().get("/cms/chart-import/")
+        response = Client().get("/admin/chart-import/")
         self.assertNotEqual(response.status_code, 200)
 
 
@@ -300,7 +300,7 @@ class TestImportView(TestCase):
             "relative_path": "Soul_Finger_Tmpt_1.pdf",
         }]
         response = self.client.get(
-            f"/cms/chart-import/review/?folder_id=abc&song_id={self.song.id}"
+            f"/admin/chart-import/review/?folder_id=abc&song_id={self.song.id}"
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Soul_Finger_Tmpt_1.pdf")
@@ -315,7 +315,7 @@ class TestImportView(TestCase):
         }]
         mock_dl.return_value = b"%PDF-1.4 test content"
 
-        response = self.client.post("/cms/chart-import/review/", {
+        response = self.client.post("/admin/chart-import/review/", {
             "song_id": self.song.id,
             "folder_id": "abc",
             "rows": ["0"],
