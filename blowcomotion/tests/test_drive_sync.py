@@ -278,3 +278,52 @@ class TestPickerView(TestCase):
     def test_picker_requires_login(self):
         response = Client().get("/cms/chart-import/")
         self.assertNotEqual(response.status_code, 200)
+
+
+from blowcomotion.models import Chart, Instrument, Song
+
+
+class TestImportView(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_superuser("admin2", "admin2@test.com", "pw")
+        self.client = Client()
+        self.client.login(username="admin2", password="pw")
+        self.song = Song.objects.create(title="Soul Finger")
+        self.instrument = Instrument.objects.create(name="Trumpet")
+
+    @patch("blowcomotion.views_chart_import.list_pdfs_in_folder")
+    def test_review_get_renders(self, mock_list):
+        mock_list.return_value = [{
+            "id": "f1", "name": "Soul_Finger_Tmpt_1.pdf",
+            "modifiedTime": "2025-01-15T12:00:00.000Z",
+            "relative_path": "Soul_Finger_Tmpt_1.pdf",
+        }]
+        response = self.client.get(
+            f"/cms/chart-import/review/?folder_id=abc&song_id={self.song.id}"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Soul_Finger_Tmpt_1.pdf")
+
+    @patch("blowcomotion.views_chart_import._download_pdf")
+    @patch("blowcomotion.views_chart_import.list_pdfs_in_folder")
+    def test_import_post_creates_chart(self, mock_list, mock_dl):
+        mock_list.return_value = [{
+            "id": "f1", "name": "Soul_Finger_Tmpt_1.pdf",
+            "modifiedTime": "2025-01-15T12:00:00.000Z",
+            "relative_path": "Soul_Finger_Tmpt_1.pdf",
+        }]
+        mock_dl.return_value = b"%PDF-1.4 test content"
+
+        response = self.client.post("/cms/chart-import/review/", {
+            "song_id": self.song.id,
+            "folder_id": "abc",
+            "rows": ["0"],
+            "row_0_file_id": "f1",
+            "row_0_filename": "Soul_Finger_Tmpt_1.pdf",
+            "row_0_modified": "2025-01-15T12:00:00.000Z",
+            "row_0_instrument_id": self.instrument.id,
+            "row_0_part": "1st Trumpet",
+            "row_0_chart_id": "",
+        })
+        self.assertEqual(Chart.objects.filter(song=self.song, instrument=self.instrument).count(), 1)

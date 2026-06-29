@@ -1,0 +1,86 @@
+{% extends "wagtailadmin/base.html" %}
+{% load i18n %}
+
+{% block titletag %}Review Charts — {{ folder_name }}{% endblock %}
+
+{% block content %}
+<div class="nice-padding">
+    <h1>Review Charts: {{ folder_name }}</h1>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="folder_id" value="{{ folder_id }}">
+
+        <div style="margin-bottom:1rem">
+            <label><strong>Song:</strong>
+                <select name="song_id">
+                    <option value="">— create new song "{{ folder_name }}" —</option>
+                    {% for s in songs %}
+                    <option value="{{ s.id }}" {% if song and song.id == s.id %}selected{% endif %}>{{ s.title }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+
+        <table class="listing">
+            <thead>
+                <tr>
+                    <th>Import?</th>
+                    <th>File</th>
+                    <th>Status</th>
+                    <th>Instrument</th>
+                    <th>Part</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for row in rows %}
+            {% with i=forloop.counter0 %}
+            {% if row.reconcile.apply != "noop" %}
+            <tr>
+                <td><input type="checkbox" name="rows" value="{{ i }}"
+                    {% if row.reconcile.apply == "auto" %}checked{% endif %}></td>
+                <td title="{{ row.drive_file.relative_path }}">{{ row.drive_file.name }}</td>
+                <td>
+                    <span class="tag
+                        {% if row.reconcile.reason == 'Exact' %}tag--teal
+                        {% elif row.reconcile.reason == 'High' %}tag--primary
+                        {% elif row.reconcile.reason == 'Needs review' %}tag--warning
+                        {% else %}tag--salmon{% endif %}">
+                        {{ row.reconcile.reason }}
+                    </span>
+                </td>
+                <td>
+                    {% if row.inst_conf == "high" and row.instrument %}
+                        <input type="hidden" name="row_{{ i }}_instrument_id" value="{{ row.instrument.id }}">
+                        {{ row.instrument.name }}
+                    {% else %}
+                        <select name="row_{{ i }}_instrument_id">
+                            {% for inst in instruments %}
+                            <option value="{{ inst.id }}"
+                                {% if row.instrument and row.instrument.id == inst.id %}selected{% endif %}>
+                                {{ inst.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    {% endif %}
+                </td>
+                <td><input type="text" name="row_{{ i }}_part" value="{{ row.part }}"></td>
+                <td>{% if row.existing_chart %}update{% else %}new{% endif %}</td>
+                <input type="hidden" name="row_{{ i }}_file_id" value="{{ row.drive_file.id }}">
+                <input type="hidden" name="row_{{ i }}_filename" value="{{ row.drive_file.name }}">
+                <input type="hidden" name="row_{{ i }}_modified" value="{{ row.drive_file.modifiedTime }}">
+                <input type="hidden" name="row_{{ i }}_chart_id" value="{{ row.existing_chart.id|default:'' }}">
+            </tr>
+            {% endif %}
+            {% endwith %}
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <div style="margin-top:1rem">
+            <button type="submit" class="button">Import selected</button>
+            <a href="{% url 'chart_import_picker' %}" class="button button-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
