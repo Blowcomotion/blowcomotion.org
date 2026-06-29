@@ -38,6 +38,15 @@ _ORDINAL_MAP = {
 
 
 @dataclass
+class ResolvedFile:
+    drive_file: dict
+    parsed: "ParsedFile"
+    matched_inst: object   # Instrument or None
+    inst_conf: str         # "high", "low", "ambiguous"
+    part: str
+
+
+@dataclass
 class ParsedFile:
     instrument_hint: str  # alias-normalized name for instrument matching
     part_ordinal: str     # "1st", "2nd", "" etc.
@@ -145,6 +154,14 @@ def match_song(folder_name: str, songs: list) -> tuple:
                for i, n in enumerate(names)]
     best_score, best_idx = max(scores)
     return songs[best_idx], best_score
+
+
+def resolve_drive_file(drive_file: dict, instruments: list) -> "ResolvedFile":
+    parsed = parse_filename(drive_file["name"])
+    hint = "Conductor" if parsed.is_score else parsed.instrument_hint
+    matched_inst, inst_conf = match_instrument(hint, instruments) if hint else (None, "low")
+    part = f"{parsed.part_ordinal} {matched_inst.name}".strip() if (matched_inst and parsed.part_ordinal) else ""
+    return ResolvedFile(drive_file=drive_file, parsed=parsed, matched_inst=matched_inst, inst_conf=inst_conf, part=part)
 
 
 def match_instrument(hint: str, instruments: list) -> tuple:

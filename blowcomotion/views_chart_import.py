@@ -17,10 +17,9 @@ from blowcomotion.drive_sync import (
     _safe_delete_document,
     list_pdfs_in_folder,
     list_song_folders,
-    match_instrument,
     match_song,
-    parse_filename,
     reconcile_file,
+    resolve_drive_file,
 )
 from blowcomotion.models import Chart, Instrument, Song
 
@@ -102,6 +101,9 @@ def review(request):
                     if old_doc:
                         _safe_delete_document(old_doc)
                 else:
+                    # ponytail: if an existing chart has a non-conforming part string it won't match
+                    # the tuple filter and will appear as "New" here — creating a duplicate. Run a
+                    # data migration to normalize part strings before first sync if needed.
                     Chart.objects.create(
                         song=song,
                         instrument=Instrument.objects.get(id=instrument_id),
@@ -131,18 +133,11 @@ def review(request):
 
     rows = []
     for drive_file in drive_files:
-        parsed = parse_filename(drive_file["name"])
-        hint = "" if parsed.is_score else parsed.instrument_hint
-        if parsed.is_score:
-            hint = "Conductor"
-
-        matched_inst, inst_conf = (
-            match_instrument(hint, instruments) if hint else (None, "low")
-        )
-
-        part = ""
-        if matched_inst and parsed.part_ordinal:
-            part = f"{parsed.part_ordinal} {matched_inst.name}"
+        resolved = resolve_drive_file(drive_file, instruments)
+        matched_inst = resolved.matched_inst
+        inst_conf = resolved.inst_conf
+        part = resolved.part
+        parsed = resolved.parsed
 
         tuple_charts = [
             c for c in existing_charts

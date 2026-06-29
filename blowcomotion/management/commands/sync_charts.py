@@ -12,9 +12,8 @@ from blowcomotion.drive_sync import (
     _get_drive_service,
     _safe_delete_document,
     list_pdfs_in_folder,
-    match_instrument,
-    parse_filename,
     reconcile_file,
+    resolve_drive_file,
 )
 from blowcomotion.models import Chart, Instrument
 
@@ -70,17 +69,11 @@ class Command(BaseCommand):
             # If multiple files map to the same tuple, flag all as review-needed.
             tuple_map = {}  # (inst_id_or_None, part) -> list of (drive_file, parsed, matched_inst)
             for drive_file in drive_files:
-                parsed = parse_filename(drive_file["name"])
-                hint = "Conductor" if parsed.is_score else parsed.instrument_hint
-                matched_inst, _ = match_instrument(hint, instruments) if hint else (None, "low")
-                if parsed.is_score:
-                    part = ""
-                elif matched_inst and parsed.part_ordinal:
-                    part = f"{parsed.part_ordinal} {matched_inst.name}"
-                else:
-                    part = ""
+                resolved = resolve_drive_file(drive_file, instruments)
+                matched_inst = resolved.matched_inst
+                part = resolved.part
                 key = (matched_inst.id if matched_inst else None, part)
-                tuple_map.setdefault(key, []).append((drive_file, parsed, matched_inst, part))
+                tuple_map.setdefault(key, []).append((drive_file, resolved.parsed, matched_inst, part))
 
             for key, file_entries in tuple_map.items():
                 if len(file_entries) > 1:
@@ -101,6 +94,9 @@ class Command(BaseCommand):
                 result = reconcile_file(drive_file, parsed, tuple_charts)
 
                 if result.apply == "review":
+                    # ponytail: charts with non-conforming part strings won't match the tuple
+                    # filter and will appear as "New" here — creating a duplicate on the manual
+                    # path. Normalize part strings via data migration before first sync if needed.
                     review_needed += 1
                     logger.info("Needs review: %s (%s)", drive_file["name"], result.reason)
                     continue
