@@ -142,6 +142,12 @@ class TestParseFilename(TestCase):
         self.assertEqual(r.part_ordinal, "1st")
         self.assertFalse(r.is_key)
 
+    def test_date_suffix_treated_as_score(self):
+        # "Song Name-DateNumber.pdf" — post-dash is numeric (date), not an instrument
+        r = self._p("Bad Guy Blowco Updated 8-31.pdf")
+        self.assertTrue(r.is_score)
+        self.assertEqual(r.instrument_hint, "")
+
     def test_bass_not_treated_as_key(self):
         # "bass" is in _KEY_LABELS but should not be stripped unless preceded by "in"
         r = self._p("Daft Punk Medley Blowco-Bass_Drum.pdf")

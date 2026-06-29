@@ -151,7 +151,11 @@ def parse_filename(name: str) -> ParsedFile:
                         part_ordinal = _ORDINAL_MAP[tok_lower]
                 else:
                     hint_tokens.append(tok)
-            return ParsedFile(instrument_hint=" ".join(hint_tokens), part_ordinal=part_ordinal, is_score=False)
+            hint = " ".join(hint_tokens)
+            # If the "instrument" portion has no letters it's a date/version, not an instrument
+            if not any(c.isalpha() for c in hint):
+                return ParsedFile(instrument_hint="", part_ordinal="", is_score=True)
+            return ParsedFile(instrument_hint=hint, part_ordinal=part_ordinal, is_score=False)
         else:
             # No clear separator — use last non-ordinal token only
             for tok in reversed(tokens):

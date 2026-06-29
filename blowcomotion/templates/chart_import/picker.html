@@ -21,7 +21,15 @@
             <tr{% if folder.archived %} style="opacity:0.55" title="Archive"{% endif %}>
                 <td>{{ folder.name }}{% if folder.archived %} <em>(archive)</em>{% endif %}</td>
                 <td>{{ folder.matched_song.title|default:"— new song —" }}</td>
-                <td>{{ folder.match_score }}</td>
+                <td>
+                    {% if folder.matched_song %}
+                        {% if folder.match_score >= 0.85 %}
+                            <span class="tag tag--teal" title="{{ folder.match_score }}">High</span>
+                        {% else %}
+                            <span class="tag tag--warning" title="{{ folder.match_score }}">⚠ {{ folder.match_score }} — review</span>
+                        {% endif %}
+                    {% endif %}
+                </td>
                 <td>
                     <a href="{% url 'chart_import_review' %}?folder_id={{ folder.id }}&folder_name={{ folder.name|urlencode }}&song_id={{ folder.matched_song.id|default:'' }}"
                        class="button button-small">Review</a>
