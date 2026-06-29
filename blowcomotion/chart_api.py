@@ -284,10 +284,10 @@ def charts_for_song_instrument(request, song_id, instrument_id):
         charts_data.append({
             'id': chart.id,
             'part': part_name,
-            'pdf_url': chart.pdf.url if chart.pdf else None,
+            'pdf_url': (chart.pdf.url if chart.pdf else None) or chart.drive_pdf_url,
             'pdf_title': chart.pdf.title if chart.pdf else None,
         })
-    
+
     return JsonResponse({
         'song_id': song.id,
         'song_title': song.title,
