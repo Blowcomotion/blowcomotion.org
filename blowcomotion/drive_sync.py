@@ -9,23 +9,48 @@ from django.conf import settings
 EXCLUDE_FOLDERS = ["01 -Warmups and Exercises", "03 - Resources-Reference"]
 ARCHIVE_FOLDERS = ["ZZArchive - INACTIVE"]
 
-# Keys are lowercase normalized tokens (spaces or underscores replaced with space)
+# Keys are lowercase normalized tokens (dots/spaces/underscores replaced with space)
 _ALIAS_MAP = {
-    "horn in f": "French Horn",
-    "f horn": "French Horn",
-    "fhorn": "French Horn",
+    # French Horn / Mellophone
+    "horn in f": "French Horn/Mellophone",
+    "f horn": "French Horn/Mellophone",
+    "fhorn": "French Horn/Mellophone",
+    "fr horn": "French Horn/Mellophone",
+    "fhn": "French Horn/Mellophone",
+    "mellophone": "French Horn/Mellophone",
+    # Tuba / Sousaphone
     "tuba": "Tuba/Sousaphone",
     "sousa": "Tuba/Sousaphone",
-    "cowbell": "Cow Bell",
-    "tmpt": "Trumpet",
-    "tpet": "Trumpet",
-    "alto": "Alto Saxophone",
+    "sousaphone": "Tuba/Sousaphone",
+    # Baritone / Euphonium
+    "baritone bc": "Baritone",
+    "baritone tc": "Baritone/Euphonium",
+    "euph": "Baritone/Euphonium",
+    "euphonium": "Baritone/Euphonium",
+    # Saxophones
+    "baritone sax": "Baritone Saxophone",
     "bari sax": "Baritone Saxophone",
     "bari": "Baritone Saxophone",
-    "clrnt": "Clarinet",
-    "tnr": "Tenor Saxophone",
+    "soprano sax": "Soprano Saxophone",
+    "alto": "Alto Saxophone",
     "tenor sax": "Tenor Saxophone",
+    "tnr": "Tenor Saxophone",
+    # Brass
+    "tbn": "Trombone",
+    "tmpt": "Trumpet",
+    "tpet": "Trumpet",
+    "flugel": "Flugelhorn",
+    "flugelhorn": "Flugelhorn",
+    # Reed
+    "clrnt": "Clarinet",
+    # Percussion
+    "bells": "Bells, Marching",
+    "aux perc": "Hand Percussion",
+    "bateria": "Drum Set",
     "4 piece drum kit": "Drum Set",
+    # Miscellaneous
+    "tenorhorn": "Horn Tenor",
+    "cowbell": "Cow Bell",
 }
 
 _SCORE_PHRASES = {"full score", "all parts"}
@@ -47,6 +72,10 @@ _ORDINAL_MAP = {
     "2": "2nd", "2nd": "2nd",
     "3": "3rd", "3rd": "3rd",
     "4": "4th", "4th": "4th",
+    # Roman numerals
+    "ii": "2nd",
+    "iii": "3rd",
+    "iv": "4th",
 }
 
 
@@ -109,7 +138,7 @@ def parse_filename(name: str) -> ParsedFile:
         search_stem = _split_camel(stem)
         instrument_portion_isolated = False
 
-    tokens = re.split(r"[-_\s]+", search_stem)
+    tokens = re.split(r"[-_.\s]+", search_stem)
 
     instrument_hint = ""
     part_ordinal = ""
@@ -165,6 +194,8 @@ def parse_filename(name: str) -> ParsedFile:
                 if tok_lower in _ORDINAL_MAP:
                     if not part_ordinal:
                         part_ordinal = _ORDINAL_MAP[tok_lower]
+                elif tok_lower.isdigit():
+                    pass  # bare numeric (date prefix, page number) — skip
                 else:
                     hint_tokens.append(tok)
             hint = " ".join(hint_tokens)
@@ -261,9 +292,11 @@ def _resolve_alt_hint(text: str) -> tuple:
     Song names never appear in the alias map, so via_alias=True means the post-dash
     side is almost certainly the instrument (not the song title).
     """
-    # Normalize parenthetical ordinals: "Horn in F(1)" → "Horn in F 1"
-    text = re.sub(r"\((\d+)\)", r" \1", text).strip()
-    tokens = re.split(r"[-_\s]+", text.strip())
+    # Strip ALL parentheticals: "(cropped)", "(updated solo)", "(8va)", "(1)" etc.
+    text = re.sub(r"\([^)]*\)", "", text).strip()
+    # Apply CamelCase and digit boundary splitting: "BariSax" → "Bari Sax"
+    text = _split_camel(text)
+    tokens = re.split(r"[-_.\s]+", text.strip())
     ordinal = ""
     for start in range(len(tokens)):
         for length in (4, 3, 2, 1):

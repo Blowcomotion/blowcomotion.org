@@ -38,11 +38,11 @@ class TestParseFilename(TestCase):
 
     def test_horn_in_f(self):
         r = self._p("Song_Horn_in_F.pdf")
-        self.assertEqual(r.instrument_hint, "French Horn")
+        self.assertEqual(r.instrument_hint, "French Horn/Mellophone")
 
     def test_fhorn_part_1(self):
         r = self._p("Song_FHorn_1.pdf")
-        self.assertEqual(r.instrument_hint, "French Horn")
+        self.assertEqual(r.instrument_hint, "French Horn/Mellophone")
         self.assertEqual(r.part_ordinal, "1st")
 
     def test_tuba_no_part(self):
@@ -226,6 +226,26 @@ class TestParseFilename(TestCase):
         # "Caravan - Horn in F(1).pdf" — post-dash "(1)" must not block alias lookup
         r = self._p("Caravan - Horn in F(1).pdf")
         self.assertEqual(r.alt_hint, "Horn in F(1)")
+
+    def test_dot_separator_fr_horn(self):
+        # "Celebration.Fr.Horn.pdf" — dots used as separators
+        r = self._p("Celebration.Fr.Horn.pdf")
+        self.assertEqual(r.instrument_hint, "French Horn/Mellophone")
+
+    def test_dot_separator_bari_sax(self):
+        # "Celebration.BariSax.pdf" — dot separator + CamelCase
+        r = self._p("Celebration.BariSax.pdf")
+        self.assertEqual(r.instrument_hint, "Baritone Saxophone")
+
+    def test_numeric_prefix_skipped(self):
+        # "28-Bateria_2.pdf" — numeric date prefix in instrument-isolated position
+        r = self._p("SongName Blowco-28-Bateria_2.pdf")
+        self.assertFalse(r.is_score)
+
+    def test_parenthetical_stripped_from_alt(self):
+        # "Bang Bang - Trumpet 2 (cropped).pdf" — parenthetical must not break alt resolution
+        r = self._p("Bang Bang - Trumpet 2 (cropped).pdf")
+        self.assertEqual(r.alt_hint, "Trumpet 2 (cropped)")
 
 
 import datetime
