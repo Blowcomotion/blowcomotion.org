@@ -111,7 +111,7 @@ def review(request):
                 logger.error("Failed to import %s: %s", filename, e)
                 messages.error(request, f"Failed to import {filename}: {e}")
 
-        messages.success(request, "Import complete.")
+        messages.success(request, f"Import complete for {song.title}.")
         return redirect("chart_import_picker")
 
     # GET
