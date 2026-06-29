@@ -72,7 +72,7 @@ class TestParseFilename(TestCase):
 
     def test_drums(self):
         r = self._p("Song_Drums.pdf")
-        self.assertEqual(r.instrument_hint, "Drum Set")
+        self.assertEqual(r.instrument_hint, "Drums")
 
     def test_drum_kit(self):
         r = self._p("Song_4-Piece_Drum_Kit.pdf")

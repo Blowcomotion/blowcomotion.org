@@ -22,7 +22,6 @@ _ALIAS_MAP = {
     "bari": "Baritone Saxophone",
     "clrnt": "Clarinet",
     "tnr": "Tenor Saxophone",
-    "drums": "Drum Set",
     "4 piece drum kit": "Drum Set",
 }
 
@@ -173,7 +172,7 @@ def _download_pdf(file_id: str) -> bytes:
     return buf.getvalue()
 
 
-AMBIGUOUS_HINTS = {"baritone"}  # always route to review; ambiguous across 3 DB instruments
+AMBIGUOUS_HINTS = {"baritone", "drums"}  # always route to review; ambiguous across multiple DB instruments
 
 
 def match_song(folder_name: str, songs: list) -> tuple:
