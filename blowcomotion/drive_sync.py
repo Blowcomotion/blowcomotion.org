@@ -245,7 +245,12 @@ def match_song(folder_name: str, songs: list) -> tuple:
 
 
 def _resolve_alt_hint(text: str) -> tuple:
-    """Resolve a raw post-dash string to (canonical_hint, ordinal) applying alias map and ordinal extraction."""
+    """Resolve a raw post-dash string to (canonical_hint, ordinal, via_alias).
+
+    via_alias is True when the alias map was used, making the match highly reliable.
+    Song names never appear in the alias map, so via_alias=True means the post-dash
+    side is almost certainly the instrument (not the song title).
+    """
     tokens = re.split(r"[-_\s]+", text.strip())
     ordinal = ""
     for start in range(len(tokens)):
@@ -258,7 +263,7 @@ def _resolve_alt_hint(text: str) -> tuple:
                 for tok in tokens[end:]:
                     if tok.lower() in _ORDINAL_MAP and not ordinal:
                         ordinal = _ORDINAL_MAP[tok.lower()]
-                return _ALIAS_MAP[candidate], ordinal
+                return _ALIAS_MAP[candidate], ordinal, True
     hint_tokens = []
     for tok in tokens:
         if tok.lower() in _ORDINAL_MAP:
@@ -266,7 +271,7 @@ def _resolve_alt_hint(text: str) -> tuple:
                 ordinal = _ORDINAL_MAP[tok.lower()]
         else:
             hint_tokens.append(tok)
-    return " ".join(hint_tokens), ordinal
+    return " ".join(hint_tokens), ordinal, False
 
 
 def resolve_drive_file(drive_file: dict, instruments: list) -> "ResolvedFile":
@@ -277,12 +282,22 @@ def resolve_drive_file(drive_file: dict, instruments: list) -> "ResolvedFile":
     matched_inst, inst_conf = match_instrument(hint, instruments) if hint else (None, "low")
     part = f"{parsed.part_ordinal} {matched_inst.name}".strip() if (matched_inst and parsed.part_ordinal) else ""
 
-    # If primary hint gave low confidence and there's an alt_hint (post-dash side of "X - Y" filenames),
-    # try the alt as the instrument — handles "Song - Instrument" format alongside "Instrument - Song".
-    if inst_conf == "low" and parsed.alt_hint:
-        alt_canonical, alt_ordinal = _resolve_alt_hint(parsed.alt_hint)
+    # For "X - Y" filenames the format is ambiguous (Instrument - Song vs Song - Instrument).
+    # Fall back to the post-dash alt_hint when:
+    #   - primary gave low confidence (primary was not an instrument), OR
+    #   - alt resolved via alias map (aliases contain only instrument names, never song titles), OR
+    #   - primary matched only via fuzzy (e.g. "Carinito" → "Clarinet" at 0.75) and alt has any match
+    #     (fuzzy false positives happen when a song name phonetically resembles an instrument)
+    if parsed.alt_hint:
+        alt_canonical, alt_ordinal, alt_via_alias = _resolve_alt_hint(parsed.alt_hint)
         alt_inst, alt_conf = match_instrument(alt_canonical, instruments) if alt_canonical else (None, "low")
-        if alt_conf != "low":
+        primary_is_exact = matched_inst is not None and hint.lower() == matched_inst.name.lower()
+        prefer_alt = (
+            (inst_conf == "low" and alt_conf != "low")
+            or (alt_via_alias and alt_conf != "low")
+            or (not primary_is_exact and alt_conf != "low")
+        )
+        if prefer_alt:
             matched_inst, inst_conf = alt_inst, alt_conf
             part = f"{alt_ordinal} {matched_inst.name}".strip() if (matched_inst and alt_ordinal) else ""
 
