@@ -18,6 +18,7 @@ _ALIAS_MAP = {
     "cowbell": "Cow Bell",
     "tmpt": "Trumpet",
     "tpet": "Trumpet",
+    "alto": "Alto Saxophone",
     "bari sax": "Baritone Saxophone",
     "bari": "Baritone Saxophone",
     "clrnt": "Clarinet",
@@ -62,10 +63,13 @@ def parse_filename(name: str) -> ParsedFile:
     if any(phrase in lower for phrase in _SCORE_PHRASES) or any(tok in tokens_lower for tok in _SCORE_TOKENS):
         return ParsedFile(instrument_hint="", part_ordinal="", is_score=True)
 
-    # If a dash separates a space-containing song name from the instrument portion
-    # (e.g. "Grazin in the Grass-Alto_Saxophone_2"), restrict token search to the
-    # instrument portion so multi-word names like "Alto Saxophone" resolve correctly.
-    if "-" in stem and " " in stem.split("-", 1)[0]:
+    # Detect filename format and isolate the instrument portion.
+    # "Instrument - Song Name" (space-dash-space): pre-dash is the instrument.
+    # "Song Name-Instrument" (no spaces around dash, pre-dash has spaces): post-dash is the instrument.
+    if " - " in stem:
+        search_stem = stem.split(" - ", 1)[0]
+        instrument_portion_isolated = True
+    elif "-" in stem and " " in stem.split("-", 1)[0]:
         search_stem = stem.split("-", 1)[1]
         instrument_portion_isolated = True
     else:

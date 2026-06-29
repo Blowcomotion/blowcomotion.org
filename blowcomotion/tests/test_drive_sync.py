@@ -120,6 +120,26 @@ class TestParseFilename(TestCase):
         self.assertEqual(r.instrument_hint, "Trumpet")
         self.assertEqual(r.part_ordinal, "1st")
 
+    def test_instrument_dash_song_name_tuba(self):
+        r = self._p("Tuba - Rock Lobster.pdf")
+        self.assertEqual(r.instrument_hint, "Tuba/Sousaphone")
+        self.assertEqual(r.part_ordinal, "")
+
+    def test_instrument_dash_song_name_alto(self):
+        r = self._p("Alto - Rock Lobster.pdf")
+        self.assertEqual(r.instrument_hint, "Alto Saxophone")
+        self.assertEqual(r.part_ordinal, "")
+
+    def test_instrument_dash_song_name_multiword(self):
+        r = self._p("Bass Drum - Rock Lobster.pdf")
+        self.assertEqual(r.instrument_hint, "Bass Drum")
+        self.assertEqual(r.part_ordinal, "")
+
+    def test_instrument_dash_song_name_bari_sax(self):
+        r = self._p("Bari Sax - Rock Lobster.pdf")
+        self.assertEqual(r.instrument_hint, "Baritone Saxophone")
+        self.assertEqual(r.part_ordinal, "")
+
     def test_fullerton_not_a_score(self):
         # "full" alone must not trigger score detection; only "full score" as a phrase
         r = self._p("Fullerton_March_Trumpet_1.pdf")
