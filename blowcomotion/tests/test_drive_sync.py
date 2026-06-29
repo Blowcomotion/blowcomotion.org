@@ -327,3 +327,66 @@ class TestImportView(TestCase):
             "row_0_chart_id": "",
         })
         self.assertEqual(Chart.objects.filter(song=self.song, instrument=self.instrument).count(), 1)
+
+
+from io import StringIO
+
+from django.core.files.base import ContentFile
+from django.core.management import call_command
+
+
+class TestSyncChartsCommand(TestCase):
+    def setUp(self):
+        self.song = Song.objects.create(title="Soul Finger")
+        self.instrument = Instrument.objects.create(name="Trumpet")
+
+    @patch("blowcomotion.management.commands.sync_charts.list_pdfs_in_folder")
+    @patch("blowcomotion.management.commands.sync_charts._download_pdf")
+    @patch("blowcomotion.management.commands.sync_charts._get_drive_service")
+    @override_settings(GDRIVE_CHARTS_FOLDER_ID="root_id")
+    def test_dry_run_makes_no_writes(self, mock_service, mock_dl, mock_list):
+        mock_list.return_value = []
+        mock_service.return_value = MagicMock()
+        initial = Chart.objects.count()
+        call_command("sync_charts", "--dry-run", stdout=StringIO())
+        mock_dl.assert_not_called()
+        self.assertEqual(Chart.objects.count(), initial)
+
+    @patch("blowcomotion.management.commands.sync_charts.list_pdfs_in_folder")
+    @patch("blowcomotion.management.commands.sync_charts._download_pdf")
+    @patch("blowcomotion.management.commands.sync_charts._get_drive_service")
+    @override_settings(GDRIVE_CHARTS_FOLDER_ID="root_id")
+    def test_exact_match_updates_chart(self, mock_service, mock_dl, mock_list):
+        import datetime
+
+        from wagtail.documents.models import Document as WagtailDocument
+
+        mock_dl.return_value = b"%PDF-1.4 updated"
+
+        old_doc = WagtailDocument(title="old.pdf")
+        old_doc.file.save("old.pdf", ContentFile(b"%PDF-1.4 old"), save=True)
+        old_time = datetime.datetime(2025, 1, 1, tzinfo=datetime.timezone.utc)
+        chart = Chart.objects.create(
+            song=self.song,
+            instrument=self.instrument,
+            part="1st Trumpet",
+            pdf=old_doc,
+            drive_file_id="file123",
+            drive_modified_time=old_time,
+        )
+
+        parent_mock = MagicMock()
+        parent_mock.files.return_value.get.return_value.execute.return_value = {
+            "parents": ["song_folder_id"]
+        }
+        mock_service.return_value = parent_mock
+        mock_list.return_value = [{
+            "id": "file123",
+            "name": "Soul_Finger_Tmpt_1.pdf",
+            "modifiedTime": "2025-06-01T12:00:00.000Z",
+            "relative_path": "Soul_Finger_Tmpt_1.pdf",
+        }]
+
+        call_command("sync_charts", stdout=StringIO())
+        chart.refresh_from_db()
+        self.assertNotEqual(chart.pdf_id, old_doc.id)
