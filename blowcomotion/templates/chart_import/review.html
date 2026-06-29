@@ -23,8 +23,8 @@
         <table class="listing">
             <thead>
                 <tr>
-                    <th><input type="checkbox" id="select-all-top" title="Select all" checked
-                        onchange="document.querySelectorAll('input[name=rows]').forEach(c=>c.checked=this.checked);document.getElementById('select-all-bottom').checked=this.checked"></th>
+                    <th><label><input type="checkbox" id="select-all-top" checked
+                        onchange="document.querySelectorAll('input[name=rows]').forEach(c=>c.checked=this.checked);document.getElementById('select-all-bottom').checked=this.checked"> Select all</label></th>
                     <th>File</th>
                     <th>Status</th>
                     <th>Instrument</th>
