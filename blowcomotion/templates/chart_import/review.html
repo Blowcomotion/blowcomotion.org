@@ -10,6 +10,36 @@
         {% csrf_token %}
         <input type="hidden" name="folder_id" value="{{ folder_id }}">
 
+        <details style="margin-bottom:1.5rem;background:#f7f7f7;border:1px solid #ddd;border-radius:4px;padding:.75rem 1rem">
+            <summary style="cursor:pointer;font-weight:bold">How this works</summary>
+            <div style="margin-top:.75rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem 2rem;font-size:.9em">
+                <div>
+                    <strong>Status badges</strong> — how the file was matched to an existing chart:
+                    <ul style="margin:.4rem 0 0 1rem;padding:0">
+                        <li><span class="tag tag--teal">Exact</span> Same Drive file ID, file has changed — will replace the existing PDF.</li>
+                        <li><span class="tag tag--primary">High</span> No stored file ID but one chart matches this instrument/part — likely a re-export.</li>
+                        <li><span class="tag tag--warning">Needs review</span> Multiple files map to the same instrument/part — pick the right one.</li>
+                        <li><span class="tag tag--salmon">New</span> No existing chart found — will create a new one.</li>
+                    </ul>
+                </div>
+                <div>
+                    <strong>Instrument confidence icons</strong> — how certain the parser is:
+                    <ul style="margin:.4rem 0 0 1rem;padding:0">
+                        <li><span style="color:green;font-weight:bold">✓</span> High confidence — instrument name matched exactly or via known alias.</li>
+                        <li><span style="color:#c4780a;font-weight:bold">⚠</span> Ambiguous — name could refer to more than one instrument; choose from the dropdown.</li>
+                        <li><span style="color:#c0392b;font-weight:bold">?</span> Low confidence — no strong match found; review and correct before importing.</li>
+                    </ul>
+                </div>
+                <div>
+                    <strong>Part field</strong> — leave blank for single-part charts. Use <em>1st Trumpet</em>, <em>2nd Trumpet</em> etc. for multi-part charts.
+                </div>
+                <div>
+                    <strong>Action column</strong> — <em>new</em> creates a chart; <em>update</em> replaces the PDF on an existing chart and deletes the old file.
+                    Uncheck any row to skip it.
+                </div>
+            </div>
+        </details>
+
         <div style="margin-bottom:1rem">
             <label><strong>Song:</strong>
                 <select name="song_id">
