@@ -101,7 +101,11 @@ def parse_filename(name: str) -> ParsedFile:
 
 def _get_drive_service():
     from googleapiclient.discovery import build
-    return build("drive", "v3", developerKey=settings.GDRIVE_API_KEY)
+    api_key = settings.GDRIVE_API_KEY
+    if not api_key:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured("GDRIVE_API_KEY is not set in local.py")
+    return build("drive", "v3", developerKey=api_key)
 
 
 def list_song_folders(folder_id: str) -> list:

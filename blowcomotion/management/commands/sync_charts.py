@@ -31,6 +31,9 @@ class Command(BaseCommand):
         dry_run = options["dry_run"]
         song_id = options.get("song_id")
 
+        if not getattr(settings, "GDRIVE_API_KEY", None):
+            self.stderr.write("GDRIVE_API_KEY not configured in local.py")
+            raise SystemExit(1)
         if not getattr(settings, "GDRIVE_CHARTS_FOLDER_ID", None):
             self.stderr.write("GDRIVE_CHARTS_FOLDER_ID not configured in local.py")
             raise SystemExit(1)
