@@ -1,6 +1,7 @@
 import difflib
 import io
 import re
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -161,15 +162,23 @@ def list_pdfs_in_folder(folder_id: str, _prefix: str = "") -> list:
 
 
 def _download_pdf(file_id: str) -> bytes:
+    from googleapiclient.errors import HttpError
     from googleapiclient.http import MediaIoBaseDownload
     service = _get_drive_service()
-    request = service.files().get_media(fileId=file_id)
-    buf = io.BytesIO()
-    dl = MediaIoBaseDownload(buf, request)
-    done = False
-    while not done:
-        _, done = dl.next_chunk()
-    return buf.getvalue()
+    for attempt in range(4):
+        try:
+            request = service.files().get_media(fileId=file_id)
+            buf = io.BytesIO()
+            dl = MediaIoBaseDownload(buf, request)
+            done = False
+            while not done:
+                _, done = dl.next_chunk()
+            return buf.getvalue()
+        except HttpError as e:
+            if e.status_code in (403, 429) and attempt < 3:
+                time.sleep(2 ** attempt)
+                continue
+            raise
 
 
 AMBIGUOUS_HINTS = {"baritone", "drums"}  # always route to review; ambiguous across multiple DB instruments

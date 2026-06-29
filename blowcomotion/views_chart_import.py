@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import datetime
 
 from wagtail.documents import get_document_model
@@ -121,6 +122,7 @@ def review(request):
             except Exception as e:
                 logger.error("Failed to import %s: %s", filename, e)
                 messages.error(request, f"Failed to import {filename}: {e}")
+            time.sleep(0.5)
 
         messages.success(request, "Import complete.")
         return redirect("chart_import_picker")
