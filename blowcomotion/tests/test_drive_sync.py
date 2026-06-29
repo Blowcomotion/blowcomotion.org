@@ -135,6 +135,19 @@ class TestParseFilename(TestCase):
         self.assertEqual(r.instrument_hint, "Bass Drum")
         self.assertEqual(r.part_ordinal, "")
 
+    def test_in_key_ordinal_suffix(self):
+        # "Song-Instrument_in_KeyOrdinal.pdf" → strip "in Bb", extract ordinal "1"
+        r = self._p("Daft Punk Medley Blowco-Clarinet_in_Bb1.pdf")
+        self.assertEqual(r.instrument_hint, "Clarinet")
+        self.assertEqual(r.part_ordinal, "1st")
+        self.assertFalse(r.is_key)
+
+    def test_bass_not_treated_as_key(self):
+        # "bass" is in _KEY_LABELS but should not be stripped unless preceded by "in"
+        r = self._p("Daft Punk Medley Blowco-Bass_Drum.pdf")
+        self.assertEqual(r.instrument_hint, "Bass Drum")
+        self.assertEqual(r.part_ordinal, "")
+
     def test_instrument_dash_song_name_bari_sax(self):
         r = self._p("Bari Sax - Rock Lobster.pdf")
         self.assertEqual(r.instrument_hint, "Baritone Saxophone")

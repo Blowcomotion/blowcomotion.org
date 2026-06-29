@@ -85,18 +85,20 @@
                         <input type="hidden" name="row_{{ i }}_is_key" value="1">
                         <span style="color:#6f42c1;font-weight:bold;margin-right:4px" title="Key-based chart — select all instruments that use this key">♪</span>
                         <strong>{{ row.parsed.instrument_hint }}</strong> key —
-                        <details style="display:inline-block;vertical-align:top">
+                        <details class="key-picker" style="display:inline-block;vertical-align:top">
                             <summary style="cursor:pointer">Select instruments</summary>
                             <div style="max-height:200px;overflow-y:auto;border:1px solid rgba(128,128,128,.35);border-radius:4px;padding:.4rem .6rem;margin-top:.25rem">
                             {% for inst in instruments %}
                                 <label style="display:block;white-space:nowrap">
                                     <input type="checkbox" name="row_{{ i }}_instrument_ids" value="{{ inst.id }}"
-                                        {% if inst.id in row.key_instrument_ids %}checked{% endif %}>
+                                        {% if inst.id in row.key_instrument_ids %}checked{% endif %}
+                                        onchange="updateKeyLabel(this)">
                                     {{ inst.name }}
                                 </label>
                             {% endfor %}
                             </div>
                         </details>
+                        <span class="key-selection-label" style="margin-left:.5rem;font-size:.9em;opacity:.75">{{ row.key_instrument_names|join:", "|default:"None selected" }}</span>
                     {% else %}
                         {% if row.inst_conf == "high" %}
                             <span style="color:green;font-weight:bold;margin-right:4px" title="High confidence">✓</span>
@@ -146,6 +148,14 @@ function toggleAll(btn) {
     const label = allChecked ? 'Select all' : 'Deselect all';
     document.getElementById('select-all-top').textContent = label;
     document.getElementById('select-all-bottom').textContent = label;
+}
+
+function updateKeyLabel(cb) {
+    const td = cb.closest('td');
+    const names = Array.from(td.querySelectorAll('input[type=checkbox]:checked'))
+        .map(c => c.closest('label').textContent.trim());
+    const label = td.querySelector('.key-selection-label');
+    if (label) label.textContent = names.length ? names.join(', ') : 'None selected';
 }
 </script>
 {% endblock %}

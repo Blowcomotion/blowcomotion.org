@@ -151,10 +151,14 @@ def review(request):
         parsed = resolved.parsed
 
         key_instrument_ids = set()
+        key_instrument_names = []
         if parsed.is_key:
             default_names = _KEY_INSTRUMENT_MAP.get(parsed.instrument_hint.lower(), [])
             name_set = {n.lower() for n in default_names}
-            key_instrument_ids = {inst.id for inst in instruments if inst.name.lower() in name_set}
+            for inst in instruments:
+                if inst.name.lower() in name_set:
+                    key_instrument_ids.add(inst.id)
+                    key_instrument_names.append(inst.name)
 
         tuple_charts = [
             c for c in existing_charts
@@ -171,6 +175,7 @@ def review(request):
             "reconcile": result,
             "existing_chart": result.existing_chart,
             "key_instrument_ids": key_instrument_ids,
+            "key_instrument_names": key_instrument_names,
         })
 
     return render(request, "chart_import/review.html", {

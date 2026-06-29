@@ -115,14 +115,42 @@ def parse_filename(name: str) -> ParsedFile:
 
     if not instrument_hint:
         if instrument_portion_isolated:
-            # Instrument portion is clean — all non-ordinal tokens form the name
+            # Instrument portion is clean — collect ordinal, strip "in <Key>" suffixes.
+            # "Clarinet_in_Bb1" → tokens ["Clarinet","in","Bb1"] → hint="Clarinet", ord="1st"
+            # Key tokens are only stripped when directly preceded by the word "in"; bare words
+            # like "bass" in "Bass Drum" are NOT treated as key labels.
+            _sorted_keys = sorted(_KEY_LABELS, key=len, reverse=True)
+
+            def _key_digit(t):
+                """Return trailing digit string if t is <key><digit>, '' if bare key, else None."""
+                for k in _sorted_keys:
+                    if t == k:
+                        return ""
+                    if t.startswith(k) and t[len(k):].isdigit():
+                        return t[len(k):]
+                return None
+
             hint_tokens = []
-            for tok in reversed(tokens):
-                if tok.lower() in _ORDINAL_MAP:
+            expect_key = False  # True immediately after seeing "in"
+            for tok in tokens:
+                tok_lower = tok.lower()
+                if tok_lower == "in":
+                    expect_key = True
+                    continue
+                if expect_key:
+                    expect_key = False
+                    kd = _key_digit(tok_lower)
+                    if kd is not None:
+                        if kd and not part_ordinal:
+                            part_ordinal = _ORDINAL_MAP.get(kd, kd + "th")
+                        continue
+                    # "in" not followed by a key — restore "in" as part of the name
+                    hint_tokens.append("in")
+                if tok_lower in _ORDINAL_MAP:
                     if not part_ordinal:
-                        part_ordinal = _ORDINAL_MAP[tok.lower()]
+                        part_ordinal = _ORDINAL_MAP[tok_lower]
                 else:
-                    hint_tokens.insert(0, tok)
+                    hint_tokens.append(tok)
             return ParsedFile(instrument_hint=" ".join(hint_tokens), part_ordinal=part_ordinal, is_score=False)
         else:
             # No clear separator — use last non-ordinal token only
