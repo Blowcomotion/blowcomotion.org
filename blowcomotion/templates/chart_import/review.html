@@ -49,19 +49,21 @@
                     </span>
                 </td>
                 <td>
-                    {% if row.inst_conf == "high" and row.instrument %}
-                        <input type="hidden" name="row_{{ i }}_instrument_id" value="{{ row.instrument.id }}">
-                        {{ row.instrument.name }}
+                    {% if row.inst_conf == "high" %}
+                        <span style="color:green;font-weight:bold;margin-right:4px" title="High confidence">✓</span>
+                    {% elif row.inst_conf == "ambiguous" %}
+                        <span style="color:#c4780a;font-weight:bold;margin-right:4px" title="Ambiguous — review required">⚠</span>
                     {% else %}
-                        <select name="row_{{ i }}_instrument_id">
-                            {% for inst in instruments %}
-                            <option value="{{ inst.id }}"
-                                {% if row.instrument and row.instrument.id == inst.id %}selected{% endif %}>
-                                {{ inst.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
+                        <span style="color:#c0392b;font-weight:bold;margin-right:4px" title="Low confidence — review required">?</span>
                     {% endif %}
+                    <select name="row_{{ i }}_instrument_id">
+                        {% for inst in instruments %}
+                        <option value="{{ inst.id }}"
+                            {% if row.instrument and row.instrument.id == inst.id %}selected{% endif %}>
+                            {{ inst.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
                 </td>
                 <td><input type="text" name="row_{{ i }}_part" value="{{ row.part }}"></td>
                 <td>{% if row.existing_chart %}update{% else %}new{% endif %}</td>

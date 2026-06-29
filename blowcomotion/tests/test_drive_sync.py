@@ -47,7 +47,7 @@ class TestParseFilename(TestCase):
 
     def test_tuba_no_part(self):
         r = self._p("Song_Tuba.pdf")
-        self.assertEqual(r.instrument_hint, "Tuba")
+        self.assertEqual(r.instrument_hint, "Tuba/Sousaphone")
         self.assertEqual(r.part_ordinal, "")
 
     def test_cowbell(self):
@@ -182,8 +182,7 @@ class TestMatchInstrument(TestCase):
             self._inst("Trumpet"),
             self._inst("French Horn"),
             self._inst("Mellophone"),
-            self._inst("Tuba"),
-            self._inst("Sousaphone"),
+            self._inst("Tuba/Sousaphone"),
             self._inst("Baritone Horn"),
             self._inst("Baritone Saxophone"),
             self._inst("Euphonium (Baritone)"),

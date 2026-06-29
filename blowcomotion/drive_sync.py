@@ -14,7 +14,7 @@ _ALIAS_MAP = {
     "horn in f": "French Horn",
     "f horn": "French Horn",
     "fhorn": "French Horn",
-    "tuba": "Tuba",
+    "tuba": "Tuba/Sousaphone",
     "cowbell": "Cow Bell",
     "tmpt": "Trumpet",
     "tpet": "Trumpet",
