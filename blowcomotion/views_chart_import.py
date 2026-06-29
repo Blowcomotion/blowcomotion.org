@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import datetime
 
@@ -180,9 +181,10 @@ def review(request):
 
     return render(request, "chart_import/review.html", {
         "song": song,
-        "songs": list(Song.objects.all()),
+        "songs": list(Song.objects.order_by("title")),
         "folder_id": folder_id,
         "folder_name": folder_name,
         "rows": rows,
         "instruments": instruments,
+        "instruments_json": json.dumps([{"id": i.id, "name": i.name} for i in instruments]),
     })
