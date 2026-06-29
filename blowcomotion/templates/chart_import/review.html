@@ -173,17 +173,43 @@ function updateKeyLabel(cb) {
 function switchToMulti(idx) {
     const cell = document.getElementById('inst-cell-' + idx);
     cell.dataset.original = cell.innerHTML;
-    let html = '<input type="hidden" name="row_' + idx + '_is_key" value="1">';
-    html += '<details class="key-picker" style="display:inline-block;vertical-align:top">';
-    html += '<summary style="cursor:pointer">Select instruments</summary>';
-    html += '<div style="max-height:200px;overflow-y:auto;border:1px solid rgba(128,128,128,.35);border-radius:4px;padding:.4rem .6rem;margin-top:.25rem">';
+    cell.innerHTML = '';
+
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden'; hidden.name = 'row_' + idx + '_is_key'; hidden.value = '1';
+    cell.appendChild(hidden);
+
+    const details = document.createElement('details');
+    details.className = 'key-picker'; details.style.cssText = 'display:inline-block;vertical-align:top';
+    const summary = document.createElement('summary');
+    summary.style.cursor = 'pointer'; summary.textContent = 'Select instruments';
+    details.appendChild(summary);
+
+    const list = document.createElement('div');
+    list.style.cssText = 'max-height:200px;overflow-y:auto;border:1px solid rgba(128,128,128,.35);border-radius:4px;padding:.4rem .6rem;margin-top:.25rem';
     INSTRUMENTS.forEach(inst => {
-        html += '<label style="display:block;white-space:nowrap"><input type="checkbox" name="row_' + idx + '_instrument_ids" value="' + inst.id + '" onchange="updateKeyLabel(this)"> ' + inst.name + '</label>';
+        const label = document.createElement('label');
+        label.style.cssText = 'display:block;white-space:nowrap';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.name = 'row_' + idx + '_instrument_ids';
+        cb.value = inst.id; cb.addEventListener('change', () => updateKeyLabel(cb));
+        label.appendChild(cb);
+        label.append(' ' + inst.name);
+        list.appendChild(label);
     });
-    html += '</div></details>';
-    html += '<span class="key-selection-label" style="margin-left:.5rem;font-size:.9em;opacity:.75">None selected</span>';
-    html += ' <button type="button" onclick="switchToSingle(' + idx + ')">Single</button>';
-    cell.innerHTML = html;
+    details.appendChild(list);
+    cell.appendChild(details);
+
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'key-selection-label';
+    labelSpan.style.cssText = 'margin-left:.5rem;font-size:.9em;opacity:.75';
+    labelSpan.textContent = 'None selected';
+    cell.appendChild(labelSpan);
+
+    const singleBtn = document.createElement('button');
+    singleBtn.type = 'button'; singleBtn.textContent = 'Single';
+    singleBtn.addEventListener('click', () => switchToSingle(idx));
+    cell.appendChild(singleBtn);
 }
 
 function switchToSingle(idx) {
