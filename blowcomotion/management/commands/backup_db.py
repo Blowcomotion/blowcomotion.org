@@ -40,11 +40,8 @@ class Command(BaseCommand):
                 '--exclude', 'wagtailcore.taskstate',
                 '--exclude', 'wagtailcore.workflowstate',
                 '--exclude', 'wagtailcore.comment',
-                # pagelogentry and pagesubscription have direct Page FKs; if any
-                # referenced page was deleted, --natural-foreign crashes serializing them
-                '--exclude', 'wagtailcore.pagelogentry',
+                # pagesubscription has a direct Page FK; exclude to avoid orphan crashes
                 '--exclude', 'wagtailcore.pagesubscription',
-                '--exclude', 'wagtailcore.modellogentry',
                 '--exclude', 'wagtailcore.groupcollectionpermission',
                 '--exclude', 'wagtailcore.grouppagepermission',
                 '--exclude', 'wagtailadmin.editingsession',
