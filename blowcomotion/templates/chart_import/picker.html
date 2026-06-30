@@ -6,12 +6,13 @@
 {% block content %}
 <div class="nice-padding">
     <h1>Import Charts from Google Drive</h1>
-    <p>Select a Drive song folder to scan and review its PDF charts before importing.</p>
+    <p>Each row is a Google Drive folder. Click <strong>Review</strong> to scan its PDF files and import charts for that song.</p>
+    <p>The <strong>Auto-detected song</strong> column shows which song in the database was matched to the folder name. If it looks wrong, you can correct it on the review page before importing. A <span class="tag tag--warning">⚠ review</span> score means the match is uncertain — double-check before proceeding.</p>
     <table class="listing">
         <thead>
             <tr>
                 <th>Drive folder</th>
-                <th>Matched song</th>
+                <th>Auto-detected song</th>
                 <th>Score</th>
                 <th>Last imported</th>
                 <th></th>
