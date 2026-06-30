@@ -8,47 +8,33 @@
     <nav style="font-size:.9em;margin-bottom:.75rem;opacity:.7">
         <a href="{% url 'chart_import_picker' %}">Import Charts</a> / Review
     </nav>
-    <h1>Review Charts</h1>
+    <h1 style="display:flex;align-items:center;gap:.5rem">
+        Review Charts
+        <span class="rc-help">
+            <button type="button" class="rc-help__btn" aria-label="How this works">?</button>
+            <span class="rc-help__tip" role="tooltip">
+                <strong>Status badges</strong> — how the file was matched to an existing chart:
+                <ul>
+                    <li><span class="tag tag--teal">Exact</span> Same Drive file ID, file has changed — will replace the existing PDF.</li>
+                    <li><span class="tag tag--primary">High</span> No stored file ID but one chart matches this instrument/part — likely a re-export.</li>
+                    <li><span class="tag tag--warning">Needs review</span> Multiple files map to the same instrument/part — pick the right one.</li>
+                    <li><span class="tag tag--salmon">New</span> No existing chart found — will create a new one.</li>
+                </ul>
+                <strong>Instrument confidence icons</strong> — how certain the parser is:
+                <ul>
+                    <li><span style="color:green;font-weight:bold">✓</span> High confidence — matched exactly or via known alias.</li>
+                    <li><span style="color:#c4780a;font-weight:bold">⚠</span> Ambiguous — choose from the dropdown.</li>
+                    <li><span style="color:#c0392b;font-weight:bold">?</span> Low confidence — review and correct before importing.</li>
+                </ul>
+                <strong>Part field</strong> — leave blank for single-part charts. Use <em>1st Trumpet</em>, <em>2nd Trumpet</em> etc. for multi-part.<br><br>
+                <strong>Action column</strong> — <em>new</em> creates a chart record; <em>update</em> replaces the Drive URL on an existing one. Uncheck any row to skip it.<br><br>
+                <strong>Multi button</strong> — switch a row to a multi-instrument selector when one PDF covers multiple instruments. Each checked instrument gets its own chart record.
+            </span>
+        </span>
+    </h1>
     <form method="post">
         {% csrf_token %}
         <input type="hidden" name="folder_id" value="{{ folder_id }}">
-
-        <details style="margin-bottom:1.5rem;border:1px solid rgba(128,128,128,0.35);border-radius:4px;padding:.75rem 1rem">
-            <summary style="cursor:pointer;font-weight:bold">How this works</summary>
-            <div style="margin-top:.75rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem 2rem;font-size:1.2em">
-                <div>
-                    <strong>Status badges</strong> — how the file was matched to an existing chart:
-                    <ul style="margin:.4rem 0 0 1rem;padding:0">
-                        <li><span class="tag tag--teal">Exact</span> Same Drive file ID, file has changed — will replace the existing PDF.</li>
-                        <li><span class="tag tag--primary">High</span> No stored file ID but one chart matches this instrument/part — likely a re-export.</li>
-                        <li><span class="tag tag--warning">Needs review</span> Multiple files map to the same instrument/part — pick the right one.</li>
-                        <li><span class="tag tag--salmon">New</span> No existing chart found — will create a new one.</li>
-                    </ul>
-                </div>
-                <div>
-                    <strong>Instrument confidence icons</strong> — how certain the parser is:
-                    <ul style="margin:.4rem 0 0 1rem;padding:0">
-                        <li><span style="color:green;font-weight:bold">✓</span> High confidence — instrument name matched exactly or via known alias.</li>
-                        <li><span style="color:#c4780a;font-weight:bold">⚠</span> Ambiguous — name could refer to more than one instrument; choose from the dropdown.</li>
-                        <li><span style="color:#c0392b;font-weight:bold">?</span> Low confidence — no strong match found; review and correct before importing.</li>
-                    </ul>
-                </div>
-                <div>
-                    <strong>Part field</strong> — leave blank for single-part charts. Use <em>1st Trumpet</em>, <em>2nd Trumpet</em> etc. for multi-part charts.
-                </div>
-                <div>
-                    <strong>Action column</strong> — <em>new</em> creates a chart record pointing to the Drive file; <em>update</em> replaces the Drive URL on an existing chart record.
-                    Uncheck any row to skip it.
-                </div>
-                <div>
-                    <strong>Multi button</strong> — click <em>Multi</em> on any instrument row to switch it to a multi-instrument selector.
-                    Use this when one PDF covers multiple instruments (e.g. a combined woodwind part).
-                    Each checked instrument gets its own chart record pointing to the same Drive file.
-                    Click <em>Single</em> to revert to a single-instrument dropdown.
-                </div>
-            </div>
-        </details>
-
         <input type="hidden" name="folder_name" value="{{ folder_name }}">
 
         <div style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;margin-bottom:1.25rem;padding:.875rem 1rem;background:rgba(128,128,128,.07);border:1px solid rgba(128,128,128,.2);border-radius:4px">
@@ -162,6 +148,61 @@
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.rc-help {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.rc-help__btn {
+    width: 1.35em;
+    height: 1.35em;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    background: none;
+    cursor: pointer;
+    font-size: .65em;
+    font-weight: bold;
+    line-height: 1;
+    color: inherit;
+    padding: 0;
+    transition: color .15s;
+}
+.rc-help__btn:hover,
+.rc-help__btn:focus {
+    color: #888;
+    outline: none;
+}
+.rc-help__tip {
+    display: none;
+    position: absolute;
+    top: calc(100% + .5rem);
+    left: 0;
+    z-index: 100;
+    width: 480px;
+    background: var(--w-color-surface-page, #fff);
+    border: 1px solid rgba(128,128,128,.35);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.15);
+    padding: 1rem 1.25rem;
+    font-size: .8rem;
+    font-weight: normal;
+    line-height: 1.5;
+    color: var(--w-color-text-label, inherit);
+    white-space: normal;
+}
+.rc-help__tip ul {
+    margin: .35rem 0 .75rem 1rem;
+    padding: 0;
+}
+.rc-help:hover .rc-help__tip,
+.rc-help__btn:focus + .rc-help__tip {
+    display: block;
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}
