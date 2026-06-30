@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="nice-padding">
-    <h1>Review Charts: {{ folder_name }}</h1>
+    <h1>Review Charts</h1>
     <form method="post">
         {% csrf_token %}
         <input type="hidden" name="folder_id" value="{{ folder_id }}">
@@ -47,15 +47,27 @@
         </details>
 
         <input type="hidden" name="folder_name" value="{{ folder_name }}">
-        <div style="margin-bottom:1rem">
-            <label><strong>Song:</strong>
-                <select name="song_id">
-                    <option value="new" {% if not song %}selected{% endif %}>— Create new song "{{ folder_name }}" —</option>
-                    {% for s in songs %}
-                    <option value="{{ s.id }}" {% if song and song.id == s.id %}selected{% endif %}>{{ s.title }}</option>
-                    {% endfor %}
-                </select>
-            </label>
+
+        <div style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;margin-bottom:1.25rem;padding:.875rem 1rem;background:rgba(128,128,128,.07);border:1px solid rgba(128,128,128,.2);border-radius:4px">
+            <div>
+                <div style="font-size:.75em;font-weight:600;text-transform:uppercase;letter-spacing:.06em;opacity:.55;margin-bottom:.2rem">Drive folder</div>
+                <strong style="font-size:1.05em">{{ folder_name }}</strong>
+            </div>
+            <div style="font-size:1.3em;opacity:.4;flex-shrink:0">→</div>
+            <div>
+                <label>
+                    <div style="font-size:.75em;font-weight:600;text-transform:uppercase;letter-spacing:.06em;opacity:.55;margin-bottom:.2rem">
+                        Song
+                        {% if song %}<span style="font-weight:400;text-transform:none;letter-spacing:0;color:#1a7f4b;margin-left:.4em">&#10003; auto-detected</span>{% endif %}
+                    </div>
+                    <select name="song_id">
+                        <option value="new" {% if not song %}selected{% endif %}>— Create new song "{{ folder_name }}" —</option>
+                        {% for s in songs %}
+                        <option value="{{ s.id }}" {% if song and song.id == s.id %}selected{% endif %}>{{ s.title }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
         </div>
 
         <table class="listing">
