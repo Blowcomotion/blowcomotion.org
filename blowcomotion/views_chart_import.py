@@ -64,7 +64,7 @@ def picker(request):
             })
 
     return render(request, "chart_import/picker.html", {
-        "folders": folders,
+        "folders": sorted(folders, key=lambda f: f["name"].lower()),
         "songs": songs,
     })
 
