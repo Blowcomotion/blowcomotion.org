@@ -31,8 +31,6 @@ class Command(BaseCommand):
             call_command(
                 'dumpdata',
                 '--indent', '2',
-                '--exclude', 'contenttypes',
-                '--exclude', 'auth.permission',
                 '--exclude', 'sessions',
                 '--exclude', 'wagtailsearch',
                 '--exclude', 'wagtailcore.referenceindex',
