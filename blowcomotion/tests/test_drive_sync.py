@@ -247,6 +247,93 @@ class TestParseFilename(TestCase):
         r = self._p("Bang Bang - Trumpet 2 (cropped).pdf")
         self.assertEqual(r.alt_hint, "Trumpet 2 (cropped)")
 
+    # --- new alias coverage ---
+
+    def test_tenor_saxophone_full_name(self):
+        r = self._p("Danza_TenorSaxophone.pdf")
+        self.assertEqual(r.instrument_hint, "Tenor Saxophone")
+
+    def test_alto_saxophone_full_name(self):
+        r = self._p("Danza_AltoSaxophone.pdf")
+        self.assertEqual(r.instrument_hint, "Alto Saxophone")
+
+    def test_baritone_saxophone_full_name(self):
+        r = self._p("Danza_BaritoneSaxophone.pdf")
+        self.assertEqual(r.instrument_hint, "Baritone Saxophone")
+
+    def test_bass_saxophone_full_name(self):
+        r = self._p("Danza_BassSaxophone.pdf")
+        self.assertEqual(r.instrument_hint, "Bass Saxophone")
+
+    def test_tenor_bare_token(self):
+        # "tenor" alone should resolve to Tenor Saxophone, not fuzzy-match "Tenors"
+        r = self._p("os siderais tenor.pdf")
+        self.assertEqual(r.instrument_hint, "Tenor Saxophone")
+
+    def test_bass_clarinet(self):
+        r = self._p("Murga_BassClarinet.pdf")
+        self.assertEqual(r.instrument_hint, "Bass Clarinet")
+
+    def test_bass_trombone(self):
+        r = self._p("Song_BassTrombone.pdf")
+        self.assertEqual(r.instrument_hint, "Bass Trombone")
+
+    def test_elec_bass(self):
+        r = self._p("Song_ElecBass.pdf")
+        self.assertEqual(r.instrument_hint, "Electric Bass")
+
+    def test_drum_set_camel(self):
+        r = self._p("Song_DrumSet.pdf")
+        self.assertEqual(r.instrument_hint, "Drum Set")
+
+    def test_hand_clap(self):
+        r = self._p("Song-Hand_Clap.pdf")
+        self.assertEqual(r.instrument_hint, "Hand Percussion")
+
+    def test_concert_bass_drum(self):
+        r = self._p("Song-Concert_Bass_Drum.pdf")
+        self.assertEqual(r.instrument_hint, "Bass Drum")
+
+    def test_tenor_drums(self):
+        r = self._p("Song-Tenor_Drums.pdf")
+        self.assertEqual(r.instrument_hint, "Quad Tenors")
+
+    def test_tenor_line(self):
+        # "TenorLine" must map to Quad Tenors, not Tenor Saxophone
+        r = self._p("Song - TenorLine~Manual.pdf")
+        self.assertEqual(r.alt_hint, "TenorLine~Manual")
+
+    def test_baritone_treble(self):
+        r = self._p("Song - baritone treble.pdf")
+        self.assertEqual(r.alt_hint, "baritone treble")
+
+    def test_baritone_bass(self):
+        r = self._p("Song - baritone bass.pdf")
+        self.assertEqual(r.alt_hint, "baritone bass")
+
+    def test_hornin_f(self):
+        r = self._p("Danza_HorninF.pdf")
+        self.assertEqual(r.instrument_hint, "French Horn/Mellophone")
+
+    def test_frech_horn(self):
+        r = self._p("Murga_FrechHorn.pdf")
+        self.assertEqual(r.instrument_hint, "French Horn/Mellophone")
+
+    def test_roman_numeral_i_ordinal(self):
+        r = self._p("Song-Trombone_I.pdf")
+        self.assertEqual(r.instrument_hint, "Trombone")
+        self.assertEqual(r.part_ordinal, "1st")
+
+    def test_all_parts_mid_string_not_score(self):
+        # "all parts" in the middle of a filename (followed by instrument) must NOT be a score
+        r = self._p("Do-Whatcha-Wanna all parts_Tuba.pdf")
+        self.assertFalse(r.is_score)
+
+    def test_all_parts_terminal_is_score(self):
+        # "all parts" at the very end IS a score/conductor document
+        r = self._p("Do-Whatcha-Wanna all parts.pdf")
+        self.assertTrue(r.is_score)
+
 
 import datetime
 from unittest.mock import MagicMock
@@ -256,7 +343,43 @@ from blowcomotion.drive_sync import (
     match_instrument,
     match_song,
     reconcile_file,
+    resolve_drive_file,
 )
+
+
+class TestResolveDriveFile(TestCase):
+    def _inst(self, name):
+        i = MagicMock()
+        i.name = name
+        return i
+
+    def _instruments(self):
+        return [
+            self._inst("Flute"),
+            self._inst("Tenor Saxophone"),
+            self._inst("Baritone/Euphonium"),
+            self._inst("Tuba/Sousaphone"),
+            self._inst("Conductor"),
+            self._inst("Quad Tenors"),
+        ]
+
+    def _file(self, name):
+        return {"name": name, "modifiedTime": "2024-01-01T00:00:00Z",
+                "id": "x", "relative_path": name}
+
+    def test_numeric_song_name_defers_to_alt_hint(self):
+        # "7.40 - Flute" — pre-dash "7.40" has no letters so is_score=True,
+        # but post-dash alt_hint "Flute" must override the Conductor fallback.
+        result = resolve_drive_file(self._file("7.40 - Flute.pdf"), self._instruments())
+        self.assertIsNotNone(result.matched_inst)
+        self.assertEqual(result.matched_inst.name, "Flute")
+
+    def test_tenor_line_resolves_to_quad_tenors(self):
+        # "Song - TenorLine~Manual" — "tenor" alias fires on split tokens,
+        # but "tenor line" must win as a longer match → Quad Tenors.
+        result = resolve_drive_file(self._file("Wabash - TenorLine~Manual.pdf"), self._instruments())
+        self.assertIsNotNone(result.matched_inst)
+        self.assertEqual(result.matched_inst.name, "Quad Tenors")
 
 
 class TestMatchSong(TestCase):

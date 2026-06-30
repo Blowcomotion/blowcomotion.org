@@ -13,9 +13,11 @@ ARCHIVE_FOLDERS = ["ZZArchive - INACTIVE"]
 _ALIAS_MAP = {
     # French Horn / Mellophone
     "horn in f": "French Horn/Mellophone",
+    "hornin f": "French Horn/Mellophone",
     "f horn": "French Horn/Mellophone",
     "fhorn": "French Horn/Mellophone",
     "fr horn": "French Horn/Mellophone",
+    "frech horn": "French Horn/Mellophone",
     "fhn": "French Horn/Mellophone",
     "mellophone": "French Horn/Mellophone",
     # Tuba / Sousaphone
@@ -25,27 +27,48 @@ _ALIAS_MAP = {
     # Baritone / Euphonium
     "baritone bc": "Baritone",
     "baritone tc": "Baritone/Euphonium",
+    "baritone treble": "Baritone/Euphonium",
+    "baritone bass": "Baritone/Euphonium",
     "euph": "Baritone/Euphonium",
     "euphonium": "Baritone/Euphonium",
-    # Saxophones
+    # Saxophones — full names prevent "Saxophone" fuzzy-matching "Bass Saxophone"
+    "tenor saxophone": "Tenor Saxophone",
+    "tenor sax": "Tenor Saxophone",
+    "tenor": "Tenor Saxophone",
+    "tnr": "Tenor Saxophone",
+    "alto saxophone": "Alto Saxophone",
+    "alto sax": "Alto Saxophone",
+    "alto": "Alto Saxophone",
+    "baritone saxophone": "Baritone Saxophone",
     "baritone sax": "Baritone Saxophone",
     "bari sax": "Baritone Saxophone",
     "bari": "Baritone Saxophone",
+    "bass saxophone": "Bass Saxophone",
+    "bass sax": "Bass Saxophone",
+    "soprano saxophone": "Soprano Saxophone",
     "soprano sax": "Soprano Saxophone",
-    "alto": "Alto Saxophone",
-    "tenor sax": "Tenor Saxophone",
-    "tnr": "Tenor Saxophone",
     # Brass
+    "bass trombone": "Bass Trombone",
     "tbn": "Trombone",
     "tmpt": "Trumpet",
     "tpet": "Trumpet",
     "flugel": "Flugelhorn",
     "flugelhorn": "Flugelhorn",
     # Reed
+    "bass clarinet": "Bass Clarinet",
     "clrnt": "Clarinet",
+    # Bass
+    "electric bass": "Electric Bass",
+    "elec bass": "Electric Bass",
     # Percussion
+    "concert bass drum": "Bass Drum",
+    "tenor drums": "Quad Tenors",
+    "tenor line": "Quad Tenors",
+    "drum set": "Drum Set",
+    "drumset": "Drum Set",
     "bells": "Bells, Marching",
     "aux perc": "Hand Percussion",
+    "hand clap": "Hand Percussion",
     "bateria": "Drum Set",
     "4 piece drum kit": "Drum Set",
     # Miscellaneous
@@ -53,7 +76,6 @@ _ALIAS_MAP = {
     "cowbell": "Cow Bell",
 }
 
-_SCORE_PHRASES = {"full score", "all parts"}
 _SCORE_TOKENS = {"score", "conductor"}
 
 # Transposition key labels — filenames like "Song Name - Bb.pdf" share one PDF across instruments
@@ -73,6 +95,7 @@ _ORDINAL_MAP = {
     "3": "3rd", "3rd": "3rd",
     "4": "4th", "4th": "4th",
     # Roman numerals
+    "i": "1st",
     "ii": "2nd",
     "iii": "3rd",
     "iv": "4th",
@@ -113,7 +136,13 @@ def parse_filename(name: str) -> ParsedFile:
     lower = normalized.lower()
 
     tokens_lower = re.split(r"[\s_-]+", lower)
-    if any(phrase in lower for phrase in _SCORE_PHRASES) or any(tok in tokens_lower for tok in _SCORE_TOKENS):
+    # "all parts" only triggers score mode when it ends the (normalized) filename — "Song all parts_Tuba"
+    # has "all parts" mid-string and should NOT be treated as a score.
+    if (
+        re.search(r"\ball\s+parts\s*$", lower)
+        or "full score" in lower
+        or any(tok in tokens_lower for tok in _SCORE_TOKENS)
+    ):
         return ParsedFile(instrument_hint="", part_ordinal="", is_score=True)
 
     # Detect filename format and isolate the instrument portion.
@@ -138,7 +167,7 @@ def parse_filename(name: str) -> ParsedFile:
         search_stem = _split_camel(stem)
         instrument_portion_isolated = False
 
-    tokens = re.split(r"[-_.\s]+", search_stem)
+    tokens = re.split(r"[-_.~\s]+", search_stem)
 
     instrument_hint = ""
     part_ordinal = ""
@@ -296,7 +325,7 @@ def _resolve_alt_hint(text: str) -> tuple:
     text = re.sub(r"\([^)]*\)", "", text).strip()
     # Apply CamelCase and digit boundary splitting: "BariSax" → "Bari Sax"
     text = _split_camel(text)
-    tokens = re.split(r"[-_.\s]+", text.strip())
+    tokens = re.split(r"[-_.~\s]+", text.strip())
     ordinal = ""
     for start in range(len(tokens)):
         for length in (4, 3, 2, 1):
@@ -336,7 +365,9 @@ def resolve_drive_file(drive_file: dict, instruments: list) -> "ResolvedFile":
     if parsed.alt_hint:
         alt_canonical, alt_ordinal, alt_via_alias = _resolve_alt_hint(parsed.alt_hint)
         alt_inst, alt_conf = match_instrument(alt_canonical, instruments) if alt_canonical else (None, "low")
-        primary_is_exact = matched_inst is not None and hint.lower() == matched_inst.name.lower()
+        # Score-detected files always matched to "Conductor"; don't treat that as exact
+        # so the alt_hint can still override when the filename carries a real instrument.
+        primary_is_exact = (not parsed.is_score) and matched_inst is not None and hint.lower() == matched_inst.name.lower()
         prefer_alt = (
             (inst_conf == "low" and alt_conf != "low")
             or (alt_via_alias and alt_conf != "low")
