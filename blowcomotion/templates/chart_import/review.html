@@ -5,6 +5,9 @@
 
 {% block content %}
 <div class="nice-padding">
+    <nav style="font-size:.9em;margin-bottom:.75rem;opacity:.7">
+        <a href="{% url 'chart_import_picker' %}">Import Charts</a> / Review
+    </nav>
     <h1>Review Charts</h1>
     <form method="post">
         {% csrf_token %}
