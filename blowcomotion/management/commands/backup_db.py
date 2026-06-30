@@ -1,7 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 
-from wagtail.models import PageLogEntry
+from wagtail.models import Page, PageLogEntry
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
@@ -28,8 +28,13 @@ class Command(BaseCommand):
         timestamp = datetime.now().strftime('%Y-%m-%d_%H%M%S')
         backup_path = output_dir / f'backup_{timestamp}.json'
 
-        # PageLogEntry.user is DO_NOTHING / no db constraint — nullify orphans before dump
-        # so --natural-foreign doesn't crash trying to serialize a deleted user's natural key
+        # PageLogEntry.page and .user are both DO_NOTHING / no db constraint — clean up
+        # orphans before dump so --natural-foreign doesn't crash on missing natural keys
+        page_ids = set(Page.objects.values_list('id', flat=True))
+        deleted, _ = PageLogEntry.objects.exclude(page_id__in=page_ids).delete()
+        if deleted:
+            self.stdout.write(f'Deleted {deleted} PageLogEntry records for missing pages')
+
         user_ids = set(get_user_model().objects.values_list('id', flat=True))
         nulled = PageLogEntry.objects.exclude(user_id__isnull=True).exclude(user_id__in=user_ids).update(user=None)
         if nulled:
