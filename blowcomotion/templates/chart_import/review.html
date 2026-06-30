@@ -1,0 +1,277 @@
+{% extends "wagtailadmin/base.html" %}
+{% load i18n %}
+
+{% block titletag %}Review Charts — {{ folder_name }}{% endblock %}
+
+{% block content %}
+<div class="nice-padding">
+    <nav style="font-size:.9em;margin-bottom:.75rem;opacity:.7">
+        <a href="{% url 'chart_import_picker' %}">Import Charts</a> / Review
+    </nav>
+    <h1 style="display:flex;align-items:center;gap:.5rem">
+        Review Charts
+        <span class="rc-help">
+            <button type="button" class="rc-help__btn" aria-label="How this works">?</button>
+            <span class="rc-help__tip" role="tooltip">
+                <strong>Status badges</strong> — how the file was matched to an existing chart:
+                <ul>
+                    <li><span class="tag tag--teal">Exact</span> Same Drive file ID, file has changed — will replace the existing PDF.</li>
+                    <li><span class="tag tag--primary">High</span> No stored file ID but one chart matches this instrument/part — likely a re-export.</li>
+                    <li><span class="tag tag--warning">Needs review</span> Multiple files map to the same instrument/part — pick the right one.</li>
+                    <li><span class="tag tag--salmon">New</span> No existing chart found — will create a new one.</li>
+                </ul>
+                <strong>Instrument confidence icons</strong> — how certain the parser is:
+                <ul>
+                    <li><span style="color:green;font-weight:bold">✓</span> High confidence — matched exactly or via known alias.</li>
+                    <li><span style="color:#c4780a;font-weight:bold">⚠</span> Ambiguous — choose from the dropdown.</li>
+                    <li><span style="color:#c0392b;font-weight:bold">?</span> Low confidence — review and correct before importing.</li>
+                </ul>
+                <strong>Part field</strong> — leave blank for single-part charts. Use <em>1st Trumpet</em>, <em>2nd Trumpet</em> etc. for multi-part.<br><br>
+                <strong>Action column</strong> — <em>new</em> creates a chart record; <em>update</em> replaces the Drive URL on an existing one. Uncheck any row to skip it.<br><br>
+                <strong>Multi button</strong> — switch a row to a multi-instrument selector when one PDF covers multiple instruments. Each checked instrument gets its own chart record.
+            </span>
+        </span>
+    </h1>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="folder_id" value="{{ folder_id }}">
+        <input type="hidden" name="folder_name" value="{{ folder_name }}">
+
+        <div style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;margin-bottom:1.25rem;padding:.875rem 1rem;background:rgba(128,128,128,.07);border:1px solid rgba(128,128,128,.2);border-radius:4px">
+            <div>
+                <div style="font-size:.8em;font-weight:600;text-transform:uppercase;letter-spacing:.06em;opacity:.75;margin-bottom:.2rem">Drive folder</div>
+                <strong style="font-size:1.05em">{{ folder_name }}</strong>
+            </div>
+            <div style="font-size:1.3em;opacity:.4;flex-shrink:0">→</div>
+            <div>
+                <label>
+                    <div style="font-size:.8em;font-weight:600;text-transform:uppercase;letter-spacing:.06em;opacity:.75;margin-bottom:.2rem">
+                        Song
+                        {% if song %}<span style="font-weight:400;text-transform:none;letter-spacing:0;color:#1a7f4b;margin-left:.4em">&#10003; auto-detected</span>{% endif %}
+                    </div>
+                    <select name="song_id">
+                        <option value="new" {% if not song %}selected{% endif %}>— Create new song "{{ folder_name }}" —</option>
+                        {% for s in songs %}
+                        <option value="{{ s.id }}" {% if song and song.id == s.id %}selected{% endif %}>{{ s.title }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <div style="font-size:.85em;opacity:.6;margin-top:.3rem">If the wrong song was detected, choose the correct one from the dropdown.</div>
+            </div>
+        </div>
+
+        <table class="listing">
+            <thead>
+                <tr>
+                    <th><button type="button" id="select-all-top" onclick="toggleAll(this)">Select all</button></th>
+                    <th>File</th>
+                    <th>Status</th>
+                    <th>Instrument</th>
+                    <th>Part</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for row in rows %}
+            {% with i=forloop.counter0 %}
+            {% if row.reconcile.apply != "noop" %}
+            <tr>
+                <td><input type="checkbox" name="rows" value="{{ i }}"
+                    {% if row.reconcile.apply == "auto" %}checked{% endif %}></td>
+                <td title="{{ row.drive_file.relative_path }}">{{ row.drive_file.name }}</td>
+                <td>
+                    <span class="tag
+                        {% if row.reconcile.reason == 'Exact' %}tag--teal
+                        {% elif row.reconcile.reason == 'High' %}tag--primary
+                        {% elif row.reconcile.reason == 'Needs review' %}tag--warning
+                        {% else %}tag--salmon{% endif %}">
+                        {{ row.reconcile.reason }}
+                    </span>
+                </td>
+                <td>
+                    {% if row.inst_conf == "key" %}
+                        <input type="hidden" name="row_{{ i }}_is_key" value="1">
+                        <span style="color:#6f42c1;font-weight:bold;margin-right:4px" title="Key-based chart — select all instruments that use this key">♪</span>
+                        <strong>{{ row.parsed.instrument_hint }}</strong> key —
+                        <details class="key-picker" style="display:inline-block;vertical-align:top">
+                            <summary style="cursor:pointer">Select instruments</summary>
+                            <div style="max-height:200px;overflow-y:auto;border:1px solid rgba(128,128,128,.35);border-radius:4px;padding:.4rem .6rem;margin-top:.25rem">
+                            {% for inst in instruments %}
+                                <label style="display:block;white-space:nowrap">
+                                    <input type="checkbox" name="row_{{ i }}_instrument_ids" value="{{ inst.id }}"
+                                        {% if inst.id in row.key_instrument_ids %}checked{% endif %}
+                                        onchange="updateKeyLabel(this)">
+                                    {{ inst.name }}
+                                </label>
+                            {% endfor %}
+                            </div>
+                        </details>
+                        <span class="key-selection-label" style="margin-left:.5rem;font-size:.9em;opacity:.75">{{ row.key_instrument_names|join:", "|default:"None selected" }}</span>
+                    {% else %}
+                        <div id="inst-cell-{{ i }}">
+                        {% if row.inst_conf == "high" %}
+                            <span style="color:green;font-weight:bold;margin-right:4px" title="High confidence">✓</span>
+                        {% elif row.inst_conf == "ambiguous" %}
+                            <span style="color:#c4780a;font-weight:bold;margin-right:4px" title="Ambiguous — review required">⚠</span>
+                        {% else %}
+                            <span style="color:#c0392b;font-weight:bold;margin-right:4px" title="Low confidence — review required">?</span>
+                        {% endif %}
+                        <select name="row_{{ i }}_instrument_id">
+                            {% for inst in instruments %}
+                            <option value="{{ inst.id }}"
+                                {% if row.instrument and row.instrument.id == inst.id %}selected{% endif %}>
+                                {{ inst.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" style="margin-left:.4rem" onclick="switchToMulti({{ i }})">Multi</button>
+                        </div>
+                    {% endif %}
+                </td>
+                <td>{% if row.inst_conf != "key" %}<input type="text" name="row_{{ i }}_part" value="{{ row.part }}">{% endif %}</td>
+                <td>{% if row.existing_chart %}update{% else %}new{% endif %}</td>
+                <input type="hidden" name="row_{{ i }}_file_id" value="{{ row.drive_file.id }}">
+                <input type="hidden" name="row_{{ i }}_filename" value="{{ row.drive_file.name }}">
+                <input type="hidden" name="row_{{ i }}_modified" value="{{ row.drive_file.modifiedTime }}">
+                <input type="hidden" name="row_{{ i }}_chart_id" value="{{ row.existing_chart.id|default:'' }}">
+            </tr>
+            {% endif %}
+            {% endwith %}
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <div style="margin-top:1rem;display:flex;align-items:center;gap:1rem">
+            <button type="button" id="select-all-bottom" onclick="toggleAll(this)">Select all</button>
+            <button type="submit" class="button">Import selected</button>
+            <a href="{% url 'chart_import_picker' %}" class="button button-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.rc-help {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.rc-help__btn {
+    width: 1.35em;
+    height: 1.35em;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    background: none;
+    cursor: pointer;
+    font-size: .65em;
+    font-weight: bold;
+    line-height: 1;
+    color: inherit;
+    padding: 0;
+    transition: color .15s;
+}
+.rc-help__btn:hover,
+.rc-help__btn:focus {
+    color: #888;
+    outline: none;
+}
+.rc-help__tip {
+    display: none;
+    position: absolute;
+    top: calc(100% + .5rem);
+    left: 0;
+    z-index: 100;
+    width: 480px;
+    background: var(--w-color-surface-page, #fff);
+    border: 1px solid rgba(128,128,128,.35);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.15);
+    padding: 1rem 1.25rem;
+    font-size: .8rem;
+    font-weight: normal;
+    line-height: 1.5;
+    color: var(--w-color-text-label, inherit);
+    white-space: normal;
+}
+.rc-help__tip ul {
+    margin: .35rem 0 .75rem 1rem;
+    padding: 0;
+}
+.rc-help:hover .rc-help__tip,
+.rc-help__btn:focus + .rc-help__tip {
+    display: block;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script id="instruments-json" type="application/json">{{ instruments_json|safe }}</script>
+<script>
+const INSTRUMENTS = JSON.parse(document.getElementById('instruments-json').textContent);
+
+function toggleAll(btn) {
+    const boxes = document.querySelectorAll('input[name=rows]');
+    const allChecked = Array.from(boxes).every(c => c.checked);
+    boxes.forEach(c => c.checked = !allChecked);
+    const label = allChecked ? 'Select all' : 'Deselect all';
+    document.getElementById('select-all-top').textContent = label;
+    document.getElementById('select-all-bottom').textContent = label;
+}
+
+function updateKeyLabel(cb) {
+    const td = cb.closest('td');
+    const names = Array.from(td.querySelectorAll('input[type=checkbox]:checked'))
+        .map(c => c.closest('label').textContent.trim());
+    const label = td.querySelector('.key-selection-label');
+    if (label) label.textContent = names.length ? names.join(', ') : 'None selected';
+}
+
+function switchToMulti(idx) {
+    const cell = document.getElementById('inst-cell-' + idx);
+    cell.dataset.original = cell.innerHTML;
+    cell.innerHTML = '';
+
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden'; hidden.name = 'row_' + idx + '_is_key'; hidden.value = '1';
+    cell.appendChild(hidden);
+
+    const details = document.createElement('details');
+    details.className = 'key-picker'; details.style.cssText = 'display:inline-block;vertical-align:top';
+    const summary = document.createElement('summary');
+    summary.style.cursor = 'pointer'; summary.textContent = 'Select instruments';
+    details.appendChild(summary);
+
+    const list = document.createElement('div');
+    list.style.cssText = 'max-height:200px;overflow-y:auto;border:1px solid rgba(128,128,128,.35);border-radius:4px;padding:.4rem .6rem;margin-top:.25rem';
+    INSTRUMENTS.forEach(inst => {
+        const label = document.createElement('label');
+        label.style.cssText = 'display:block;white-space:nowrap';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.name = 'row_' + idx + '_instrument_ids';
+        cb.value = inst.id; cb.addEventListener('change', () => updateKeyLabel(cb));
+        label.appendChild(cb);
+        label.append(' ' + inst.name);
+        list.appendChild(label);
+    });
+    details.appendChild(list);
+    cell.appendChild(details);
+
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'key-selection-label';
+    labelSpan.style.cssText = 'margin-left:.5rem;font-size:.9em;opacity:.75';
+    labelSpan.textContent = 'None selected';
+    cell.appendChild(labelSpan);
+
+    const singleBtn = document.createElement('button');
+    singleBtn.type = 'button'; singleBtn.textContent = 'Single';
+    singleBtn.addEventListener('click', () => switchToSingle(idx));
+    cell.appendChild(singleBtn);
+}
+
+function switchToSingle(idx) {
+    const cell = document.getElementById('inst-cell-' + idx);
+    if (cell.dataset.original) cell.innerHTML = cell.dataset.original;
+}
+</script>
+{% endblock %}

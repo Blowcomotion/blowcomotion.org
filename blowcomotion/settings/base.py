@@ -320,6 +320,9 @@ GIGO_BAND_ID = None
 # Local test band ID (set in dev.py for testing)
 GIGO_BAND_ID_LOCAL = None
 
+GDRIVE_API_KEY = None
+GDRIVE_CHARTS_FOLDER_ID = None
+
 # Email settings
 # FROM_EMAIL should be set in dev.py for development and local.py in production
 FROM_EMAIL = None

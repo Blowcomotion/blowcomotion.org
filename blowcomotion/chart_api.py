@@ -7,7 +7,7 @@ Provides JSON endpoints for:
 - Listing chart parts for a song+instrument combination
 """
 
-from django.db.models import Exists, OuterRef, Prefetch
+from django.db.models import Exists, OuterRef, Prefetch, Q
 from django.http import JsonResponse
 
 from blowcomotion.models import Chart, Instrument, Song
@@ -21,8 +21,9 @@ def instruments_with_charts(request):
     grouped by section. This is the entry point for the instrument-first flow.
     """
     # Get distinct instrument IDs that have charts with PDFs for active songs
+    has_pdf = Q(pdf__isnull=False) | Q(drive_pdf_url__isnull=False)
     instrument_ids = Chart.objects.filter(
-        pdf__isnull=False,
+        has_pdf,
         song__active=True
     ).values_list('instrument_id', flat=True).distinct()
     
@@ -70,17 +71,18 @@ def songs_for_instrument(request, instrument_id):
     search_query = request.GET.get('search', '').strip()
     
     # Get songs that have charts for this instrument
+    has_pdf = Q(pdf__isnull=False) | Q(drive_pdf_url__isnull=False)
     song_ids = Chart.objects.filter(
+        has_pdf,
         instrument=instrument,
-        pdf__isnull=False
     ).values_list('song_id', flat=True).distinct()
-    
+
     # Prefetch charts for this instrument to avoid N+1 queries
     charts_prefetch = Prefetch(
         'charts',
         queryset=Chart.objects.filter(
+            has_pdf,
             instrument=instrument,
-            pdf__isnull=False
         ).select_related('pdf').order_by('part'),
         to_attr='instrument_charts'
     )
@@ -112,7 +114,7 @@ def songs_for_instrument(request, instrument_id):
             charts_data.append({
                 'id': chart.id,
                 'part': part_name,
-                'pdf_url': chart.pdf.url if chart.pdf else None,
+                'pdf_url': (chart.pdf.url if chart.pdf else None) or chart.drive_pdf_url,
                 'pdf_title': chart.pdf.title if chart.pdf else None,
             })
         
@@ -147,8 +149,8 @@ def songs_with_charts(request):
     
     # Subquery to check if song has at least one chart with a PDF
     has_chart_with_pdf = Chart.objects.filter(
+        Q(pdf__isnull=False) | Q(drive_pdf_url__isnull=False),
         song=OuterRef('pk'),
-        pdf__isnull=False
     )
     
     songs = Song.objects.filter(
@@ -235,7 +237,7 @@ def instruments_for_song(request, song_id):
             charts_data.append({
                 'id': chart.id,
                 'part': part_name,
-                'pdf_url': chart.pdf.url if chart.pdf else None,
+                'pdf_url': (chart.pdf.url if chart.pdf else None) or chart.drive_pdf_url,
                 'pdf_title': chart.pdf.title if chart.pdf else None,
             })
         
@@ -284,10 +286,10 @@ def charts_for_song_instrument(request, song_id, instrument_id):
         charts_data.append({
             'id': chart.id,
             'part': part_name,
-            'pdf_url': chart.pdf.url if chart.pdf else None,
+            'pdf_url': (chart.pdf.url if chart.pdf else None) or chart.drive_pdf_url,
             'pdf_title': chart.pdf.title if chart.pdf else None,
         })
-    
+
     return JsonResponse({
         'song_id': song.id,
         'song_title': song.title,

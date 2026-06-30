@@ -82,6 +82,17 @@ def register_admin_urls():
     ]
 
 
+@hooks.register("register_admin_urls")
+def register_chart_import_urls():
+    from django.urls import path
+
+    from blowcomotion import views_chart_import
+    return [
+        path("chart-import/", views_chart_import.picker, name="chart_import_picker"),
+        path("chart-import/review/", views_chart_import.review, name="chart_import_review"),
+    ]
+
+
 @hooks.register("register_admin_menu_item")
 def register_management_menu_item():
     """
@@ -130,12 +141,24 @@ def register_rental_requests_menu_item():
     )
 
 
+@hooks.register("register_admin_menu_item")
+def register_chart_import_menu_item():
+    from wagtail.admin.menu import MenuItem
+    return MenuItem(
+        "Import Charts",
+        reverse("chart_import_picker"),
+        icon_name="google-drive",
+        order=901,
+    )
+
+
 @hooks.register("register_icons")
 def register_icons(icons):
     return icons + [
         'icons/drum-solid-full.svg',
         'icons/music-solid-full.svg',
         'icons/french-horn.svg',
+        'icons/google-drive.svg',
     ]
 
 

@@ -248,10 +248,11 @@ class Chart(models.Model):
     pdf = models.ForeignKey(
         get_document_model(),
         null=True,
-        blank=False,
+        blank=True,
         on_delete=models.SET_NULL,
         related_name="+",
     )
+    drive_pdf_url = models.URLField(null=True, blank=True)
     part = models.CharField(
         max_length=255,
         blank=True,
@@ -259,12 +260,19 @@ class Chart(models.Model):
         help_text=" e.g. '2nd Trombone' If left blank, instrument name will be used.",
     )
     instrument = models.ForeignKey("blowcomotion.Instrument", on_delete=models.CASCADE)
+    drive_file_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+    drive_modified_time = models.DateTimeField(null=True, blank=True)
+    drive_imported_at = models.DateTimeField(null=True, blank=True)
 
     # Index song and instrument fields for searchability in the chart library
     search_fields = [
         index.SearchField("song__title", partial_match=True, boost=2),
         index.SearchField("instrument__name", partial_match=True),
     ]
+
+    def clean(self):
+        if not self.pdf and not self.drive_pdf_url:
+            raise ValidationError("A chart must have either a PDF document or a Drive PDF URL.")
 
     def __str__(self):
         return f"{self.song.title} - {self.instrument.name} - {self.part}" if self.part else f"{self.song.title} - {self.instrument.name}"
