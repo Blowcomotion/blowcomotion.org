@@ -57,7 +57,8 @@ def picker(request):
                 "id": f["id"],
                 "name": name,
                 "matched_song": matched_song,
-                "match_score": round(score, 2),
+                "match_score": score,
+                "match_pct": round(score * 100),
                 "archived": archived,
                 "last_imported": last_imported,
             })

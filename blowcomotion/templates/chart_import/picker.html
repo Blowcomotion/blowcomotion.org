@@ -26,9 +26,9 @@
                 <td>
                     {% if folder.matched_song %}
                         {% if folder.match_score >= 0.85 %}
-                            <span style="color:#1a7f4b">{% widthratio folder.match_score 1 100 %}%</span>
+                            <span style="color:#1a7f4b">{{ folder.match_pct }}%</span>
                         {% else %}
-                            <span style="color:#c4780a">⚠ {% widthratio folder.match_score 1 100 %}% — check</span>
+                            <span style="color:#c4780a">⚠ {{ folder.match_pct }}% — check</span>
                         {% endif %}
                     {% endif %}
                 </td>
