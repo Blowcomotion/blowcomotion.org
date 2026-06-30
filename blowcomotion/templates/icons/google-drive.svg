@@ -1,8 +1,8 @@
-<svg id="icon-google-drive" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 87.3 78">
-  <path fill="#0066da" d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 52H0c0 1.55.4 3.1 1.2 4.5z"/>
-  <path fill="#00ac47" d="M43.65 25L29.9 0c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44A9.06 9.06 0 000 52h27.5z"/>
-  <path fill="#ea4335" d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75L86.1 56.5c.8-1.4 1.2-2.95 1.2-4.5H59.8L73.55 76.8z"/>
-  <path fill="#00832d" d="M43.65 25L57.4 0H29.9z"/>
-  <path fill="#ffba00" d="M59.8 52h27.5L57.4 0 43.65 25z"/>
-  <path fill="#2684fc" d="M27.5 52l16.15 27.95 16.15-27.95z"/>
+<svg id="icon-google-drive" xmlns="http://www.w3.org/2000/svg" viewBox="0 -5 87.3 88">
+  <path style="fill:#0066da!important" d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 52H0c0 1.55.4 3.1 1.2 4.5z"/>
+  <path style="fill:#00ac47!important" d="M43.65 25L29.9 0c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44A9.06 9.06 0 000 52h27.5z"/>
+  <path style="fill:#ea4335!important" d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75L86.1 56.5c.8-1.4 1.2-2.95 1.2-4.5H59.8L73.55 76.8z"/>
+  <path style="fill:#00832d!important" d="M43.65 25L57.4 0H29.9z"/>
+  <path style="fill:#ffba00!important" d="M59.8 52h27.5L57.4 0 43.65 25z"/>
+  <path style="fill:#2684fc!important" d="M27.5 52l16.15 27.95 16.15-27.95z"/>
 </svg>
