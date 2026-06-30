@@ -32,6 +32,8 @@ class Command(BaseCommand):
                 'dumpdata',
                 '--natural-foreign',
                 '--indent', '2',
+                '--exclude', 'contenttypes',
+                '--exclude', 'auth.permission',
                 '--exclude', 'sessions',
                 '--exclude', 'wagtailsearch',
                 '--exclude', 'wagtailcore.referenceindex',
