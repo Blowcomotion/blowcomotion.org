@@ -6,6 +6,16 @@
         <div class="container">
             <div class="row">
                 <div class="col-12 mt-3">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            {% for ancestor in page.get_ancestors.specific %}
+                                {% if ancestor.get_verbose_name == 'Wiki Index Page' or ancestor.get_verbose_name == 'Wiki Page' %}
+                                    <li class="breadcrumb-item"><a href="{{ ancestor.url }}">{{ ancestor.title }}</a></li>
+                                {% endif %}
+                            {% endfor %}
+                            <li class="breadcrumb-item active" aria-current="page">{{ page.title }}</li>
+                        </ol>
+                    </nav>
                     <h1>{{ page.title }}</h1>
                 </div>
             </div>

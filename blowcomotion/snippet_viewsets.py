@@ -37,6 +37,7 @@ class ChartViewSet(SnippetViewSet):
     panels = [
         'song',
         'pdf',
+        'drive_pdf_url',
         'part',
         'instrument',
     ]

@@ -20,6 +20,7 @@ jobs:
             set -e
             cd ~/blowcomotion.org
             git pull origin main
+            pip install -r requirements.txt --quiet
             python manage.py migrate --noinput
             python manage.py collectstatic --noinput
           EOF

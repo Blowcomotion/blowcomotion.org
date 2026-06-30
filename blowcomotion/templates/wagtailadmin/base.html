@@ -4,7 +4,13 @@
 {% block branding_logo %}
     {% with logo=settings.blowcomotion.SiteSettings.logo %}
         {% if logo %}
-            {% image logo width-80 %}
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 0;color:white;">
+                {% image logo width-80 %}
+                <span style="font-size:.75rem;font-weight:700;letter-spacing:.08em;line-height:1;">
+                    {% if debug %}LOCAL{% else %}PRODUCTION{% endif %}
+                </span>
+                <span style="font-size:.65rem;letter-spacing:.1em;opacity:.7;line-height:1;">ADMIN</span>
+            </div>
         {% else %}
             <a href="{% url 'wagtailsettings:edit' 'blowcomotion' 'SiteSettings' %}">Set your logo</a>
         {% endif %}

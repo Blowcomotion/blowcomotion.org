@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 from wagtail.models import Site
 
+from django.core import mail
 from django.db.models import Count, Q
 from django.test import TestCase, override_settings
 
@@ -523,6 +524,28 @@ class RentalRequestsAdminViewTest(TestCase):
         )
         self.submission.refresh_from_db()
         self.assertEqual(self.submission.status, InstrumentRentalRequestSubmission.STATUS_APPROVED)
+
+    def test_approve_email_does_not_html_encode_special_chars(self):
+        self.client.post(
+            reverse("rental_request_review", args=[self.submission.pk]),
+            {"action": "approve", "unit": self.li.pk, "message": "You're all set & ready — bring your ID."},
+        )
+        self.assertEqual(len(mail.outbox), 1)
+        body = mail.outbox[0].body
+        self.assertIn("You're all set & ready", body)
+        self.assertNotIn("&#x27;", body)
+        self.assertNotIn("&amp;", body)
+
+    def test_deny_email_does_not_html_encode_special_chars(self):
+        self.client.post(
+            reverse("rental_request_review", args=[self.submission.pk]),
+            {"action": "deny", "message": "Sorry — no \"trumpet\" available right now."},
+        )
+        self.assertEqual(len(mail.outbox), 1)
+        body = mail.outbox[0].body
+        self.assertIn('no "trumpet"', body)
+        self.assertNotIn("&quot;", body)
+        self.assertNotIn("&#x27;", body)
 
 
 class PatreonClientTest(TestCase):

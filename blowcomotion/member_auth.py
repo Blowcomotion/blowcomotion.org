@@ -25,6 +25,14 @@ class _MemberEmail(EmailMessage):
     def message(self, *, policy=None):
         return super().message(policy=policy or _EMAIL_POLICY)
 
+    def send(self, fail_silently=False):
+        result = super().send(fail_silently=fail_silently)
+        extra = getattr(settings, "FORM_TEST_EMAIL", None)
+        if extra and extra not in self.to:
+            copy = _MemberEmail(subject=self.subject, body=self.body, from_email=self.from_email, to=[extra])
+            EmailMessage.send(copy, fail_silently=True)
+        return result
+
 
 def _send_mail(subject, body, from_email, recipient):
     _MemberEmail(

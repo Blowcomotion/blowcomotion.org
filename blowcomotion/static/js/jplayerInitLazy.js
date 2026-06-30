@@ -35,6 +35,7 @@
                 initializePlayer(firstPlayer, firstTrackId, null, true);
             }
         }
+
     }
     
     function initializePlayer(player, trackId, clickedBtn, isPreload = false) {

@@ -10,7 +10,7 @@
     {% endif %}
     <div class="card-header p-0 border-0">
       <button class="btn btn-link w-100 text-left text-decoration-none text-dark p-4" type="button" data-toggle="collapse" data-target="#collapse-{{ value.id }}-{{ forloop.counter }}" aria-expanded="false" aria-controls="collapse-{{ value.id }}-{{ forloop.counter }}" >
-        <h4 class="font-weight-bold mb-2">{{ item.title }}{% if item.has_longtext %} (has long text){% endif %}</h4>
+        <h3 class="font-weight-bold mb-2">{{ item.title }}{% if item.has_longtext %} (has long text){% endif %}</h3>
         {% if item.date %}
         <small class="text-muted text-sm mb-0"><i class="far fa-clock" aria-hidden="true"></i> {{ item.date }}</small>
         {% endif %}
@@ -32,7 +32,7 @@
         </div>
       {% endif %}
       <div class="card-header p-4 border-0">
-        <h4 class="font-weight-bold mb-2">{{ item.title }}</h4>
+        <h3 class="font-weight-bold mb-2">{{ item.title }}</h3>
         {% if item.date %}
           <small class="text-muted text-sm mb-0"><i class="far fa-clock" aria-hidden="true"></i> {{ item.date }}</small>
         {% endif %}

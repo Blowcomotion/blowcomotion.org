@@ -604,12 +604,6 @@ def _send_form_email(subject, message, recipient_list):
     _MemberEmail(
         subject=subject, body=message, from_email=settings.FROM_EMAIL, to=recipient_list
     ).send(fail_silently=False)
-    # Send a copy for verifying functionality
-    extra_email = settings.FORM_TEST_EMAIL if hasattr(settings, 'FORM_TEST_EMAIL') else None
-    if extra_email:
-        _MemberEmail(
-            subject=subject, body=message, from_email=settings.FROM_EMAIL, to=[extra_email]
-        ).send(fail_silently=False)
 
 
 def _create_email_message(form_type, name, email, **kwargs):
@@ -993,11 +987,15 @@ def dump_data(request):
     # Base arguments for `dumpdata`
     # Always exclude auth users and site settings (may contain credentials and other sensitive data)
     base_args = [
-        '--natural-primary', '--natural-foreign', '--indent', '2',
-        '-e', 'contenttypes', '-e', 'auth.permission', 
-        '-e', 'wagtailcore.groupcollectionpermission', '-e', 'wagtailcore.grouppagepermission', '-e', 'wagtailcore.referenceindex', 
-        '-e', 'wagtailimages.rendition', '-e', 'sessions', '-e', 'wagtailsearch', '-e', 'wagtailcore.pagelogentry', '-e', 'wagtailcore.revision', '-e', 'wagtailcore.taskstate', '-e', 'wagtailcore.workflowstate', '-e', 'wagtailcore.comment',
-        '-e', 'auth.user', '-e', 'blowcomotion.sitesettings',
+        '--natural-foreign', '--indent', '2',
+        '-e', 'contenttypes', '-e', 'auth.permission',
+        '-e', 'wagtailcore.groupcollectionpermission', '-e', 'wagtailcore.grouppagepermission', '-e', 'wagtailcore.referenceindex',
+        '-e', 'sessions', '-e', 'wagtailsearch', '-e', 'wagtailcore.pagelogentry', '-e', 'wagtailcore.revision', '-e', 'wagtailcore.taskstate', '-e', 'wagtailcore.workflowstate', '-e', 'wagtailcore.comment',
+        '-e', 'auth.user',
+        '-e', 'admin.logentry', '-e', 'axes.accesslog',
+        '-e', 'wagtailcore.modellogentry', '-e', 'wagtailcore.pagesubscription',
+        '-e', 'wagtailadmin.editingsession', '-e', 'wagtailadmin.formstate',
+        '-e', 'wagtailusers.userprofile',
     ]
     
     args = base_args
@@ -1027,12 +1025,17 @@ def dump_data(request):
         # Clear user FKs that would otherwise reference excluded `auth.user` records
         # (e.g. wagtailimages.Image.uploaded_by_user, LibraryInstrument.locked_by, InstrumentHistoryLog.user)
         user_fk_field_names = {'uploaded_by_user', 'user', 'locked_by', 'owner'}
+        # Optional FileFields serialized as "" instead of null cause DeserializationError on load
+        empty_string_file_fields = {'thumbnail', 'avatar'}
         for item in data:
             fields = item.get('fields')
             if not fields:
                 continue
             for field_name in user_fk_field_names:
                 if field_name in fields:
+                    fields[field_name] = None
+            for field_name in empty_string_file_fields:
+                if fields.get(field_name) == '':
                     fields[field_name] = None
 
         # Scrub member data in-place if not including real data
@@ -1073,6 +1076,26 @@ def dump_data(request):
                     scrubbed_count += 1
             
             logger.info(f'Scrubbed {scrubbed_count} member records in data dump')
+
+        # Always scrub SiteSettings sensitive fields regardless of include_real_data
+        sitesettings_passwords = {'attendance_password', 'birthdays_password'}
+        sitesettings_recipients = {
+            'contact_form_email_recipients', 'join_band_form_email_recipients',
+            'booking_form_email_recipients', 'feedback_form_email_recipients',
+            'donate_form_email_recipients', 'birthday_summary_email_recipients',
+            'instrument_rental_notification_recipients',
+            'attendance_report_notification_recipients',
+            'member_signup_notification_recipients',
+        }
+        for item in data:
+            if item.get('model') == 'blowcomotion.sitesettings':
+                fields = item.get('fields', {})
+                for field in sitesettings_passwords:
+                    if field in fields:
+                        fields[field] = None
+                for field in sitesettings_recipients:
+                    if field in fields:
+                        fields[field] = 'local@example.com'
 
         logger.info(f"Data dump completed successfully by user {request.user.username}")
         # Return the data as a JSON response with pretty formatting
@@ -2479,9 +2502,11 @@ def rental_request_review(request, pk):
                 if not unit:
                     form.add_error("unit", "Please select a unit to assign for approval.")
                 else:
+                    submission.prior_storage_location = unit.storage_location
                     unit.member = submission.member
                     unit.status = LibraryInstrument.STATUS_RENTED
                     unit.rental_date = date.today()
+                    unit.storage_location = None
                     unit.save()
                     if submission.member:
                         submission.member.renting = True
@@ -2527,7 +2552,15 @@ def rental_request_return(request, pk):
         unit.rental_date = None
         unit.patreon_active = False
         unit.patreon_amount = None
+        unit.storage_location = submission.prior_storage_location
         unit.save()
+
+        if submission.prior_storage_location is None:
+            messages.warning(
+                request,
+                f"Instrument returned from {submission.name}, but no prior storage location was recorded. "
+                "Please assign a storage location manually in Library Instruments.",
+            )
 
         if previous_member:
             still_renting = LibraryInstrument.objects.filter(

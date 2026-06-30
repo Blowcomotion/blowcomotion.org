@@ -9,6 +9,8 @@ SECRET_KEY = "django-insecure-gpnmtm+eot&u_ki#&#sj7=^6*x0o!zlpf^qfnpq(&=qnx1etdz
 # SECURITY WARNING: define the correct hosts in production!
 ALLOWED_HOSTS = ["*"]
 
+INTERNAL_IPS = ["127.0.0.1", "::1"]
+
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # GO3 Local Development Settings
@@ -28,3 +30,6 @@ try:
     from .local import *
 except ImportError:
     pass
+
+# Must come after local.py import — local.py re-imports base.py which resets MEDIA_URL
+MEDIA_URL = "https://www.blowcomotion.org/media/"

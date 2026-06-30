@@ -1,7 +1,7 @@
 (function ($) {
     $(document).ready(function() {
         // reCAPTCHA disclosure notice (required when hiding the badge)
-        $('form[hx-post*="process-form"], form[action*="process-form"], form#member-form').each(function() {
+        $('form[hx-post*="process-form"], form[action*="process-form"], form#member-form, form[data-recaptcha]').each(function() {
             var $form = $(this);
             if ($form.find('.recaptcha-notice').length === 0) {
                 $form.append('<div class="recaptcha-notice" style="display: block; width: 100%; font-size: 0.75rem; color: #888; margin-top: 0.5rem; text-align: center;">This site is protected by reCAPTCHA.</div>');
@@ -12,7 +12,7 @@
         if (typeof grecaptcha !== 'undefined' && window.RECAPTCHA_SITE_KEY) {
 
             // Add hidden token inputs to all reCAPTCHA-protected forms
-            $('form[hx-post*="process-form"], form[action*="process-form"], form#member-form').each(function() {
+            $('form[hx-post*="process-form"], form[action*="process-form"], form#member-form, form[data-recaptcha]').each(function() {
                 var $form = $(this);
                 if ($form.find('input[name="g-recaptcha-response"]').length === 0) {
                     $form.append('<input type="hidden" name="g-recaptcha-response" class="recaptcha-token" value="">');
@@ -94,7 +94,7 @@
             });
             
             // Handle regular (non-HTMX) form submissions
-            $('form[action*="process-form"]').not('[hx-post]').on('submit', function(event) {
+            $('form[action*="process-form"], form#member-form, form[data-recaptcha]').not('[hx-post]').on('submit', function(event) {
                 var $form = $(this);
                 var $tokenInput = $form.find('input[name="g-recaptcha-response"]');
                 

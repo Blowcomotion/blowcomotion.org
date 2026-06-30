@@ -3,5 +3,5 @@
 
 {% block branding_welcome %}
 {% wagtail_site as current_site %}
-Welcome to {{ current_site.site_name|default:"the"|default_if_none:"the" }} Admin
+Welcome to {% if debug %}LOCAL {% endif %}{{ current_site.site_name|default:"the"|default_if_none:"the" }} Admin
 {% endblock %}

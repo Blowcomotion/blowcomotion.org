@@ -52,8 +52,6 @@ python manage.py collectstatic --noinput
 
 **StreamField blocks** are defined in `blocks.py` and rendered by templates in `templates/blocks/`. New page content types are added as blocks on `BlankCanvasPage`.
 
-**Member instruments (Oct 2025 refactor):** `Member` has `primary_instrument` (ForeignKey, determines attendance section) and `additional_instruments` (ManyToMany through `MemberInstrument`). Attendance filters members by `primary_instrument.section`.
-
 **GigoGig integration:** `CachedGig` is a DB table that stores gig data synced from the API (persists until next sync). The `gigs_for_date` view adds a second layer via Django's `cache` (600s TTL) on top of DB queries. Configured via `GIGO_API_URL` / `GIGO_API_KEY` / `GIGO_BAND_ID` in `local.py`.
 
 **Patreon validation:** After an instrument rental request is submitted, `blowcomotion/patreon_client.py` paginates the Patreon API v2 campaign member list to check whether the submitter's email has an active Patreon pledge. The result is stored on `InstrumentRentalRequestSubmission.patreon_validated` (None = not checked, True = active, False = not found / inactive) and included in the manager notification email. Requires in `local.py`:
@@ -71,6 +69,7 @@ If either setting is absent the check is skipped silently (field stays None).
 The disclosure notice is injected automatically by `form.js` for any form matching:
 - `form[hx-post*="process-form"]` or `form[action*="process-form"]` — public CMS forms
 - `form#member-form` — member portal forms
+- `form[data-recaptcha]` — any other form type; add this attribute to opt in
 
 The reCAPTCHA script and `form.js` load when `include_form_js=True` is in the template context (set by the view). In dev with no keys configured, `_validate_recaptcha` skips validation; in production it rejects submissions without a valid token.
 
@@ -78,6 +77,9 @@ The reCAPTCHA script and `form.js` load when `include_form_js=True` is in the te
 - Pass `include_form_js=True` in the view context (GET and POST)
 - Call `_validate_recaptcha(request)` at the top of the POST handler before any processing
 - Use `id="member-form"` on member portal forms, or route through `/process-form/` for CMS block forms — the notice appears automatically
+- For any other form type, add `data-recaptcha` to the `<form>` element — `form.js` picks it up automatically
+
+**Do NOT add inline reCAPTCHA submit handlers to templates.** `form.js` already attaches a submit handler to every `form#member-form` and `form[action*="process-form"]`. Adding a second `addEventListener('submit', ...)` in a template's `{% block extra_js %}` causes two concurrent handlers to both call `grecaptcha.execute()` and `form.submit()`, resulting in the form being submitted twice — two server requests, two emails sent, two tokens created.
 
 ## Commits and PRs
 

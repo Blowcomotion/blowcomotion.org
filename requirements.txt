@@ -1,4 +1,6 @@
 argon2-cffi
+google-api-python-client
+mutagen
 Django==6.0.6
 requests
 django-axes

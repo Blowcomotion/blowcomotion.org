@@ -184,3 +184,7 @@ blowco.json.superpowers/
 # Claude Code — local overrides and ephemeral state
 .claude/settings.local.json
 .claude/worktrees/
+
+# Catch data dump files
+*.csv
+*.json

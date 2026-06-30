@@ -317,6 +317,7 @@ def rental_request_detail(request, pk):
 @login_required
 def instrument_rental_request(request):
     if not hasattr(request.user, "member"):
+        logger.info(f"User without member attribute attempted to access instrument rental request: {request.user}")
         return redirect("/")
     member = request.user.member
     site_settings = SiteSettings.for_request(request)
@@ -439,6 +440,7 @@ def instrument_rental_request(request):
                         "second_choice": second_choice,
                         "third_choice": third_choice,
                         "notes": submission.message,
+                        "contact_emails": site_settings.instrument_rental_notification_recipients,
                     },
                 )
                 _MemberEmail(
