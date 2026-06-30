@@ -6,8 +6,8 @@ from datetime import datetime, timezone
 
 from django.conf import settings
 
-EXCLUDE_FOLDERS = ["01 -Warmups and Exercises", "03 - Resources-Reference", "0 - Rehearsal Recordings", "02 - Sound Files and Midis", "04 - Performance Videos"]
-ARCHIVE_FOLDERS = ["ZZArchive - INACTIVE"]
+EXCLUDE_FOLDERS = []
+ARCHIVE_FOLDERS = ["01 -Warmups and Exercises", "03 - Resources-Reference", "0 - Rehearsal Recordings", "02 - Sound Files and Midis", "04 - Performance Videos", "ZZArchive - INACTIVE"]
 
 # Keys are lowercase normalized tokens (dots/spaces/underscores replaced with space)
 _ALIAS_MAP = {
