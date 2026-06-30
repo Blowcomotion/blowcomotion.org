@@ -13,7 +13,7 @@
         {% csrf_token %}
         <input type="hidden" name="folder_id" value="{{ folder_id }}">
 
-        <details class="hw-details" style="margin-bottom:1.5rem;border:1px solid rgba(128,128,128,0.35);border-radius:4px;padding:.75rem 1rem">
+        <details style="margin-bottom:1.5rem;border:1px solid rgba(128,128,128,0.35);border-radius:4px;padding:.75rem 1rem">
             <summary style="cursor:pointer;font-weight:bold" title="Click to expand">How this works</summary>
             <div style="margin-top:.75rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem 2rem;font-size:1.2em">
                 <div>
@@ -162,19 +162,6 @@
         </div>
     </form>
 </div>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-.hw-details > summary::before {
-    content: '▶\00a0';
-    display: inline-block;
-    transition: transform .15s;
-}
-.hw-details[open] > summary::before {
-    transform: rotate(90deg);
-}
-</style>
 {% endblock %}
 
 {% block extra_js %}
