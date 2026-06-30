@@ -44,7 +44,6 @@ class Command(BaseCommand):
                 '--exclude', 'wagtailadmin.editingsession',
                 '--exclude', 'wagtailadmin.formstate',
                 '--exclude', 'wagtailusers.userprofile',
-                '--exclude', 'admin.logentry',
                 '--exclude', 'axes.accesslog',
                 stdout=f,
                 verbosity=0,
