@@ -7,13 +7,13 @@
 <div class="nice-padding">
     <h1>Import Charts from Google Drive</h1>
     <p>Each row is a Google Drive folder. Click <strong>Review</strong> to scan its PDF files and import charts for that song.</p>
-    <p>The <strong>Auto-detected song</strong> column shows which song in the database was matched to the folder name. If it looks wrong, you can correct it on the review page before importing. A <span class="tag tag--warning">⚠ review</span> score means the match is uncertain — double-check before proceeding.</p>
+    <p>The <strong>Auto-detected song</strong> column shows which song in the database was matched to the folder name. If it looks wrong, you can correct it on the review page before importing. A low match confidence means the name didn't match closely — double-check before proceeding.</p>
     <table class="listing">
         <thead>
             <tr>
                 <th>Drive folder</th>
                 <th>Auto-detected song</th>
-                <th>Score</th>
+                <th>Match confidence</th>
                 <th>Last imported</th>
                 <th></th>
             </tr>
@@ -26,9 +26,9 @@
                 <td>
                     {% if folder.matched_song %}
                         {% if folder.match_score >= 0.85 %}
-                            <span class="tag tag--teal" title="{{ folder.match_score }}">High</span>
+                            <span style="color:#1a7f4b">{% widthratio folder.match_score 1 100 %}%</span>
                         {% else %}
-                            <span class="tag tag--warning" title="{{ folder.match_score }}">⚠ {{ folder.match_score }} — review</span>
+                            <span style="color:#c4780a">⚠ {% widthratio folder.match_score 1 100 %}% — check</span>
                         {% endif %}
                     {% endif %}
                 </td>
