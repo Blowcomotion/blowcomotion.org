@@ -145,9 +145,9 @@ def register_rental_requests_menu_item():
 def register_chart_import_menu_item():
     from wagtail.admin.menu import MenuItem
     return MenuItem(
-        "Import Charts from Drive",
+        "Import Charts",
         reverse("chart_import_picker"),
-        icon_name="doc-full",
+        icon_name="google-drive",
         order=901,
     )
 
@@ -158,6 +158,7 @@ def register_icons(icons):
         'icons/drum-solid-full.svg',
         'icons/music-solid-full.svg',
         'icons/french-horn.svg',
+        'icons/google-drive.svg',
     ]
 
 
