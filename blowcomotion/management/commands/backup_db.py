@@ -30,7 +30,6 @@ class Command(BaseCommand):
         with open(backup_path, 'w', encoding='utf-8') as f:
             call_command(
                 'dumpdata',
-                '--natural-foreign',
                 '--indent', '2',
                 '--exclude', 'contenttypes',
                 '--exclude', 'auth.permission',
