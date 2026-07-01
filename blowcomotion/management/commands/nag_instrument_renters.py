@@ -6,9 +6,9 @@ from wagtail.models import Site
 from django.conf import settings
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
-from django.core.signing import TimestampSigner
 
 from blowcomotion.models import InstrumentRentalNagLog, LibraryInstrument, SiteSettings
+from blowcomotion.views import _build_nag_email
 
 
 class Command(BaseCommand):
@@ -96,49 +96,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f"Nothing to nag today ({skipped_cooldown} skipped by cooldown)."))
 
     def _send_renter_nag(self, li, member, base_url, patreon_url, reasons, dry_run):
-        signer = TimestampSigner()
-        token = signer.sign(str(li.pk))
-        first_name = member.first_name or member.full_name
-
-        lines = [
-            f"Hi {first_name},",
-            "",
-            f"We wanted to check in about the {li.instrument.name} you're renting from Blowcomotion.",
-            "",
-        ]
-        if "attendance" in reasons:
-            last_seen_str = str(member.last_seen) if member.last_seen else "unknown"
-            lines += [
-                f"We haven't seen you at rehearsal in a while (last seen: {last_seen_str}). We'd love to have you back!",
-                "",
-            ]
-        if "patreon" in reasons:
-            patreon_line = "Our records show your Patreon membership may not be current. Keeping it active helps us maintain the instrument library."
-            if patreon_url:
-                patreon_line += f" You can activate or renew at: {patreon_url}"
-            lines += [patreon_line, ""]
-
-        if "attendance" in reasons:
-            confirm_label = "I'll be back at rehearsal soon:"
-            confirm_url = f"{base_url}/instrument-rental/staying/?t={token}"
-        else:
-            confirm_label = "I've updated my Patreon membership:"
-            confirm_url = f"{base_url}/instrument-rental/patreon-updated/?t={token}"
-        lines += [
-            "Please let us know your plans:",
-            "",
-            confirm_label,
-            confirm_url,
-            "",
-            "I'd like to return the instrument:",
-            f"{base_url}/instrument-rental/return/?t={token}",
-            "",
-            "Start Wearing Purple,",
-            "Blowcomotion",
-        ]
-        message = "\n".join(lines)
-        subject = "A note from Blowcomotion about your instrument rental"
-
+        subject, message = _build_nag_email(li, member, base_url, patreon_url, reasons)
         if dry_run:
             self.stdout.write(self.style.NOTICE(f"[Dry Run] Would email {member.email}:\nSubject: {subject}\n{message}\n"))
         else:
