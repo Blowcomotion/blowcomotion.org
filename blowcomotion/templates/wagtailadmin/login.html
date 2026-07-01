@@ -4,7 +4,7 @@
 
 {% block branding_login %}
 {% wagtail_site as current_site %}
-Sign in to {{ current_site.site_name|default:"the"|default_if_none:"the" }} Admin
+Sign in to {{ current_site.site_name|default:"the"|default_if_none:"the" }} {% if debug %}LOCAL{% else %}PRODUCTION{% endif %} Admin
 {% endblock %}
 
 {% block branding_logo %}
@@ -13,7 +13,13 @@ Sign in to {{ current_site.site_name|default:"the"|default_if_none:"the" }} Admi
         {% if logo %}
             {% image logo original as logo_image %}
             {% wagtail_site as current_site %}
-            <img src="{{ logo_image.url }}" alt="{{ current_site.site_name }}" style="margin-top: 20px;"/>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:20px;">
+                <img src="{{ logo_image.url }}" alt="{{ current_site.site_name }}"/>
+                <span style="font-size:.85rem;font-weight:700;letter-spacing:.08em;">
+                    {% if debug %}LOCAL DEVELOPMENT{% else %}PRODUCTION{% endif %}
+                </span>
+                <span style="font-size:.75rem;letter-spacing:.1em;opacity:.7;">ADMIN</span>
+            </div>
         {% else %}
             {{ block.super }}
         {% endif %}

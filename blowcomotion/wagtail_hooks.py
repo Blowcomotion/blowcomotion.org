@@ -3,9 +3,11 @@ from wagtail.admin.menu import Menu, MenuItem, SubmenuMenuItem
 from wagtail.admin.ui.components import Component
 from wagtail.snippets.models import register_snippet
 
+from django.conf import settings as django_settings
 from django.templatetags.static import static
 from django.urls import path, reverse
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
 from blowcomotion.views import (
     dump_data,
@@ -80,6 +82,17 @@ def register_admin_urls():
     ]
 
 
+@hooks.register("register_admin_urls")
+def register_chart_import_urls():
+    from django.urls import path
+
+    from blowcomotion import views_chart_import
+    return [
+        path("chart-import/", views_chart_import.picker, name="chart_import_picker"),
+        path("chart-import/review/", views_chart_import.review, name="chart_import_review"),
+    ]
+
+
 @hooks.register("register_admin_menu_item")
 def register_management_menu_item():
     """
@@ -128,12 +141,24 @@ def register_rental_requests_menu_item():
     )
 
 
+@hooks.register("register_admin_menu_item")
+def register_chart_import_menu_item():
+    from wagtail.admin.menu import MenuItem
+    return MenuItem(
+        "Import Charts",
+        reverse("chart_import_picker"),
+        icon_name="google-drive",
+        order=901,
+    )
+
+
 @hooks.register("register_icons")
 def register_icons(icons):
     return icons + [
         'icons/drum-solid-full.svg',
         'icons/music-solid-full.svg',
         'icons/french-horn.svg',
+        'icons/google-drive.svg',
     ]
 
 
@@ -175,6 +200,12 @@ class NotificationBannerPanel(Component):
 def add_notification_banner_panel(request, panels):
     """Add notification banner shortcut to the admin homepage."""
     panels.append(NotificationBannerPanel())
+
+
+@hooks.register('insert_global_admin_css')
+def admin_env_sidebar_css():
+    color = '#1a5c2e' if django_settings.DEBUG else '#5b1a76'
+    return mark_safe(f'<style>.sidebar,.sidebar-loading,.sidebar__inner{{background-color:{color}!important}}</style>')
 
 
 @hooks.register('insert_global_admin_js')

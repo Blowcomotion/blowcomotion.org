@@ -225,30 +225,6 @@ When deploying to production, always run:
 
 **Important**: Run `collectstatic` after any changes to static files (CSS, JavaScript, images) to ensure they're available in production.
 
-## Database Schema
-
-### Member Model (Updated October 2025)
-
-The Member model was refactored to better represent instrument relationships:
-
-#### Instrument Fields
-
-- **`primary_instrument`** (ForeignKey): The member's main instrument - determines which section they appear in for attendance
-- **`additional_instruments`** (ManyToMany through MemberInstrument): Any extra instruments the member can play
-
-#### Key Changes
-
-- Members appear in their primary section by default, with additional instruments surfaced (and flagged) in the relevant sections for quick access
-- The old `instruments` many-to-many field was split into primary + additional
-- Migration 0076 automatically migrated existing data: first instrument → primary, rest → additional
-- Admin search for Members uses Django queries instead of Wagtail FTS indexing for better SQLite compatibility
-
-#### Adding/Editing Members
-
-1. Navigate to **Wagtail Admin > Band Stuff > Members**
-2. Set the **Primary Instrument** - this determines their section for attendance
-3. Optionally add **Additional Instruments** they can also play
-4. The primary instrument should NOT be listed in additional instruments
 
 ## Features
 

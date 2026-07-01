@@ -3,15 +3,32 @@
 {% block content %}
 <div class="nice-padding">
     <h1>Rental Requests</h1>
+    <p>Review and approve or deny pending instrument rental requests. Pending requests appear at the top.</p>
+    <p>The Patreon columns are populated automatically when a request is submitted. Use <strong>Refresh Patreon status</strong> to re-check all requests against the current Patreon member list — useful if a member recently pledged or their payment lapsed. Note: Patreon lookup matches on email address — the member's Patreon account must use the same email as their member profile for validation to work.</p>
+    <div style="margin-bottom:1rem;">
+        <form method="post" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="refresh_patreon">
+            <button type="submit" class="button button-secondary">Refresh Patreon status</button>
+        </form>
+    </div>
+    {% if messages %}
+    {% for message in messages %}
+    <p class="help-block help-block-{{ message.tags }}">{{ message }}</p>
+    {% endfor %}
+    {% endif %}
     <table class="listing">
         <thead>
             <tr>
                 <th>Member</th>
                 <th>1st Choice</th>
-                <th>2nd Choice</th>
-                <th>3rd Choice</th>
                 <th>Submitted</th>
                 <th>Status</th>
+                <th>Patreon</th>
+                <th>Pledge/mo</th>
+                <th>Last charge</th>
+                <th>Patron since</th>
+                <th>Lifetime</th>
                 <th></th>
             </tr>
         </thead>
@@ -27,10 +44,21 @@
                     <br><small>{{ sub.email }}</small>
                 </td>
                 <td>{{ sub.instrument }}</td>
-                <td>{{ sub.second_choice|default:"—" }}</td>
-                <td>{{ sub.third_choice|default:"—" }}</td>
                 <td>{{ sub.date_submitted|date:"Y-m-d" }}</td>
                 <td>{{ sub.get_status_display }}</td>
+                <td>
+                    {% if sub.patreon_validated is None %}
+                    <span title="Not checked">—</span>
+                    {% elif sub.patreon_validated %}
+                    <span style="color:green;" title="Active patron">Active</span>
+                    {% else %}
+                    <span style="color:#c00;" title="Not found or inactive">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>{% if sub.patreon_pledge_cents is not None %}${% widthratio sub.patreon_pledge_cents 100 1 %}{% else %}—{% endif %}</td>
+                <td>{% if sub.patreon_last_charge_date %}{{ sub.patreon_last_charge_date|date:"Y-m-d" }}{% if sub.patreon_last_charge_status %} ({{ sub.patreon_last_charge_status }}){% endif %}{% else %}—{% endif %}</td>
+                <td>{{ sub.patreon_patron_since|date:"Y-m-d"|default:"—" }}</td>
+                <td>{% if sub.patreon_lifetime_cents is not None %}${% widthratio sub.patreon_lifetime_cents 100 1 %}{% else %}—{% endif %}</td>
                 <td style="display:flex;gap:0.5rem;align-items:center;">
                     <a href="{% url 'rental_request_review' sub.pk %}"
                        class="button button-small{% if sub.status != 'pending' %} button-secondary{% endif %}">
@@ -42,7 +70,7 @@
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="7" class="no-results-message">No rental requests yet.</td></tr>
+            <tr><td colspan="10" class="no-results-message">No rental requests yet.</td></tr>
             {% endfor %}
         </tbody>
     </table>

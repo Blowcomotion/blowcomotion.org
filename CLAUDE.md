@@ -52,9 +52,13 @@ python manage.py collectstatic --noinput
 
 **StreamField blocks** are defined in `blocks.py` and rendered by templates in `templates/blocks/`. New page content types are added as blocks on `BlankCanvasPage`.
 
-**Member instruments (Oct 2025 refactor):** `Member` has `primary_instrument` (ForeignKey, determines attendance section) and `additional_instruments` (ManyToMany through `MemberInstrument`). Attendance filters members by `primary_instrument.section`.
-
 **GigoGig integration:** `CachedGig` is a DB table that stores gig data synced from the API (persists until next sync). The `gigs_for_date` view adds a second layer via Django's `cache` (600s TTL) on top of DB queries. Configured via `GIGO_API_URL` / `GIGO_API_KEY` / `GIGO_BAND_ID` in `local.py`.
+
+**Patreon validation:** After an instrument rental request is submitted, `blowcomotion/patreon_client.py` paginates the Patreon API v2 campaign member list to check whether the submitter's email has an active Patreon pledge. The result is stored on `InstrumentRentalRequestSubmission.patreon_validated` (None = not checked, True = active, False = not found / inactive) and included in the manager notification email. Requires in `local.py`:
+- `PATREON_ACCESS_TOKEN` — creator access token (must have `campaigns.members` and `campaigns.members[email]` scopes)
+- `PATREON_CAMPAIGN_ID` — numeric campaign ID
+
+If either setting is absent the check is skipped silently (field stays None).
 
 ## reCAPTCHA — required on every public form
 

@@ -256,10 +256,11 @@ class Chart(models.Model):
     pdf = models.ForeignKey(
         get_document_model(),
         null=True,
-        blank=False,
+        blank=True,
         on_delete=models.SET_NULL,
         related_name="+",
     )
+    drive_pdf_url = models.URLField(null=True, blank=True)
     part = models.CharField(
         max_length=255,
         blank=True,
@@ -267,12 +268,19 @@ class Chart(models.Model):
         help_text=" e.g. '2nd Trombone' If left blank, instrument name will be used.",
     )
     instrument = models.ForeignKey("blowcomotion.Instrument", on_delete=models.CASCADE)
+    drive_file_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+    drive_modified_time = models.DateTimeField(null=True, blank=True)
+    drive_imported_at = models.DateTimeField(null=True, blank=True)
 
     # Index song and instrument fields for searchability in the chart library
     search_fields = [
         index.SearchField("song__title", partial_match=True, boost=2),
         index.SearchField("instrument__name", partial_match=True),
     ]
+
+    def clean(self):
+        if not self.pdf and not self.drive_pdf_url:
+            raise ValidationError("A chart must have either a PDF document or a Drive PDF URL.")
 
     def __str__(self):
         return f"{self.song.title} - {self.instrument.name} - {self.part}" if self.part else f"{self.song.title} - {self.instrument.name}"
@@ -2091,6 +2099,11 @@ class InstrumentRentalRequestSubmission(BaseFormSubmission):
         blank=True,
         help_text="Set automatically via Patreon API at submission time. Active = confirmed; Inactive = not found or inactive; Unknown = API not configured or check failed.",
     )
+    patreon_pledge_cents = models.PositiveIntegerField(null=True, blank=True, help_text="Monthly pledge amount in cents at time of last Patreon check.")
+    patreon_last_charge_date = models.DateTimeField(null=True, blank=True, help_text="Date of last Patreon charge attempt.")
+    patreon_last_charge_status = models.CharField(max_length=20, null=True, blank=True, help_text="Last Patreon charge status at time of check (e.g. Paid, Declined).")
+    patreon_patron_since = models.DateTimeField(null=True, blank=True, help_text="Date the member started their Patreon pledge.")
+    patreon_lifetime_cents = models.PositiveIntegerField(null=True, blank=True, help_text="Lifetime Patreon support in cents at time of last check.")
     admin_message = models.TextField(blank=True)
     assigned_unit = models.ForeignKey(
         "blowcomotion.LibraryInstrument",

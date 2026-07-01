@@ -341,14 +341,55 @@ class InstrumentsForSongEndpointTests(TestCase):
             title="Empty Song",
             active=True
         )
-        
+
         response = self.client.get(
             reverse('chart-instruments', kwargs={'song_id': empty_song.id})
         )
         self.assertEqual(response.status_code, 200)
-        
+
         data = response.json()
         self.assertEqual(len(data['sections']), 0)
+
+    def test_instruments_include_drive_pdf_url_only_chart(self):
+        """Test that instruments with only a Drive URL (no PDF) are included"""
+        Chart.objects.create(
+            song=self.song,
+            instrument=self.saxophone,
+            pdf=None,
+            drive_pdf_url="https://drive.google.com/file/d/f1/view",
+            part="Saxophone"
+        )
+
+        response = self.client.get(
+            reverse('chart-instruments', kwargs={'song_id': self.song.id})
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        all_instruments = []
+        for section in data['sections']:
+            all_instruments.extend([i['name'] for i in section['instruments']])
+        self.assertIn('Saxophone', all_instruments)
+
+    def test_instruments_pdf_url_prioritizes_drive_url(self):
+        """Test that pdf_url prefers drive_pdf_url over an uploaded pdf"""
+        chart = Chart.objects.get(song=self.song, instrument=self.clarinet)
+        chart.drive_pdf_url = "https://drive.google.com/file/d/f1/view"
+        chart.save()
+
+        response = self.client.get(
+            reverse('chart-instruments', kwargs={'song_id': self.song.id})
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        brass_or_woodwinds = next(
+            s for s in data['sections'] if s['name'] == 'Woodwinds'
+        )
+        clarinet = next(
+            i for i in brass_or_woodwinds['instruments'] if i['name'] == 'Clarinet'
+        )
+        self.assertEqual(clarinet['charts'][0]['pdf_url'], chart.drive_pdf_url)
 
 
 class ChartsForSongInstrumentEndpointTests(TestCase):
@@ -580,11 +621,51 @@ class ChartsForSongInstrumentEndpointTests(TestCase):
             })
         )
         self.assertEqual(response.status_code, 200)
-        
+
         data = response.json()
         # One of the charts should have part name equal to instrument name
         part_names = [c['part'] for c in data['charts']]
         self.assertIn('Test Instrument', part_names)
+
+    def test_charts_include_drive_pdf_url_only_chart(self):
+        """Test that a chart with only a Drive URL (no PDF) is returned"""
+        Chart.objects.create(
+            song=self.song,
+            instrument=self.instrument,
+            pdf=None,
+            drive_pdf_url="https://drive.google.com/file/d/f1/view",
+            part="3rd Part"
+        )
+
+        response = self.client.get(
+            reverse('chart-parts', kwargs={
+                'song_id': self.song.id,
+                'instrument_id': self.instrument.id
+            })
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(len(data['charts']), 3)
+        drive_chart = next(c for c in data['charts'] if c['part'] == '3rd Part')
+        self.assertEqual(drive_chart['pdf_url'], "https://drive.google.com/file/d/f1/view")
+
+    def test_charts_pdf_url_prioritizes_drive_url(self):
+        """Test that pdf_url prefers drive_pdf_url over an uploaded pdf"""
+        self.chart1.drive_pdf_url = "https://drive.google.com/file/d/f1/view"
+        self.chart1.save()
+
+        response = self.client.get(
+            reverse('chart-parts', kwargs={
+                'song_id': self.song.id,
+                'instrument_id': self.instrument.id
+            })
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        chart = next(c for c in data['charts'] if c['part'] == '1st Part')
+        self.assertEqual(chart['pdf_url'], self.chart1.drive_pdf_url)
 
 
 class InstrumentsWithChartsEndpointTests(TestCase):
@@ -1088,5 +1169,40 @@ class SongsForInstrumentEndpointTests(TestCase):
         # 5. Prefetch charts
         # Should NOT have one query per song for charts
         query_count = len(queries)
-        self.assertLessEqual(query_count, 6, 
+        self.assertLessEqual(query_count, 6,
             f"Expected ≤6 queries, got {query_count}. Possible N+1 query issue.")
+
+    def test_songs_include_drive_pdf_url_only_chart(self):
+        """Test that a song with only a Drive URL chart (no PDF) is included"""
+        drive_only_song = Song.objects.create(title="Drive Only Song", active=True)
+        Chart.objects.create(
+            song=drive_only_song,
+            instrument=self.clarinet,
+            pdf=None,
+            drive_pdf_url="https://drive.google.com/file/d/f1/view",
+            part="Clarinet"
+        )
+
+        response = self.client.get(
+            reverse('chart-songs-for-instrument', kwargs={'instrument_id': self.clarinet.id})
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        song_titles = [s['title'] for s in data['songs']]
+        self.assertIn('Drive Only Song', song_titles)
+
+    def test_songs_pdf_url_prioritizes_drive_url(self):
+        """Test that pdf_url prefers drive_pdf_url over an uploaded pdf"""
+        chart = Chart.objects.get(song=self.song1, instrument=self.clarinet)
+        chart.drive_pdf_url = "https://drive.google.com/file/d/f1/view"
+        chart.save()
+
+        response = self.client.get(
+            reverse('chart-songs-for-instrument', kwargs={'instrument_id': self.clarinet.id})
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        song = next(s for s in data['songs'] if s['title'] == 'Test Song 1')
+        self.assertEqual(song['charts'][0]['pdf_url'], chart.drive_pdf_url)
