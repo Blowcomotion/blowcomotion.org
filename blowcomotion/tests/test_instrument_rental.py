@@ -648,6 +648,43 @@ class RentalRequestsAdminViewTest(TestCase):
         self.assertTrue(any("Summary" in s for s in subjects))
         self.assertTrue(any("[COPY]" in s for s in subjects))
 
+    def test_delete_removes_denied_submission(self):
+        self.submission.status = InstrumentRentalRequestSubmission.STATUS_DENIED
+        self.submission.save()
+        pk = self.submission.pk
+        self.client.post(
+            reverse("rental_requests_dashboard"),
+            {"action": "delete", "pk": pk},
+        )
+        self.assertFalse(
+            InstrumentRentalRequestSubmission.objects.filter(pk=pk).exists()
+        )
+
+    def test_delete_on_non_denied_submission_returns_404(self):
+        self.submission.status = InstrumentRentalRequestSubmission.STATUS_PENDING
+        self.submission.save()
+        pk = self.submission.pk
+        response = self.client.post(
+            reverse("rental_requests_dashboard"),
+            {"action": "delete", "pk": pk},
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(
+            InstrumentRentalRequestSubmission.objects.filter(pk=pk).exists()
+        )
+
+    def test_delete_on_approved_submission_returns_404(self):
+        self._make_approved_submission()
+        pk = self.submission.pk
+        response = self.client.post(
+            reverse("rental_requests_dashboard"),
+            {"action": "delete", "pk": pk},
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(
+            InstrumentRentalRequestSubmission.objects.filter(pk=pk).exists()
+        )
+
 
 class PatreonClientTest(TestCase):
     """Unit tests for check_patreon_membership() in patreon_client.py.
