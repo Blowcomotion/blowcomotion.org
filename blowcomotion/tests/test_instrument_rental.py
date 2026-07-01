@@ -589,7 +589,7 @@ class PatreonClientTest(TestCase):
         ])
         with override_settings(PATREON_ACCESS_TOKEN="tok", PATREON_CAMPAIGN_ID="cam123"):
             result = check_patreon_membership("patron@example.com")
-        self.assertTrue(result)
+        self.assertTrue(result["is_active"])
 
     @patch("blowcomotion.patreon_client.requests.get")
     def test_declined_patron_returns_false(self, mock_get):
@@ -600,7 +600,7 @@ class PatreonClientTest(TestCase):
         ])
         with override_settings(PATREON_ACCESS_TOKEN="tok", PATREON_CAMPAIGN_ID="cam123"):
             result = check_patreon_membership("lapsed@example.com")
-        self.assertFalse(result)
+        self.assertFalse(result["is_active"])
 
     @patch("blowcomotion.patreon_client.requests.get")
     def test_member_not_found_returns_false(self, mock_get):
@@ -609,7 +609,7 @@ class PatreonClientTest(TestCase):
         mock_get.return_value = self._make_page([])
         with override_settings(PATREON_ACCESS_TOKEN="tok", PATREON_CAMPAIGN_ID="cam123"):
             result = check_patreon_membership("nobody@example.com")
-        self.assertFalse(result)
+        self.assertFalse(result["is_active"])
 
     def test_missing_token_returns_none(self):
 
@@ -634,7 +634,7 @@ class PatreonClientTest(TestCase):
         ])
         with override_settings(PATREON_ACCESS_TOKEN="tok", PATREON_CAMPAIGN_ID="cam123"):
             result = check_patreon_membership("patron@example.com")
-        self.assertTrue(result)
+        self.assertTrue(result["is_active"])
 
     @patch("blowcomotion.patreon_client.requests.get")
     def test_member_found_on_second_page(self, mock_get):
@@ -651,7 +651,7 @@ class PatreonClientTest(TestCase):
         mock_get.side_effect = [page1, page2]
         with override_settings(PATREON_ACCESS_TOKEN="tok", PATREON_CAMPAIGN_ID="cam123"):
             result = check_patreon_membership("patron@example.com")
-        self.assertTrue(result)
+        self.assertTrue(result["is_active"])
         self.assertEqual(mock_get.call_count, 2)
 
     @patch("blowcomotion.patreon_client.requests.get")
@@ -690,6 +690,10 @@ class PatreonClientTest(TestCase):
         self.assertIsNone(result)
 
 
+_PATREON_ACTIVE = {"is_active": True, "pledge_cents": None, "last_charge_date": None, "last_charge_status": None, "patron_since": None, "lifetime_cents": None}
+_PATREON_INACTIVE = {"is_active": False, "pledge_cents": None, "last_charge_date": None, "last_charge_status": None, "patron_since": None, "lifetime_cents": None}
+
+
 class PatreonValidationIntegrationTest(TestCase):
     """Integration tests verifying Patreon validation is triggered during rental submission."""
 
@@ -721,14 +725,14 @@ class PatreonValidationIntegrationTest(TestCase):
             "policy_acknowledged": True,
         })
 
-    @patch("blowcomotion.member_views.check_patreon_membership", return_value=True)
+    @patch("blowcomotion.member_views.check_patreon_membership", return_value=_PATREON_ACTIVE)
     def test_active_patron_sets_patreon_validated_true(self, mock_check):
         self._post()
         sub = InstrumentRentalRequestSubmission.objects.first()
         self.assertTrue(sub.patreon_validated)
         mock_check.assert_called_once_with(self.member.email)
 
-    @patch("blowcomotion.member_views.check_patreon_membership", return_value=False)
+    @patch("blowcomotion.member_views.check_patreon_membership", return_value=_PATREON_INACTIVE)
     def test_inactive_patron_sets_patreon_validated_false(self, mock_check):
         self._post()
         sub = InstrumentRentalRequestSubmission.objects.first()
@@ -744,7 +748,7 @@ class PatreonValidationIntegrationTest(TestCase):
         mock_check.assert_called_once_with(self.member.email)
 
     @patch("blowcomotion.member_views._MemberEmail")
-    @patch("blowcomotion.member_views.check_patreon_membership", return_value=False)
+    @patch("blowcomotion.member_views.check_patreon_membership", return_value=_PATREON_INACTIVE)
     def test_inactive_patron_manager_email_mentions_patreon(self, mock_check, mock_email_cls):
         mock_email_cls.return_value.send.return_value = None
         self.site_settings.instrument_rental_notification_recipients = "mgr@example.com"
@@ -754,7 +758,7 @@ class PatreonValidationIntegrationTest(TestCase):
         self.assertIn("NOT FOUND or INACTIVE", call_kwargs["body"])
 
     @patch("blowcomotion.member_views._MemberEmail")
-    @patch("blowcomotion.member_views.check_patreon_membership", return_value=True)
+    @patch("blowcomotion.member_views.check_patreon_membership", return_value=_PATREON_ACTIVE)
     def test_active_patron_manager_email_confirms_active(self, mock_check, mock_email_cls):
         mock_email_cls.return_value.send.return_value = None
         self.site_settings.instrument_rental_notification_recipients = "mgr@example.com"
@@ -773,7 +777,7 @@ class PatreonValidationIntegrationTest(TestCase):
         call_kwargs = mock_email_cls.call_args_list[0][1]
         self.assertIn("not checked", call_kwargs["body"])
 
-    @patch("blowcomotion.member_views.check_patreon_membership", return_value=True)
+    @patch("blowcomotion.member_views.check_patreon_membership", return_value=_PATREON_ACTIVE)
     def test_submission_created_even_if_patreon_active(self, mock_check):
         self._post()
         self.assertEqual(InstrumentRentalRequestSubmission.objects.count(), 1)

@@ -54,6 +54,7 @@ from blowcomotion.models import (
     Section,
     SiteSettings,
 )
+from blowcomotion.patreon_client import check_patreon_membership
 from blowcomotion.utils import (
     convert_utc_gig_to_central,
     make_gigo_api_request,
@@ -2468,7 +2469,40 @@ def _send_rental_returned_email(request, submission, condition_notes):
 
 
 def rental_requests_dashboard(request):
+    from django.contrib import messages
     from django.db.models import Case, IntegerField, Value, When
+
+    if request.method == "POST" and request.POST.get("action") == "refresh_patreon":
+        all_submissions = (
+            InstrumentRentalRequestSubmission.objects.all()
+            .select_related("member")
+        )
+        updated = errors = skipped = 0
+        for sub in all_submissions:
+            email = sub.member.email if sub.member else None
+            if not email:
+                skipped += 1
+                continue
+            result = check_patreon_membership(email)
+            if result is None:
+                errors += 1
+                continue
+            sub.patreon_validated = result["is_active"]
+            sub.patreon_pledge_cents = result["pledge_cents"]
+            sub.patreon_last_charge_date = result["last_charge_date"]
+            sub.patreon_last_charge_status = result["last_charge_status"]
+            sub.patreon_patron_since = result["patron_since"]
+            sub.patreon_lifetime_cents = result["lifetime_cents"]
+            sub.save(update_fields=["patreon_validated", "patreon_pledge_cents", "patreon_last_charge_date", "patreon_last_charge_status", "patreon_patron_since", "patreon_lifetime_cents"])
+            updated += 1
+        msg = f"Patreon refresh: {updated} updated"
+        if skipped:
+            msg += f", {skipped} skipped (no email)"
+        if errors:
+            msg += f", {errors} failed (API error)"
+        messages.success(request, msg)
+        return redirect("rental_requests_dashboard")
+
     submissions = (
         InstrumentRentalRequestSubmission.objects.annotate(
             status_order=Case(
