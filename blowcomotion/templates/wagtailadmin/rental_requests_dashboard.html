@@ -87,6 +87,15 @@
                     </form>
                     {% endif %}
                     {% endif %}
+                    {% if sub.status == 'denied' %}
+                    <form method="post" style="display:inline;"
+                          onsubmit="return confirm('Delete this denied rental request from {{ sub.name|escapejs }}? This cannot be undone.');">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="pk" value="{{ sub.pk }}">
+                        <button type="submit" class="button button-small no">Delete</button>
+                    </form>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}

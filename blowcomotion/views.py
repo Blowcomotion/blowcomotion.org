@@ -2693,6 +2693,18 @@ def rental_requests_dashboard(request):
                 messages.info(request, f"Nag all: nothing to send ({skipped_cooldown} skipped by cooldown).")
             return redirect("rental_requests_dashboard")
 
+        elif action == "delete":
+            pk = request.POST.get("pk")
+            sub = get_object_or_404(
+                InstrumentRentalRequestSubmission,
+                pk=pk,
+                status=InstrumentRentalRequestSubmission.STATUS_DENIED,
+            )
+            name = sub.name
+            sub.delete()
+            messages.success(request, f"Deleted denied rental request from {name}.")
+            return redirect("rental_requests_dashboard")
+
     submissions = list(
         InstrumentRentalRequestSubmission.objects.annotate(
             status_order=Case(
