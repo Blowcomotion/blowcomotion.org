@@ -428,12 +428,3 @@ def reconcile_file(drive_file: dict, parsed: ParsedFile, existing_charts: list) 
         return ReconcileResult(drive_file, parsed, "review", "Needs review", None)
 
     return ReconcileResult(drive_file, parsed, "review", "New", None)
-
-
-def _safe_delete_document(doc):
-    from blowcomotion.models import Chart
-
-    # ponytail: skip rich-text usage scan — Chart PDFs are never embedded in rich text
-    if not Chart.objects.filter(pdf=doc).exists():
-        doc.file.delete(save=False)
-        doc.delete()
