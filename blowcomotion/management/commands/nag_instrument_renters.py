@@ -118,16 +118,17 @@ class Command(BaseCommand):
                 patreon_line += f" You can activate or renew at: {patreon_url}"
             lines += [patreon_line, ""]
 
-        staying_label = (
-            "I'll be back at rehearsal soon:"
-            if "attendance" in reasons
-            else "I've updated my Patreon membership:"
-        )
+        if "attendance" in reasons:
+            confirm_label = "I'll be back at rehearsal soon:"
+            confirm_url = f"{base_url}/instrument-rental/staying/?t={token}"
+        else:
+            confirm_label = "I've updated my Patreon membership:"
+            confirm_url = f"{base_url}/instrument-rental/patreon-updated/?t={token}"
         lines += [
             "Please let us know your plans:",
             "",
-            staying_label,
-            f"{base_url}/instrument-rental/staying/?t={token}",
+            confirm_label,
+            confirm_url,
             "",
             "I'd like to return the instrument:",
             f"{base_url}/instrument-rental/return/?t={token}",
