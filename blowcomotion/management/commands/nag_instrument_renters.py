@@ -116,10 +116,15 @@ class Command(BaseCommand):
                 "Our records show your Patreon membership may not be current. Keeping it active helps us maintain the instrument library.",
                 "",
             ]
+        staying_label = (
+            "I'll be back at rehearsal soon:"
+            if "attendance" in reasons
+            else "I'll activate or renew my Patreon membership:"
+        )
         lines += [
             "Please let us know your plans:",
             "",
-            "I'll be back at rehearsal soon:",
+            staying_label,
             f"{base_url}/instrument-rental/staying/?t={token}",
             "",
             "I'd like to return the instrument:",
