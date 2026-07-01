@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 PATREON_MEMBERS_URL = "https://www.patreon.com/api/oauth2/v2/campaigns/{campaign_id}/members"
 ACTIVE_PATRON_STATUS = "active_patron"
+# Minimum monthly pledge (in cents) required for an active instrument rental.
+MIN_RENTAL_PLEDGE_CENTS = 500
 # Safety cap: stop paginating after this many pages to avoid hanging in-request.
 MAX_PAGES = 20
 
@@ -35,6 +37,62 @@ _MEMBER_FIELDS = ",".join([
     "lifetime_support_cents",
     "pledge_relationship_start",
 ])
+
+
+def fetch_all_members() -> dict | None:
+    """
+    Fetch the full Patreon campaign member list and return a dict keyed by
+    lowercased email.  Use this when checking multiple emails in one pass to
+    avoid a full API scan per lookup.
+
+    Returns:
+        dict mapping lowercase email → membership detail dict (same shape as
+        check_patreon_membership's return value), or None if the API is not
+        configured or a network/HTTP error occurs.
+    """
+    access_token = getattr(settings, "PATREON_ACCESS_TOKEN", None)
+    campaign_id = getattr(settings, "PATREON_CAMPAIGN_ID", None)
+
+    if not access_token or not campaign_id:
+        return None
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+    url = PATREON_MEMBERS_URL.format(campaign_id=campaign_id)
+    params = {"fields[member]": _MEMBER_FIELDS, "page[count]": 100}
+
+    members: dict = {}
+    pages_fetched = 0
+
+    while url and pages_fetched < MAX_PAGES:
+        try:
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError,
+                requests.exceptions.HTTPError, Exception) as exc:  # noqa: BLE001
+            logger.error("patreon_client: fetch_all_members error (page %d): %s", pages_fetched + 1, exc)
+            return None
+
+        pages_fetched += 1
+        params = {}
+
+        for member in data.get("data", []):
+            attrs = member.get("attributes", {})
+            email = (attrs.get("email") or "").lower()
+            if email:
+                members[email] = {
+                    "is_active": attrs.get("patron_status") == ACTIVE_PATRON_STATUS,
+                    "pledge_cents": attrs.get("currently_entitled_amount_cents"),
+                    "last_charge_date": parse_datetime(attrs.get("last_charge_date") or ""),
+                    "last_charge_status": attrs.get("last_charge_status"),
+                    "patron_since": parse_datetime(attrs.get("pledge_relationship_start") or ""),
+                    "lifetime_cents": attrs.get("lifetime_support_cents"),
+                }
+
+        url = (data.get("links") or {}).get("next")
+
+    logger.info("patreon_client: fetch_all_members fetched %d members", len(members))
+    return members
 
 
 def check_patreon_membership(email: str) -> dict | None:
