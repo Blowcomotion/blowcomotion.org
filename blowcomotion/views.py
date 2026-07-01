@@ -2616,24 +2616,15 @@ def rental_requests_dashboard(request):
             return redirect("rental_requests_dashboard")
 
         elif action == "nag_all":
-            instruments = LibraryInstrument.objects.filter(
-                status=LibraryInstrument.STATUS_RENTED,
-                member__isnull=False,
-                member__email__isnull=False,
-            ).exclude(member__email="").select_related("member", "instrument")
+            candidates = _get_nag_all_candidates(cutoff)
 
             nagged = []
             failed = []
             skipped_cooldown = 0
-            for li in instruments:
-                member = li.member
-                reasons = []
-                if not member.is_active or not member.last_seen or member.last_seen < cutoff:
-                    reasons.append("attendance")
-                if not li.patreon_active:
-                    reasons.append("patreon")
-                if not reasons:
-                    continue
+            for candidate in candidates:
+                li = candidate["instrument"]
+                member = candidate["member"]
+                reasons = candidate["reasons"]
 
                 # Atomic cooldown gate — prevents double-send on concurrent clicks
                 claimed = LibraryInstrument.objects.filter(pk=li.pk).filter(
@@ -2734,8 +2725,34 @@ def rental_requests_dashboard(request):
                 or sub.patreon_validated is not True
             )
         sub.nag_eligible = nag_eligible
+
+    nag_all_preview = []
+    sendable_lines = []
+    for candidate in _get_nag_all_candidates(cutoff):
+        li = candidate["instrument"]
+        in_cooldown = bool(li.last_nag_sent and (today - li.last_nag_sent).days < cooldown_days)
+        reason_label = " + ".join(candidate["reasons"])
+        nag_all_preview.append({
+            "member": candidate["member"],
+            "instrument": li,
+            "reasons": candidate["reasons"],
+            "cta": _nag_cta_for_reasons(candidate["reasons"]),
+            "in_cooldown": in_cooldown,
+        })
+        if not in_cooldown:
+            sendable_lines.append(f"{candidate['member'].full_name} ({li.instrument.name}) — {reason_label}")
+
+    if sendable_lines:
+        nag_all_confirm_message = "Send nag emails to the following renters?\n\n" + "\n".join(sendable_lines)
+    elif nag_all_preview:
+        nag_all_confirm_message = "No emails will be sent — all eligible renters are currently in cooldown."
+    else:
+        nag_all_confirm_message = "No renters are currently eligible for a nag email."
+
     return render(request, "wagtailadmin/rental_requests_dashboard.html", {
         "submissions": submissions,
+        "nag_all_preview": nag_all_preview,
+        "nag_all_confirm_message": nag_all_confirm_message,
     })
 
 
@@ -2854,6 +2871,48 @@ def _get_site_settings_for_view():
     return SiteSettings.for_site(site)
 
 
+def _get_nag_all_candidates(cutoff):
+    """Return the list of renters that 'Nag all eligible renters' would email right now.
+
+    Read-only — does not touch cooldown state or send anything. Used both to build the
+    confirmation preview shown before the bulk nag runs and, as the source of truth for
+    eligibility/reasons, by the nag_all POST handler itself, so the preview can never
+    drift from what actually gets sent.
+
+    Each item: {"instrument": LibraryInstrument, "member": Member, "reasons": [...]}.
+    "reasons" may include "attendance" and/or "patreon"; see _build_nag_email for how
+    reasons map to the CTA included in the email.
+    """
+    instruments = LibraryInstrument.objects.filter(
+        status=LibraryInstrument.STATUS_RENTED,
+        member__isnull=False,
+        member__email__isnull=False,
+    ).exclude(member__email="").select_related("member", "instrument")
+
+    candidates = []
+    for li in instruments:
+        member = li.member
+        reasons = []
+        if not member.is_active or not member.last_seen or member.last_seen < cutoff:
+            reasons.append("attendance")
+        if not li.patreon_active:
+            reasons.append("patreon")
+        if not reasons:
+            continue
+        candidates.append({"instrument": li, "member": member, "reasons": reasons})
+    return candidates
+
+
+def _nag_cta_for_reasons(reasons):
+    """Return the nag email's call-to-action slug ('staying' or 'patreon-updated') for reasons.
+
+    Single source of truth for the reason->CTA mapping, shared by _build_nag_email (which
+    builds the actual confirm link) and the nag-all preview (which just labels it) so the
+    two can't drift apart.
+    """
+    return "staying" if "attendance" in reasons else "patreon-updated"
+
+
 def _build_nag_email(li, member, base_url, patreon_url, reasons):
     """Build (subject, message) for a rental nag email. reasons is a list of 'attendance'/'patreon'."""
     from django.core.signing import TimestampSigner
@@ -2876,12 +2935,12 @@ def _build_nag_email(li, member, base_url, patreon_url, reasons):
         if patreon_url:
             patreon_line += f" You can activate or renew at: {patreon_url}"
         lines += [patreon_line, ""]
-    if "attendance" in reasons:
+    cta = _nag_cta_for_reasons(reasons)
+    if cta == "staying":
         confirm_label = "I'll be back at rehearsal soon:"
-        confirm_url = f"{base_url}/instrument-rental/staying/?t={token}"
     else:
         confirm_label = "I've updated my Patreon membership:"
-        confirm_url = f"{base_url}/instrument-rental/patreon-updated/?t={token}"
+    confirm_url = f"{base_url}/instrument-rental/{cta}/?t={token}"
     lines += [
         "Please let us know your plans:",
         "",

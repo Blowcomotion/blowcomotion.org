@@ -12,12 +12,57 @@
             <input type="hidden" name="action" value="refresh_patreon">
             <button type="submit" class="button button-secondary">Refresh Patreon status</button>
         </form>
-        <form method="post" style="display:inline;">
+        <form method="post" style="display:inline;" onsubmit="return confirm(nagAllConfirmMessage);">
             {% csrf_token %}
             <input type="hidden" name="action" value="nag_all">
             <button type="submit" class="button button-secondary">Nag all eligible renters</button>
         </form>
     </div>
+    {% if nag_all_preview %}
+    <details style="margin-bottom:1rem;">
+        <summary style="cursor:pointer;color:var(--w-color-text-link-default);text-decoration:underline;font-weight:bold;">
+            Preview: who "Nag all eligible renters" will email ({{ nag_all_preview|length }}) — click to expand/collapse
+        </summary>
+        <table class="listing">
+            <thead>
+                <tr>
+                    <th>Member</th>
+                    <th>Instrument</th>
+                    <th>Reason</th>
+                    <th>CTA link in email</th>
+                    <th>Will send?</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in nag_all_preview %}
+                <tr>
+                    <td>{{ item.member.full_name }}<br><small>{{ item.member.email }}</small></td>
+                    <td>{{ item.instrument.instrument.name }}</td>
+                    <td>{{ item.reasons|join:" + " }}</td>
+                    <td>
+                        {% if item.cta == "staying" %}
+                        "I'll be back at rehearsal soon"
+                        {% else %}
+                        "I've updated my Patreon membership"
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.in_cooldown %}
+                        <span style="color:#666;" title="Nagged within the cooldown period">Skipped — in cooldown</span>
+                        {% else %}
+                        <span style="color:green;">Yes</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p><small><strong>Reason</strong> key: <strong>attendance</strong> = no recent rehearsal attendance; <strong>patreon</strong> = Patreon status not confirmed active. <strong>CTA link in email</strong> shows the confirmation button the renter is asked to click in the email they'll receive.</small></p>
+    </details>
+    {% endif %}
+    <script>
+        var nagAllConfirmMessage = "{{ nag_all_confirm_message|escapejs }}";
+    </script>
     {% if messages %}
     {% for message in messages %}
     <p class="help-block help-block-{{ message.tags }}">{{ message }}</p>
