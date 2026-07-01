@@ -648,6 +648,75 @@ class RentalRequestsAdminViewTest(TestCase):
         self.assertTrue(any("Summary" in s for s in subjects))
         self.assertTrue(any("[COPY]" in s for s in subjects))
 
+    def test_nag_all_preview_lists_eligible_renter_with_reason(self):
+        self.li.status = LibraryInstrument.STATUS_RENTED
+        self.li.member = self.member
+        self.li.save()
+        response = self.client.get(reverse("rental_requests_dashboard"))
+        preview = response.context["nag_all_preview"]
+        self.assertEqual(len(preview), 1)
+        self.assertEqual(preview[0]["member"], self.member)
+        self.assertIn("attendance", preview[0]["reasons"])
+        self.assertFalse(preview[0]["in_cooldown"])
+        self.assertIn(self.member.full_name, response.context["nag_all_confirm_message"])
+
+    def test_nag_all_preview_matches_who_nag_all_actually_emails(self):
+        # The preview (GET) and the real send (POST) must derive from the same
+        # eligibility computation, or the confirm step could show a different
+        # set of renters than actually get nagged. Includes a cooldown renter
+        # so the full preview list and the sendable (non-cooldown) subset can
+        # be told apart — comparing the full preview to sent mail would pass
+        # even if cooldown-skipped renters leaked into the confirm text.
+        import datetime
+        other_instrument = make_instrument("Trombone")
+        other_li = make_library_instrument(other_instrument, serial="SN002")
+        other_member = make_member(email="other@example.com", first_name="Robin", last_name="Brass")
+
+        self.li.status = LibraryInstrument.STATUS_RENTED
+        self.li.member = self.member
+        self.li.save()
+
+        other_li.status = LibraryInstrument.STATUS_RENTED
+        other_li.member = other_member
+        other_li.last_nag_sent = datetime.date.today()
+        other_li.save()
+
+        response = self.client.get(reverse("rental_requests_dashboard"))
+        preview = response.context["nag_all_preview"]
+        confirm_message = response.context["nag_all_confirm_message"]
+        preview_emails = {item["member"].email for item in preview}
+        sendable_emails = {item["member"].email for item in preview if not item["in_cooldown"]}
+
+        # Both renters are eligible, so both appear in the full preview...
+        self.assertEqual(preview_emails, {self.member.email, other_member.email})
+        # ...but only the non-cooldown renter is sendable, and only they're
+        # named in the confirm text.
+        self.assertEqual(sendable_emails, {self.member.email})
+        self.assertIn(self.member.full_name, confirm_message)
+        self.assertNotIn(other_member.full_name, confirm_message)
+
+        self.client.post(reverse("rental_requests_dashboard"), {"action": "nag_all"})
+        sent_emails = {addr for m in mail.outbox for addr in m.to}
+
+        self.assertEqual(sendable_emails, sent_emails)
+
+    def test_nag_all_preview_marks_cooldown_renter_but_excludes_from_confirm_text(self):
+        import datetime
+        self.li.status = LibraryInstrument.STATUS_RENTED
+        self.li.member = self.member
+        self.li.last_nag_sent = datetime.date.today()
+        self.li.save()
+        response = self.client.get(reverse("rental_requests_dashboard"))
+        preview = response.context["nag_all_preview"]
+        self.assertEqual(len(preview), 1)
+        self.assertTrue(preview[0]["in_cooldown"])
+        self.assertNotIn(self.member.full_name, response.context["nag_all_confirm_message"])
+
+    def test_nag_all_confirm_message_when_none_eligible(self):
+        response = self.client.get(reverse("rental_requests_dashboard"))
+        self.assertEqual(response.context["nag_all_preview"], [])
+        self.assertIn("No renters are currently eligible", response.context["nag_all_confirm_message"])
+
     def test_delete_removes_denied_submission(self):
         self.submission.status = InstrumentRentalRequestSubmission.STATUS_DENIED
         self.submission.save()
