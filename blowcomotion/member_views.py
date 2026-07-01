@@ -1,5 +1,5 @@
 import logging
-from datetime import timedelta
+from datetime import date, timedelta
 
 from django_ratelimit.decorators import ratelimit
 
@@ -8,7 +8,9 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model, login, views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
+from django.core.paginator import Paginator
 from django.db import transaction
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -225,6 +227,10 @@ def profile_view(request):
             "shirt_size_choices": SHIRT_SIZE_CHOICES,
             "dietary_choices": DIETARY_CHOICES,
             "allergen_choices": ALLERGEN_CHOICES,
+            "attendance_total": member.attendance_records.count(),
+            "attendance_this_year": member.attendance_records.filter(
+                date__year=date.today().year
+            ).count(),
         }
 
     if request.method == "POST":
@@ -299,6 +305,115 @@ def requests_view(request):
     member = request.user.member
     rental_requests = member.rental_requests.select_related("instrument")
     return render(request, "member/requests.html", {"member": member, "rental_requests": rental_requests})
+
+
+ATTENDANCE_RATE_WEEKS = 12
+ATTENDANCE_PAGE_SIZE = 50
+
+
+def _count_tuesdays(start_date, end_date):
+    """Count practice Tuesdays between two dates, inclusive."""
+    count = 0
+    current = start_date
+    while current <= end_date:
+        if current.weekday() == 1:  # Tuesday
+            count += 1
+        current += timedelta(days=1)
+    return count
+
+
+def _attendance_streaks(record_dates, today):
+    """
+    Compute (current_streak, longest_streak) in weeks. A week counts toward a
+    streak if it has at least one attendance record; the current streak may
+    anchor on this week or last week, since this week's practice may not have
+    happened yet.
+    """
+    if not record_dates:
+        return 0, 0
+
+    def week_index(d):
+        iso = d.isocalendar()
+        # Ordinal of the ISO week's Monday // 7 gives a consecutive week number
+        return date.fromisocalendar(iso[0], iso[1], 1).toordinal() // 7
+
+    weeks = sorted({week_index(d) for d in record_dates})
+    week_set = set(weeks)
+
+    longest = run = 1
+    for prev, cur in zip(weeks, weeks[1:]):
+        run = run + 1 if cur == prev + 1 else 1
+        longest = max(longest, run)
+
+    this_week = week_index(today)
+    if this_week in week_set:
+        anchor = this_week
+    elif this_week - 1 in week_set:
+        anchor = this_week - 1
+    else:
+        return 0, longest
+
+    current = 0
+    while anchor in week_set:
+        current += 1
+        anchor -= 1
+    return current, longest
+
+
+@login_required
+@require_GET
+def attendance_view(request):
+    if not hasattr(request.user, "member"):
+        return redirect("/")
+    member = request.user.member
+    records = member.attendance_records.select_related("played_instrument").order_by("-date")
+
+    today = date.today()
+    stats = None
+    record_dates = list(records.values_list("date", flat=True))
+    if record_dates:
+        window_start = today - timedelta(weeks=ATTENDANCE_RATE_WEEKS)
+        window_count = sum(1 for d in record_dates if d >= window_start)
+        effective_start = (
+            max(window_start, member.join_date) if member.join_date else window_start
+        )
+        window_tuesdays = _count_tuesdays(effective_start, today)
+        rate = (
+            min(100, round(window_count / window_tuesdays * 100))
+            if window_tuesdays
+            else None
+        )
+
+        current_streak, longest_streak = _attendance_streaks(record_dates, today)
+
+        stats = {
+            "total": len(record_dates),
+            "this_year": sum(1 for d in record_dates if d.year == today.year),
+            "first_date": record_dates[-1],
+            "last_date": record_dates[0],
+            "window_count": window_count,
+            "window_tuesdays": window_tuesdays,
+            "window_weeks": ATTENDANCE_RATE_WEEKS,
+            "rate": rate,
+            "current_streak": current_streak,
+            "longest_streak": longest_streak,
+            "by_year": records.values("date__year")
+            .annotate(count=Count("id"))
+            .order_by("-date__year"),
+            "instruments": records.filter(played_instrument__isnull=False)
+            .values("played_instrument__name")
+            .annotate(count=Count("id"))
+            .order_by("-count", "played_instrument__name"),
+        }
+
+    paginator = Paginator(records, ATTENDANCE_PAGE_SIZE)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    return render(request, "member/attendance.html", {
+        "member": member,
+        "stats": stats,
+        "page_obj": page_obj,
+    })
 
 
 @login_required

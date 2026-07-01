@@ -30,6 +30,7 @@ urlpatterns = [
     # Portal views (added in Task 9)
     path("confirm-email/<uuid:token_uuid>/", member_views.confirm_email_view, name="member-confirm-email"),
     path("profile/", member_views.profile_view, name="member-profile"),
+    path("attendance/", member_views.attendance_view, name="member-attendance"),
     path("requests/", member_views.requests_view, name="member-requests"),
     path("requests/<int:pk>/", member_views.rental_request_detail, name="member-rental-request-detail"),
     path("instrument-rental/", member_views.instrument_rental_request, name="member-instrument-rental"),

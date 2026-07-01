@@ -1,0 +1,129 @@
+{% extends "member/portal_base.html" %}
+{% block title %}My Attendance — Blowcomotion{% endblock %}
+{% block portal_content %}
+<h2 class="mb-4">My Attendance</h2>
+
+{% if stats %}
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">Summary</div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <tbody>
+                        <tr>
+                            <th scope="row">Total events attended</th>
+                            <td>{{ stats.total }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">This year</th>
+                            <td>{{ stats.this_year }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Last {{ stats.window_weeks }} weeks</th>
+                            <td>
+                                {{ stats.window_count }} of {{ stats.window_tuesdays }} practice Tuesday{{ stats.window_tuesdays|pluralize }}
+                                {% if stats.rate is not None %}({{ stats.rate }}%){% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Current streak</th>
+                            <td>{{ stats.current_streak }} week{{ stats.current_streak|pluralize }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Longest streak</th>
+                            <td>{{ stats.longest_streak }} week{{ stats.longest_streak|pluralize }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">First recorded</th>
+                            <td>{{ stats.first_date|date:"N j, Y" }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Most recent</th>
+                            <td>{{ stats.last_date|date:"N j, Y" }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">By Year</div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <tbody>
+                    {% for row in stats.by_year %}
+                        <tr>
+                            <th scope="row">{{ row.date__year }}</th>
+                            <td>{{ row.count }} event{{ row.count|pluralize }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if stats.instruments %}
+        <div class="card">
+            <div class="card-header">Instruments Played</div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <tbody>
+                    {% for row in stats.instruments %}
+                        <tr>
+                            <th scope="row">{{ row.played_instrument__name }}</th>
+                            <td>{{ row.count }} time{{ row.count|pluralize }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<h4 class="mb-3">Attendance History</h4>
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Date</th>
+                <th>Event</th>
+                <th>Instrument</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for record in page_obj %}
+            <tr>
+                <td>{{ record.date|date:"D, N j, Y" }}</td>
+                <td>{{ record.notes|default:"—" }}</td>
+                <td>{{ record.played_instrument.name|default:"—" }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if page_obj.paginator.num_pages > 1 %}
+<nav aria-label="Attendance pages">
+    <ul class="pagination">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Previous</span></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Next</span></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<p class="text-muted">No attendance has been recorded for you yet. Once you check in at a practice or performance, your history will show up here.</p>
+{% endif %}
+{% endblock %}

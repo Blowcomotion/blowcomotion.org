@@ -5,6 +5,7 @@
         <div class="col-md-3 mb-4">
             <nav class="list-group">
                 <a href="{% url 'member-profile' %}" class="list-group-item list-group-item-action{% if request.resolver_match.url_name == 'member-profile' %} active{% endif %}">My Profile</a>
+                <a href="{% url 'member-attendance' %}" class="list-group-item list-group-item-action{% if request.resolver_match.url_name == 'member-attendance' %} active{% endif %}">My Attendance</a>
                 <a href="{% url 'member-requests' %}" class="list-group-item list-group-item-action{% if request.resolver_match.url_name == 'member-requests' %} active{% endif %}">My Requests</a>
                 <a href="{% url 'member-instrument-rental' %}" class="list-group-item list-group-item-action{% if request.resolver_match.url_name == 'member-instrument-rental' %} active{% endif %}">Request an Instrument</a>
                 <form method="post" action="{% url 'member-logout' %}" style="margin:0;">
