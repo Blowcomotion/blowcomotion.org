@@ -43,6 +43,7 @@ from blowcomotion.models import (
     PasswordSetToken,
     SiteSettings,
 )
+from blowcomotion.patreon_client import check_patreon_membership
 from blowcomotion.views import _validate_recaptcha
 
 logger = logging.getLogger(__name__)
@@ -385,6 +386,17 @@ def instrument_rental_request(request):
                 status=InstrumentRentalRequestSubmission.STATUS_PENDING,
             )
 
+            # Validate Patreon membership for the submitting member.
+            # Runs after save so the submission always exists regardless of API outcome.
+            patreon_result = check_patreon_membership(member.email)
+            submission.patreon_validated = patreon_result["is_active"] if patreon_result is not None else None
+            submission.patreon_pledge_cents = patreon_result["pledge_cents"] if patreon_result is not None else None
+            submission.patreon_last_charge_date = patreon_result["last_charge_date"] if patreon_result is not None else None
+            submission.patreon_last_charge_status = patreon_result["last_charge_status"] if patreon_result is not None else None
+            submission.patreon_patron_since = patreon_result["patron_since"] if patreon_result is not None else None
+            submission.patreon_lifetime_cents = patreon_result["lifetime_cents"] if patreon_result is not None else None
+            submission.save(update_fields=["patreon_validated", "patreon_pledge_cents", "patreon_last_charge_date", "patreon_last_charge_status", "patreon_patron_since", "patreon_lifetime_cents"])
+
             recipients = [
                 r.strip()
                 for r in (site_settings.instrument_rental_notification_recipients or "").split(",")
@@ -397,6 +409,15 @@ def instrument_rental_request(request):
                 if third_choice:
                     choices_text += f"\n3rd choice: {third_choice.name}"
                 review_url = request.build_absolute_uri(f"/admin/rental-requests/{submission.pk}/")
+                if patreon_result is not None and patreon_result["is_active"]:
+                    patreon_line = "Patreon: ACTIVE PATRON (verified at submission)"
+                elif patreon_result is not None:
+                    patreon_line = (
+                        "Patreon: NOT FOUND or INACTIVE — please verify Patreon membership "
+                        "before assigning an instrument."
+                    )
+                else:
+                    patreon_line = "Patreon: not checked (API not configured or unavailable)"
                 manager_body = (
                     f"Instrument Rental Request [PENDING]\n\n"
                     f"Member: {member.full_name}\n"
@@ -404,7 +425,8 @@ def instrument_rental_request(request):
                     f"Phone: {member.phone or 'not provided'}\n"
                     f"Address: {member.address or 'not provided'}\n"
                     f"{choices_text}\n"
-                    f"Notes: {submission.message or '—'}\n\n"
+                    f"Notes: {submission.message or '—'}\n"
+                    f"{patreon_line}\n\n"
                     f"Review and approve/deny:\n{review_url}\n"
                 )
                 _MemberEmail(

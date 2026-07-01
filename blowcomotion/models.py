@@ -2061,6 +2061,11 @@ class InstrumentRentalRequestSubmission(BaseFormSubmission):
         blank=True,
         help_text="Set automatically via Patreon API at submission time. Active = confirmed; Inactive = not found or inactive; Unknown = API not configured or check failed.",
     )
+    patreon_pledge_cents = models.PositiveIntegerField(null=True, blank=True, help_text="Monthly pledge amount in cents at time of last Patreon check.")
+    patreon_last_charge_date = models.DateTimeField(null=True, blank=True, help_text="Date of last Patreon charge attempt.")
+    patreon_last_charge_status = models.CharField(max_length=20, null=True, blank=True, help_text="Last Patreon charge status at time of check (e.g. Paid, Declined).")
+    patreon_patron_since = models.DateTimeField(null=True, blank=True, help_text="Date the member started their Patreon pledge.")
+    patreon_lifetime_cents = models.PositiveIntegerField(null=True, blank=True, help_text="Lifetime Patreon support in cents at time of last check.")
     admin_message = models.TextField(blank=True)
     assigned_unit = models.ForeignKey(
         "blowcomotion.LibraryInstrument",
