@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}We'll Be in Touch — Blowcomotion{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 text-center">
+            <div class="card shadow-sm">
+                <div class="card-body p-5">
+                    <h1 class="mb-4">We'll be in touch!</h1>
+                    <p class="lead mb-4">
+                        We've let the instrument library team know you'd like to return
+                        the <strong>{{ instrument.instrument.name }}</strong>.
+                        Someone will reach out to arrange the return.
+                    </p>
+                    <p class="text-muted">
+                        Thank you for being part of Blowcomotion!
+                    </p>
+                    <div class="mt-4">
+                        <a href="/" class="site-btn btn-lg px-5">Return Home</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

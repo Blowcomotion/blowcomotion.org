@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Thanks — Blowcomotion{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 text-center">
+            <div class="card shadow-sm">
+                <div class="card-body p-5">
+                    <h1 class="mb-4">Great news!</h1>
+                    <p class="lead mb-4">
+                        Thanks for updating your Patreon membership — we appreciate your support!
+                    </p>
+                    {% if instrument.member %}
+                    <p class="text-muted">
+                        If you have any questions about your rental of the
+                        <strong>{{ instrument.instrument.name }}</strong>,
+                        please reach out to the instrument library team.
+                    </p>
+                    {% endif %}
+                    <div class="mt-4">
+                        <a href="/" class="site-btn btn-lg px-5">Return Home</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
