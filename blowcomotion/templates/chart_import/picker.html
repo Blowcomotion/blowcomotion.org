@@ -8,6 +8,21 @@
     <h1>Import Charts from Google Drive</h1>
     <p>Each row is a Google Drive folder. Click <strong>Review</strong> to scan its PDF files and import charts for that song.</p>
     <p>The <strong>Auto-detected song</strong> column shows which song in the database was matched to the folder name. If it looks wrong, you can correct it on the review page before importing. A low match confidence means the name didn't match closely — double-check before proceeding.</p>
+
+    <details style="margin-bottom:1.5rem">
+        <summary style="cursor:pointer;font-weight:600">File naming guide</summary>
+        <div style="margin-top:.75rem;padding:.75rem 1rem;background:var(--w-color-surface-menus);border-left:3px solid var(--w-color-border);font-size:.9rem">
+            <p style="margin-top:0">The importer reads the instrument and part from each PDF filename. Supported formats:</p>
+            <ul>
+                <li><strong>Song &ndash; Instrument.pdf</strong> &mdash; e.g. <code>Caravan - Trumpet.pdf</code></li>
+                <li><strong>Song &ndash; Instrument 2nd.pdf</strong> &mdash; e.g. <code>Caravan - Trombone 2nd.pdf</code> or <code>Caravan - Clarinet in Bb1.pdf</code></li>
+                <li><strong>Song-Instrument.pdf</strong> (no spaces around dash) &mdash; post-dash side is the instrument</li>
+                <li><strong>Song &ndash; Bb.pdf / Song &ndash; Eb.pdf / Song &ndash; C.pdf</strong> &mdash; transposition key: one PDF shared across multiple instruments (Bb = Trumpet/Clarinet/Tenor Sax, Eb = Alto/Bari Sax, C = Flute/Trombone/Tuba)</li>
+                <li><strong>Song Score.pdf / Song Full Score.pdf / Song Conductor.pdf / Song All Parts.pdf</strong> &mdash; treated as conductor/score, not linked to an instrument</li>
+            </ul>
+            <p>Common abbreviations are recognized automatically: <em>tbn, tmpt, bari sax, alto sax, tenor sax, euph, sousa,</em> etc. Part numbers work as digits, ordinals, or roman numerals (1, 1st, I).</p>
+        </div>
+    </details>
     <table class="listing">
         <thead>
             <tr>
