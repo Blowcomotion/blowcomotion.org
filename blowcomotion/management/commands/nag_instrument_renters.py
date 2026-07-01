@@ -44,6 +44,7 @@ class Command(BaseCommand):
         site = Site.objects.filter(is_default_site=True).first() or Site.objects.first()
         base_url = site.root_url if site else "https://blowcomotion.org"
 
+        patreon_url = site_settings.patreon_url or ""
         cutoff = today - datetime.timedelta(days=site_settings.attendance_cleanup_days)
         cooldown_days = site_settings.nag_cooldown_days
 
@@ -74,7 +75,7 @@ class Command(BaseCommand):
                 continue
 
             reason_str = "+".join(reasons)
-            self._send_renter_nag(li, member, base_url, reasons, dry_run)
+            self._send_renter_nag(li, member, base_url, patreon_url, reasons, dry_run)
 
             if not dry_run:
                 LibraryInstrument.objects.filter(pk=li.pk).update(last_nag_sent=today)
@@ -94,7 +95,7 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.SUCCESS(f"Nothing to nag today ({skipped_cooldown} skipped by cooldown)."))
 
-    def _send_renter_nag(self, li, member, base_url, reasons, dry_run):
+    def _send_renter_nag(self, li, member, base_url, patreon_url, reasons, dry_run):
         signer = TimestampSigner()
         token = signer.sign(str(li.pk))
         first_name = member.first_name or member.full_name
@@ -112,14 +113,15 @@ class Command(BaseCommand):
                 "",
             ]
         if "patreon" in reasons:
-            lines += [
-                "Our records show your Patreon membership may not be current. Keeping it active helps us maintain the instrument library.",
-                "",
-            ]
+            patreon_line = "Our records show your Patreon membership may not be current. Keeping it active helps us maintain the instrument library."
+            if patreon_url:
+                patreon_line += f" You can activate or renew at: {patreon_url}"
+            lines += [patreon_line, ""]
+
         staying_label = (
             "I'll be back at rehearsal soon:"
             if "attendance" in reasons
-            else "I'll activate or renew my Patreon membership:"
+            else "I've updated my Patreon membership:"
         )
         lines += [
             "Please let us know your plans:",
