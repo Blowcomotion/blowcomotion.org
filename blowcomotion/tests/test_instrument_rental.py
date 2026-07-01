@@ -547,6 +547,107 @@ class RentalRequestsAdminViewTest(TestCase):
         self.assertNotIn("&quot;", body)
         self.assertNotIn("&#x27;", body)
 
+    def _make_approved_submission(self):
+        """Return a submission in STATUS_APPROVED with a rented unit assigned."""
+        import datetime
+        self.li.status = LibraryInstrument.STATUS_RENTED
+        self.li.member = self.member
+        self.li.last_nag_sent = None
+        self.li.save()
+        self.submission.status = InstrumentRentalRequestSubmission.STATUS_APPROVED
+        self.submission.assigned_unit = self.li
+        self.submission.save()
+
+    def test_nag_one_sends_email_and_updates_last_nag_sent(self):
+        self._make_approved_submission()
+        self.client.post(
+            reverse("rental_requests_dashboard"),
+            {"action": "nag_one", "pk": self.submission.pk},
+        )
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(self.member.email, mail.outbox[0].to)
+        self.li.refresh_from_db()
+        self.assertIsNotNone(self.li.last_nag_sent)
+
+    def test_nag_one_respects_cooldown(self):
+        import datetime
+        self._make_approved_submission()
+        self.li.last_nag_sent = datetime.date.today()
+        self.li.save()
+        self.client.post(
+            reverse("rental_requests_dashboard"),
+            {"action": "nag_one", "pk": self.submission.pk},
+        )
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_nag_all_emails_eligible_renter(self):
+        self.li.status = LibraryInstrument.STATUS_RENTED
+        self.li.member = self.member
+        self.li.save()
+        self.client.post(
+            reverse("rental_requests_dashboard"),
+            {"action": "nag_all"},
+        )
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(self.member.email, mail.outbox[0].to)
+
+    def test_nag_all_skips_cooldown_renter(self):
+        import datetime
+        self.li.status = LibraryInstrument.STATUS_RENTED
+        self.li.member = self.member
+        self.li.last_nag_sent = datetime.date.today()
+        self.li.save()
+        self.client.post(
+            reverse("rental_requests_dashboard"),
+            {"action": "nag_all"},
+        )
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_nag_one_no_assigned_unit(self):
+        self.submission.status = InstrumentRentalRequestSubmission.STATUS_APPROVED
+        self.submission.assigned_unit = None
+        self.submission.save()
+        self.client.post(
+            reverse("rental_requests_dashboard"),
+            {"action": "nag_one", "pk": self.submission.pk},
+        )
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_nag_one_no_reasons_warns(self):
+        import datetime
+        self._make_approved_submission()
+        # Mark member active in attendance and patreon
+        self.member.last_seen = datetime.date.today()
+        self.member.save()
+        self.submission.patreon_validated = True
+        self.submission.save()
+        response = self.client.post(
+            reverse("rental_requests_dashboard"),
+            {"action": "nag_one", "pk": self.submission.pk},
+            follow=True,
+        )
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertContains(response, "appears active")
+
+    @override_settings(FORM_TEST_EMAIL="test@example.com")
+    def test_nag_all_sends_admin_summary_and_copy(self):
+        from wagtail.models import Site
+        site_settings = SiteSettings.for_site(Site.objects.get(is_default_site=True))
+        site_settings.instrument_rental_notification_recipients = "admin@example.com"
+        site_settings.save()
+        self.li.status = LibraryInstrument.STATUS_RENTED
+        self.li.member = self.member
+        self.li.save()
+        self.client.post(
+            reverse("rental_requests_dashboard"),
+            {"action": "nag_all"},
+        )
+        # renter email + admin summary + FORM_TEST_EMAIL copy
+        self.assertEqual(len(mail.outbox), 3)
+        subjects = [m.subject for m in mail.outbox]
+        self.assertTrue(any("Summary" in s for s in subjects))
+        self.assertTrue(any("[COPY]" in s for s in subjects))
+
 
 class PatreonClientTest(TestCase):
     """Unit tests for check_patreon_membership() in patreon_client.py.

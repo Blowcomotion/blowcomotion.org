@@ -46,6 +46,7 @@ from blowcomotion.models import (
     FeedbackFormSubmission,
     Instrument,
     InstrumentHistoryLog,
+    InstrumentRentalNagLog,
     InstrumentRentalRequestSubmission,
     JoinBandFormSubmission,
     LibraryInstrument,
@@ -2473,78 +2474,226 @@ def _send_rental_returned_email(request, submission, condition_notes):
 
 
 def rental_requests_dashboard(request):
+    import re as _re
+
+    from wagtail.models import Site
+
     from django.contrib import messages
     from django.db.models import Case, IntegerField, Value, When
 
-    if request.method == "POST" and request.POST.get("action") == "refresh_patreon":
-        from django.utils import timezone
+    site_settings = _get_site_settings_for_view()
+    today = date.today()
+    site = Site.objects.filter(is_default_site=True).first() or Site.objects.first()
+    base_url = site.root_url if site else "https://blowcomotion.org"
+    patreon_url = (site_settings.patreon_url or "") if site_settings else ""
+    cooldown_days = site_settings.nag_cooldown_days if site_settings else 7
+    cleanup_days = site_settings.attendance_cleanup_days if site_settings else 90
+    cutoff = today - timedelta(days=cleanup_days)
+    raw_recipients = (site_settings.instrument_rental_notification_recipients or "") if site_settings else ""
+    admin_recipients = [r.strip() for r in _re.split(r"[,\n]", raw_recipients) if r.strip()]
 
-        patreon_data = fetch_all_members()
-        if patreon_data is None:
-            messages.error(request, "Patreon API not configured or error fetching members.")
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "refresh_patreon":
+            from django.utils import timezone
+
+            patreon_data = fetch_all_members()
+            if patreon_data is None:
+                messages.error(request, "Patreon API not configured or error fetching members.")
+                return redirect("rental_requests_dashboard")
+
+            now = timezone.now()
+            _not_found = {"is_active": False, "pledge_cents": None, "last_charge_date": None,
+                          "last_charge_status": None, "patron_since": None, "lifetime_cents": None}
+            _sub_fields = ["patreon_validated", "patreon_pledge_cents", "patreon_last_charge_date",
+                           "patreon_last_charge_status", "patreon_patron_since", "patreon_lifetime_cents"]
+            _member_fields = ["patreon_is_active", "patreon_pledge_cents", "patreon_last_charge_date",
+                               "patreon_last_charge_status", "patreon_patron_since", "patreon_lifetime_cents",
+                               "patreon_last_synced"]
+
+            updated = skipped = 0
+            for sub in InstrumentRentalRequestSubmission.objects.select_related("member"):
+                email = sub.member.email if sub.member else None
+                if not email:
+                    skipped += 1
+                    continue
+                result = patreon_data.get(email.lower(), _not_found)
+                sub.patreon_validated = result["is_active"]
+                sub.patreon_pledge_cents = result["pledge_cents"]
+                sub.patreon_last_charge_date = result["last_charge_date"]
+                sub.patreon_last_charge_status = result["last_charge_status"]
+                sub.patreon_patron_since = result["patron_since"]
+                sub.patreon_lifetime_cents = result["lifetime_cents"]
+                sub.save(update_fields=_sub_fields)
+                updated += 1
+
+            for member in Member.objects.exclude(email="").exclude(email__isnull=True):
+                result = patreon_data.get(member.email.lower())
+                if result is None:
+                    continue
+                member.patreon_is_active = result["is_active"]
+                member.patreon_pledge_cents = result["pledge_cents"]
+                member.patreon_last_charge_date = result["last_charge_date"]
+                member.patreon_last_charge_status = result["last_charge_status"]
+                member.patreon_patron_since = result["patron_since"]
+                member.patreon_lifetime_cents = result["lifetime_cents"]
+                member.patreon_last_synced = now
+                member.save(update_fields=_member_fields)
+
+            for li in LibraryInstrument.objects.select_related("member"):
+                member = li.member
+                if not member:
+                    continue
+                result = patreon_data.get((member.email or "").lower())
+                new_active = bool(result and result["is_active"] and (result["pledge_cents"] or 0) >= MIN_RENTAL_PLEDGE_CENTS)
+                if li.patreon_active != new_active:
+                    li.patreon_active = new_active
+                    li.save(update_fields=["patreon_active"])
+
+            msg = f"Patreon refresh: {updated} submissions updated, {len(patreon_data)} Patreon members fetched"
+            if skipped:
+                msg += f", {skipped} skipped (no email)"
+            messages.success(request, msg)
             return redirect("rental_requests_dashboard")
 
-        now = timezone.now()
-        _not_found = {"is_active": False, "pledge_cents": None, "last_charge_date": None,
-                      "last_charge_status": None, "patron_since": None, "lifetime_cents": None}
-        _sub_fields = ["patreon_validated", "patreon_pledge_cents", "patreon_last_charge_date",
-                       "patreon_last_charge_status", "patreon_patron_since", "patreon_lifetime_cents"]
-        _member_fields = ["patreon_is_active", "patreon_pledge_cents", "patreon_last_charge_date",
-                          "patreon_last_charge_status", "patreon_patron_since", "patreon_lifetime_cents",
-                          "patreon_last_synced"]
+        elif action == "nag_one":
+            pk = request.POST.get("pk")
+            sub = get_object_or_404(
+                InstrumentRentalRequestSubmission,
+                pk=pk,
+                status=InstrumentRentalRequestSubmission.STATUS_APPROVED,
+            )
+            li = sub.assigned_unit
+            if not li or not li.member or not li.member.email:
+                messages.error(request, f"Cannot nag {sub.name}: no assigned unit or member email.")
+                return redirect("rental_requests_dashboard")
 
-        # Update rental submissions
-        updated = skipped = 0
-        for sub in InstrumentRentalRequestSubmission.objects.select_related("member"):
-            email = sub.member.email if sub.member else None
-            if not email:
-                skipped += 1
-                continue
-            result = patreon_data.get(email.lower(), _not_found)
-            sub.patreon_validated = result["is_active"]
-            sub.patreon_pledge_cents = result["pledge_cents"]
-            sub.patreon_last_charge_date = result["last_charge_date"]
-            sub.patreon_last_charge_status = result["last_charge_status"]
-            sub.patreon_patron_since = result["patron_since"]
-            sub.patreon_lifetime_cents = result["lifetime_cents"]
-            sub.save(update_fields=_sub_fields)
-            updated += 1
+            if li.status != LibraryInstrument.STATUS_RENTED:
+                messages.error(request, f"Cannot nag {sub.name}: instrument is not currently rented.")
+                return redirect("rental_requests_dashboard")
 
-        # Update Member cache for known Patreon members
-        for member in Member.objects.exclude(email=""):
-            result = patreon_data.get(member.email.lower())
-            if result is None:
-                continue
-            member.patreon_is_active = result["is_active"]
-            member.patreon_pledge_cents = result["pledge_cents"]
-            member.patreon_last_charge_date = result["last_charge_date"]
-            member.patreon_last_charge_status = result["last_charge_status"]
-            member.patreon_patron_since = result["patron_since"]
-            member.patreon_lifetime_cents = result["lifetime_cents"]
-            member.patreon_last_synced = now
-            member.save(update_fields=_member_fields)
+            if li.last_nag_sent and (today - li.last_nag_sent).days < cooldown_days:
+                messages.warning(request, f"Nag not sent — {sub.name} is still in the cooldown period (last nag: {li.last_nag_sent}).")
+                return redirect("rental_requests_dashboard")
 
-        # Sync LibraryInstrument.patreon_active
-        for li in LibraryInstrument.objects.select_related("current_borrower__member"):
-            borrower = getattr(li, "current_borrower", None)
-            member = getattr(borrower, "member", None) if borrower else None
-            if not member:
-                continue
-            result = patreon_data.get((member.email or "").lower())
-            if result is None:
-                continue
-            new_active = result["is_active"] and (result["pledge_cents"] or 0) >= MIN_RENTAL_PLEDGE_CENTS
-            if li.patreon_active != new_active:
-                li.patreon_active = new_active
-                li.save(update_fields=["patreon_active"])
+            member = li.member
+            reasons = []
+            if not member.is_active or not member.last_seen or member.last_seen < cutoff:
+                reasons.append("attendance")
+            if sub.patreon_validated is not True:
+                reasons.append("patreon")
 
-        msg = f"Patreon refresh: {updated} submissions updated, {len(patreon_data)} Patreon members fetched"
-        if skipped:
-            msg += f", {skipped} skipped (no email)"
-        messages.success(request, msg)
-        return redirect("rental_requests_dashboard")
+            if not reasons:
+                messages.warning(request, f"No nag reasons for {sub.name} — member appears active in attendance and Patreon.")
+                return redirect("rental_requests_dashboard")
 
-    submissions = (
+            # Atomic cooldown gate — prevents double-send on concurrent clicks
+            claimed = LibraryInstrument.objects.filter(pk=li.pk).filter(
+                Q(last_nag_sent__isnull=True) |
+                Q(last_nag_sent__lte=today - timedelta(days=cooldown_days))
+            ).update(last_nag_sent=today)
+            if not claimed:
+                messages.warning(request, f"Nag not sent — {sub.name} was already nagged (concurrent request).")
+                return redirect("rental_requests_dashboard")
+
+            subject, body = _build_nag_email(li, member, base_url, patreon_url, reasons)
+            try:
+                send_mail(subject, body, settings.FROM_EMAIL, [member.email], fail_silently=False)
+            except Exception as exc:
+                LibraryInstrument.objects.filter(pk=li.pk).update(last_nag_sent=li.last_nag_sent)
+                messages.error(request, f"Failed to send nag email to {member.full_name}: {exc}")
+                return redirect("rental_requests_dashboard")
+
+            InstrumentRentalNagLog.objects.create(
+                library_instrument=li,
+                member_name=member.full_name,
+                member_email=member.email,
+                reasons="+".join(reasons),
+                sent_at=today,
+            )
+            messages.success(request, f"Nag email sent to {member.full_name} ({li.instrument.name}) — {'+'.join(reasons)}.")
+            return redirect("rental_requests_dashboard")
+
+        elif action == "nag_all":
+            instruments = LibraryInstrument.objects.filter(
+                status=LibraryInstrument.STATUS_RENTED,
+                member__isnull=False,
+                member__email__isnull=False,
+            ).exclude(member__email="").select_related("member", "instrument")
+
+            nagged = []
+            failed = []
+            skipped_cooldown = 0
+            for li in instruments:
+                member = li.member
+                reasons = []
+                if not member.is_active or not member.last_seen or member.last_seen < cutoff:
+                    reasons.append("attendance")
+                if not li.patreon_active:
+                    reasons.append("patreon")
+                if not reasons:
+                    continue
+
+                # Atomic cooldown gate — prevents double-send on concurrent clicks
+                claimed = LibraryInstrument.objects.filter(pk=li.pk).filter(
+                    Q(last_nag_sent__isnull=True) |
+                    Q(last_nag_sent__lte=today - timedelta(days=cooldown_days))
+                ).update(last_nag_sent=today)
+                if not claimed:
+                    skipped_cooldown += 1
+                    continue
+
+                subject, body = _build_nag_email(li, member, base_url, patreon_url, reasons)
+                try:
+                    send_mail(subject, body, settings.FROM_EMAIL, [member.email], fail_silently=False)
+                except Exception as exc:
+                    LibraryInstrument.objects.filter(pk=li.pk).update(last_nag_sent=li.last_nag_sent)
+                    failed.append(f"{member.full_name} ({li.instrument.name}): {exc}")
+                    continue
+
+                InstrumentRentalNagLog.objects.create(
+                    library_instrument=li,
+                    member_name=member.full_name,
+                    member_email=member.email,
+                    reasons="+".join(reasons),
+                    sent_at=today,
+                )
+                nagged.append({"instrument": li, "member": member, "reasons": reasons})
+
+            if nagged or failed:
+                summary_lines = [
+                    f"Instrument Rental Nag Summary — {today}",
+                    "=" * 50,
+                    "",
+                    f"Nag emails sent to {len(nagged)} renter(s):",
+                    "",
+                ]
+                for item in nagged:
+                    m = item["member"]
+                    reason_label = " + ".join(item["reasons"])
+                    last_seen_note = f", last seen {m.last_seen}" if m.last_seen and "attendance" in item["reasons"] else ""
+                    summary_lines.append(f"  * {m.full_name} — {item['instrument'].instrument.name} (Reason: {reason_label}{last_seen_note})")
+                if failed:
+                    summary_lines += ["", f"Failed ({len(failed)}):"]
+                    summary_lines.extend(f"  * {f}" for f in failed)
+                summary_lines += ["", f"Skipped (cooldown active): {skipped_cooldown} renter(s)"]
+                summary_body = "\n".join(summary_lines)
+                summary_subject = f"Instrument Rental Nag Summary — {today}"
+                if admin_recipients:
+                    send_mail(summary_subject, summary_body, settings.FROM_EMAIL, admin_recipients, fail_silently=False)
+                    extra = getattr(settings, "FORM_TEST_EMAIL", None)
+                    if extra:
+                        send_mail(f"[COPY] {summary_subject}", summary_body, settings.FROM_EMAIL, [extra], fail_silently=False)
+                msg = f"Nag all: {len(nagged)} email(s) sent, {skipped_cooldown} skipped (cooldown)"
+                if failed:
+                    msg += f", {len(failed)} failed"
+                messages.success(request, msg + ".")
+            else:
+                messages.info(request, f"Nag all: nothing to send ({skipped_cooldown} skipped by cooldown).")
+            return redirect("rental_requests_dashboard")
+
+    submissions = list(
         InstrumentRentalRequestSubmission.objects.annotate(
             status_order=Case(
                 When(status=InstrumentRentalRequestSubmission.STATUS_PENDING, then=Value(0)),
@@ -2553,8 +2702,26 @@ def rental_requests_dashboard(request):
             )
         )
         .order_by("status_order", "-date_submitted")
-        .select_related("member", "instrument", "second_choice", "third_choice", "assigned_unit")
+        .select_related("member", "instrument", "second_choice", "third_choice", "assigned_unit",
+                        "assigned_unit__member", "assigned_unit__instrument")
     )
+    for sub in submissions:
+        li = sub.assigned_unit
+        sub.nag_in_cooldown = bool(
+            sub.status == InstrumentRentalRequestSubmission.STATUS_APPROVED
+            and li
+            and li.last_nag_sent
+            and (today - li.last_nag_sent).days < cooldown_days
+        )
+        nag_eligible = False
+        if (sub.status == InstrumentRentalRequestSubmission.STATUS_APPROVED
+                and li and li.member and li.member.email):
+            m = li.member
+            nag_eligible = (
+                not m.is_active or not m.last_seen or m.last_seen < cutoff
+                or sub.patreon_validated is not True
+            )
+        sub.nag_eligible = nag_eligible
     return render(request, "wagtailadmin/rental_requests_dashboard.html", {
         "submissions": submissions,
     })
@@ -2673,6 +2840,50 @@ def _get_site_settings_for_view():
     if not site:
         return None
     return SiteSettings.for_site(site)
+
+
+def _build_nag_email(li, member, base_url, patreon_url, reasons):
+    """Build (subject, message) for a rental nag email. reasons is a list of 'attendance'/'patreon'."""
+    from django.core.signing import TimestampSigner
+    token = TimestampSigner().sign(str(li.pk))
+    first_name = member.first_name or member.full_name
+    lines = [
+        f"Hi {first_name},",
+        "",
+        f"We wanted to check in about the {li.instrument.name} you're renting from Blowcomotion.",
+        "",
+    ]
+    if "attendance" in reasons:
+        last_seen_str = str(member.last_seen) if member.last_seen else "unknown"
+        lines += [
+            f"We haven't seen you at rehearsal in a while (last seen: {last_seen_str}). We'd love to have you back!",
+            "",
+        ]
+    if "patreon" in reasons:
+        patreon_line = "Our records show your Patreon membership may not be current. Keeping it active helps us maintain the instrument library."
+        if patreon_url:
+            patreon_line += f" You can activate or renew at: {patreon_url}"
+        lines += [patreon_line, ""]
+    if "attendance" in reasons:
+        confirm_label = "I'll be back at rehearsal soon:"
+        confirm_url = f"{base_url}/instrument-rental/staying/?t={token}"
+    else:
+        confirm_label = "I've updated my Patreon membership:"
+        confirm_url = f"{base_url}/instrument-rental/patreon-updated/?t={token}"
+    lines += [
+        "Please let us know your plans:",
+        "",
+        confirm_label,
+        confirm_url,
+        "",
+        "I'd like to return the instrument:",
+        f"{base_url}/instrument-rental/return/?t={token}",
+        "",
+        "Start Wearing Purple,",
+        "Blowcomotion",
+    ]
+    subject = "A note from Blowcomotion about your instrument rental"
+    return subject, "\n".join(lines)
 
 
 def instrument_rental_staying(request):

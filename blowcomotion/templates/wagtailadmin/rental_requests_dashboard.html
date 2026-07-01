@@ -5,11 +5,17 @@
     <h1>Rental Requests</h1>
     <p>Review and approve or deny pending instrument rental requests. Pending requests appear at the top.</p>
     <p>The Patreon columns are populated automatically when a request is submitted. Use <strong>Refresh Patreon status</strong> to re-check all requests against the current Patreon member list — useful if a member recently pledged or their payment lapsed. Note: Patreon lookup matches on email address — the member's Patreon account must use the same email as their member profile for validation to work.</p>
-    <div style="margin-bottom:1rem;">
+    <p>A renter is eligible for a nag email if they meet one or both of these conditions: <strong>attendance inactive</strong> (no rehearsal attendance within the configured window, or marked inactive) or <strong>Patreon inactive</strong> (Patreon status is not confirmed active). The nag cooldown prevents sending more than one email per renter within the cooldown period — the <strong>Nag</strong> button is disabled while a renter is in cooldown. Use <strong>Nag all eligible renters</strong> to send in bulk to everyone currently eligible.</p>
+    <div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
         <form method="post" style="display:inline;">
             {% csrf_token %}
             <input type="hidden" name="action" value="refresh_patreon">
             <button type="submit" class="button button-secondary">Refresh Patreon status</button>
+        </form>
+        <form method="post" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="nag_all">
+            <button type="submit" class="button button-secondary">Nag all eligible renters</button>
         </form>
     </div>
     {% if messages %}
@@ -59,13 +65,27 @@
                 <td>{% if sub.patreon_last_charge_date %}{{ sub.patreon_last_charge_date|date:"Y-m-d" }}{% if sub.patreon_last_charge_status %} ({{ sub.patreon_last_charge_status }}){% endif %}{% else %}—{% endif %}</td>
                 <td>{{ sub.patreon_patron_since|date:"Y-m-d"|default:"—" }}</td>
                 <td>{% if sub.patreon_lifetime_cents is not None %}${% widthratio sub.patreon_lifetime_cents 100 1 %}{% else %}—{% endif %}</td>
-                <td style="display:flex;gap:0.5rem;align-items:center;">
+                <td style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
                     <a href="{% url 'rental_request_review' sub.pk %}"
                        class="button button-small{% if sub.status != 'pending' %} button-secondary{% endif %}">
                         {% if sub.status == 'pending' %}Review{% else %}View{% endif %}
                     </a>
                     {% if sub.status == 'approved' and sub.assigned_unit %}
                     <a href="{% url 'rental_request_return' sub.pk %}" class="button button-small button-secondary">Return</a>
+                    {% if sub.nag_eligible %}
+                    <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="nag_one">
+                        <input type="hidden" name="pk" value="{{ sub.pk }}">
+                        <button type="submit" class="button button-small button-secondary"
+                                {% if sub.nag_in_cooldown %}disabled{% endif %}>
+                            Nag
+                        </button>
+                        {% if sub.nag_in_cooldown %}
+                        <small style="color:#666;">last nag: {{ sub.assigned_unit.last_nag_sent }}</small>
+                        {% endif %}
+                    </form>
+                    {% endif %}
                     {% endif %}
                 </td>
             </tr>
