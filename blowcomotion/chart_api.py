@@ -114,10 +114,10 @@ def songs_for_instrument(request, instrument_id):
             charts_data.append({
                 'id': chart.id,
                 'part': part_name,
-                'pdf_url': (chart.pdf.url if chart.pdf else None) or chart.drive_pdf_url,
+                'pdf_url': chart.drive_pdf_url or (chart.pdf.url if chart.pdf else None),
                 'pdf_title': chart.pdf.title if chart.pdf else None,
             })
-        
+
         song_data = {
             'id': song.id,
             'title': song.title,
@@ -202,9 +202,10 @@ def instruments_for_song(request, song_id):
         return JsonResponse({'error': 'Song not found'}, status=404)
     
     # Get instruments that have charts with PDFs for this song
+    has_pdf = Q(pdf__isnull=False) | Q(drive_pdf_url__isnull=False)
     instrument_ids = Chart.objects.filter(
+        has_pdf,
         song=song,
-        pdf__isnull=False
     ).values_list('instrument_id', flat=True).distinct()
     
     instruments = Instrument.objects.filter(
@@ -226,18 +227,18 @@ def instruments_for_song(request, song_id):
         
         # Get charts for this instrument and song
         charts = Chart.objects.filter(
+            has_pdf,
             song=song,
             instrument=instrument,
-            pdf__isnull=False
         ).select_related('pdf').order_by('part')
-        
+
         charts_data = []
         for chart in charts:
             part_name = chart.part if chart.part else instrument.name
             charts_data.append({
                 'id': chart.id,
                 'part': part_name,
-                'pdf_url': (chart.pdf.url if chart.pdf else None) or chart.drive_pdf_url,
+                'pdf_url': chart.drive_pdf_url or (chart.pdf.url if chart.pdf else None),
                 'pdf_title': chart.pdf.title if chart.pdf else None,
             })
         
@@ -274,19 +275,20 @@ def charts_for_song_instrument(request, song_id, instrument_id):
     except Instrument.DoesNotExist:
         return JsonResponse({'error': 'Instrument not found'}, status=404)
     
+    has_pdf = Q(pdf__isnull=False) | Q(drive_pdf_url__isnull=False)
     charts = Chart.objects.filter(
+        has_pdf,
         song=song,
         instrument=instrument,
-        pdf__isnull=False
     ).select_related('pdf').order_by('part')
-    
+
     charts_data = []
     for chart in charts:
         part_name = chart.part if chart.part else instrument.name
         charts_data.append({
             'id': chart.id,
             'part': part_name,
-            'pdf_url': (chart.pdf.url if chart.pdf else None) or chart.drive_pdf_url,
+            'pdf_url': chart.drive_pdf_url or (chart.pdf.url if chart.pdf else None),
             'pdf_title': chart.pdf.title if chart.pdf else None,
         })
 
