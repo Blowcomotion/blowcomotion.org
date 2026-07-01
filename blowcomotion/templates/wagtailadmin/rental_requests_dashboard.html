@@ -72,15 +72,20 @@
                     </a>
                     {% if sub.status == 'approved' and sub.assigned_unit %}
                     <a href="{% url 'rental_request_return' sub.pk %}" class="button button-small button-secondary">Return</a>
+                    {% if sub.nag_eligible %}
                     <form method="post" style="display:inline;">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="nag_one">
                         <input type="hidden" name="pk" value="{{ sub.pk }}">
                         <button type="submit" class="button button-small button-secondary"
-                                {% if sub.nag_in_cooldown %}disabled title="In cooldown period (last nag: {{ sub.assigned_unit.last_nag_sent }})"{% endif %}>
+                                {% if sub.nag_in_cooldown %}disabled{% endif %}>
                             Nag
                         </button>
+                        {% if sub.nag_in_cooldown %}
+                        <small style="color:#666;">last nag: {{ sub.assigned_unit.last_nag_sent }}</small>
+                        {% endif %}
                     </form>
+                    {% endif %}
                     {% endif %}
                 </td>
             </tr>

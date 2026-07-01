@@ -2713,6 +2713,15 @@ def rental_requests_dashboard(request):
             and li.last_nag_sent
             and (today - li.last_nag_sent).days < cooldown_days
         )
+        nag_eligible = False
+        if (sub.status == InstrumentRentalRequestSubmission.STATUS_APPROVED
+                and li and li.member and li.member.email):
+            m = li.member
+            nag_eligible = (
+                not m.is_active or not m.last_seen or m.last_seen < cutoff
+                or sub.patreon_validated is not True
+            )
+        sub.nag_eligible = nag_eligible
     return render(request, "wagtailadmin/rental_requests_dashboard.html", {
         "submissions": submissions,
     })
