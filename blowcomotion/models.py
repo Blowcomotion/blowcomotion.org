@@ -748,6 +748,15 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
     notify_reminders = models.BooleanField(default=True)
     notify_announcements = models.BooleanField(default=True)
 
+    # Patreon cache — populated by validate_patreon_rentals / admin refresh
+    patreon_is_active = models.BooleanField(null=True, blank=True)
+    patreon_pledge_cents = models.PositiveIntegerField(null=True, blank=True)
+    patreon_last_charge_date = models.DateTimeField(null=True, blank=True)
+    patreon_last_charge_status = models.CharField(max_length=20, null=True, blank=True)
+    patreon_patron_since = models.DateTimeField(null=True, blank=True)
+    patreon_lifetime_cents = models.PositiveIntegerField(null=True, blank=True)
+    patreon_last_synced = models.DateTimeField(null=True, blank=True)
+
     # Commenting out search_fields to avoid FTS indexing issues
     # Admin search still works via snippet_viewsets.py search_fields
     search_fields = [

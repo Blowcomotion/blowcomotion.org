@@ -397,6 +397,18 @@ def instrument_rental_request(request):
             submission.patreon_lifetime_cents = patreon_result["lifetime_cents"] if patreon_result is not None else None
             submission.save(update_fields=["patreon_validated", "patreon_pledge_cents", "patreon_last_charge_date", "patreon_last_charge_status", "patreon_patron_since", "patreon_lifetime_cents"])
 
+            # Cache Patreon result on the Member so bulk operations can skip the API.
+            if patreon_result is not None:
+                from django.utils import timezone
+                member.patreon_is_active = patreon_result["is_active"]
+                member.patreon_pledge_cents = patreon_result["pledge_cents"]
+                member.patreon_last_charge_date = patreon_result["last_charge_date"]
+                member.patreon_last_charge_status = patreon_result["last_charge_status"]
+                member.patreon_patron_since = patreon_result["patron_since"]
+                member.patreon_lifetime_cents = patreon_result["lifetime_cents"]
+                member.patreon_last_synced = timezone.now()
+                member.save(update_fields=["patreon_is_active", "patreon_pledge_cents", "patreon_last_charge_date", "patreon_last_charge_status", "patreon_patron_since", "patreon_lifetime_cents", "patreon_last_synced"])
+
             recipients = [
                 r.strip()
                 for r in (site_settings.instrument_rental_notification_recipients or "").split(",")

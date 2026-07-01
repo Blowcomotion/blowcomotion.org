@@ -67,7 +67,6 @@ class Command(BaseCommand):
             if not member.is_active or not member.last_seen or member.last_seen < cutoff:
                 reasons.append("attendance")
 
-            # ponytail: stub — real validation in issue #246; reads field set manually or by future API sync
             if not li.patreon_active:
                 reasons.append("patreon")
 
