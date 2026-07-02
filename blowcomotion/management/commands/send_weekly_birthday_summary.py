@@ -167,7 +167,7 @@ class Command(BaseCommand):
                     )
                 logger.info(
                     f"Weekly birthday update sent successfully for {today.strftime('%B %d, %Y')} "
-                    f"to {len(recipient_list)} recipient(s): {', '.join(recipient_list)}"
+                    f"to {len(recipient_list)} recipient(s)"
                 )
 
                 if verbosity >= 1:
