@@ -112,6 +112,12 @@ class SiteSettings(BaseSiteSetting):
         null=True,
         help_text="Comma-separated list of email addresses to receive monthly birthday summary emails",
     )
+    weekly_birthday_summary_email_recipients = models.CharField(
+        max_length=1024,
+        blank=True,
+        null=True,
+        help_text="Comma-separated list of email addresses to receive weekly birthday update emails",
+    )
     instrument_rental_notification_recipients = models.CharField(
         max_length=1024,
         blank=True,
@@ -197,6 +203,7 @@ class SiteSettings(BaseSiteSetting):
             FieldPanel('feedback_form_email_recipients'),
             FieldPanel('donate_form_email_recipients'),
             FieldPanel('birthday_summary_email_recipients'),
+            FieldPanel('weekly_birthday_summary_email_recipients'),
             FieldPanel('instrument_rental_notification_recipients'),
             FieldPanel('attendance_report_notification_recipients'),
             FieldPanel('member_signup_notification_recipients'),
