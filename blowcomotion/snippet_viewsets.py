@@ -6,6 +6,7 @@ from wagtail.admin.panels import (
     InlinePanel,
     MultiFieldPanel,
     MultipleChooserPanel,
+    Panel,
 )
 from wagtail.admin.ui.tables import Column, DateColumn, UpdatedAtColumn
 from wagtail.snippets.views.snippets import SnippetViewSet, SnippetViewSetGroup
@@ -173,6 +174,25 @@ class EventViewSet(SnippetViewSet):
         super().__init__(*args, **kwargs)
 
 
+class SectionMembersPanel(Panel):
+    """Read-only panel listing the active members derived from the section's instruments."""
+
+    class BoundPanel(Panel.BoundPanel):
+        template_name = "wagtailadmin/panels/section_members.html"
+
+        def is_shown(self):
+            return bool(self.instance and self.instance.pk)
+
+        def get_context_data(self, parent_context=None):
+            context = super().get_context_data(parent_context)
+            context["members"] = (
+                self.instance.get_members()
+                .select_related("primary_instrument")
+                .order_by("first_name", "last_name")
+            )
+            return context
+
+
 class SectionViewSet(SnippetViewSet):
     model = None
     menu_label = 'Sections'
@@ -183,6 +203,13 @@ class SectionViewSet(SnippetViewSet):
     panels = [
         "name",
         MultipleChooserPanel("instructors", chooser_field_name="instructor"),
+        SectionMembersPanel(
+            heading="Members",
+            help_text=(
+                "Derived automatically from each active member's primary and "
+                "additional instruments."
+            ),
+        ),
     ]
 
     def __init__(self, *args, **kwargs):
