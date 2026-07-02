@@ -472,21 +472,21 @@ class Section(ClusterableModel, index.Indexed):
         index.SearchField("name"),
     ]
 
+    def get_members(self):
+        """Active members whose primary or additional instrument belongs to this section."""
+        return Member.objects.filter(
+            is_active=True
+        ).filter(
+            models.Q(primary_instrument__section=self) |
+            models.Q(additional_instruments__instrument__section=self)
+        ).distinct()
+
     def __str__(self):
         return self.name
 
     class Meta:
         verbose_name = "Section"
         verbose_name_plural = "Sections"
-
-
-class SectionMember(Orderable):
-    section = ParentalKey("blowcomotion.Section", related_name="members")
-    member = models.ForeignKey("blowcomotion.Member", on_delete=models.CASCADE)
-
-    panels = [
-        "member",
-    ]
 
 
 class SectionInstructor(Orderable):

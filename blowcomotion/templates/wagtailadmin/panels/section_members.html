@@ -1,0 +1,40 @@
+<style>
+    .section-members-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        columns: 3 16rem;
+        column-gap: 2rem;
+    }
+    .section-members-list li {
+        break-inside: avoid;
+        padding: 0.25rem 0;
+        border-bottom: 1px solid var(--w-color-border-furniture);
+    }
+    .section-members-list a {
+        color: var(--w-color-text-link-default);
+    }
+    .section-members-instrument {
+        color: var(--w-color-text-meta);
+        font-size: 0.85em;
+        margin-left: 0.5rem;
+    }
+    .section-members-empty {
+        color: var(--w-color-text-meta);
+        margin: 0;
+    }
+</style>
+{% if members %}
+    <ul class="section-members-list">
+        {% for member in members %}
+            <li>
+                <a href="{% url 'wagtailsnippets_blowcomotion_member:edit' member.pk %}">{{ member.display_name }}</a>
+                {% if member.primary_instrument %}
+                    <span class="section-members-instrument">{{ member.primary_instrument.name }}</span>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p class="section-members-empty">No active members currently play an instrument in this section.</p>
+{% endif %}

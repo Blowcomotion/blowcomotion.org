@@ -96,11 +96,8 @@ class SectionAttendanceForm(forms.Form):
         self._populate_gig_choices()
         
         if section:
-            # Get all active members whose primary instrument is in this section
-            section_members = Member.objects.filter(
-                primary_instrument__section=section,
-                is_active=True
-            ).distinct().order_by('first_name', 'last_name')
+            # Get all active members whose primary or additional instrument is in this section
+            section_members = section.get_members().order_by('first_name', 'last_name')
             
             # Create checkbox field for each member
             for member in section_members:
