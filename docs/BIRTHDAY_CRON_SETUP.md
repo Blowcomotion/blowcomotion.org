@@ -4,15 +4,17 @@ This document explains how to set up the monthly and weekly birthday summary ema
 
 ## Overview
 
-Two management commands automatically send birthday email digests to designated recipients:
+The `send_monthly_birthday_summary` management command automatically sends birthday email digests to designated recipients. It has two modes:
 
-- `send_monthly_birthday_summary` sends a summary of birthdays for a calendar month. It is intended to be run on the 1st of each month and is used for the in-person shout out at the start of the month.
-- `send_weekly_birthday_summary` sends a rolling-window update of birthdays coming up in the next N days (30 by default). It is intended to be run weekly so the written weekly rehearsal announcement has up-to-date birthday information, including for members who joined recently.
+- **Monthly mode (default)** sends a summary of birthdays for a calendar month. It is intended to be run on the 1st of each month and is used for the in-person shout out at the start of the month.
+- **Rolling-window mode (`--days`)** sends an update of birthdays coming up in the next N days (7 by default). It is intended to be run weekly so the written weekly rehearsal announcement has up-to-date birthday information, including for members who joined recently.
+
+Both modes send to the same **Birthday summary email recipients** configured in Site Settings.
 
 ## Command Usage
 
 ```bash
-# Monthly: send summary for next month (default behavior)
+# Monthly: send summary for the current month (default behavior)
 python manage.py send_monthly_birthday_summary
 
 # Monthly: send summary for specific month and year
@@ -21,14 +23,14 @@ python manage.py send_monthly_birthday_summary --month 9 --year 2025
 # Monthly: dry run (preview without sending)
 python manage.py send_monthly_birthday_summary --dry-run
 
-# Weekly: send update for birthdays in the next 30 days (default)
-python manage.py send_weekly_birthday_summary
+# Weekly: send update for birthdays in the next 7 days (default)
+python manage.py send_monthly_birthday_summary --days
 
 # Weekly: send update for birthdays in a custom lookahead window
-python manage.py send_weekly_birthday_summary --days 14
+python manage.py send_monthly_birthday_summary --days 14
 
 # Weekly: dry run (preview without sending)
-python manage.py send_weekly_birthday_summary --dry-run
+python manage.py send_monthly_birthday_summary --days --dry-run
 ```
 
 ## Configuration
@@ -38,7 +40,7 @@ python manage.py send_weekly_birthday_summary --dry-run
 Configure email recipients in Django admin:
 
 1. Go to **Settings** → **Site Settings**
-2. In the **Form Email Recipients** section, set **Birthday summary email recipients** (used by the monthly command) and/or **Weekly birthday summary email recipients** (used by the weekly command)
+2. In the **Form Email Recipients** section, set **Birthday summary email recipients** (used by both the monthly and weekly modes)
 3. Enter comma-separated email addresses: `admin@blowcomotion.org, leadership@blowcomotion.org`
 
 ### 2. Email Backend
@@ -67,7 +69,7 @@ crontab -e
 
 # Add these lines (adjust paths as needed)
 0 9 1 * * /path/to/your/venv/bin/python /path/to/blowcomotion.org/manage.py send_monthly_birthday_summary
-0 9 * * 1 /path/to/your/venv/bin/python /path/to/blowcomotion.org/manage.py send_weekly_birthday_summary
+0 9 * * 1 /path/to/your/venv/bin/python /path/to/blowcomotion.org/manage.py send_monthly_birthday_summary --days
 ```
 
 ### Option 2: Django Settings Crontab (if using django-crontab)
@@ -76,21 +78,21 @@ crontab -e
 # In settings.py
 CRONJOBS = [
     ('0 9 1 * *', 'django.core.management.call_command', ['send_monthly_birthday_summary']),
-    ('0 9 * * 1', 'django.core.management.call_command', ['send_weekly_birthday_summary']),
+    ('0 9 * * 1', 'django.core.management.call_command', ['send_monthly_birthday_summary', '--days']),
 ]
 ```
 
 ### Option 3: PythonAnywhere Scheduled Tasks
 
-In the PythonAnywhere dashboard, under **Tasks**, add one scheduled task per command:
+In the PythonAnywhere dashboard, under **Tasks**, add one scheduled task per mode:
 
 - `send_monthly_birthday_summary` — schedule daily at 9:00 AM; the command checks that it's the 1st of the month before sending, so it is a no-op on other days
-- `send_weekly_birthday_summary` — schedule weekly, at a time that runs shortly before the weekly rehearsal announcement is written. Unlike the monthly command, this command has no built-in date check, so scheduling it more often than weekly will re-send the same upcoming-birthday digest to recipients.
+- `send_monthly_birthday_summary --days` — schedule weekly, at a time that runs shortly before the weekly rehearsal announcement is written. Unlike the monthly mode, this mode has no built-in date check, so scheduling it more often than weekly will re-send the same upcoming-birthday digest to recipients.
 
-Command to enter for each task (adjust the path to your virtualenv and project):
+Command to enter for the weekly task (adjust the path to your virtualenv and project):
 
 ```bash
-/path/to/your/venv/bin/python /path/to/blowcomotion.org/manage.py send_weekly_birthday_summary
+/path/to/your/venv/bin/python /path/to/blowcomotion.org/manage.py send_monthly_birthday_summary --days
 ```
 
 ### Option 4: Systemd Timer (Modern Linux Systems)
@@ -149,18 +151,17 @@ python manage.py send_monthly_birthday_summary --month 9 --year 2025
 # Force actual sending on any day (bypasses the 1st-of-month safety check; be very careful in production)
 python manage.py send_monthly_birthday_summary --month 9 --year 2025 --ignore-date-check
 
-# Weekly: dry run for the default 30-day lookahead window
-python manage.py send_weekly_birthday_summary --dry-run
+# Weekly: dry run for the default 7-day lookahead window
+python manage.py send_monthly_birthday_summary --days --dry-run
 
 # Weekly: dry run for a custom lookahead window
-python manage.py send_weekly_birthday_summary --days 14 --dry-run
+python manage.py send_monthly_birthday_summary --days 14 --dry-run
 ```
 
 ### Run Tests
 
 ```bash
 python manage.py test blowcomotion.tests.test_birthday_command
-python manage.py test blowcomotion.tests.test_weekly_birthday_command
 ```
 
 ## Monitoring
@@ -200,23 +201,19 @@ Monitor email delivery success and ensure:
    - Verify template files exist: `templates/emails/monthly_birthday_summary.html` and `templates/emails/weekly_birthday_summary.html`
    - Check template syntax
 
-5. **Weekly recipients not configured**
-   - Error: "No weekly birthday email recipients configured"
-   - Solution: Set **Weekly birthday summary email recipients** in Django admin Site Settings (this is a separate field from the monthly recipients)
-
 ### Debug Mode
 
 Use dry-run mode to debug without sending emails:
 
 ```bash
 python manage.py send_monthly_birthday_summary --dry-run
-python manage.py send_weekly_birthday_summary --dry-run
+python manage.py send_monthly_birthday_summary --days --dry-run
 ```
 
 ## Features
 
 - **Automatic monthly scheduling**: Runs on 1st of each month by default
-- **Rolling weekly lookahead**: Weekly command surfaces birthdays in the next N days (30 by default) regardless of calendar month boundaries
+- **Rolling weekly lookahead**: `--days` mode surfaces birthdays in the next N days (7 by default) regardless of calendar month boundaries
 - **Professional HTML emails**: Responsive design with band branding
 - **Member details**: Names, preferred names, instruments, ages
 - **Flexible scheduling**: Can specify any month/year (monthly) or lookahead window (weekly)
@@ -235,4 +232,4 @@ The monthly summary includes:
 - Professional Blowcomotion branding
 - Both HTML and plain text versions
 
-The weekly update includes the same member details, but for birthdays falling within the next N days (30 by default) from today, rather than a fixed calendar month. This keeps the weekly rehearsal announcement current even for members who join partway through the month.
+The weekly update includes the same member details, but for birthdays falling within the next N days (7 by default) from today, rather than a fixed calendar month. This keeps the weekly rehearsal announcement current even for members who join partway through the month.
