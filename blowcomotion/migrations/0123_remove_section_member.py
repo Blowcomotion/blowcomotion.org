@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("blowcomotion", "0121_populate_active_rentals"),
+        ("blowcomotion", "0122_alter_member_email"),
     ]
 
     operations = [
