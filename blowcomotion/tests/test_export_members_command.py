@@ -54,7 +54,7 @@ class ExportMembersToCSVCommandTest(TestCase):
             last_name="Lovelace",
             primary_instrument=self.trumpet,
             shirt_size="M",
-            dietary_preferences=["Vegetarian", "Gluten-Free"],
+            dietary_preferences=["Vegan", "Gluten-Free"],
             has_allergies=True,
             allergens=["Peanuts"],
             has_epipen=True,
@@ -118,7 +118,7 @@ class ExportMembersToCSVCommandTest(TestCase):
             row = rows[0]
 
             self.assertEqual(row["shirt_size"], "M")
-            self.assertEqual(row["dietary_preferences"], "Vegetarian; Gluten-Free")
+            self.assertEqual(row["dietary_preferences"], "Vegan; Gluten-Free")
             self.assertEqual(row["has_allergies"], "YES")
             self.assertEqual(row["allergens"], "Peanuts")
             self.assertEqual(row["has_epipen"], "YES")
