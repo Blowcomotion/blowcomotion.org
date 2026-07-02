@@ -188,8 +188,6 @@ class NagInstrumentRentersCommandTest(TestCase):
 
     def test_member_without_email_skipped(self):
         no_email_member = make_member(first_name="NoEmail", last_name="X", email="", last_seen=datetime.date.today() - datetime.timedelta(days=100))
-        no_email_member.email = None
-        no_email_member.save()
         make_library_instrument(no_email_member)
         out = StringIO()
         call_command("nag_instrument_renters", f"--day-to-run={TODAY_WEEKDAY}", stdout=out)
