@@ -183,7 +183,6 @@ class SectionViewSet(SnippetViewSet):
     panels = [
         "name",
         MultipleChooserPanel("instructors", chooser_field_name="instructor"),
-        MultipleChooserPanel("members", chooser_field_name="member"),
     ]
 
     def __init__(self, *args, **kwargs):

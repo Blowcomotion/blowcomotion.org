@@ -1512,22 +1512,7 @@ def attendance_capture(request, section_slug=None):
             section_member_ids.add(member.id)
     elif section:
         section_instruments = list(Instrument.objects.filter(section=section).order_by('name'))
-
-        primary_ids = set(
-            Member.objects.filter(
-                primary_instrument__in=section_instruments,
-                is_active=True
-            ).values_list('id', flat=True)
-        )
-
-        additional_ids = set(
-            Member.objects.filter(
-                is_active=True,
-                additional_instruments__instrument__section=section
-            ).values_list('id', flat=True)
-        )
-
-        section_member_ids = primary_ids.union(additional_ids)
+        section_member_ids = set(section.get_members().values_list('id', flat=True))
 
         if section_member_ids:
             section_members = Member.objects.filter(
@@ -2032,12 +2017,7 @@ def attendance_reports(request):
     if section_id:
         section = Section.objects.get(id=section_id)
         # Include members whose primary or additional instruments belong to this section
-        section_member_ids = Member.objects.filter(
-            is_active=True
-        ).filter(
-            Q(primary_instrument__section=section) |
-            Q(additional_instruments__instrument__section=section)
-        ).values_list('id', flat=True).distinct()
+        section_member_ids = section.get_members().values_list('id', flat=True)
         attendance_records = attendance_records.filter(
             Q(member_id__in=section_member_ids) | Q(member__isnull=True)
         )
@@ -2092,12 +2072,9 @@ def attendance_section_report_new(request, section_slug):
         end_date = date.fromisoformat(request.GET.get('end_date'))
     
     # Include members whose primary or additional instruments belong to this section
-    section_members = Member.objects.filter(
-        is_active=True
-    ).filter(
-        Q(primary_instrument__section=section) |
-        Q(additional_instruments__instrument__section=section)
-    ).select_related('primary_instrument').prefetch_related('additional_instruments__instrument').order_by('first_name', 'last_name').distinct()
+    section_members = section.get_members().select_related(
+        'primary_instrument'
+    ).prefetch_related('additional_instruments__instrument').order_by('first_name', 'last_name')
     
     section_member_ids = list(section_members.values_list('id', flat=True))
     
