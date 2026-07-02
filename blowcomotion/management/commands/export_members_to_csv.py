@@ -79,4 +79,6 @@ class Command(BaseCommand):
             return "YES" if value else "NO"
         if isinstance(value, (datetime, date)):
             return value.isoformat()
+        if isinstance(value, (list, tuple)):
+            return "; ".join(str(item) for item in value)
         return str(value)
