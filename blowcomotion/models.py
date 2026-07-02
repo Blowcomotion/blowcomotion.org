@@ -644,7 +644,7 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
     last_seen = models.DateField(blank=True, null=True, help_text="This field auto-populates whenever attendance is taken.")
     separation_date = models.DateField(blank=True, null=True, help_text="Date of separation from the organization.")
     reactivated_date = models.DateField(blank=True, null=True, help_text="Date when the member was reactivated (is_active changed to True).")
-    email = models.EmailField(blank=True, null=True)
+    email = models.EmailField()
     gigomatic_username = models.CharField(
         max_length=255,
         blank=True,
