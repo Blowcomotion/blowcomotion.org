@@ -1005,11 +1005,17 @@ def dump_data(request):
     ]
     
     args = base_args
-    
-    # Check if the user is superuser
-    if not request.user.is_superuser:
+
+    has_dev_access = request.user.has_perm('blowcomotion.access_dev_tools')
+    has_analyst_access = request.user.has_perm('blowcomotion.access_real_data_exports')
+
+    if not (has_dev_access or has_analyst_access):
         logger.warning(f"Unauthorized access attempt to dump_data by user {request.user.username}")
-        return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
+        return JsonResponse({'error': 'You do not have permission to access this feature'}, status=403)
+
+    if include_real_data and not has_analyst_access:
+        logger.warning(f"Unauthorized include_real_data access attempt to dump_data by user {request.user.username}")
+        return JsonResponse({'error': 'You do not have permission to access real member data'}, status=403)
 
     try:
         logger.info(f"Starting data dump by user {request.user.username} (include_real_data={include_real_data})")
