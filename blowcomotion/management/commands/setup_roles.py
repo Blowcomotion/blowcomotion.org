@@ -62,7 +62,11 @@ ROLE_PERMISSIONS = {
     "Attendance Taker": lambda: [],
 }
 
-EDITOR_GROUP_NAMES = ("Editors", "Moderators")
+EDITOR_GROUP_NAMES = (
+    "Editors", "Moderators",              # Wagtail's stock defaults (fresh installs / test DB)
+    "Site Editors", "Site Moderators",    # this install's renamed defaults
+    "Wiki Editors", "Wiki Moderators",    # this install's wiki-scoped editor groups
+)
 
 
 class Command(BaseCommand):

@@ -74,3 +74,19 @@ class SetupRolesCommandTests(TestCase):
         call_command('setup_roles')
         self.assertEqual(Group.objects.filter(name='Dev').count(), first_count)
         self.assertEqual(self._perm_codenames('Dev'), first_perms)
+
+    def test_patches_this_installs_renamed_editor_groups_with_image_and_media_perms(self):
+        # This installation renamed Wagtail's stock "Editors"/"Moderators" groups
+        # to "Site Editors"/"Site Moderators" and added wiki-scoped "Wiki Editors"/
+        # "Wiki Moderators" groups. None of these match the stock names, so they
+        # must be patched too, in addition to (not instead of) the stock names.
+        renamed_group_names = (
+            'Site Editors', 'Site Moderators',
+            'Wiki Editors', 'Wiki Moderators',
+        )
+        for group_name in renamed_group_names:
+            Group.objects.get_or_create(name=group_name)
+        call_command('setup_roles')
+        for group_name in renamed_group_names:
+            codenames = self._perm_codenames(group_name)
+            self.assertIn('change_customimage', codenames)
