@@ -102,14 +102,5 @@
             }
         }
     }
-    
-    // Auto-dismiss the alert after 5 seconds
-    setTimeout(function() {
-        const alert = document.querySelector('.alert-success');
-        if (alert) {
-            alert.classList.remove('show');
-            setTimeout(() => alert.remove(), 150);
-        }
-    }, 5000);
 })();
 </script>
