@@ -10,14 +10,16 @@ With --days it instead sends a rolling-window update of birthdays coming
 up in the next N days (7 by default). This mode is intended to be run
 weekly (e.g. via a scheduled task) so that the written weekly rehearsal
 announcement has up-to-date birthday information, including for members
-who joined recently.
+who joined recently. Like the monthly mode, it is meant to be scheduled
+daily (PythonAnywhere only supports daily/hourly scheduling) and no-ops
+on every day but Sunday.
 
 Usage:
     # Monthly summary (run on the 1st of each month)
     python manage.py send_monthly_birthday_summary [--month MONTH] [--year YEAR] [--dry-run] [--ignore-date-check]
 
-    # Rolling-window update (run weekly)
-    python manage.py send_monthly_birthday_summary --days [DAYS] [--dry-run]
+    # Rolling-window update (run daily, only sends on Sundays)
+    python manage.py send_monthly_birthday_summary --days [DAYS] [--dry-run] [--ignore-date-check]
 
 Options:
     --month: Month to generate summary for (1-12, default: current month)
@@ -26,7 +28,8 @@ Options:
             instead of a calendar-month summary (default when the flag is
             given without a value: 7)
     --dry-run: Print what would be sent without actually sending emails
-    --ignore-date-check: Bypass the first-day-of-month check (for manual/testing runs)
+    --ignore-date-check: Bypass the first-day-of-month check (monthly mode)
+            or the Sunday-only check (weekly --days mode); for manual/testing runs
 """
 
 import calendar
@@ -85,7 +88,10 @@ class Command(BaseCommand):
         parser.add_argument(
             '--ignore-date-check',
             action='store_true',
-            help='Bypass the first-day-of-month check (for manual/testing runs)',
+            help=(
+                'Bypass the first-day-of-month check (monthly mode) or the '
+                'Sunday-only check (weekly --days mode); for manual/testing runs'
+            ),
         )
 
     def handle(self, *args, **options):
@@ -101,6 +107,18 @@ class Command(BaseCommand):
                     raise CommandError('--days cannot be combined with --month or --year')
                 if days_ahead <= 0:
                     raise CommandError(f"--days must be a positive integer, got {days_ahead}")
+
+                # PythonAnywhere only supports daily/hourly scheduling, so this is
+                # scheduled to run daily and this check (like the 1st-of-month check
+                # below) makes it a no-op except on the intended day.
+                if not options['ignore_date_check'] and today.weekday() != 6:
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f'This command is intended to be run on Sundays only. '
+                            f'Today is {today.strftime("%A, %B %d, %Y")}. Use --ignore-date-check to bypass this restriction.'
+                        )
+                    )
+                    return
 
                 future_date = today + timedelta(days=days_ahead)
                 period_label = f'the next {days_ahead} day(s)'

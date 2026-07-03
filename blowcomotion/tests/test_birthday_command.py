@@ -510,7 +510,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             self._mock_today(mock_date, date(2026, 7, 1))
 
             out = StringIO()
-            call_command('send_monthly_birthday_summary', '--days', '--dry-run', stdout=out)
+            call_command('send_monthly_birthday_summary', '--days', '--dry-run', '--ignore-date-check', stdout=out)
 
             output = out.getvalue()
             self.assertIn('Found 1 birthday(s) in the next 7 day(s)', output)
@@ -534,7 +534,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             self._mock_today(mock_date, date(2026, 7, 1))
 
             out = StringIO()
-            call_command('send_monthly_birthday_summary', '--days', '--dry-run', stdout=out)
+            call_command('send_monthly_birthday_summary', '--days', '--dry-run', '--ignore-date-check', stdout=out)
 
             output = out.getvalue()
             self.assertIn('Found 0 birthday(s)', output)
@@ -555,7 +555,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             self._mock_today(mock_date, date(2026, 7, 1))
 
             out = StringIO()
-            call_command('send_monthly_birthday_summary', '--days', '--dry-run', stdout=out)
+            call_command('send_monthly_birthday_summary', '--days', '--dry-run', '--ignore-date-check', stdout=out)
 
             output = out.getvalue()
             self.assertIn('Found 0 birthday(s)', output)
@@ -577,7 +577,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             self._mock_today(mock_date, date(2026, 7, 1))
 
             out = StringIO()
-            call_command('send_monthly_birthday_summary', '--days', stdout=out)
+            call_command('send_monthly_birthday_summary', '--days', '--ignore-date-check', stdout=out)
 
             output = out.getvalue()
             self.assertIn('✅ Weekly birthday update sent successfully', output)
@@ -598,7 +598,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             self._mock_today(mock_date, date(2026, 7, 1))
 
             out = StringIO()
-            call_command('send_monthly_birthday_summary', '--days', stdout=out)
+            call_command('send_monthly_birthday_summary', '--days', '--ignore-date-check', stdout=out)
 
             output = out.getvalue()
             self.assertIn('No birthdays scheduled', output)
@@ -622,7 +622,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             self._mock_today(mock_date, date(2026, 7, 1))
 
             with self.assertRaises(CommandError) as cm:
-                call_command('send_monthly_birthday_summary', '--days')
+                call_command('send_monthly_birthday_summary', '--days', '--ignore-date-check')
 
             self.assertIn('No birthday email recipients configured', str(cm.exception))
 
@@ -637,6 +637,38 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             call_command('send_monthly_birthday_summary', '--days=7', '--month=9')
 
         self.assertIn('--days cannot be combined with --month or --year', str(cm.exception))
+
+    def test_command_skips_on_non_sunday(self):
+        """The weekly mode should be a no-op on days other than Sunday"""
+        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+            self._mock_today(mock_date, date(2026, 7, 1))  # Wednesday
+
+            out = StringIO()
+            call_command('send_monthly_birthday_summary', '--days', stdout=out)
+
+            self.assertIn('intended to be run on Sundays only', out.getvalue())
+            self.assertEqual(len(mail.outbox), 0)
+
+    def test_command_runs_on_sunday(self):
+        """The weekly mode should send without --ignore-date-check when today is Sunday"""
+        Member.objects.create(
+            first_name='John',
+            last_name='WithAge',
+            birth_month=7,
+            birth_day=5,
+            birth_year=1990,
+            is_active=True,
+            primary_instrument=self.trumpet,
+        )
+
+        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+            self._mock_today(mock_date, date(2026, 7, 5))  # Sunday
+
+            out = StringIO()
+            call_command('send_monthly_birthday_summary', '--days', stdout=out)
+
+            self.assertIn('✅ Weekly birthday update sent successfully', out.getvalue())
+            self.assertEqual(len(mail.outbox), 1)
 
     def test_command_birthday_today_included(self):
         """A birthday that falls on today should be included"""
@@ -654,7 +686,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             self._mock_today(mock_date, date(2026, 7, 1))
 
             out = StringIO()
-            call_command('send_monthly_birthday_summary', '--days', '--dry-run', stdout=out)
+            call_command('send_monthly_birthday_summary', '--days', '--dry-run', '--ignore-date-check', stdout=out)
 
             output = out.getvalue()
             self.assertIn('Grace Today', output)
@@ -675,7 +707,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             self._mock_today(mock_date, date(2026, 12, 28))
 
             out = StringIO()
-            call_command('send_monthly_birthday_summary', '--days', '--dry-run', stdout=out)
+            call_command('send_monthly_birthday_summary', '--days', '--dry-run', '--ignore-date-check', stdout=out)
 
             output = out.getvalue()
             self.assertIn('Found 1 birthday(s)', output)
@@ -698,13 +730,13 @@ class RollingWindowBirthdayUpdateTests(TestCase):
 
             # Default 7-day window excludes the birthday (10 days out)
             out = StringIO()
-            call_command('send_monthly_birthday_summary', '--days', '--dry-run', stdout=out)
+            call_command('send_monthly_birthday_summary', '--days', '--dry-run', '--ignore-date-check', stdout=out)
             self.assertIn('Found 0 birthday(s)', out.getvalue())
             self.assertNotIn('Alice TenDaysOut', out.getvalue())
 
             # A wider 14-day window includes it
             out = StringIO()
-            call_command('send_monthly_birthday_summary', '--days=14', '--dry-run', stdout=out)
+            call_command('send_monthly_birthday_summary', '--days=14', '--dry-run', '--ignore-date-check', stdout=out)
             self.assertIn('Found 1 birthday(s)', out.getvalue())
             self.assertIn('Alice TenDaysOut', out.getvalue())
 
@@ -727,7 +759,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             self._mock_today(mock_date, date(2026, 7, 1))
 
             out = StringIO()
-            call_command('send_monthly_birthday_summary', '--days', '--dry-run', stdout=out)
+            call_command('send_monthly_birthday_summary', '--days', '--dry-run', '--ignore-date-check', stdout=out)
 
             output = out.getvalue()
             self.assertIn('Alex MultiInstrument', output)
@@ -750,7 +782,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
         with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
             self._mock_today(mock_date, date(2026, 7, 1))
 
-            call_command('send_monthly_birthday_summary', '--days')
+            call_command('send_monthly_birthday_summary', '--days', '--ignore-date-check')
 
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]

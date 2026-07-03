@@ -9,6 +9,8 @@ The `send_monthly_birthday_summary` management command automatically sends birth
 - **Monthly mode (default)** sends a summary of birthdays for a calendar month. It is intended to be run on the 1st of each month and is used for the in-person shout out at the start of the month.
 - **Rolling-window mode (`--days`)** sends an update of birthdays coming up in the next N days (7 by default). It is intended to be run weekly so the written weekly rehearsal announcement has up-to-date birthday information, including for members who joined recently.
 
+Both modes are meant to be scheduled to run **daily**, since PythonAnywhere only supports daily/hourly scheduled tasks. Each mode has its own built-in check that makes it a no-op except on the intended day: monthly mode only sends on the 1st of the month, and weekly mode only sends on Sundays. Use `--ignore-date-check` to bypass either check for manual/testing runs.
+
 Both modes send to the same **Birthday summary email recipients** configured in Site Settings.
 
 ## Command Usage
@@ -61,7 +63,7 @@ EMAIL_HOST_PASSWORD = 'your-password'
 
 ### Option 1: System Crontab
 
-Add to system crontab to run the monthly summary on the 1st of each month at 9:00 AM, and the weekly update every Monday at 9:00 AM:
+Add to system crontab to run the monthly summary on the 1st of each month at 9:00 AM, and the weekly update every Sunday at 9:00 AM:
 
 ```bash
 # Edit crontab
@@ -69,7 +71,7 @@ crontab -e
 
 # Add these lines (adjust paths as needed)
 0 9 1 * * /path/to/your/venv/bin/python /path/to/blowcomotion.org/manage.py send_monthly_birthday_summary
-0 9 * * 1 /path/to/your/venv/bin/python /path/to/blowcomotion.org/manage.py send_monthly_birthday_summary --days
+0 9 * * 0 /path/to/your/venv/bin/python /path/to/blowcomotion.org/manage.py send_monthly_birthday_summary --days
 ```
 
 ### Option 2: Django Settings Crontab (if using django-crontab)
@@ -78,16 +80,16 @@ crontab -e
 # In settings.py
 CRONJOBS = [
     ('0 9 1 * *', 'django.core.management.call_command', ['send_monthly_birthday_summary']),
-    ('0 9 * * 1', 'django.core.management.call_command', ['send_monthly_birthday_summary', '--days']),
+    ('0 9 * * 0', 'django.core.management.call_command', ['send_monthly_birthday_summary', '--days']),
 ]
 ```
 
 ### Option 3: PythonAnywhere Scheduled Tasks
 
-In the PythonAnywhere dashboard, under **Tasks**, add one scheduled task per mode:
+PythonAnywhere only supports daily and hourly scheduled tasks (no weekly option), which is why both modes have a built-in day check. In the PythonAnywhere dashboard, under **Tasks**, add one scheduled task per mode, both scheduled **daily**:
 
 - `send_monthly_birthday_summary` — schedule daily at 9:00 AM; the command checks that it's the 1st of the month before sending, so it is a no-op on other days
-- `send_monthly_birthday_summary --days` — schedule weekly, at a time that runs shortly before the weekly rehearsal announcement is written. Unlike the monthly mode, this mode has no built-in date check, so scheduling it more often than weekly will re-send the same upcoming-birthday digest to recipients.
+- `send_monthly_birthday_summary --days` — schedule daily, at a time that runs shortly before the weekly rehearsal announcement is written; the command checks that it's a Sunday before sending, so it is a no-op on other days
 
 Command to enter for the weekly task (adjust the path to your virtualenv and project):
 
@@ -151,11 +153,14 @@ python manage.py send_monthly_birthday_summary --month 9 --year 2025
 # Force actual sending on any day (bypasses the 1st-of-month safety check; be very careful in production)
 python manage.py send_monthly_birthday_summary --month 9 --year 2025 --ignore-date-check
 
-# Weekly: dry run for the default 7-day lookahead window
-python manage.py send_monthly_birthday_summary --days --dry-run
+# Weekly: dry run for the default 7-day lookahead window (bypasses the Sunday-only check for testing)
+python manage.py send_monthly_birthday_summary --days --dry-run --ignore-date-check
 
-# Weekly: dry run for a custom lookahead window
-python manage.py send_monthly_birthday_summary --days 14 --dry-run
+# Weekly: dry run for a custom lookahead window (bypasses the Sunday-only check for testing)
+python manage.py send_monthly_birthday_summary --days 14 --dry-run --ignore-date-check
+
+# Force actual weekly sending on any day (bypasses the Sunday-only safety check; be very careful in production)
+python manage.py send_monthly_birthday_summary --days --ignore-date-check
 ```
 
 ### Run Tests
