@@ -36,12 +36,12 @@
                                     {% endif %}
                                     </li>
                             {% endfor %}
-                            {% if not request.user.is_staff %}
-                                {% if request.user.is_authenticated %}
+                            {% if request.user.is_authenticated %}
+                                {% if not request.user.is_staff or request.user.member %}
                                     <li class="header__nav-auth-mobile"><a href="{% url 'member-profile' %}">My Profile</a></li>
-                                {% else %}
-                                    <li class="header__nav-auth-mobile"><a href="{% url 'member-login' %}">Member Login</a></li>
                                 {% endif %}
+                            {% else %}
+                                <li class="header__nav-auth-mobile"><a href="{% url 'member-login' %}">Member Login</a></li>
                             {% endif %}
                         </ul>
                     </nav>
@@ -52,14 +52,16 @@
                         </div>
                     {% endif %}
                     <div class="header__member-auth ms-3">
-                        {% if request.user.is_authenticated and not request.user.is_staff %}
-                            <a href="{% url 'member-profile' %}" class="header__auth-link">My Profile</a>
-                            <span class="header__auth-sep">|</span>
-                            <form method="post" action="{% url 'member-logout' %}" style="display:inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="header__auth-logout">Log Out</button>
-                            </form>
-                        {% elif not request.user.is_authenticated %}
+                        {% if request.user.is_authenticated %}
+                            {% if not request.user.is_staff or request.user.member %}
+                                <a href="{% url 'member-profile' %}" class="header__auth-link">My Profile</a>
+                                <span class="header__auth-sep">|</span>
+                                <form method="post" action="{% url 'member-logout' %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="header__auth-logout">Log Out</button>
+                                </form>
+                            {% endif %}
+                        {% else %}
                             <a href="{% url 'member-login' %}" class="header__auth-link">Member Login</a>
                         {% endif %}
                     </div>
