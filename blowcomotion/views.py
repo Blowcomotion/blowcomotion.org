@@ -1123,9 +1123,9 @@ def dump_data(request):
     
 
 def export_members_csv(request):
-    if not request.user.is_superuser:
+    if not request.user.has_perm('blowcomotion.access_real_data_exports'):
         logger.warning("Unauthorized access attempt to export members by user %s", request.user.username)
-        return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
+        return JsonResponse({'error': 'You do not have permission to access this feature'}, status=403)
 
     include_extra = True
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
@@ -1166,9 +1166,9 @@ def export_members_csv(request):
 
 
 def export_attendance_csv(request):
-    if not request.user.is_superuser:
+    if not request.user.has_perm('blowcomotion.access_real_data_exports'):
         logger.warning("Unauthorized access attempt to export attendance by user %s", request.user.username)
-        return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
+        return JsonResponse({'error': 'You do not have permission to access this feature'}, status=403)
 
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
@@ -1215,9 +1215,9 @@ def export_attendance_csv(request):
 
 
 def export_charts_csv(request):
-    if not request.user.is_superuser:
+    if not request.user.has_perm('blowcomotion.access_real_data_exports'):
         logger.warning("Unauthorized access attempt to export charts by user %s", request.user.username)
-        return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
+        return JsonResponse({'error': 'You do not have permission to access this feature'}, status=403)
 
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
     temp_path = temp_file.name
@@ -1252,9 +1252,9 @@ def export_charts_csv(request):
 
 
 def export_library_instruments_csv(request):
-    if not request.user.is_superuser:
+    if not request.user.has_perm('blowcomotion.access_real_data_exports'):
         logger.warning("Unauthorized access attempt to export library instruments by user %s", request.user.username)
-        return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
+        return JsonResponse({'error': 'You do not have permission to access this feature'}, status=403)
 
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
     temp_path = temp_file.name
