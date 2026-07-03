@@ -30,6 +30,7 @@ TESTING = 'test' in sys.argv
 
 INSTALLED_APPS = [
     "blowcomotion",
+    "gigs",
     "search",
     "compressor",
     "livereload",

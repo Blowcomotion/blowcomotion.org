@@ -123,7 +123,7 @@ class MemberSaveEmailDriftTests(TestCase):
         # GO3 returns a valid member_id — this is what triggers the clobber:
         # update_fields = [] inside the if-branch, then gigo fields appended.
         go3_response = {"member_id": 12345, "username": "oldplayer"}
-        with patch("blowcomotion.utils.make_gigo_api_request", return_value=go3_response):
+        with patch("gigs.gigo.make_gigo_api_request", return_value=go3_response):
             member.email = "new@example.com"
             member.save(update_fields=["email"])  # sync_go3=True (default)
 

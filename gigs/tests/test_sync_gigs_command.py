@@ -35,7 +35,7 @@ class SyncGigsCommandTests(TestCase):
         GIGO_API_KEY='test-key',
         GIGO_BAND_NAME='TestBand'
     )
-    @patch('blowcomotion.management.commands.sync_gigs.make_gigo_api_request')
+    @patch('gigs.management.commands.sync_gigs.make_gigo_api_request')
     def test_sync_gigs_creates_new_gigs(self, mock_request):
         """Test that sync creates new CachedGig records."""
         # Mock API response
@@ -71,7 +71,7 @@ class SyncGigsCommandTests(TestCase):
         GIGO_API_KEY='test-key',
         GIGO_BAND_NAME='TestBand'
     )
-    @patch('blowcomotion.management.commands.sync_gigs.make_gigo_api_request')
+    @patch('gigs.management.commands.sync_gigs.make_gigo_api_request')
     def test_sync_gigs_updates_existing_gigs(self, mock_request):
         """Test that sync updates existing CachedGig records."""
         # Create existing gig
@@ -119,7 +119,7 @@ class SyncGigsCommandTests(TestCase):
         GIGO_API_KEY='test-key',
         GIGO_BAND_NAME='TestBand'
     )
-    @patch('blowcomotion.management.commands.sync_gigs.make_gigo_api_request')
+    @patch('gigs.management.commands.sync_gigs.make_gigo_api_request')
     def test_sync_gigs_filters_by_band(self, mock_request):
         """Test that sync filters gigs by GIGO_BAND_NAME."""
         # Mock API response with mixed bands
@@ -162,7 +162,7 @@ class SyncGigsCommandTests(TestCase):
         GIGO_API_KEY='test-key',
         GIGO_BAND_NAME='TestBand'
     )
-    @patch('blowcomotion.management.commands.sync_gigs.make_gigo_api_request')
+    @patch('gigs.management.commands.sync_gigs.make_gigo_api_request')
     def test_sync_gigs_dry_run(self, mock_request):
         """Test that dry run doesn't save changes."""
         # Mock API response
@@ -195,7 +195,7 @@ class SyncGigsCommandTests(TestCase):
         GIGO_API_KEY='test-key',
         GIGO_BAND_NAME='TestBand'
     )
-    @patch('blowcomotion.management.commands.sync_gigs.make_gigo_api_request')
+    @patch('gigs.management.commands.sync_gigs.make_gigo_api_request')
     def test_sync_gigs_skips_invalid_gigs(self, mock_request):
         """Test that sync skips gigs with invalid data."""
         # Mock API response with invalid gigs
@@ -250,7 +250,7 @@ class SyncGigsCommandTests(TestCase):
         GIGO_API_KEY='test-key',
         GIGO_BAND_NAME='TestBand'
     )
-    @patch('blowcomotion.management.commands.sync_gigs.make_gigo_api_request')
+    @patch('gigs.management.commands.sync_gigs.make_gigo_api_request')
     def test_sync_gigs_handles_api_failure(self, mock_request):
         """Test that sync handles API request failures gracefully."""
         # Mock API failure
@@ -267,7 +267,7 @@ class SyncGigsCommandTests(TestCase):
         GIGO_API_KEY='test-key',
         GIGO_BAND_NAME='TestBand'
     )
-    @patch('blowcomotion.management.commands.sync_gigs.make_gigo_api_request')
+    @patch('gigs.management.commands.sync_gigs.make_gigo_api_request')
     def test_sync_gigs_filters_past_gigs(self, mock_request):
         """Test that sync filters out gigs before today's date."""
         past_date = datetime.date.today() - datetime.timedelta(days=7)
@@ -312,7 +312,7 @@ class SyncGigsCommandTests(TestCase):
         GIGO_API_KEY='test-key',
         GIGO_BAND_NAME='TestBand'
     )
-    @patch('blowcomotion.management.commands.sync_gigs.make_gigo_api_request')
+    @patch('gigs.management.commands.sync_gigs.make_gigo_api_request')
     def test_sync_gigs_deletes_old_cached_gigs(self, mock_request):
         """Test that sync deletes cached gigs before today's date."""
         past_date = datetime.date.today() - datetime.timedelta(days=7)
@@ -359,7 +359,7 @@ class SyncGigsCommandTests(TestCase):
         GIGO_API_KEY='test-key',
         GIGO_BAND_NAME='TestBand'
     )
-    @patch('blowcomotion.management.commands.sync_gigs.make_gigo_api_request')
+    @patch('gigs.management.commands.sync_gigs.make_gigo_api_request')
     def test_sync_gigs_dry_run_deletes_old_gigs(self, mock_request):
         """Test that dry run reports old gigs that would be deleted."""
         past_date = datetime.date.today() - datetime.timedelta(days=7)
@@ -404,7 +404,7 @@ class SyncGigsCommandTests(TestCase):
         GIGO_API_KEY='test-key',
         GIGO_BAND_NAME='TestBand'
     )
-    @patch('blowcomotion.management.commands.sync_gigs.make_gigo_api_request')
+    @patch('gigs.management.commands.sync_gigs.make_gigo_api_request')
     def test_sync_gigs_reports_invalid_dates_verbosely(self, mock_request):
         """Test that sync reports detailed invalid date warnings at verbosity=2."""
         # Mock API response with invalid date

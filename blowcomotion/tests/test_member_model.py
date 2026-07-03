@@ -29,7 +29,7 @@ class MemberGetGigoIdTests(TestCase):
         )
         
         # Should return cached value without making API call
-        with patch('blowcomotion.utils.make_gigo_api_request') as mock_api:
+        with patch('gigs.gigo.make_gigo_api_request') as mock_api:
             result = member.get_gigo_id()
             
             self.assertEqual(result, 123)
@@ -44,7 +44,7 @@ class MemberGetGigoIdTests(TestCase):
         )
         
         # Should return None without making API call
-        with patch('blowcomotion.utils.make_gigo_api_request') as mock_api:
+        with patch('gigs.gigo.make_gigo_api_request') as mock_api:
             result = member.get_gigo_id()
             
             self.assertIsNone(result)
@@ -60,14 +60,14 @@ class MemberGetGigoIdTests(TestCase):
             primary_instrument=self.trumpet
         )
         
-        with patch('blowcomotion.utils.make_gigo_api_request') as mock_api:
+        with patch('gigs.gigo.make_gigo_api_request') as mock_api:
             result = member.get_gigo_id()
             
             self.assertIsNone(result)
             mock_api.assert_not_called()
 
     @override_settings(GIGO_API_URL='http://localhost:8000', GIGO_API_KEY='test-key')
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_queries_api_and_caches_result(self, mock_api):
         """Test that get_gigo_id queries API and caches the result"""
         mock_api.return_value = {
@@ -95,7 +95,7 @@ class MemberGetGigoIdTests(TestCase):
         self.assertEqual(member.gigomatic_id, 456)
 
     @override_settings(GIGO_API_URL='http://localhost:8000', GIGO_API_KEY='test-key')
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_returns_none_when_member_not_found_in_api(self, mock_api):
         """Test that get_gigo_id returns None when member is not found in API"""
         mock_api.return_value = {}  # Empty response, member not found
@@ -118,7 +118,7 @@ class MemberGetGigoIdTests(TestCase):
         self.assertIsNone(member.gigomatic_id)
 
     @override_settings(GIGO_API_URL='http://localhost:8000', GIGO_API_KEY='test-key')
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_handles_api_errors_gracefully(self, mock_api):
         """Test that get_gigo_id handles API errors gracefully"""
         mock_api.side_effect = Exception('Connection timeout')
@@ -137,7 +137,7 @@ class MemberGetGigoIdTests(TestCase):
         mock_api.assert_called_once()
 
     @override_settings(GIGO_API_URL='http://localhost:8000', GIGO_API_KEY='test-key')
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_handles_malformed_api_response(self, mock_api):
         """Test that get_gigo_id handles malformed API responses"""
         mock_api.return_value = {'wrong_key': 'value'}  # Missing member_id key
@@ -155,7 +155,7 @@ class MemberGetGigoIdTests(TestCase):
         self.assertIsNone(result)
 
     @override_settings(GIGO_API_URL='http://localhost:8000', GIGO_API_KEY='test-key')
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_subsequent_calls_use_cached_value(self, mock_api):
         """Test that subsequent calls use cached value instead of querying API"""
         mock_api.return_value = {
@@ -183,7 +183,7 @@ class MemberGetGigoIdTests(TestCase):
         self.assertEqual(mock_api.call_count, 1)  # Still only called once
 
     @override_settings(GIGO_API_URL='http://localhost:8000', GIGO_API_KEY='test-key')
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_handles_none_response_from_api(self, mock_api):
         """Test that get_gigo_id handles None response from API"""
         mock_api.return_value = None
@@ -201,7 +201,7 @@ class MemberGetGigoIdTests(TestCase):
         self.assertIsNone(result)
 
     @override_settings(GIGO_API_URL='http://localhost:8000', GIGO_API_KEY='test-key')
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_saves_only_gigomatic_id_field(self, mock_api):
         """Test that get_gigo_id only updates gigomatic_id field"""
         mock_api.return_value = {
@@ -241,7 +241,7 @@ class MemberSaveMethodTests(TestCase):
         self.trumpet = Instrument.objects.create(name='Trumpet', section=self.brass_section)
 
     @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_save_deactivating_member_updates_id_and_syncs_to_occasional(self, mock_api):
         """Test that deactivating updates member ID/username and marks them as occasional in GO3"""
         member = Member.objects.create(
@@ -278,7 +278,7 @@ class MemberSaveMethodTests(TestCase):
         self.assertEqual(toggle_call[1]['method'], 'PATCH')
 
     @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_save_activating_member_updates_id_and_syncs_to_regular(self, mock_api):
         """Test that activating updates member ID/username and marks them as regular in GO3"""
         member = Member.objects.create(
@@ -313,7 +313,7 @@ class MemberSaveMethodTests(TestCase):
         self.assertEqual(toggle_call[1]['method'], 'PATCH')
 
     @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_save_toggle_verification_retries_on_wrong_state(self, mock_api):
         """Test that save toggles again if first toggle returns wrong state"""
         member = Member.objects.create(
@@ -341,7 +341,7 @@ class MemberSaveMethodTests(TestCase):
         self.assertEqual(mock_api.call_count, 3)
 
     @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_save_without_is_active_change_doesnt_toggle_status(self, mock_api):
         """Test that save doesn't call GO3 API when ID/username already set and nothing important changed"""
         member = Member.objects.create(
@@ -365,7 +365,7 @@ class MemberSaveMethodTests(TestCase):
         self.assertEqual(mock_api.call_count, 0)
 
     @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_save_syncs_id_and_username_when_missing(self, mock_api):
         """Test that save syncs ID and username from GO3 when they're missing"""
         # Create member instance without saving
@@ -406,7 +406,7 @@ class MemberSaveMethodTests(TestCase):
         self.assertIn('/members/query?email=emily%40example.com', call_args[0][0])
 
     @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_save_handles_api_errors_gracefully(self, mock_api):
         """Test that save doesn't fail when GO3 API errors occur"""
         member = Member.objects.create(
@@ -430,7 +430,7 @@ class MemberSaveMethodTests(TestCase):
         self.assertFalse(member.is_active)
 
     @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_save_syncs_when_email_changes(self, mock_api):
         """Test that save syncs with GO3 when email changes"""
         member = Member.objects.create(
@@ -463,7 +463,7 @@ class MemberSaveMethodTests(TestCase):
         self.assertIn('/members/query?email=frank.miller%40example.com', call_args[0][0])
 
     @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_save_respects_sync_go3_false(self, mock_api):
         """Test that save doesn't sync with GO3 when sync_go3=False"""
         # Create member instance without saving
@@ -488,7 +488,7 @@ class MemberSaveMethodTests(TestCase):
         self.assertEqual(mock_api.call_count, 0)
 
     @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_save_ignores_mutated_fields_not_in_update_fields(self, mock_api):
         """Test that save doesn't sync when field is mutated but excluded from update_fields"""
         member = Member.objects.create(
@@ -516,7 +516,7 @@ class MemberSaveMethodTests(TestCase):
         self.assertTrue(member.is_active)
         
     @override_settings(DEBUG=False, GIGO_BAND_ID='1', GIGO_API_URL='http://test', GIGO_API_KEY='test-key')
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_save_syncs_when_field_in_update_fields(self, mock_api):
         """Test that save DOES sync when field is mutated and included in update_fields"""
         member = Member.objects.create(
@@ -557,7 +557,7 @@ class MemberReactivatedDateTests(TestCase):
         self.brass_section = Section.objects.create(name='Brass')
         self.trumpet = Instrument.objects.create(name='Trumpet', section=self.brass_section)
 
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_reactivated_date_set_on_inactive_to_active_transition(self, mock_api):
         """Test that reactivated_date is set when member transitions from inactive to active"""
         import datetime
@@ -584,7 +584,7 @@ class MemberReactivatedDateTests(TestCase):
         self.assertIsNotNone(member.reactivated_date)
         self.assertEqual(member.reactivated_date, datetime.date.today())
 
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_reactivated_date_not_set_on_active_to_inactive_transition(self, mock_api):
         """Test that reactivated_date is NOT set when member transitions from active to inactive"""
         # Create active member
@@ -608,7 +608,7 @@ class MemberReactivatedDateTests(TestCase):
         member.refresh_from_db()
         self.assertIsNone(member.reactivated_date)
 
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_reactivated_date_not_set_when_member_remains_active(self, mock_api):
         """Test that reactivated_date is NOT set when member remains active"""
         import datetime
@@ -633,7 +633,7 @@ class MemberReactivatedDateTests(TestCase):
         member.refresh_from_db()
         self.assertEqual(member.reactivated_date, previous_date)
 
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_reactivated_date_persisted_with_update_fields_list(self, mock_api):
         """Test that reactivated_date is persisted when using update_fields as a list"""
         import datetime
@@ -657,7 +657,7 @@ class MemberReactivatedDateTests(TestCase):
         self.assertIsNotNone(member.reactivated_date)
         self.assertEqual(member.reactivated_date, datetime.date.today())
 
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_reactivated_date_persisted_with_update_fields_tuple(self, mock_api):
         """Test that reactivated_date is persisted when using update_fields as a tuple"""
         import datetime
@@ -681,7 +681,7 @@ class MemberReactivatedDateTests(TestCase):
         self.assertIsNotNone(member.reactivated_date)
         self.assertEqual(member.reactivated_date, datetime.date.today())
 
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_reactivated_date_persisted_with_update_fields_set(self, mock_api):
         """Test that reactivated_date is persisted when using update_fields as a set"""
         import datetime
@@ -705,7 +705,7 @@ class MemberReactivatedDateTests(TestCase):
         self.assertIsNotNone(member.reactivated_date)
         self.assertEqual(member.reactivated_date, datetime.date.today())
 
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_reactivated_date_not_changed_when_already_active(self, mock_api):
         """Test that reactivated_date doesn't change when saving an already-active member"""
         import datetime
@@ -729,7 +729,7 @@ class MemberReactivatedDateTests(TestCase):
         member.refresh_from_db()
         self.assertEqual(member.reactivated_date, old_date)
 
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_reactivated_date_not_set_when_creating_active_member(self, mock_api):
         """Test that reactivated_date is NOT set when creating a new active member"""
         # Create a new active member
@@ -745,7 +745,7 @@ class MemberReactivatedDateTests(TestCase):
         member.refresh_from_db()
         self.assertIsNone(member.reactivated_date)
 
-    @patch('blowcomotion.utils.make_gigo_api_request')
+    @patch('gigs.gigo.make_gigo_api_request')
     def test_reactivated_date_persisted_without_update_fields(self, mock_api):
         """Test that reactivated_date is persisted in a normal save (without update_fields)"""
         import datetime

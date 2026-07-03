@@ -20,7 +20,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from blowcomotion.models import CachedGig
-from blowcomotion.utils import convert_utc_gig_to_central, make_gigo_api_request
+from gigs.gigo import convert_utc_gig_to_central, make_gigo_api_request
 
 logger = logging.getLogger(__name__)
 

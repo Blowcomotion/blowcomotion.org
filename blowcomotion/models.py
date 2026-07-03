@@ -841,7 +841,7 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
 
         from django.conf import settings
 
-        from blowcomotion.utils import make_gigo_api_request
+        from gigs.gigo import make_gigo_api_request
         
         logger = logging.getLogger(__name__)
         
@@ -891,7 +891,7 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
 
         from django.conf import settings
 
-        from blowcomotion.utils import make_gigo_api_request
+        from gigs.gigo import make_gigo_api_request
         
         logger = logging.getLogger(__name__)
         

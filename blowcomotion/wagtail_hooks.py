@@ -22,8 +22,8 @@ from blowcomotion.views import (
     rental_request_return,
     rental_request_review,
     rental_requests_dashboard,
-    sync_gigs_admin,
 )
+from gigs.views import sync_gigs_admin
 
 from .chooser_viewsets import (
     event_chooser_viewset,
