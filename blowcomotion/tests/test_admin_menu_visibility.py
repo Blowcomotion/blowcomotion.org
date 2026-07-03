@@ -39,7 +39,17 @@ class AdminMenuVisibilityTests(TestCase):
         user.user_permissions.add(access_admin, change_li)
         html = self._get_admin_home_html(user)
         self.assertIn('Rental Requests', html)
-        self.assertNotIn('Utilities', html)
+        # Library Manager needs "Utilities" visible to reach "Library Dashboards" nested inside it.
+        self.assertIn('Utilities', html)
+
+    def test_gig_booker_sees_utilities_menu(self):
+        access_admin = Permission.objects.get(content_type__app_label='wagtailadmin', codename='access_admin')
+        change_cachedgig = Permission.objects.get(content_type__app_label='blowcomotion', codename='change_cachedgig')
+        user = User.objects.create_user(username='gigbooker', password='pw', is_staff=True)
+        user.user_permissions.add(access_admin, change_cachedgig)
+        html = self._get_admin_home_html(user)
+        # Gig Booker needs "Utilities" visible to reach the "Sync Gigs" action nested inside it.
+        self.assertIn('Utilities', html)
 
     def test_arranger_sees_import_charts(self):
         access_admin = Permission.objects.get(content_type__app_label='wagtailadmin', codename='access_admin')

@@ -123,6 +123,17 @@ def register_chart_import_urls():
     ]
 
 
+EXPORTS_PERMISSIONS = ['blowcomotion.access_dev_tools', 'blowcomotion.access_real_data_exports']
+
+# The outer "Utilities" menu must independently list every permission needed
+# by anything nested inside it (PermissionSubmenuMenuItem.is_shown does not
+# fall back to "show if any child is visible").
+UTILITIES_PERMISSIONS = EXPORTS_PERMISSIONS + [
+    'blowcomotion.change_libraryinstrument',  # Library Dashboards submenu
+    'blowcomotion.change_cachedgig',  # Sync Gigs
+]
+
+
 @hooks.register("register_admin_menu_item")
 def register_management_menu_item():
     """
@@ -130,7 +141,7 @@ def register_management_menu_item():
     """
     exports_submenu = Menu(items=[
         PermissionMenuItem('Dump Data', reverse('dump_data'), icon_name='download',
-                            permission=['blowcomotion.access_dev_tools', 'blowcomotion.access_real_data_exports']),
+                            permission=EXPORTS_PERMISSIONS),
         PermissionMenuItem('Export Members CSV', reverse('export_members'), icon_name='table',
                             permission='blowcomotion.access_real_data_exports'),
         PermissionMenuItem('Export Attendance CSV', reverse('export_attendance'), icon_name='calendar',
@@ -152,7 +163,7 @@ def register_management_menu_item():
 
     submenu = Menu(items=[
         PermissionSubmenuMenuItem('Exports', exports_submenu, icon_name='download',
-                                   permission=['blowcomotion.access_dev_tools', 'blowcomotion.access_real_data_exports']),
+                                   permission=EXPORTS_PERMISSIONS),
         PermissionSubmenuMenuItem('Library Dashboards', library_dashboards_submenu, icon_name='french-horn',
                                    permission='blowcomotion.change_libraryinstrument'),
         PermissionMenuItem('Sync Gigs', reverse('sync_gigs'), icon_name='cog',
@@ -160,7 +171,7 @@ def register_management_menu_item():
     ])
     return PermissionSubmenuMenuItem(
         'Utilities', submenu, icon_name='cogs', order=10000,
-        permission=['blowcomotion.access_dev_tools', 'blowcomotion.access_real_data_exports'],
+        permission=UTILITIES_PERMISSIONS,
     )
 
 
