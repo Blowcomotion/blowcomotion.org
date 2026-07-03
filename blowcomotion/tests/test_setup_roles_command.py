@@ -1,7 +1,12 @@
 """
 Unit tests for the setup_roles management command.
 """
-from wagtail.models import GroupCollectionPermission, GroupPagePermission, Page
+from wagtail.models import (
+    GroupCollectionPermission,
+    GroupPagePermission,
+    GroupSitePermission,
+    Page,
+)
 
 from django.contrib.auth.models import Group, Permission
 from django.core.management import call_command
@@ -64,6 +69,7 @@ class SetupRolesCommandTests(TestCase):
         Group.objects.get_or_create(name='Moderators')
         call_command('setup_roles')
         for group_name in ('Editors', 'Moderators'):
+            group = Group.objects.get(name=group_name)
             codenames = self._perm_codenames(group_name)
             # Permissions are granted against wagtailimages.Image (not the
             # swapped-in CustomImage) since that's what Wagtail's image
@@ -71,9 +77,20 @@ class SetupRolesCommandTests(TestCase):
             # WAGTAILIMAGES_IMAGE_MODEL points to.
             self.assertIn('change_image', codenames)
             self.assertIn('change_media', codenames)
-            self.assertIn('change_notificationbanner', codenames)
-            self.assertIn('change_seosettings', codenames)
-            self.assertIn('change_collection', codenames)
+            # NotificationBanner/SeoSettings are BaseSiteSetting models -
+            # their permission policy checks GroupSitePermission, not the
+            # flat Group.permissions M2M.
+            site_setting_codenames = set(
+                GroupSitePermission.objects.filter(group=group).values_list('permission__codename', flat=True)
+            )
+            self.assertIn('change_notificationbanner', site_setting_codenames)
+            self.assertIn('change_seosettings', site_setting_codenames)
+            # Collection management perms are scoped via GroupCollectionPermission
+            # (Wagtail migration 0066), not the flat Group.permissions M2M.
+            collection_codenames = set(
+                GroupCollectionPermission.objects.filter(group=group).values_list('permission__codename', flat=True)
+            )
+            self.assertIn('change_collection', collection_codenames)
 
     def test_grants_page_and_collection_permissions_by_tier(self):
         Group.objects.get_or_create(name='Site Editors')

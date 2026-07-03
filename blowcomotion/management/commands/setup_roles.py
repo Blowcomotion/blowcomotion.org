@@ -4,6 +4,7 @@ from wagtail.models import (
     Collection,
     GroupCollectionPermission,
     GroupPagePermission,
+    GroupSitePermission,
     Page,
     Site,
 )
@@ -102,11 +103,17 @@ EDITOR_COLLECTION_MODEL_ACTIONS = {
     WagtailImage: ("add", "change", "view", "choose"),
     get_media_model(): ("add", "change", "view"),
     get_document_model(): ("add", "change", "view", "choose"),
+    # Wagtail migration 0066 moved collection management from a flat
+    # add/change/delete_collection Permission to per-collection
+    # GroupCollectionPermission records - granting the flat Permission is a
+    # no-op for both the admin UI and the actual permission check.
+    Collection: ("add", "change"),
 }
 MODERATOR_COLLECTION_MODEL_ACTIONS = {
     WagtailImage: ("add", "change", "delete", "view", "choose"),
     get_media_model(): ("add", "change", "delete", "view"),
     get_document_model(): ("add", "change", "delete", "view", "choose"),
+    Collection: ("add", "change", "delete"),
 }
 
 
@@ -127,6 +134,12 @@ def _grant_collection_perms(group, collection, model_actions):
             GroupCollectionPermission.objects.get_or_create(group=group, collection=collection, permission=perm)
 
 
+def _grant_site_setting_perms(group, perms, sites):
+    for perm in perms:
+        for site in sites:
+            GroupSitePermission.objects.get_or_create(group=group, site=site, permission=perm)
+
+
 class Command(BaseCommand):
     help = "Create/update role Groups with their permission sets (safe to re-run)"
 
@@ -144,16 +157,18 @@ class Command(BaseCommand):
     def _patch_editor_groups(self):
         image_perms = _model_perms(WagtailImage)
         media_perms = _model_perms(get_media_model())
-        # Global admin settings/config, granted to all editor tiers alike since
-        # none of them are meaningfully scoped by "site" vs "wiki".
-        global_settings_perms = (
-            _model_perms(Collection)
-            + _named_perm("blowcomotion", "change_notificationbanner")
+        # NotificationBanner and SEO settings are Wagtail BaseSiteSetting
+        # models - their permission policy checks per-site GroupSitePermission
+        # records, not the flat Group.permissions M2M, so these are granted
+        # via _grant_site_setting_perms() below rather than group.permissions.add().
+        site_setting_perms = (
+            _named_perm("blowcomotion", "change_notificationbanner")
             + _named_perm("wagtailseo", "change_seosettings")
         )
 
         root_collection = Collection.get_first_root_node()
         site_root_page = _site_root_page()
+        all_sites = list(Site.objects.all())
         wiki_root_page = Page.objects.filter(slug="wiki").first()
         if wiki_root_page is None:
             self.stdout.write(self.style.WARNING("No page with slug 'wiki' found, skipping Wiki group page permissions"))
@@ -165,8 +180,9 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f"Group '{group_name}' not found, skipping"))
                 continue
 
-            group.permissions.add(*image_perms, *media_perms, *global_settings_perms)
-            self.stdout.write(f"Patched '{group_name}' with Image + Media permissions")
+            group.permissions.add(*image_perms, *media_perms)
+            _grant_site_setting_perms(group, site_setting_perms, all_sites)
+            self.stdout.write(f"Patched '{group_name}' with Image + Media + site-settings permissions")
 
             collection_actions = (
                 MODERATOR_COLLECTION_MODEL_ACTIONS if tier == "moderator" else EDITOR_COLLECTION_MODEL_ACTIONS
