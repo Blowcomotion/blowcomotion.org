@@ -989,10 +989,6 @@ def dump_data(request):
     # Create an in-memory string buffer to capture the output
     output = StringIO()
     
-    # Check if the user wants real member data (default is scrubbed for privacy)
-    # Pass ?include_real_data=true to get actual member information
-    include_real_data = request.GET.get('include_real_data', 'false').lower() == 'true'
-
     # Base arguments for `dumpdata`
     # Always exclude auth users and site settings (may contain credentials and other sensitive data)
     base_args = [
@@ -1015,6 +1011,15 @@ def dump_data(request):
     if not (has_dev_access or has_analyst_access):
         logger.warning(f"Unauthorized access attempt to dump_data by user {request.user.username}")
         return JsonResponse({'error': 'You do not have permission to access this feature'}, status=403)
+
+    # Real member data is scrubbed by default, except for analysts who get it
+    # by default since they're already permitted to request it explicitly.
+    # Pass ?include_real_data=false to force scrubbed output instead.
+    include_real_data_param = request.GET.get('include_real_data')
+    if include_real_data_param is None:
+        include_real_data = has_analyst_access
+    else:
+        include_real_data = include_real_data_param.lower() == 'true'
 
     if include_real_data and not has_analyst_access:
         logger.warning(f"Unauthorized include_real_data access attempt to dump_data by user {request.user.username}")

@@ -140,8 +140,24 @@ class DumpDataViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_default_scrubs_member_data(self):
-        """Test that member data is scrubbed by default"""
-        self.client.login(username='admin', password='testpass123')
+        """Test that member data is scrubbed by default for users without analyst access"""
+        User.objects.create_user(
+            username='dev_no_analyst',
+            password='testpass123',
+            is_staff=True,
+        )
+        dev_perm = Permission.objects.get(codename='access_dev_tools')
+        dev_user = User.objects.get(username='dev_no_analyst')
+        dev_user.user_permissions.add(dev_perm)
+        try:
+            admin_permission = Permission.objects.get(
+                content_type__app_label='wagtailadmin',
+                codename='access_admin'
+            )
+            dev_user.user_permissions.add(admin_permission)
+        except Permission.DoesNotExist:
+            pass  # Permission might not exist in test DB
+        self.client.login(username='dev_no_analyst', password='testpass123')
         response = self.client.get(reverse('dump_data'))
         
         self.assertEqual(response.status_code, 200)
