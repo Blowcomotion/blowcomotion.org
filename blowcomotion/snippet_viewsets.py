@@ -31,7 +31,6 @@ class ChartViewSet(SnippetViewSet):
         'pdf',
         'instrument',
         Column('part', label='Part'),
-        UpdatedAtColumn()
     ]
     filterset_class = None  # Set in __init__
     ordering = ['song__title', 'instrument__name']
@@ -369,7 +368,7 @@ class AttendanceRecordViewSet(SnippetViewSet):
         UpdatedAtColumn()
     ]
     filterset_class = None  # Set in __init__
-    ordering = ['-date', 'member__last_name']
+    ordering = ['-date', '-id']
     panels = [
         FieldRowPanel([
             'date',
@@ -429,7 +428,6 @@ class LibraryInstrumentViewSet(SnippetViewSet):
         'patreon_active',
         'hide_from_rental',
         'hide_from_member_forms',
-        UpdatedAtColumn()
     ]
     filterset_class = None  # Set in __init__
     ordering = ['instrument__name', 'serial_number']
