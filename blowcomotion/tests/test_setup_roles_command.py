@@ -1,6 +1,8 @@
 """
 Unit tests for the setup_roles management command.
 """
+from wagtail.models import GroupCollectionPermission, GroupPagePermission, Page
+
 from django.contrib.auth.models import Group, Permission
 from django.core.management import call_command
 from django.test import TestCase
@@ -63,7 +65,61 @@ class SetupRolesCommandTests(TestCase):
         call_command('setup_roles')
         for group_name in ('Editors', 'Moderators'):
             codenames = self._perm_codenames(group_name)
-            self.assertIn('change_customimage', codenames)
+            # Permissions are granted against wagtailimages.Image (not the
+            # swapped-in CustomImage) since that's what Wagtail's image
+            # permission policy actually checks, regardless of which model
+            # WAGTAILIMAGES_IMAGE_MODEL points to.
+            self.assertIn('change_image', codenames)
+            self.assertIn('change_media', codenames)
+            self.assertIn('change_notificationbanner', codenames)
+            self.assertIn('change_seosettings', codenames)
+            self.assertIn('change_collection', codenames)
+
+    def test_grants_page_and_collection_permissions_by_tier(self):
+        Group.objects.get_or_create(name='Site Editors')
+        Group.objects.get_or_create(name='Site Moderators')
+        call_command('setup_roles')
+
+        editors = Group.objects.get(name='Site Editors')
+        editor_page_codenames = set(
+            GroupPagePermission.objects.filter(group=editors).values_list('permission__codename', flat=True)
+        )
+        self.assertIn('add_page', editor_page_codenames)
+        self.assertIn('change_page', editor_page_codenames)
+        self.assertNotIn('publish_page', editor_page_codenames)
+        self.assertNotIn('delete_page', editor_page_codenames)
+
+        editor_collection_codenames = set(
+            GroupCollectionPermission.objects.filter(group=editors).values_list('permission__codename', flat=True)
+        )
+        self.assertIn('choose_image', editor_collection_codenames)
+        self.assertIn('choose_document', editor_collection_codenames)
+        self.assertNotIn('delete_image', editor_collection_codenames)
+
+        moderators = Group.objects.get(name='Site Moderators')
+        moderator_page_codenames = set(
+            GroupPagePermission.objects.filter(group=moderators).values_list('permission__codename', flat=True)
+        )
+        self.assertIn('publish_page', moderator_page_codenames)
+        self.assertIn('delete_page', moderator_page_codenames)
+
+        moderator_collection_codenames = set(
+            GroupCollectionPermission.objects.filter(group=moderators).values_list('permission__codename', flat=True)
+        )
+        self.assertIn('delete_image', moderator_collection_codenames)
+
+    def test_grants_wiki_editors_page_permissions_scoped_to_wiki_page(self):
+        site_root = Page.objects.get(depth=2)
+        wiki_page = site_root.add_child(instance=Page(title='Blowco Wiki', slug='wiki'))
+        Group.objects.get_or_create(name='Wiki Editors')
+
+        call_command('setup_roles')
+
+        wiki_editors = Group.objects.get(name='Wiki Editors')
+        page_perms = GroupPagePermission.objects.filter(group=wiki_editors)
+        self.assertTrue(page_perms.exists())
+        for perm in page_perms:
+            self.assertEqual(perm.page_id, wiki_page.id)
 
     def test_missing_editors_group_does_not_raise(self):
         Group.objects.filter(name__in=['Editors', 'Moderators']).delete()
@@ -91,4 +147,4 @@ class SetupRolesCommandTests(TestCase):
         call_command('setup_roles')
         for group_name in renamed_group_names:
             codenames = self._perm_codenames(group_name)
-            self.assertIn('change_customimage', codenames)
+            self.assertIn('change_image', codenames)
