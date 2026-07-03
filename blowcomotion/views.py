@@ -934,10 +934,9 @@ def sync_gigs_admin(request):
     This provides a web interface to run the sync_gigs management command
     for cases when immediate sync is needed (e.g., after adding new gigs).
     """
-    # Check if the user is superuser
-    if not request.user.is_superuser:
+    if not request.user.has_perm('blowcomotion.change_cachedgig'):
         logger.warning(f"Unauthorized access attempt to sync_gigs_admin by user {request.user.username}")
-        return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
+        return JsonResponse({'error': 'You do not have permission to access this feature'}, status=403)
     
     if request.method == 'POST':
         # Run the sync
