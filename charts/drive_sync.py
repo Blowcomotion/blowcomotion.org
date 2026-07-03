@@ -107,8 +107,9 @@ class ResolvedFile:
     drive_file: dict
     parsed: "ParsedFile"
     matched_inst: object   # Instrument or None
-    inst_conf: str         # "high", "low", "ambiguous"
+    inst_conf: str         # "high", "low", "ambiguous", "conductor", "key"
     part: str
+    is_conductor_chart: bool = False
 
 
 @dataclass
@@ -352,7 +353,26 @@ def resolve_drive_file(drive_file: dict, instruments: list) -> "ResolvedFile":
     parsed = parse_filename(drive_file["name"])
     if parsed.is_key:
         return ResolvedFile(drive_file=drive_file, parsed=parsed, matched_inst=None, inst_conf="key", part="")
-    hint = "Conductor" if parsed.is_score else parsed.instrument_hint
+
+    if parsed.is_score:
+        # Score/conductor files become conductor charts. Check alt_hint first — a filename like
+        # "7.40 - Flute.pdf" has a numeric song title that triggers is_score but carries a real
+        # instrument in the post-dash position; prefer that over marking it a conductor chart.
+        if parsed.alt_hint:
+            alt_canonical, alt_ordinal, alt_via_alias = _resolve_alt_hint(parsed.alt_hint)
+            alt_inst, alt_conf = match_instrument(alt_canonical, instruments) if alt_canonical else (None, "low")
+            if alt_conf != "low" and alt_inst is not None:
+                part = f"{alt_ordinal} {alt_inst.name}".strip() if alt_ordinal else ""
+                return ResolvedFile(
+                    drive_file=drive_file, parsed=parsed,
+                    matched_inst=alt_inst, inst_conf=alt_conf, part=part,
+                )
+        return ResolvedFile(
+            drive_file=drive_file, parsed=parsed,
+            matched_inst=None, inst_conf="conductor", part="", is_conductor_chart=True,
+        )
+
+    hint = parsed.instrument_hint
     matched_inst, inst_conf = match_instrument(hint, instruments) if hint else (None, "low")
     part = f"{parsed.part_ordinal} {matched_inst.name}".strip() if (matched_inst and parsed.part_ordinal) else ""
 
@@ -365,9 +385,7 @@ def resolve_drive_file(drive_file: dict, instruments: list) -> "ResolvedFile":
     if parsed.alt_hint:
         alt_canonical, alt_ordinal, alt_via_alias = _resolve_alt_hint(parsed.alt_hint)
         alt_inst, alt_conf = match_instrument(alt_canonical, instruments) if alt_canonical else (None, "low")
-        # Score-detected files always matched to "Conductor"; don't treat that as exact
-        # so the alt_hint can still override when the filename carries a real instrument.
-        primary_is_exact = (not parsed.is_score) and matched_inst is not None and hint.lower() == matched_inst.name.lower()
+        primary_is_exact = matched_inst is not None and hint.lower() == matched_inst.name.lower()
         prefer_alt = (
             (inst_conf == "low" and alt_conf != "low")
             or (alt_via_alias and alt_conf != "low")
