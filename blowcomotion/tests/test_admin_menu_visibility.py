@@ -55,3 +55,13 @@ class AdminMenuVisibilityTests(TestCase):
         self.assertIn('Utilities', html)
         self.assertIn('Rental Requests', html)
         self.assertIn('Import Charts', html)
+
+    def test_data_analyst_sees_utilities_and_exports_menu(self):
+        access_admin = Permission.objects.get(content_type__app_label='wagtailadmin', codename='access_admin')
+        analyst_perm = Permission.objects.get(codename='access_real_data_exports')
+        user = User.objects.create_user(username='analyst', password='pw', is_staff=True)
+        user.user_permissions.add(access_admin, analyst_perm)
+        html = self._get_admin_home_html(user)
+        self.assertIn('Utilities', html)
+        self.assertIn('Exports', html)
+        self.assertIn('Dump Data', html)

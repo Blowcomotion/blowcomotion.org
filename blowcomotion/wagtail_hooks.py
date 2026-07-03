@@ -42,15 +42,25 @@ register_snippet(FormsViewSetGroup)
 register_snippet(SyncViewSetGroup)
 
 
+def _permission_granted(user, permission):
+    """
+    `permission` may be a single permission string, an iterable of permission
+    strings (any one of which grants visibility), or None (always shown).
+    """
+    if permission is None:
+        return True
+    if isinstance(permission, str):
+        return user.has_perm(permission)
+    return any(user.has_perm(p) for p in permission)
+
+
 class PermissionMenuItem(MenuItem):
     def __init__(self, *args, permission=None, **kwargs):
         self._permission = permission
         super().__init__(*args, **kwargs)
 
     def is_shown(self, request):
-        if self._permission is None:
-            return True
-        return request.user.has_perm(self._permission)
+        return _permission_granted(request.user, self._permission)
 
 
 class PermissionSubmenuMenuItem(SubmenuMenuItem):
@@ -59,9 +69,7 @@ class PermissionSubmenuMenuItem(SubmenuMenuItem):
         super().__init__(*args, **kwargs)
 
     def is_shown(self, request):
-        if self._permission is None:
-            return True
-        return request.user.has_perm(self._permission)
+        return _permission_granted(request.user, self._permission)
 
 
 @hooks.register("register_admin_urls")
@@ -122,7 +130,7 @@ def register_management_menu_item():
     """
     exports_submenu = Menu(items=[
         PermissionMenuItem('Dump Data', reverse('dump_data'), icon_name='download',
-                            permission='blowcomotion.access_dev_tools'),
+                            permission=['blowcomotion.access_dev_tools', 'blowcomotion.access_real_data_exports']),
         PermissionMenuItem('Export Members CSV', reverse('export_members'), icon_name='table',
                             permission='blowcomotion.access_real_data_exports'),
         PermissionMenuItem('Export Attendance CSV', reverse('export_attendance'), icon_name='calendar',
@@ -144,18 +152,15 @@ def register_management_menu_item():
 
     submenu = Menu(items=[
         PermissionSubmenuMenuItem('Exports', exports_submenu, icon_name='download',
-                                   permission='blowcomotion.access_dev_tools'),
+                                   permission=['blowcomotion.access_dev_tools', 'blowcomotion.access_real_data_exports']),
         PermissionSubmenuMenuItem('Library Dashboards', library_dashboards_submenu, icon_name='french-horn',
                                    permission='blowcomotion.change_libraryinstrument'),
         PermissionMenuItem('Sync Gigs', reverse('sync_gigs'), icon_name='cog',
                             permission='blowcomotion.change_cachedgig'),
     ])
-    # ponytail: Utilities menu requires access_dev_tools, so a Data-Analyst-only
-    # user has no menu entry point to the exports (still reachable by URL). Revisit
-    # if Data Analyst needs its own menu item.
     return PermissionSubmenuMenuItem(
         'Utilities', submenu, icon_name='cogs', order=10000,
-        permission='blowcomotion.access_dev_tools',
+        permission=['blowcomotion.access_dev_tools', 'blowcomotion.access_real_data_exports'],
     )
 
 
