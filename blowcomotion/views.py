@@ -13,6 +13,7 @@ import requests
 from django import forms as django_forms
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.cache import cache
 from django.core.mail import send_mail
@@ -74,6 +75,7 @@ BIRTHDAY_RANGE_DAYS = 30
 # Instrument Library Dashboard Views
 
 
+@permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
 def instrument_library_rented(request):
     instruments = (
         LibraryInstrument.objects.filter(status=LibraryInstrument.STATUS_RENTED)
@@ -90,6 +92,7 @@ def instrument_library_rented(request):
     )
 
 
+@permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
 def instrument_library_available(request):
     instruments = (
         LibraryInstrument.objects.filter(status=LibraryInstrument.STATUS_AVAILABLE)
@@ -106,6 +109,7 @@ def instrument_library_available(request):
     )
 
 
+@permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
 def instrument_library_needs_repair(request):
     instruments = (
         LibraryInstrument.objects.filter(
@@ -2455,6 +2459,7 @@ def _send_rental_returned_email(request, submission, condition_notes):
         ).send(fail_silently=True)
 
 
+@permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
 def rental_requests_dashboard(request):
     import re as _re
 
@@ -2738,6 +2743,7 @@ def rental_requests_dashboard(request):
     })
 
 
+@permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
 def rental_request_review(request, pk):
     submission = get_object_or_404(InstrumentRentalRequestSubmission, pk=pk)
     form = RentalRequestReviewForm(submission=submission)
@@ -2785,6 +2791,7 @@ def rental_request_review(request, pk):
     })
 
 
+@permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
 def rental_request_return(request, pk):
     submission = get_object_or_404(
         InstrumentRentalRequestSubmission,
