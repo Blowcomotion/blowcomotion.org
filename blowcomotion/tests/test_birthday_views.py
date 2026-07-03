@@ -5,15 +5,24 @@ Tests have been updated to work with BIRTHDAY_RANGE_DAYS = 30 (changed from 10).
 The birthday view displays birthdays from 30 days in the past to 30 days in the future.
 """
 
-import base64
 from datetime import date, timedelta
 
-from wagtail.models import Site
-
-from django.test import Client, TestCase, override_settings
+from django.contrib.auth.models import Permission, User
+from django.test import Client, TestCase
 from django.urls import reverse
 
-from blowcomotion.models import Member, SiteSettings
+from blowcomotion.models import Member
+
+
+def login_with_perms(client, username, *codenames, superuser=False):
+    """Create a user with the given permission codenames (or a superuser) and log them in."""
+    if superuser:
+        User.objects.create_superuser(username=username, email=f'{username}@example.com', password='pw')
+    else:
+        user = User.objects.create_user(username=username, password='pw', is_staff=True)
+        for codename in codenames:
+            user.user_permissions.add(Permission.objects.get(codename=codename))
+    client.login(username=username, password='pw')
 
 
 class BirthdayViewTests(TestCase):
@@ -22,14 +31,8 @@ class BirthdayViewTests(TestCase):
     def setUp(self):
         """Set up test data"""
         self.client = Client()
-        
-        # Set up SiteSettings with no password (authentication disabled)
-        self.site = Site.objects.get(is_default_site=True)
-        self.site_settings = SiteSettings.objects.create(
-            site=self.site,
-            birthdays_password=None  # No password = no authentication required
-        )
-        
+        login_with_perms(self.client, 'taker', 'view_attendancerecord')
+
         # Create test members with different birthday scenarios
         today = date.today()
         
@@ -284,144 +287,29 @@ class BirthdayViewTests(TestCase):
         self.assertEqual(len(diana_names), 1, "Diana should be included in upcoming birthdays")
 
 
-class BirthdayViewHTTPAuthTests(TestCase):
-    """Test cases for HTTP Basic Auth on birthdays view"""
+class BirthdayPermissionTests(TestCase):
+    """Test cases for permission-based access to the birthdays view"""
 
     def setUp(self):
-        """Set up test data"""
         self.client = Client()
-        
-        # Set up SiteSettings with test password
-        self.site = Site.objects.get(is_default_site=True)
-        self.site_settings = SiteSettings.objects.create(
-            site=self.site,
-            birthdays_password='testpassword'
-        )
-        
-        # Create a test member for basic testing
-        today = date.today()
-        self.member = Member.objects.create(
-            first_name="Test",
-            last_name="Member",
-            birth_month=today.month,
-            birth_day=today.day,
-            birth_year=1990,
-            is_active=True
-        )
 
-    def test_no_auth_returns_401(self):
-        """Test that accessing without auth returns 401"""
+    def test_anonymous_redirected_to_login(self):
         response = self.client.get(reverse('birthdays'))
-        self.assertEqual(response.status_code, 401)
-        self.assertIn('WWW-Authenticate', response)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/member/login/', response.url)
 
-
-class BirthdayAuthenticationTests(TestCase):
-    """Test cases for SiteSettings-based authentication for birthdays"""
-
-    def setUp(self):
-        """Set up test data"""
-        self.client = Client()
-        self.site = Site.objects.get(is_default_site=True)
-
-    def test_no_auth_when_no_password_set(self):
-        """Test that authentication is skipped when no password is set in SiteSettings"""
-        # Create SiteSettings with no password
-        SiteSettings.objects.create(
-            site=self.site,
-            birthdays_password=None
-        )
-        
-        # Should be able to access without authentication
+    def test_staff_without_permission_denied(self):
+        login_with_perms(self.client, 'staff')
         response = self.client.get(reverse('birthdays'))
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 403)
 
-    def test_no_auth_when_empty_password_set(self):
-        """Test that authentication is skipped when empty password is set in SiteSettings"""
-        # Create SiteSettings with empty password
-        SiteSettings.objects.create(
-            site=self.site,
-            birthdays_password=''
-        )
-        
-        # Should be able to access without authentication
+    def test_view_permission_allows_access(self):
+        login_with_perms(self.client, 'taker', 'view_attendancerecord')
         response = self.client.get(reverse('birthdays'))
-        self.assertEqual(response.status_code, 200)
-
-    def test_auth_required_when_password_set(self):
-        """Test that authentication is required when password is set in SiteSettings"""
-        # Create SiteSettings with password
-        SiteSettings.objects.create(
-            site=self.site,
-            birthdays_password='testpassword'
-        )
-        
-        # Should require authentication
-        response = self.client.get(reverse('birthdays'))
-        self.assertEqual(response.status_code, 401)
-        self.assertIn('WWW-Authenticate', response)
-
-    def test_correct_password_allows_access(self):
-        """Test that correct password allows access"""
-        # Create SiteSettings with password
-        SiteSettings.objects.create(
-            site=self.site,
-            birthdays_password='testpassword'
-        )
-        
-        # Set up correct credentials
-        credentials = base64.b64encode(b'testuser:testpassword').decode('ascii')
-        self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
-        
-        # Should allow access
-        response = self.client.get(reverse('birthdays'))
-        self.assertEqual(response.status_code, 200)
-
-    def test_wrong_password_denies_access(self):
-        """Test that wrong password denies access"""
-        # Create SiteSettings with password
-        SiteSettings.objects.create(
-            site=self.site,
-            birthdays_password='testpassword'
-        )
-        
-        # Set up wrong credentials
-        credentials = base64.b64encode(b'testuser:wrongpassword').decode('ascii')
-        self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
-        
-        # Should deny access
-        response = self.client.get(reverse('birthdays'))
-        self.assertEqual(response.status_code, 401)
-
-    def test_correct_auth_allows_access(self):
-        """Test that correct HTTP Basic Auth allows access"""
-        # Create SiteSettings with password to enable auth
-        SiteSettings.objects.create(
-            site=self.site,
-            birthdays_password='testpassword'
-        )
-        
-        # Create Basic Auth header
-        credentials = base64.b64encode(b'user:testpassword').decode('ascii')
-        response = self.client.get(
-            reverse('birthdays'),
-            HTTP_AUTHORIZATION=f'Basic {credentials}'
-        )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Member Birthdays")
 
-    def test_incorrect_auth_returns_401(self):
-        """Test that incorrect HTTP Basic Auth returns 401"""
-        # Create SiteSettings with password to enable auth
-        SiteSettings.objects.create(
-            site=self.site,
-            birthdays_password='testpassword'
-        )
-        
-        # Create Basic Auth header with wrong password
-        credentials = base64.b64encode(b'user:wrongpassword').decode('ascii')
-        response = self.client.get(
-            reverse('birthdays'),
-            HTTP_AUTHORIZATION=f'Basic {credentials}'
-        )
-        self.assertEqual(response.status_code, 401)
+    def test_superuser_allowed(self):
+        login_with_perms(self.client, 'admin', superuser=True)
+        response = self.client.get(reverse('birthdays'))
+        self.assertEqual(response.status_code, 200)

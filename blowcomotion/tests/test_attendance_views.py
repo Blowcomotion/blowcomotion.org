@@ -2,13 +2,10 @@
 Unit tests for attendance tracking views.
 """
 
-import base64
 from datetime import date, timedelta
 from unittest.mock import patch
 
-from wagtail.models import Site
-
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Permission, User
 from django.http import Http404
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
@@ -20,89 +17,108 @@ from blowcomotion.models import (
     Member,
     MemberInstrument,
     Section,
-    SiteSettings,
 )
 
 
-class AttendanceAuthenticationTests(TestCase):
-    """Test cases for SiteSettings-based authentication"""
+def login_with_perms(client, username, *codenames, superuser=False):
+    """Create a user with the given permission codenames (or a superuser) and log them in."""
+    if superuser:
+        User.objects.create_superuser(username=username, email=f'{username}@example.com', password='pw')
+    else:
+        user = User.objects.create_user(username=username, password='pw', is_staff=True)
+        for codename in codenames:
+            user.user_permissions.add(Permission.objects.get(codename=codename))
+    client.login(username=username, password='pw')
+
+
+class AttendancePermissionTests(TestCase):
+    """Test cases for permission-based access to attendance/birthday views"""
 
     def setUp(self):
-        """Set up test data"""
         self.client = Client()
-        self.site = Site.objects.get(is_default_site=True)
-        
-        # Create test section for basic functionality
         self.section = Section.objects.create(name="Test Section")
 
-    def test_no_auth_when_no_password_set(self):
-        """Test that authentication is skipped when no password is set in SiteSettings"""
-        # Create SiteSettings with no password
-        SiteSettings.objects.create(
-            site=self.site,
-            attendance_password=None
-        )
-        
-        # Should be able to access without authentication
+    def test_anonymous_redirected_to_login(self):
+        response = self.client.get(reverse('attendance-capture', args=['test-section']))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/member/login/', response.url)
+
+    def test_staff_without_permission_denied(self):
+        login_with_perms(self.client, 'staff')
+        response = self.client.get(reverse('attendance-capture', args=['test-section']))
+        self.assertEqual(response.status_code, 403)
+
+    def test_view_only_user_denied_attendance_capture(self):
+        """add_attendancerecord is required to capture attendance; view alone isn't enough"""
+        login_with_perms(self.client, 'viewer', 'view_attendancerecord')
+        response = self.client.get(reverse('attendance-capture', args=['test-section']))
+        self.assertEqual(response.status_code, 403)
+
+    def test_add_permission_allows_attendance_capture(self):
+        login_with_perms(self.client, 'taker', 'add_attendancerecord')
         response = self.client.get(reverse('attendance-capture', args=['test-section']))
         self.assertEqual(response.status_code, 200)
 
-    def test_no_auth_when_empty_password_set(self):
-        """Test that authentication is skipped when empty password is set in SiteSettings"""
-        # Create SiteSettings with empty password
-        SiteSettings.objects.create(
-            site=self.site,
-            attendance_password=''
-        )
-        
-        # Should be able to access without authentication
-        response = self.client.get(reverse('attendance-capture', args=['test-section']))
+    def test_view_permission_allows_attendance_reports(self):
+        login_with_perms(self.client, 'reporter', 'view_attendancerecord')
+        response = self.client.get(reverse('attendance-reports'))
         self.assertEqual(response.status_code, 200)
 
-    def test_auth_required_when_password_set(self):
-        """Test that authentication is required when password is set in SiteSettings"""
-        # Create SiteSettings with password
-        SiteSettings.objects.create(
-            site=self.site,
-            attendance_password='testpassword'
-        )
-        
-        # Should require authentication
-        response = self.client.get(reverse('attendance-capture', args=['test-section']))
-        self.assertEqual(response.status_code, 401)
-        self.assertIn('WWW-Authenticate', response)
+    def test_add_only_user_denied_attendance_reports(self):
+        """view_attendancerecord is required for reports; add alone isn't enough"""
+        login_with_perms(self.client, 'taker', 'add_attendancerecord')
+        response = self.client.get(reverse('attendance-reports'))
+        self.assertEqual(response.status_code, 403)
 
-    def test_correct_password_allows_access(self):
-        """Test that correct password allows access"""
-        # Create SiteSettings with password
-        SiteSettings.objects.create(
-            site=self.site,
-            attendance_password='testpassword'
-        )
-        
-        # Set up correct credentials
-        credentials = base64.b64encode(b'testuser:testpassword').decode('ascii')
-        self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
-        
-        # Should allow access
-        response = self.client.get(reverse('attendance-capture', args=['test-section']))
+    def test_view_permission_allows_gigs_for_date(self):
+        login_with_perms(self.client, 'reporter', 'view_attendancerecord')
+        response = self.client.get(reverse('gigs-for-date'), {'date': '2024-08-15'})
         self.assertEqual(response.status_code, 200)
 
-    def test_wrong_password_denies_access(self):
-        """Test that wrong password denies access"""
-        # Create SiteSettings with password
-        SiteSettings.objects.create(
-            site=self.site,
-            attendance_password='testpassword'
-        )
-        
-        # Set up wrong credentials
-        credentials = base64.b64encode(b'testuser:wrongpassword').decode('ascii')
-        self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
-        
-        # Should deny access
-        response = self.client.get(reverse('attendance-capture', args=['test-section']))
-        self.assertEqual(response.status_code, 401)
+    def test_add_only_user_denied_gigs_for_date(self):
+        """view_attendancerecord is required for gigs-for-date; add alone isn't enough"""
+        login_with_perms(self.client, 'taker', 'add_attendancerecord')
+        response = self.client.get(reverse('gigs-for-date'), {'date': '2024-08-15'})
+        self.assertEqual(response.status_code, 403)
+
+    def test_view_permission_allows_birthdays(self):
+        login_with_perms(self.client, 'reporter', 'view_attendancerecord')
+        response = self.client.get(reverse('birthdays'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_add_permission_allows_inactive_members(self):
+        login_with_perms(self.client, 'taker', 'add_attendancerecord')
+        response = self.client.get(reverse('inactive-members'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_only_user_denied_inactive_members(self):
+        """add_attendancerecord is required for inactive-members; view alone isn't enough"""
+        login_with_perms(self.client, 'viewer', 'view_attendancerecord')
+        response = self.client.get(reverse('inactive-members'))
+        self.assertEqual(response.status_code, 403)
+
+    def test_view_permission_allows_attendance_section_report(self):
+        login_with_perms(self.client, 'reporter', 'view_attendancerecord')
+        response = self.client.get(reverse('attendance-section-report', args=['test-section']))
+        self.assertEqual(response.status_code, 200)
+
+    def test_staff_without_permission_denied_attendance_section_report(self):
+        login_with_perms(self.client, 'staff')
+        response = self.client.get(reverse('attendance-section-report', args=['test-section']))
+        self.assertEqual(response.status_code, 403)
+
+    def test_superuser_allowed_on_all_gated_views(self):
+        login_with_perms(self.client, 'admin', superuser=True)
+        for url in (
+            reverse('attendance-capture', args=['test-section']),
+            reverse('attendance-reports'),
+            reverse('attendance-section-report', args=['test-section']),
+            reverse('gigs-for-date') + '?date=2024-08-15',
+            reverse('birthdays'),
+            reverse('inactive-members'),
+        ):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200, url)
 
 
 class AttendanceCaptureViewTests(TestCase):
@@ -111,18 +127,9 @@ class AttendanceCaptureViewTests(TestCase):
     def setUp(self):
         """Set up test data"""
         self.client = Client()
-        
-        # Set up SiteSettings with test password
-        self.site = Site.objects.get(is_default_site=True)
-        self.site_settings = SiteSettings.objects.create(
-            site=self.site,
-            attendance_password='testpassword'
-        )
-        
-        # Set up HTTP Basic Auth credentials
-        credentials = base64.b64encode(b'testuser:testpassword').decode('ascii')
-        self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
-        
+
+        login_with_perms(self.client, 'taker', 'add_attendancerecord')
+
         # Create test sections
         self.high_brass = Section.objects.create(name="High Brass")
         self.low_brass = Section.objects.create(name="Low Brass")
@@ -913,21 +920,12 @@ class AttendanceReportsViewTests(TestCase):
     def setUp(self):
         """Set up test data"""
         self.client = Client()
-        
-        # Set up SiteSettings with test password
-        self.site = Site.objects.get(is_default_site=True)
-        self.site_settings = SiteSettings.objects.create(
-            site=self.site,
-            attendance_password='testpassword'
-        )
-        
-        # Set up HTTP Basic Auth credentials
-        credentials = base64.b64encode(b'testuser:testpassword').decode('ascii')
-        self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
-        
+
+        login_with_perms(self.client, 'reporter', 'view_attendancerecord')
+
         # Create test section
         self.section = Section.objects.create(name="Test Section")
-        
+
         # Create test member
         self.member = Member.objects.create(
             first_name="Test",
@@ -935,7 +933,7 @@ class AttendanceReportsViewTests(TestCase):
             email="test@example.com",
             is_active=True
         )
-        
+
         # Create test attendance records
         self.attendance1 = AttendanceRecord.objects.create(
             date=date.today(),
@@ -1017,21 +1015,12 @@ class AttendanceSectionReportViewTests(TestCase):
     def setUp(self):
         """Set up test data"""
         self.client = Client()
-        
-        # Set up SiteSettings with test password
-        self.site = Site.objects.get(is_default_site=True)
-        self.site_settings = SiteSettings.objects.create(
-            site=self.site,
-            attendance_password='testpassword'
-        )
-        
-        # Set up HTTP Basic Auth credentials
-        credentials = base64.b64encode(b'testuser:testpassword').decode('ascii')
-        self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
-        
+
+        login_with_perms(self.client, 'reporter', 'view_attendancerecord')
+
         # Create test section
         self.section = Section.objects.create(name="Test Section")
-        
+
         # Create test instrument
         self.instrument = Instrument.objects.create(
             name="Test Instrument",
@@ -1206,94 +1195,14 @@ class AttendanceSectionReportViewTests(TestCase):
 
 
 class AttendanceViewsIntegrationTests(TestCase):
-    def test_attendance_capture_post_populates_join_date_if_null(self):
-        """Test that recording attendance populates join_date if it hasn't been set yet"""
-        attendance_date = date.today()
-        
-        # Create a member without a join_date
-        member_no_join_date = Member.objects.create(
-            first_name="New",
-            last_name="Member",
-            email="new.member@example.com",
-            is_active=True,
-            join_date=None  # Explicitly set to None
-        )
-        MemberInstrument.objects.create(member=member_no_join_date, instrument=self.trumpet)
-        
-        # Verify join_date is None before attendance
-        self.assertIsNone(member_no_join_date.join_date)
-        
-        response = self.client.post(
-            reverse('attendance-capture', args=['high-brass']),
-            {
-                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
-                f'member_{member_no_join_date.id}': 'on',
-            }
-        )
-        
-        self.assertEqual(response.status_code, 200)
-        
-        # Check that join_date was populated with attendance date
-        member_no_join_date.refresh_from_db()
-        self.assertEqual(member_no_join_date.join_date, attendance_date)
-        
-        # Check that last_seen was also updated
-        self.assertEqual(member_no_join_date.last_seen, attendance_date)
-    
-    def test_attendance_capture_post_preserves_existing_join_date(self):
-        """Test that recording attendance preserves existing join_date"""
-        attendance_date = date.today()
-        existing_join_date = date.today() - timedelta(days=30)
-        
-        # Create a member with an existing join_date
-        member_with_join_date = Member.objects.create(
-            first_name="Existing",
-            last_name="Member",
-            email="existing.member@example.com",
-            is_active=True,
-            join_date=existing_join_date
-        )
-        MemberInstrument.objects.create(member=member_with_join_date, instrument=self.trumpet)
-        
-        # Verify join_date is set before attendance
-        self.assertEqual(member_with_join_date.join_date, existing_join_date)
-        
-        response = self.client.post(
-            reverse('attendance-capture', args=['high-brass']),
-            {
-                'attendance_date': attendance_date.strftime('%Y-%m-%d'),
-                f'member_{member_with_join_date.id}': 'on',
-            }
-        )
-        
-        self.assertEqual(response.status_code, 200)
-        
-        # Check that join_date was NOT changed
-        member_with_join_date.refresh_from_db()
-        self.assertEqual(member_with_join_date.join_date, existing_join_date)
-        
-        # Check that last_seen was updated
-        self.assertEqual(member_with_join_date.last_seen, attendance_date)
-
-
-class AttendanceViewsIntegrationTests(TestCase):
     """Integration tests for attendance views working together"""
 
     def setUp(self):
         """Set up test data"""
         self.client = Client()
-        
-        # Set up SiteSettings with test password
-        self.site = Site.objects.get(is_default_site=True)
-        self.site_settings = SiteSettings.objects.create(
-            site=self.site,
-            attendance_password='testpassword'
-        )
-        
-        # Set up HTTP Basic Auth credentials
-        credentials = base64.b64encode(b'testuser:testpassword').decode('ascii')
-        self.client.defaults['HTTP_AUTHORIZATION'] = f'Basic {credentials}'
-        
+
+        login_with_perms(self.client, 'taker', 'add_attendancerecord', 'view_attendancerecord')
+
         # Create comprehensive test data
         self.section1 = Section.objects.create(name="Brass")
         self.section2 = Section.objects.create(name="Woodwinds")
@@ -1401,14 +1310,9 @@ class GigsEndpointTests(TestCase):
     def setUp(self):
         """Set up test data"""
         self.client = Client()
-        self.site = Site.objects.get(is_default_site=True)
-        
-        # Create SiteSettings with no password for testing
-        SiteSettings.objects.create(
-            site=self.site,
-            attendance_password=None
-        )
-        
+
+        login_with_perms(self.client, 'taker', 'add_attendancerecord', 'view_attendancerecord')
+
         # Clear cache for clean tests
         from django.core.cache import cache
         cache.clear()
@@ -1560,12 +1464,14 @@ class InactiveMembersViewTests(TestCase):
     """Test cases for the inactive_members view"""
     
     def setUp(self):
+        login_with_perms(self.client, 'taker', 'add_attendancerecord')
+
         # Create test section
         self.section = Section.objects.create(name="Test Section")
-        
+
         # Create test instruments
         self.instrument = Instrument.objects.create(name="Test Instrument", section=self.section)
-        
+
         # Create active and inactive members
         self.active_member = Member.objects.create(
             first_name="Active",

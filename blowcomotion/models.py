@@ -138,19 +138,6 @@ class SiteSettings(BaseSiteSetting):
         help_text="URL to Patreon page",
     )
     
-    # HTTP Basic Auth passwords for protected views
-    attendance_password = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-        help_text="Password for accessing the attendance tracking system",
-    )
-    birthdays_password = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-        help_text="Password for accessing the birthdays page",
-    )
     attendance_cleanup_days = models.IntegerField(
         default=90,
         help_text=(
@@ -212,11 +199,6 @@ class SiteSettings(BaseSiteSetting):
             FieldPanel('patreon_url'),
         ], heading="Donation Links"),
         
-        MultiFieldPanel([
-            FieldPanel('attendance_password'),
-            FieldPanel('birthdays_password'),
-        ], heading="Access Control", help_text="Set passwords for protected areas of the site. Leave blank to disable authentication for that area."),
-
         MultiFieldPanel([
             FieldPanel('attendance_cleanup_days'),
             FieldPanel('nag_cooldown_days'),

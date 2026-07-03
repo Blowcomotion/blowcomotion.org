@@ -67,10 +67,9 @@ ROLE_PERMISSIONS = {
         + _model_perms(SongVideo)
         + ACCESS_ADMIN()
     ),
-    # Grants admin access to the AttendanceRecord snippet UI. The public
-    # attendance/birthday views (attendance_capture, birthdays, etc.) still use
-    # the separate HTTP Basic Auth password until the #301 follow-up converts
-    # them to this permission.
+    # Grants admin access to the AttendanceRecord snippet UI and gates the
+    # public attendance/birthday views (attendance_capture, birthdays, etc.),
+    # which now check add/view_attendancerecord instead of a shared password.
     "Attendance Taker": lambda: _model_perms(AttendanceRecord) + ACCESS_ADMIN(),
 }
 
