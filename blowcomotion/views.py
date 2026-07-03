@@ -1,11 +1,9 @@
-import base64
 import json
 import logging
 import os
 import tempfile
 from collections import OrderedDict, defaultdict
 from datetime import date, datetime, timedelta
-from functools import wraps
 from io import StringIO
 
 import requests
@@ -13,7 +11,7 @@ import requests
 from django import forms as django_forms
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.decorators import permission_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.cache import cache
 from django.core.mail import send_mail
@@ -334,193 +332,6 @@ def get_next_year_birthday_info(member, today, future_date):
         pass
     
     return None
-
-
-def http_basic_auth_generic(password_setting_or_value, realm_name, username=None, direct_password=None):
-    """
-    Generic decorator for HTTP Basic Authentication
-    
-    Args:
-        password_setting_or_value: The settings key to get the password from, or the password value if direct_password is True
-        realm_name: The authentication realm name
-        username: If provided, both username and password must match. If None, only password is checked.
-        direct_password: If True, password_setting_or_value is used as the password directly
-    """
-    def decorator(func):
-        @wraps(func)
-        def wrapper(request, *args, **kwargs):
-            # Get password
-            if direct_password:
-                password = password_setting_or_value
-            else:
-                # Get password from settings each time (allows for test overrides)
-                password = getattr(settings, password_setting_or_value, None)
-            
-            # If password is None, skip authentication
-            if password is None:
-                return func(request, *args, **kwargs)
-            
-            # Check if Authorization header exists
-            if 'HTTP_AUTHORIZATION' not in request.META:
-                response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = f'Basic realm="{realm_name}"'
-                return response
-            
-            # Parse the Authorization header
-            auth_header = request.META['HTTP_AUTHORIZATION']
-            if not auth_header.startswith('Basic '):
-                response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = f'Basic realm="{realm_name}"'
-                return response
-            
-            # Decode credentials
-            try:
-                encoded_credentials = auth_header[6:]  # Remove 'Basic '
-                decoded_credentials = base64.b64decode(encoded_credentials).decode('utf-8')
-                provided_username, provided_password = decoded_credentials.split(':', 1)
-            except (ValueError, UnicodeDecodeError):
-                response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = f'Basic realm="{realm_name}"'
-                return response
-            
-            # Check credentials
-            if username is None:
-                # Only check password if username is None
-                if provided_password == password:
-                    return func(request, *args, **kwargs)
-            else:
-                # Check both username and password
-                if provided_username == username and provided_password == password:
-                    return func(request, *args, **kwargs)
-            
-            response = HttpResponse('Unauthorized', status=401)
-            response['WWW-Authenticate'] = f'Basic realm="{realm_name}"'
-            return response
-        
-        return wrapper
-    return decorator
-
-
-def http_basic_auth(username=None, password=None):
-    """
-    Decorator for HTTP Basic Authentication
-    If username is None, any username will be accepted (only password is checked)
-    If password is provided directly, uses that password for authentication.
-    If password is None, uses attendance_password from SiteSettings.
-    If attendance_password is None or empty, authentication is skipped.
-    """
-    def decorator(func):
-        @wraps(func)
-        def wrapper(request, *args, **kwargs):
-            if password is not None:
-                # Use the provided password directly
-                auth_password = password
-            else:
-                # Get password from SiteSettings
-                try:
-                    site_settings = SiteSettings.for_request(request)
-                    auth_password = site_settings.attendance_password
-                except:
-                    auth_password = None
-            
-            # If password is None or empty, skip authentication
-            if not auth_password:
-                return func(request, *args, **kwargs)
-            
-            # Check if Authorization header exists
-            if 'HTTP_AUTHORIZATION' not in request.META:
-                response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
-                return response
-            
-            # Parse the Authorization header
-            auth_header = request.META['HTTP_AUTHORIZATION']
-            if not auth_header.startswith('Basic '):
-                response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
-                return response
-            
-            # Decode credentials
-            try:
-                encoded_credentials = auth_header[6:]  # Remove 'Basic '
-                decoded_credentials = base64.b64decode(encoded_credentials).decode('utf-8')
-                provided_username, provided_password = decoded_credentials.split(':', 1)
-            except (ValueError, UnicodeDecodeError):
-                response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
-                return response
-            
-            # Check credentials
-            if username is None:
-                # Only check password if username is None
-                if provided_password == auth_password:
-                    return func(request, *args, **kwargs)
-            else:
-                # Check both username and password
-                if provided_username == username and provided_password == auth_password:
-                    return func(request, *args, **kwargs)
-            
-            response = HttpResponse('Unauthorized', status=401)
-            response['WWW-Authenticate'] = 'Basic realm="Attendance Area"'
-            return response
-        
-        return wrapper
-    return decorator
-
-
-def http_basic_auth_birthdays():
-    """
-    Decorator for HTTP Basic Authentication for birthdays view
-    Uses birthdays_password from SiteSettings
-    If birthdays_password is None or empty, authentication is skipped
-    """
-    def decorator(func):
-        @wraps(func)
-        def wrapper(request, *args, **kwargs):
-            # Get password from SiteSettings
-            try:
-                site_settings = SiteSettings.for_request(request)
-                password = site_settings.birthdays_password
-            except:
-                password = None
-            
-            # If password is None or empty, skip authentication
-            if not password:
-                return func(request, *args, **kwargs)
-            
-            # Check if Authorization header exists
-            if 'HTTP_AUTHORIZATION' not in request.META:
-                response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = 'Basic realm="Birthdays Area"'
-                return response
-            
-            # Parse the Authorization header
-            auth_header = request.META['HTTP_AUTHORIZATION']
-            if not auth_header.startswith('Basic '):
-                response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = 'Basic realm="Birthdays Area"'
-                return response
-            
-            # Decode credentials
-            try:
-                encoded_credentials = auth_header[6:]  # Remove 'Basic '
-                decoded_credentials = base64.b64decode(encoded_credentials).decode('utf-8')
-                provided_username, provided_password = decoded_credentials.split(':', 1)
-            except (ValueError, UnicodeDecodeError):
-                response = HttpResponse('Unauthorized', status=401)
-                response['WWW-Authenticate'] = 'Basic realm="Birthdays Area"'
-                return response
-            
-            # Only check password (any username is accepted)
-            if provided_password == password:
-                return func(request, *args, **kwargs)
-            
-            response = HttpResponse('Unauthorized', status=401)
-            response['WWW-Authenticate'] = 'Basic realm="Birthdays Area"'
-            return response
-        
-        return wrapper
-    return decorator
 
 
 def _get_form_recipients(site_settings, form_type):
@@ -1098,7 +909,6 @@ def dump_data(request):
             logger.info(f'Scrubbed {scrubbed_count} member records in data dump')
 
         # Always scrub SiteSettings sensitive fields regardless of include_real_data
-        sitesettings_passwords = {'attendance_password', 'birthdays_password'}
         sitesettings_recipients = {
             'contact_form_email_recipients', 'join_band_form_email_recipients',
             'booking_form_email_recipients', 'feedback_form_email_recipients',
@@ -1110,9 +920,6 @@ def dump_data(request):
         for item in data:
             if item.get('model') == 'blowcomotion.sitesettings':
                 fields = item.get('fields', {})
-                for field in sitesettings_passwords:
-                    if field in fields:
-                        fields[field] = None
                 for field in sitesettings_recipients:
                     if field in fields:
                         fields[field] = 'local@example.com'
@@ -1430,7 +1237,8 @@ def process_form(request):
 # Attendance Views
 
 
-@http_basic_auth()
+@login_required
+@permission_required('blowcomotion.add_attendancerecord', raise_exception=True)
 def attendance_capture(request, section_slug=None):
     """View for capturing attendance for a specific section"""
     sections = Section.objects.all().order_by('name')
@@ -1935,7 +1743,8 @@ def attendance_capture(request, section_slug=None):
     return render(request, 'attendance/capture.html', context)
 
 
-@http_basic_auth()
+@login_required
+@permission_required('blowcomotion.add_attendancerecord', raise_exception=True)
 @require_http_methods(["GET", "POST"])
 def inactive_members(request):
     """View for managing inactive members - display list with reactivation buttons"""
@@ -2006,7 +1815,8 @@ def inactive_members(request):
     return render(request, 'attendance/inactive_members.html', context)
 
 
-@http_basic_auth()
+@login_required
+@permission_required('blowcomotion.view_attendancerecord', raise_exception=True)
 def attendance_reports(request):
     """View for attendance reports - overall summary"""
     filter_form = AttendanceReportFilterForm(request.GET or None)
@@ -2071,7 +1881,8 @@ def attendance_reports(request):
     
     return render(request, 'attendance/reports.html', context)
 
-@http_basic_auth()
+@login_required
+@permission_required('blowcomotion.view_attendancerecord', raise_exception=True)
 def attendance_section_report_new(request, section_slug):
     """View for attendance reports for a specific section"""
     section = get_object_or_404(Section, name__iexact=section_slug.replace('-', ' '))
@@ -2144,7 +1955,8 @@ def attendance_section_report_new(request, section_slug):
     return render(request, 'attendance/section_report.html', context)
 
 
-@http_basic_auth_birthdays()
+@login_required
+@permission_required('blowcomotion.view_attendancerecord', raise_exception=True)
 def birthdays(request):
     """
     View to display recent and upcoming member birthdays.
@@ -2236,7 +2048,8 @@ def birthdays(request):
     return render(request, 'birthdays.html', context)
 
 
-@http_basic_auth()
+@login_required
+@permission_required('blowcomotion.view_attendancerecord', raise_exception=True)
 def gigs_for_date(request):
     """API endpoint to get gigs for a specific date"""
     date_str = request.GET.get('date')
