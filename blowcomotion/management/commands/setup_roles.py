@@ -56,10 +56,11 @@ ROLE_PERMISSIONS = {
         + _model_perms(SongVideo)
         + ACCESS_ADMIN()
     ),
-    # Attendance Taker's permission set (AttendanceRecord view/add/change) lands
-    # with the attendance/birthday login-conversion follow-up plan; created here
-    # so the group exists and can be assigned to users ahead of that work.
-    "Attendance Taker": lambda: [],
+    # Grants admin access to the AttendanceRecord snippet UI. The public
+    # attendance/birthday views (attendance_capture, birthdays, etc.) still use
+    # the separate HTTP Basic Auth password until the #301 follow-up converts
+    # them to this permission.
+    "Attendance Taker": lambda: _model_perms(AttendanceRecord) + ACCESS_ADMIN(),
 }
 
 EDITOR_GROUP_NAMES = (

@@ -46,11 +46,13 @@ class SetupRolesCommandTests(TestCase):
                           'change_songsoloist', 'change_songvideo'):
             self.assertIn(expected, codenames)
 
-    def test_creates_attendance_taker_group_placeholder_permissions(self):
-        # Attendance Taker permissions land with the follow-up plan; the group
-        # itself is created here so it exists ahead of that work.
+    def test_creates_attendance_taker_group(self):
         call_command('setup_roles')
-        self.assertTrue(Group.objects.filter(name='Attendance Taker').exists())
+        codenames = self._perm_codenames('Attendance Taker')
+        self.assertIn('view_attendancerecord', codenames)
+        self.assertIn('add_attendancerecord', codenames)
+        self.assertIn('change_attendancerecord', codenames)
+        self.assertIn('access_admin', codenames)
 
     def test_patches_editors_group_with_image_and_media_perms(self):
         # Wagtail's own migrations already seed "Editors"/"Moderators" groups
