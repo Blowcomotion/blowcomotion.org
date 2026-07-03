@@ -223,6 +223,12 @@ class SiteSettings(BaseSiteSetting):
         ], heading="Attendance Cleanup Notifications", help_text="Configure attendance cleanup settings."),
     ]
 
+    class Meta:
+        permissions = [
+            ("access_dev_tools", "Can access developer data dump tools"),
+            ("access_real_data_exports", "Can access real member data dumps and CSV exports"),
+        ]
+
 
 class CustomImage(AbstractImage):
     # Add any extra fields to image here

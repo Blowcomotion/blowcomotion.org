@@ -4,7 +4,7 @@ Unit tests for admin dump_data view.
 
 import json
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Permission, User
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -66,13 +66,11 @@ class DumpDataViewTests(TestCase):
             is_active=False
         )
 
-    def test_requires_superuser(self):
-        """Test that dump_data requires superuser authentication"""
-        # Try without authentication - may redirect to login or return forbidden
+    def test_requires_permission(self):
+        """Test that dump_data requires access_dev_tools or access_real_data_exports"""
         response = self.client.get(reverse('dump_data'))
         self.assertIn(response.status_code, [302, 403])  # Redirect to login or forbidden
-        
-        # Try with regular (staff) user - should be forbidden or redirected
+
         User.objects.create_user(
             username='regular',
             password='testpass123',
@@ -80,17 +78,86 @@ class DumpDataViewTests(TestCase):
         )
         self.client.login(username='regular', password='testpass123')
         response = self.client.get(reverse('dump_data'))
-        # Non-superuser staff are redirected by admin middleware or get 403 from view
         self.assertIn(response.status_code, [302, 403])
-        
-        # Superuser should have access
+
         self.client.login(username='admin', password='testpass123')
         response = self.client.get(reverse('dump_data'))
         self.assertEqual(response.status_code, 200)
 
+    def test_dev_can_access_scrubbed_dump_only(self):
+        """Test that access_dev_tools grants scrubbed dump but not include_real_data"""
+        dev_perm = Permission.objects.get(codename='access_dev_tools')
+        dev_user = User.objects.create_user(
+            username='dev',
+            password='testpass123',
+            is_staff=True,
+            is_active=True
+        )
+        dev_user.user_permissions.add(dev_perm)
+
+        # Add Wagtail admin access permission
+        try:
+            admin_permission = Permission.objects.get(
+                content_type__app_label='wagtailadmin',
+                codename='access_admin'
+            )
+            dev_user.user_permissions.add(admin_permission)
+        except Permission.DoesNotExist:
+            pass  # Permission might not exist in test DB
+
+        self.client.login(username='dev', password='testpass123')
+
+        response = self.client.get(reverse('dump_data'))
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.get(reverse('dump_data') + '?include_real_data=true')
+        self.assertEqual(response.status_code, 403)
+
+    def test_data_analyst_can_access_real_dump(self):
+        """Test that access_real_data_exports grants include_real_data"""
+        analyst_perm = Permission.objects.get(codename='access_real_data_exports')
+        analyst_user = User.objects.create_user(
+            username='analyst',
+            password='testpass123',
+            is_staff=True,
+            is_active=True
+        )
+        analyst_user.user_permissions.add(analyst_perm)
+
+        # Add Wagtail admin access permission
+        try:
+            admin_permission = Permission.objects.get(
+                content_type__app_label='wagtailadmin',
+                codename='access_admin'
+            )
+            analyst_user.user_permissions.add(admin_permission)
+        except Permission.DoesNotExist:
+            pass  # Permission might not exist in test DB
+
+        self.client.login(username='analyst', password='testpass123')
+
+        response = self.client.get(reverse('dump_data') + '?include_real_data=true')
+        self.assertEqual(response.status_code, 200)
+
     def test_default_scrubs_member_data(self):
-        """Test that member data is scrubbed by default"""
-        self.client.login(username='admin', password='testpass123')
+        """Test that member data is scrubbed by default for users without analyst access"""
+        User.objects.create_user(
+            username='dev_no_analyst',
+            password='testpass123',
+            is_staff=True,
+        )
+        dev_perm = Permission.objects.get(codename='access_dev_tools')
+        dev_user = User.objects.get(username='dev_no_analyst')
+        dev_user.user_permissions.add(dev_perm)
+        try:
+            admin_permission = Permission.objects.get(
+                content_type__app_label='wagtailadmin',
+                codename='access_admin'
+            )
+            dev_user.user_permissions.add(admin_permission)
+        except Permission.DoesNotExist:
+            pass  # Permission might not exist in test DB
+        self.client.login(username='dev_no_analyst', password='testpass123')
         response = self.client.get(reverse('dump_data'))
         
         self.assertEqual(response.status_code, 200)

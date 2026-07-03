@@ -13,6 +13,7 @@ import requests
 from django import forms as django_forms
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.cache import cache
 from django.core.mail import send_mail
@@ -74,6 +75,7 @@ BIRTHDAY_RANGE_DAYS = 30
 # Instrument Library Dashboard Views
 
 
+@permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
 def instrument_library_rented(request):
     instruments = (
         LibraryInstrument.objects.filter(status=LibraryInstrument.STATUS_RENTED)
@@ -90,6 +92,7 @@ def instrument_library_rented(request):
     )
 
 
+@permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
 def instrument_library_available(request):
     instruments = (
         LibraryInstrument.objects.filter(status=LibraryInstrument.STATUS_AVAILABLE)
@@ -106,6 +109,7 @@ def instrument_library_available(request):
     )
 
 
+@permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
 def instrument_library_needs_repair(request):
     instruments = (
         LibraryInstrument.objects.filter(
@@ -934,10 +938,9 @@ def sync_gigs_admin(request):
     This provides a web interface to run the sync_gigs management command
     for cases when immediate sync is needed (e.g., after adding new gigs).
     """
-    # Check if the user is superuser
-    if not request.user.is_superuser:
+    if not request.user.has_perm('blowcomotion.change_cachedgig'):
         logger.warning(f"Unauthorized access attempt to sync_gigs_admin by user {request.user.username}")
-        return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
+        return JsonResponse({'error': 'You do not have permission to access this feature'}, status=403)
     
     if request.method == 'POST':
         # Run the sync
@@ -986,10 +989,6 @@ def dump_data(request):
     # Create an in-memory string buffer to capture the output
     output = StringIO()
     
-    # Check if the user wants real member data (default is scrubbed for privacy)
-    # Pass ?include_real_data=true to get actual member information
-    include_real_data = request.GET.get('include_real_data', 'false').lower() == 'true'
-
     # Base arguments for `dumpdata`
     # Always exclude auth users and site settings (may contain credentials and other sensitive data)
     base_args = [
@@ -1005,11 +1004,26 @@ def dump_data(request):
     ]
     
     args = base_args
-    
-    # Check if the user is superuser
-    if not request.user.is_superuser:
+
+    has_dev_access = request.user.has_perm('blowcomotion.access_dev_tools')
+    has_analyst_access = request.user.has_perm('blowcomotion.access_real_data_exports')
+
+    if not (has_dev_access or has_analyst_access):
         logger.warning(f"Unauthorized access attempt to dump_data by user {request.user.username}")
-        return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
+        return JsonResponse({'error': 'You do not have permission to access this feature'}, status=403)
+
+    # Real member data is scrubbed by default, except for analysts who get it
+    # by default since they're already permitted to request it explicitly.
+    # Pass ?include_real_data=false to force scrubbed output instead.
+    include_real_data_param = request.GET.get('include_real_data')
+    if include_real_data_param is None:
+        include_real_data = has_analyst_access
+    else:
+        include_real_data = include_real_data_param.lower() == 'true'
+
+    if include_real_data and not has_analyst_access:
+        logger.warning(f"Unauthorized include_real_data access attempt to dump_data by user {request.user.username}")
+        return JsonResponse({'error': 'You do not have permission to access real member data'}, status=403)
 
     try:
         logger.info(f"Starting data dump by user {request.user.username} (include_real_data={include_real_data})")
@@ -1117,9 +1131,9 @@ def dump_data(request):
     
 
 def export_members_csv(request):
-    if not request.user.is_superuser:
+    if not request.user.has_perm('blowcomotion.access_real_data_exports'):
         logger.warning("Unauthorized access attempt to export members by user %s", request.user.username)
-        return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
+        return JsonResponse({'error': 'You do not have permission to access this feature'}, status=403)
 
     include_extra = True
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
@@ -1160,9 +1174,9 @@ def export_members_csv(request):
 
 
 def export_attendance_csv(request):
-    if not request.user.is_superuser:
+    if not request.user.has_perm('blowcomotion.access_real_data_exports'):
         logger.warning("Unauthorized access attempt to export attendance by user %s", request.user.username)
-        return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
+        return JsonResponse({'error': 'You do not have permission to access this feature'}, status=403)
 
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
@@ -1209,9 +1223,9 @@ def export_attendance_csv(request):
 
 
 def export_charts_csv(request):
-    if not request.user.is_superuser:
+    if not request.user.has_perm('blowcomotion.access_real_data_exports'):
         logger.warning("Unauthorized access attempt to export charts by user %s", request.user.username)
-        return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
+        return JsonResponse({'error': 'You do not have permission to access this feature'}, status=403)
 
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
     temp_path = temp_file.name
@@ -1246,9 +1260,9 @@ def export_charts_csv(request):
 
 
 def export_library_instruments_csv(request):
-    if not request.user.is_superuser:
+    if not request.user.has_perm('blowcomotion.access_real_data_exports'):
         logger.warning("Unauthorized access attempt to export library instruments by user %s", request.user.username)
-        return JsonResponse({'error': 'You must be a superuser to access this feature'}, status=403)
+        return JsonResponse({'error': 'You do not have permission to access this feature'}, status=403)
 
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
     temp_path = temp_file.name
@@ -2450,6 +2464,7 @@ def _send_rental_returned_email(request, submission, condition_notes):
         ).send(fail_silently=True)
 
 
+@permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
 def rental_requests_dashboard(request):
     import re as _re
 
@@ -2733,6 +2748,7 @@ def rental_requests_dashboard(request):
     })
 
 
+@permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
 def rental_request_review(request, pk):
     submission = get_object_or_404(InstrumentRentalRequestSubmission, pk=pk)
     form = RentalRequestReviewForm(submission=submission)
@@ -2780,6 +2796,7 @@ def rental_request_review(request, pk):
     })
 
 
+@permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
 def rental_request_return(request, pk):
     submission = get_object_or_404(
         InstrumentRentalRequestSubmission,

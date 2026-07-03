@@ -42,6 +42,36 @@ register_snippet(FormsViewSetGroup)
 register_snippet(SyncViewSetGroup)
 
 
+def _permission_granted(user, permission):
+    """
+    `permission` may be a single permission string, an iterable of permission
+    strings (any one of which grants visibility), or None (always shown).
+    """
+    if permission is None:
+        return True
+    if isinstance(permission, str):
+        return user.has_perm(permission)
+    return any(user.has_perm(p) for p in permission)
+
+
+class PermissionMenuItem(MenuItem):
+    def __init__(self, *args, permission=None, **kwargs):
+        self._permission = permission
+        super().__init__(*args, **kwargs)
+
+    def is_shown(self, request):
+        return _permission_granted(request.user, self._permission)
+
+
+class PermissionSubmenuMenuItem(SubmenuMenuItem):
+    def __init__(self, *args, permission=None, **kwargs):
+        self._permission = permission
+        super().__init__(*args, **kwargs)
+
+    def is_shown(self, request):
+        return _permission_granted(request.user, self._permission)
+
+
 @hooks.register("register_admin_urls")
 def register_admin_urls():
     """
@@ -93,31 +123,56 @@ def register_chart_import_urls():
     ]
 
 
+EXPORTS_PERMISSIONS = ['blowcomotion.access_dev_tools', 'blowcomotion.access_real_data_exports']
+
+# The outer "Utilities" menu must independently list every permission needed
+# by anything nested inside it (PermissionSubmenuMenuItem.is_shown does not
+# fall back to "show if any child is visible").
+UTILITIES_PERMISSIONS = EXPORTS_PERMISSIONS + [
+    'blowcomotion.change_libraryinstrument',  # Library Dashboards submenu
+    'blowcomotion.change_cachedgig',  # Sync Gigs
+]
+
+
 @hooks.register("register_admin_menu_item")
 def register_management_menu_item():
     """
     Register the admin menu item for the app.
     """
     exports_submenu = Menu(items=[
-        MenuItem('Dump Data', reverse('dump_data'), icon_name='download'),
-        MenuItem('Export Members CSV', reverse('export_members'), icon_name='table'),
-        MenuItem('Export Attendance CSV', reverse('export_attendance'), icon_name='calendar'),
-        MenuItem('Export Charts CSV', reverse('export_charts'), icon_name='doc-full-inverse'),
-        MenuItem('Export Library Instruments CSV', reverse('export_library_instruments'), icon_name='french-horn'),
+        PermissionMenuItem('Dump Data', reverse('dump_data'), icon_name='download',
+                            permission=EXPORTS_PERMISSIONS),
+        PermissionMenuItem('Export Members CSV', reverse('export_members'), icon_name='table',
+                            permission='blowcomotion.access_real_data_exports'),
+        PermissionMenuItem('Export Attendance CSV', reverse('export_attendance'), icon_name='calendar',
+                            permission='blowcomotion.access_real_data_exports'),
+        PermissionMenuItem('Export Charts CSV', reverse('export_charts'), icon_name='doc-full-inverse',
+                            permission='blowcomotion.access_real_data_exports'),
+        PermissionMenuItem('Export Library Instruments CSV', reverse('export_library_instruments'), icon_name='french-horn',
+                            permission='blowcomotion.access_real_data_exports'),
     ])
-    
+
     library_dashboards_submenu = Menu(items=[
-        MenuItem('Library: Rented', reverse('instrument_library_rented'), icon_name='french-horn'),
-        MenuItem('Library: Available', reverse('instrument_library_available'), icon_name='french-horn'),
-        MenuItem('Library: Maintenance', reverse('instrument_library_needs_repair'), icon_name='warning'),
+        PermissionMenuItem('Library: Rented', reverse('instrument_library_rented'), icon_name='french-horn',
+                            permission='blowcomotion.change_libraryinstrument'),
+        PermissionMenuItem('Library: Available', reverse('instrument_library_available'), icon_name='french-horn',
+                            permission='blowcomotion.change_libraryinstrument'),
+        PermissionMenuItem('Library: Maintenance', reverse('instrument_library_needs_repair'), icon_name='warning',
+                            permission='blowcomotion.change_libraryinstrument'),
     ])
-    
+
     submenu = Menu(items=[
-        SubmenuMenuItem('Exports', exports_submenu, icon_name='download'),
-        SubmenuMenuItem('Library Dashboards', library_dashboards_submenu, icon_name='french-horn'),
-        MenuItem('Sync Gigs', reverse('sync_gigs'), icon_name='cog'),
+        PermissionSubmenuMenuItem('Exports', exports_submenu, icon_name='download',
+                                   permission=EXPORTS_PERMISSIONS),
+        PermissionSubmenuMenuItem('Library Dashboards', library_dashboards_submenu, icon_name='french-horn',
+                                   permission='blowcomotion.change_libraryinstrument'),
+        PermissionMenuItem('Sync Gigs', reverse('sync_gigs'), icon_name='cog',
+                            permission='blowcomotion.change_cachedgig'),
     ])
-    return SubmenuMenuItem('Utilities', submenu, icon_name='cogs', order=10000)
+    return PermissionSubmenuMenuItem(
+        'Utilities', submenu, icon_name='cogs', order=10000,
+        permission=UTILITIES_PERMISSIONS,
+    )
 
 
 # TODO(#250): delete — replaced by Rental Requests dashboard
@@ -133,22 +188,23 @@ def register_management_menu_item():
 
 @hooks.register("register_admin_menu_item")
 def register_rental_requests_menu_item():
-    return MenuItem(
+    return PermissionMenuItem(
         "Rental Requests",
         reverse("rental_requests_dashboard"),
         icon_name="french-horn",
         order=295,
+        permission='blowcomotion.change_libraryinstrument',
     )
 
 
 @hooks.register("register_admin_menu_item")
 def register_chart_import_menu_item():
-    from wagtail.admin.menu import MenuItem
-    return MenuItem(
+    return PermissionMenuItem(
         "Import Charts",
         reverse("chart_import_picker"),
         icon_name="google-drive",
         order=901,
+        permission='blowcomotion.change_chart',
     )
 
 
