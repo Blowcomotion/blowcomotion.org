@@ -31,7 +31,6 @@ class ChartViewSet(SnippetViewSet):
         'pdf',
         'instrument',
         Column('part', label='Part'),
-        UpdatedAtColumn()
     ]
     filterset_class = None  # Set in __init__
     ordering = ['song__title', 'instrument__name']
@@ -54,6 +53,9 @@ class ChartViewSet(SnippetViewSet):
         self.model = Chart
         self.filterset_class = ChartFilterSetWithModel
         super().__init__(*args, **kwargs)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request) or self.model.objects.select_related('song', 'instrument', 'pdf')
 
 
 class SongFilterSet(WagtailFilterSet):
@@ -240,6 +242,9 @@ class InstrumentViewSet(SnippetViewSet):
         self.model = Instrument
         super().__init__(*args, **kwargs)
 
+    def get_queryset(self, request):
+        return super().get_queryset(request) or self.model.objects.select_related('section')
+
 
 class MemberFilterSet(WagtailFilterSet):
     last_seen = django_filters.DateFromToRangeFilter(
@@ -329,6 +334,9 @@ class MemberViewSet(SnippetViewSet):
         self.filterset_class = MemberFilterSetWithModel
         super().__init__(*args, **kwargs)
 
+    def get_queryset(self, request):
+        return super().get_queryset(request) or self.model.objects.select_related('primary_instrument')
+
 
 class AttendanceRecordFilterSet(WagtailFilterSet):
     date = django_filters.DateFromToRangeFilter(
@@ -360,7 +368,7 @@ class AttendanceRecordViewSet(SnippetViewSet):
         UpdatedAtColumn()
     ]
     filterset_class = None  # Set in __init__
-    ordering = ['-date', 'member__last_name']
+    ordering = ['-date', '-id']
     panels = [
         FieldRowPanel([
             'date',
@@ -382,6 +390,9 @@ class AttendanceRecordViewSet(SnippetViewSet):
         self.model = AttendanceRecord
         self.filterset_class = AttendanceRecordFilterSetWithModel
         super().__init__(*args, **kwargs)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request) or self.model.objects.select_related('member', 'played_instrument')
 
 
 class LibraryInstrumentFilterSet(WagtailFilterSet):
@@ -417,7 +428,6 @@ class LibraryInstrumentViewSet(SnippetViewSet):
         'patreon_active',
         'hide_from_rental',
         'hide_from_member_forms',
-        UpdatedAtColumn()
     ]
     filterset_class = None  # Set in __init__
     ordering = ['instrument__name', 'serial_number']
@@ -464,6 +474,9 @@ class LibraryInstrumentViewSet(SnippetViewSet):
         self.filterset_class = LibraryInstrumentFilterSetWithModel
         super().__init__(*args, **kwargs)
 
+    def get_queryset(self, request):
+        return super().get_queryset(request) or self.model.objects.select_related('instrument', 'member', 'storage_location')
+
 
 class InstrumentHistoryLogViewSet(SnippetViewSet):
     model = None
@@ -488,6 +501,11 @@ class InstrumentHistoryLogViewSet(SnippetViewSet):
         from .models import InstrumentHistoryLog
         self.model = InstrumentHistoryLog
         super().__init__(*args, **kwargs)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request) or self.model.objects.select_related(
+            'library_instrument__instrument', 'library_instrument__member', 'user'
+        )
 
 
 class InstrumentStorageLocationViewSet(SnippetViewSet):
@@ -624,6 +642,9 @@ class EquipmentViewSet(SnippetViewSet):
         self.model = Equipment
         self.filterset_class = EquipmentFilterSetWithModel
         super().__init__(*args, **kwargs)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request) or self.model.objects.select_related('storage_location')
 
 
 class BandViewSetGroup(SnippetViewSetGroup):
