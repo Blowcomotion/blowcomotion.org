@@ -4,9 +4,8 @@ from datetime import datetime
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import permission_required
 from django.db.models import Max
-from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
@@ -25,15 +24,8 @@ from blowcomotion.models import Chart, Instrument, Song
 logger = logging.getLogger(__name__)
 
 
-def _admin_required(request):
-    return request.user.is_active and request.user.has_perm("wagtailadmin.access_admin")
-
-
-@login_required
+@permission_required('blowcomotion.change_chart', raise_exception=True)
 def picker(request):
-    if not _admin_required(request):
-        return HttpResponseForbidden()
-
     folder_id = getattr(settings, "GDRIVE_CHARTS_FOLDER_ID", None)
     songs = list(Song.objects.all())
     folders = []
@@ -69,11 +61,8 @@ def picker(request):
     })
 
 
-@login_required
+@permission_required('blowcomotion.change_chart', raise_exception=True)
 def review(request):
-    if not _admin_required(request):
-        return HttpResponseForbidden()
-
     instruments = list(Instrument.objects.order_by("name"))
 
     if request.method == "POST":
