@@ -8,7 +8,6 @@ from django.urls import include, path
 
 import blowcomotion.views as blowcomotion_views
 from blowcomotion import chart_api, member_urls
-from gigs import views as gigs_views
 from search import views as search_views
 
 urlpatterns = [
@@ -17,15 +16,9 @@ urlpatterns = [
     path("documents/", include(wagtaildocs_urls)),
     path("search/", search_views.search, name="search"),
     path("process-form/", blowcomotion_views.process_form, name="process-form"),
-    
-    # Attendance URLs
-    path("attendance/", blowcomotion_views.attendance_capture, name="attendance-main"),
-    path("attendance/reports/", blowcomotion_views.attendance_reports, name="attendance-reports"),
-    path("attendance/reports/<str:section_slug>/", blowcomotion_views.attendance_section_report_new, name="attendance-section-report"),
-    path("attendance/gigs-for-date/", gigs_views.gigs_for_date, name="gigs-for-date"),
-    path("attendance/inactive-members/", blowcomotion_views.inactive_members, name="inactive-members"),
-    path("attendance/<str:section_slug>/", blowcomotion_views.attendance_capture, name="attendance-capture"),
-    
+
+    path("attendance/", include("attendance.urls")),
+
     # Birthdays URL
     path("birthdays/", blowcomotion_views.birthdays, name="birthdays"),
     

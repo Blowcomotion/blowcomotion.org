@@ -641,7 +641,7 @@ class AttendanceCaptureViewTests(TestCase):
         
         self.assertEqual(response.status_code, 200)
 
-    @patch('blowcomotion.views.date')
+    @patch('attendance.views.date')
     def test_attendance_capture_post_date_handling(self, mock_date):
         """Test proper date handling in POST requests"""
         # Mock today's date

@@ -9,9 +9,9 @@ from django.urls import path, reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from attendance.views import export_attendance_csv
 from blowcomotion.views import (
     dump_data,
-    export_attendance_csv,
     export_charts_csv,
     export_library_instruments_csv,
     export_members_csv,
