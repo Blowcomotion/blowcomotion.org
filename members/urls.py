@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from blowcomotion import member_views
+from members import views as member_views
 
 urlpatterns = [
     path("login/", member_views.MemberLoginView.as_view(), name="member-login"),

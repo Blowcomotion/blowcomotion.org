@@ -3,8 +3,8 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 
-from blowcomotion.member_auth import create_member_user
 from blowcomotion.models import EmailChangeToken, Member, PasswordSetToken
+from members.auth import create_member_user
 
 User = get_user_model()
 
@@ -148,7 +148,7 @@ class MemberSaveEmailDriftTests(TestCase):
         self.assertEqual(user.username, "fullnew@example.com")
 
 
-from blowcomotion.member_auth import (
+from members.auth import (
     create_member_user,
     send_email_change_confirmation,
     send_set_password_email,

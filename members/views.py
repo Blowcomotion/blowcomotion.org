@@ -1,5 +1,8 @@
 import logging
+import os
+import tempfile
 from datetime import date, timedelta
+from io import StringIO
 
 from django_ratelimit.decorators import ratelimit
 
@@ -8,33 +11,17 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model, login, views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
+from django.core.management import call_command
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_GET
 
-from blowcomotion.member_auth import (
-    _MemberEmail,
-    create_member_user,
-    ensure_set_password_flow,
-    needs_set_password,
-    send_email_change_confirmation,
-    send_set_password_email,
-    send_signup_invite_email,
-)
-from blowcomotion.member_forms import (
-    ALLERGEN_CHOICES,
-    DIETARY_CHOICES,
-    SHIRT_SIZE_CHOICES,
-    GetAccessForm,
-    InstrumentRentalRequestForm,
-    MemberProfileForm,
-    _yesno_to_bool,
-)
 from blowcomotion.models import (
     CustomImage,
     EmailChangeToken,
@@ -47,6 +34,24 @@ from blowcomotion.models import (
 )
 from blowcomotion.views import _validate_recaptcha
 from instruments.patreon import check_patreon_membership
+from members.auth import (
+    _MemberEmail,
+    create_member_user,
+    ensure_set_password_flow,
+    needs_set_password,
+    send_email_change_confirmation,
+    send_set_password_email,
+    send_signup_invite_email,
+)
+from members.forms import (
+    ALLERGEN_CHOICES,
+    DIETARY_CHOICES,
+    SHIRT_SIZE_CHOICES,
+    GetAccessForm,
+    InstrumentRentalRequestForm,
+    MemberProfileForm,
+    _yesno_to_bool,
+)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -632,3 +637,48 @@ def confirm_email_view(request, token_uuid):
 
     logger.info(f"Email confirmed for member {member.pk}: {new_email}")
     return render(request, "member/confirm_email_result.html", {"confirmed": True, "new_email": new_email})
+
+
+# ── Export ─────────────────────────────────────────────────────────────────────
+
+def export_members_csv(request):
+    if not request.user.has_perm('blowcomotion.access_real_data_exports'):
+        logger.warning("Unauthorized access attempt to export members by user %s", request.user.username)
+        return JsonResponse({'error': 'You do not have permission to access this feature'}, status=403)
+
+    include_extra = True
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
+    temp_path = temp_file.name
+    temp_file.close()
+
+    try:
+        logger.info(
+            "Starting member export by user %s (include_extra=%s)",
+            request.user.username,
+            include_extra,
+        )
+        call_command(
+            'export_members_to_csv',
+            output=temp_path,
+            include_extra=include_extra,
+            stdout=StringIO(),
+        )
+
+    except Exception as e:
+        logger.error("Error during member export by user %s: %s", request.user.username, str(e))
+        return JsonResponse({'error': str(e)}, status=500)
+    else:
+        with open(temp_path, 'rb') as csv_file:
+            csv_data = csv_file.read()
+
+        timestamp = timezone.now().strftime('%Y%m%d-%H%M%S')
+        filename = f'members_export_{timestamp}.csv'
+        response = HttpResponse(csv_data, content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        logger.info("Member export completed successfully by user %s", request.user.username)
+        return response
+    finally:
+        try:
+            os.remove(temp_path)
+        except OSError:
+            logger.warning("Temporary file %s could not be removed after member export", temp_path)

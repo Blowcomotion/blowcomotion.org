@@ -4,9 +4,9 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from blowcomotion.member_auth import create_member_user
-from blowcomotion.member_views import _attendance_streaks, _count_tuesdays
 from blowcomotion.models import AttendanceRecord, Instrument, Member
+from members.auth import create_member_user
+from members.views import _attendance_streaks, _count_tuesdays
 
 User = get_user_model()
 

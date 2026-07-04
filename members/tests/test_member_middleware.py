@@ -27,7 +27,7 @@ def _make_request(user, session_data=None):
 
 class MemberIdleLogoutMiddlewareTests(TestCase):
     def get_middleware(self):
-        from blowcomotion.middleware import MemberIdleLogoutMiddleware
+        from members.middleware import MemberIdleLogoutMiddleware
         return MemberIdleLogoutMiddleware(get_response=lambda r: None)
 
     @override_settings(MEMBER_IDLE_TIMEOUT=3600)

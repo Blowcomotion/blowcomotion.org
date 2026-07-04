@@ -26,7 +26,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 from blowcomotion import blocks as blowcomotion_blocks
-from blowcomotion.utils import validate_birthday
+from members.utils import validate_birthday
 
 
 def get_default_expiration_date():

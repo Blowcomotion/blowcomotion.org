@@ -10,8 +10,8 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.template.loader import render_to_string
 
-from blowcomotion.member_auth import create_member_user, send_set_password_email
 from blowcomotion.models import Member
+from members.auth import create_member_user, send_set_password_email
 
 logger = logging.getLogger(__name__)
 

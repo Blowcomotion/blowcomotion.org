@@ -7,7 +7,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 import blowcomotion.views as blowcomotion_views
-from blowcomotion import member_urls
+from members import birthdays as member_birthday_views
 from search import views as search_views
 
 urlpatterns = [
@@ -20,13 +20,13 @@ urlpatterns = [
     path("attendance/", include("attendance.urls")),
 
     # Birthdays URL
-    path("birthdays/", blowcomotion_views.birthdays, name="birthdays"),
+    path("birthdays/", member_birthday_views.birthdays, name="birthdays"),
 
     path("charts/", include("charts.urls")),
 
     path("instrument-rental/", include("instruments.urls")),
 
-    path("member/", include(member_urls)),
+    path("member/", include("members.urls")),
 ]
 
 

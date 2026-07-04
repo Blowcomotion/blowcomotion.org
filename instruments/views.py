@@ -17,7 +17,6 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from blowcomotion.member_auth import _MemberEmail
 from blowcomotion.models import (
     InstrumentHistoryLog,
     InstrumentRentalNagLog,
@@ -28,6 +27,7 @@ from blowcomotion.models import (
 )
 from instruments.forms import LibraryInstrumentRentForm, LibraryInstrumentReturnForm
 from instruments.patreon import MIN_RENTAL_PLEDGE_CENTS, fetch_all_members
+from members.auth import _MemberEmail
 
 logger = logging.getLogger(__name__)
 

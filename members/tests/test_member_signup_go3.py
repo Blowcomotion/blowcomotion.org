@@ -10,7 +10,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from blowcomotion.models import Instrument, Member, Section, SiteSettings
-from blowcomotion.utils import send_member_to_go3_band_invite
+from members.utils import send_member_to_go3_band_invite
 
 
 class GO3BandInviteUtilsTests(TestCase):

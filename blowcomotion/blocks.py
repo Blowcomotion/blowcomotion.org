@@ -340,8 +340,8 @@ class MemberSignupFormBlock(blocks.StructBlock):
     def get_context(self, value, parent_context=None):
         context = super().get_context(value, parent_context=parent_context)
         # Import here to avoid circular imports
-        from blowcomotion.forms import MemberSignupForm
         from blowcomotion.models import Instrument
+        from members.forms import MemberSignupForm
         context['instruments'] = Instrument.objects.filter(hide_from_member_forms=False).order_by('name')
         context['shirt_size_choices'] = MemberSignupForm.SHIRT_SIZE_CHOICES
         context['dietary_choices'] = MemberSignupForm.DIETARY_CHOICES

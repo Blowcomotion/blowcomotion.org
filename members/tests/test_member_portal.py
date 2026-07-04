@@ -6,13 +6,13 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from blowcomotion.member_auth import create_member_user
 from blowcomotion.models import (
     EmailChangeToken,
     Instrument,
     InstrumentRentalRequestSubmission,
     Member,
 )
+from members.auth import create_member_user
 
 User = get_user_model()
 
@@ -61,7 +61,7 @@ class ProfileViewTests(TestCase):
         self.user.save()
         self.client.login(username="robin@example.com", password="Pass123!")
         self._recaptcha = patch(
-            "blowcomotion.member_views._validate_recaptcha", return_value=(True, None)
+            "members.views._validate_recaptcha", return_value=(True, None)
         )
         self._recaptcha.start()
 
@@ -115,7 +115,7 @@ class ProfileViewTests(TestCase):
     def test_profile_post_with_recaptcha_failure_returns_error(self):
         self._recaptcha.stop()
         with patch(
-            "blowcomotion.member_views._validate_recaptcha",
+            "members.views._validate_recaptcha",
             return_value=(False, "reCAPTCHA failed"),
         ):
             response = self.client.post(
@@ -129,7 +129,7 @@ class ProfileViewTests(TestCase):
     def test_profile_recaptcha_failure_preserves_submitted_input(self):
         self._recaptcha.stop()
         with patch(
-            "blowcomotion.member_views._validate_recaptcha",
+            "members.views._validate_recaptcha",
             return_value=(False, "reCAPTCHA failed"),
         ):
             response = self.client.post(

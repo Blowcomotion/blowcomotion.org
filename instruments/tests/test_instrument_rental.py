@@ -6,7 +6,6 @@ from django.core import mail
 from django.db.models import Count, Q
 from django.test import TestCase, override_settings
 
-from blowcomotion.member_forms import InstrumentRentalRequestForm
 from blowcomotion.models import (
     Instrument,
     InstrumentRentalRequestSubmission,
@@ -15,6 +14,7 @@ from blowcomotion.models import (
     SiteSettings,
 )
 from instruments.patreon import check_patreon_membership
+from members.forms import InstrumentRentalRequestForm
 
 
 def make_instrument(name="Trumpet"):
@@ -192,7 +192,7 @@ class InstrumentRentalRequestFormTest(TestCase):
 
 from django.urls import reverse
 
-from blowcomotion.member_auth import create_member_user
+from members.auth import create_member_user
 
 
 class InstrumentRentalRequestViewTest(TestCase):
@@ -207,7 +207,7 @@ class InstrumentRentalRequestViewTest(TestCase):
         self.client.login(username="sam@example.com", password="Pass123!")
         self.site_settings = SiteSettings.for_site(Site.objects.get(is_default_site=True))
         self.site_settings.instrument_rental_policy = "You must return the instrument."
-        patcher = patch("blowcomotion.member_views._validate_recaptcha", return_value=(True, None))
+        patcher = patch("members.views._validate_recaptcha", return_value=(True, None))
         patcher.start()
         self.addCleanup(patcher.stop)
         self.site_settings.save()
@@ -265,7 +265,7 @@ class InstrumentRentalRequestViewTest(TestCase):
         sub = InstrumentRentalRequestSubmission.objects.first()
         self.assertEqual(sub.message, "prefer small bore")
 
-    @patch("blowcomotion.member_views._MemberEmail")
+    @patch("members.views._MemberEmail")
     def test_post_sends_two_emails(self, mock_email_cls):
         mock_email_cls.return_value.send.return_value = None
         site_settings = SiteSettings.for_site(Site.objects.get(is_default_site=True))
@@ -395,7 +395,7 @@ class InstrumentRentalTemplateTest(TestCase):
         self.site_settings = SiteSettings.for_site(Site.objects.get(is_default_site=True))
         self.site_settings.instrument_rental_policy = "You must return it."
         self.site_settings.save()
-        patcher = patch("blowcomotion.member_views._validate_recaptcha", return_value=(True, None))
+        patcher = patch("members.views._validate_recaptcha", return_value=(True, None))
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -411,7 +411,7 @@ class InstrumentRentalTemplateTest(TestCase):
         self.assertContains(response, "Third choice")
 
     def test_success_state_has_no_patreon_prompt(self):
-        with patch("blowcomotion.member_views._MemberEmail"):
+        with patch("members.views._MemberEmail"):
             response = self.client.post(reverse("member-instrument-rental"), {
                 "instrument": self.instrument.pk,
                 "policy_acknowledged": True,
@@ -420,7 +420,7 @@ class InstrumentRentalTemplateTest(TestCase):
         self.assertNotContains(response, "patreon")
 
     def test_success_state_shows_in_touch(self):
-        with patch("blowcomotion.member_views._MemberEmail"):
+        with patch("members.views._MemberEmail"):
             response = self.client.post(reverse("member-instrument-rental"), {
                 "instrument": self.instrument.pk,
                 "policy_acknowledged": True,
@@ -907,7 +907,7 @@ class PatreonValidationIntegrationTest(TestCase):
     def setUp(self):
         from wagtail.models import Site
 
-        from blowcomotion.member_auth import create_member_user
+        from members.auth import create_member_user
         self.instrument = make_instrument("Trumpet")
         self.li = make_library_instrument(self.instrument, status=LibraryInstrument.STATUS_AVAILABLE)
         self.member = make_member()
@@ -919,7 +919,7 @@ class PatreonValidationIntegrationTest(TestCase):
         self.site_settings.instrument_rental_policy = "You must return the instrument."
         self.site_settings.save()
         patcher_captcha = patch(
-            "blowcomotion.member_views._validate_recaptcha", return_value=(True, None)
+            "members.views._validate_recaptcha", return_value=(True, None)
         )
         patcher_captcha.start()
         self.addCleanup(patcher_captcha.stop)
@@ -932,14 +932,14 @@ class PatreonValidationIntegrationTest(TestCase):
             "policy_acknowledged": True,
         })
 
-    @patch("blowcomotion.member_views.check_patreon_membership", return_value=_PATREON_ACTIVE)
+    @patch("members.views.check_patreon_membership", return_value=_PATREON_ACTIVE)
     def test_active_patron_sets_patreon_validated_true(self, mock_check):
         self._post()
         sub = InstrumentRentalRequestSubmission.objects.first()
         self.assertTrue(sub.patreon_validated)
         mock_check.assert_called_once_with(self.member.email)
 
-    @patch("blowcomotion.member_views.check_patreon_membership", return_value=_PATREON_INACTIVE)
+    @patch("members.views.check_patreon_membership", return_value=_PATREON_INACTIVE)
     def test_inactive_patron_sets_patreon_validated_false(self, mock_check):
         self._post()
         sub = InstrumentRentalRequestSubmission.objects.first()
@@ -947,15 +947,15 @@ class PatreonValidationIntegrationTest(TestCase):
         self.assertIsNotNone(sub.patreon_validated)
         mock_check.assert_called_once_with(self.member.email)
 
-    @patch("blowcomotion.member_views.check_patreon_membership", return_value=None)
+    @patch("members.views.check_patreon_membership", return_value=None)
     def test_unconfigured_patreon_sets_patreon_validated_none(self, mock_check):
         self._post()
         sub = InstrumentRentalRequestSubmission.objects.first()
         self.assertIsNone(sub.patreon_validated)
         mock_check.assert_called_once_with(self.member.email)
 
-    @patch("blowcomotion.member_views._MemberEmail")
-    @patch("blowcomotion.member_views.check_patreon_membership", return_value=_PATREON_INACTIVE)
+    @patch("members.views._MemberEmail")
+    @patch("members.views.check_patreon_membership", return_value=_PATREON_INACTIVE)
     def test_inactive_patron_manager_email_mentions_patreon(self, mock_check, mock_email_cls):
         mock_email_cls.return_value.send.return_value = None
         self.site_settings.instrument_rental_notification_recipients = "mgr@example.com"
@@ -964,8 +964,8 @@ class PatreonValidationIntegrationTest(TestCase):
         call_kwargs = mock_email_cls.call_args_list[0][1]
         self.assertIn("NOT FOUND or INACTIVE", call_kwargs["body"])
 
-    @patch("blowcomotion.member_views._MemberEmail")
-    @patch("blowcomotion.member_views.check_patreon_membership", return_value=_PATREON_ACTIVE)
+    @patch("members.views._MemberEmail")
+    @patch("members.views.check_patreon_membership", return_value=_PATREON_ACTIVE)
     def test_active_patron_manager_email_confirms_active(self, mock_check, mock_email_cls):
         mock_email_cls.return_value.send.return_value = None
         self.site_settings.instrument_rental_notification_recipients = "mgr@example.com"
@@ -974,8 +974,8 @@ class PatreonValidationIntegrationTest(TestCase):
         call_kwargs = mock_email_cls.call_args_list[0][1]
         self.assertIn("ACTIVE PATRON", call_kwargs["body"])
 
-    @patch("blowcomotion.member_views._MemberEmail")
-    @patch("blowcomotion.member_views.check_patreon_membership", return_value=None)
+    @patch("members.views._MemberEmail")
+    @patch("members.views.check_patreon_membership", return_value=None)
     def test_unconfigured_patreon_manager_email_says_not_checked(self, mock_check, mock_email_cls):
         mock_email_cls.return_value.send.return_value = None
         self.site_settings.instrument_rental_notification_recipients = "mgr@example.com"
@@ -984,7 +984,7 @@ class PatreonValidationIntegrationTest(TestCase):
         call_kwargs = mock_email_cls.call_args_list[0][1]
         self.assertIn("not checked", call_kwargs["body"])
 
-    @patch("blowcomotion.member_views.check_patreon_membership", return_value=_PATREON_ACTIVE)
+    @patch("members.views.check_patreon_membership", return_value=_PATREON_ACTIVE)
     def test_submission_created_even_if_patreon_active(self, mock_check):
         self._post()
         self.assertEqual(InstrumentRentalRequestSubmission.objects.count(), 1)

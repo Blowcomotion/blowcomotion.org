@@ -1,29 +1,18 @@
 import json
 import logging
-import os
-import tempfile
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from io import StringIO
 
 import requests
 
 from django.conf import settings
-from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.management import call_command
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import render
-from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from blowcomotion.forms import MemberSignupForm
-from blowcomotion.member_auth import (
-    _MemberEmail,
-    create_member_user,
-    send_member_signup_welcome_email,
-)
-from blowcomotion.member_forms import _yesno_to_bool
 from blowcomotion.models import (
     BookingFormSubmission,
     ContactFormSubmission,
@@ -33,68 +22,15 @@ from blowcomotion.models import (
     Member,
     SiteSettings,
 )
-from blowcomotion.utils import send_member_to_go3_band_invite
+from members.auth import (
+    _MemberEmail,
+    create_member_user,
+    send_member_signup_welcome_email,
+)
+from members.forms import MemberSignupForm, _yesno_to_bool
+from members.utils import send_member_to_go3_band_invite
 
 logger = logging.getLogger(__name__)
-
-# Constants
-BIRTHDAY_RANGE_DAYS = 30
-
-
-def get_birthday(year, month, day):
-    """
-    Helper function to get a birthday date for a given year, handling leap year edge cases.
-    
-    Args:
-        year: The year for the birthday
-        month: The birth month
-        day: The birth day
-        
-    Returns:
-        date object if valid, None if invalid date
-    """
-    try:
-        return date(year, month, day)
-    except ValueError:
-        # Handle leap year edge case (Feb 29)
-        if month == 2 and day == 29:
-            return date(year, 2, 28)
-        else:
-            return None  # Skip invalid dates
-
-
-def get_next_year_birthday_info(member, today, future_date):
-    """
-    Helper function to check if a member's next year birthday falls within the upcoming range.
-    
-    Args:
-        member: Member object with birth_month, birth_day, and birth_year
-        today: Current date
-        future_date: End date for the upcoming range
-        
-    Returns:
-        dict with next year birthday info if within range, None otherwise
-    """
-    next_year = today.year + 1
-    
-    try:
-        next_year_birthday = date(next_year, member.birth_month, member.birth_day)
-        if today < next_year_birthday <= future_date:
-            birthday_info = {
-                'birthday': next_year_birthday,
-                'days_until': (next_year_birthday - today).days
-            }
-            
-            # Calculate age for next year if birth year is available
-            if member.birth_year:
-                birthday_info['age'] = next_year - member.birth_year
-                
-            return birthday_info
-    except ValueError:
-        # Handle invalid dates (e.g., Feb 29 in non-leap years)
-        pass
-    
-    return None
 
 
 def _get_form_recipients(site_settings, form_type):
@@ -643,49 +579,6 @@ def dump_data(request):
         logger.error(f"Error during data dump by user {request.user.username}: {str(e)}")
         # If something goes wrong, return an error message
         return JsonResponse({'error': str(e)}, status=500)
-    
-
-def export_members_csv(request):
-    if not request.user.has_perm('blowcomotion.access_real_data_exports'):
-        logger.warning("Unauthorized access attempt to export members by user %s", request.user.username)
-        return JsonResponse({'error': 'You do not have permission to access this feature'}, status=403)
-
-    include_extra = True
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
-    temp_path = temp_file.name
-    temp_file.close()
-
-    try:
-        logger.info(
-            "Starting member export by user %s (include_extra=%s)",
-            request.user.username,
-            include_extra,
-        )
-        call_command(
-            'export_members_to_csv',
-            output=temp_path,
-            include_extra=include_extra,
-            stdout=StringIO(),
-        )
-
-    except Exception as e:
-        logger.error("Error during member export by user %s: %s", request.user.username, str(e))
-        return JsonResponse({'error': str(e)}, status=500)
-    else:
-        with open(temp_path, 'rb') as csv_file:
-            csv_data = csv_file.read()
-
-        timestamp = timezone.now().strftime('%Y%m%d-%H%M%S')
-        filename = f'members_export_{timestamp}.csv'
-        response = HttpResponse(csv_data, content_type='text/csv')
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        logger.info("Member export completed successfully by user %s", request.user.username)
-        return response
-    finally:
-        try:
-            os.remove(temp_path)
-        except OSError:
-            logger.warning("Temporary file %s could not be removed after member export", temp_path)
 
 
 def process_form(request):
@@ -817,99 +710,6 @@ def process_form(request):
         logger.info(f"Form submission accessed with GET method by user {request.user.username}")
 
     return render(request, 'forms/post_process.html', context)
-
-
-@login_required
-@permission_required('blowcomotion.view_attendancerecord', raise_exception=True)
-def birthdays(request):
-    """
-    View to display recent and upcoming member birthdays.
-    Shows birthdays from the past BIRTHDAY_RANGE_DAYS and the upcoming BIRTHDAY_RANGE_DAYS.
-    """
-    today = date.today()
-    past_date = today - timedelta(days=BIRTHDAY_RANGE_DAYS)
-    future_date = today + timedelta(days=BIRTHDAY_RANGE_DAYS)
-    
-    # Calculate relevant birth months to reduce database queries
-    # We need to consider months that could have birthdays in our date range
-    relevant_months = set()
-    
-    # Add months for the date range - iterate through each day and collect months
-    current_date = past_date
-    while current_date <= future_date:
-        relevant_months.add(current_date.month)
-        current_date += timedelta(days=1)
-    
-    # Also add next year's months for future_date if we're near year end
-    if future_date.month <= 2:  # If future date is in Jan/Feb, include Dec from previous year
-        relevant_months.add(12)
-    if past_date.month >= 11:  # If past date is in Nov/Dec, include Jan from next year  
-        relevant_months.add(1)
-    
-    # Get all active members with birthday information, filtered by relevant months
-    members_with_birthdays = Member.objects.filter(
-        is_active=True,
-        birth_month__isnull=False,
-        birth_day__isnull=False,
-        birth_month__in=relevant_months
-    ).select_related('primary_instrument').order_by('first_name', 'last_name')
-    
-    recent_birthdays = []
-    upcoming_birthdays = []
-    today_birthdays = []
-    
-    for member in members_with_birthdays:
-        # Create a date object for this year's birthday
-        birthday_this_year = get_birthday(today.year, member.birth_month, member.birth_day)
-        if birthday_this_year is None:
-            continue  # Skip invalid dates
-        
-        # Calculate age (if birth year is available)
-        age = None
-        if member.birth_year:
-            age = today.year - member.birth_year
-            if today < birthday_this_year:
-                age -= 1
-        
-        member_info = {
-            'member': member,
-            'birthday': birthday_this_year,
-            'age': age,
-            'display_name': f'"{member.preferred_name}" {member.first_name}' if member.preferred_name else f'{member.first_name}',
-        }
-        
-        # Check if birthday is today
-        if birthday_this_year == today:
-            today_birthdays.append(member_info)
-        # Check if birthday was in the past BIRTHDAY_RANGE_DAYS days
-        elif past_date <= birthday_this_year < today:
-            member_info['days_ago'] = (today - birthday_this_year).days
-            recent_birthdays.append(member_info)
-        # Check if birthday is in the upcoming BIRTHDAY_RANGE_DAYS days
-        elif today < birthday_this_year <= future_date:
-            member_info['days_until'] = (birthday_this_year - today).days
-            upcoming_birthdays.append(member_info)
-        # Check if birthday already passed this year; consider next year's birthday if it's within range
-        elif birthday_this_year < today:
-            next_year_info = get_next_year_birthday_info(member, today, future_date)
-            if next_year_info:
-                member_info.update(next_year_info)
-                upcoming_birthdays.append(member_info)
-    
-    # Sort lists efficiently - recent birthdays by date (most recent first)
-    recent_birthdays.sort(key=lambda x: x['birthday'], reverse=True)
-    # Upcoming birthdays by date (soonest first) 
-    upcoming_birthdays.sort(key=lambda x: x['birthday'])
-    # Today's birthdays are already ordered by name due to database ordering
-    
-    context = {
-        'today_birthdays': today_birthdays,
-        'recent_birthdays': recent_birthdays,
-        'upcoming_birthdays': upcoming_birthdays,
-        'today': today,
-    }
-    
-    return render(request, 'birthdays.html', context)
 
 
 @require_http_methods(["POST"])

@@ -288,7 +288,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         )
         
         # Mock today as January 27, 2026
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             mock_date.today.return_value = date(2026, 1, 27)
             mock_date.side_effect = date
             
@@ -319,7 +319,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         # September 2026 would be in the future, so it should use 2026
         # But if today is March 2026, then September 2026 is future
         # If today is October 2026, then September 2026 is past, so use 2027
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             mock_date.today.return_value = date(2026, 10, 15)  # October 15, 2026
             mock_date.side_effect = date
             
@@ -347,7 +347,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         )
         
         # Mock today as January 1, 2026 (first day of January)
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             mock_date.today.return_value = date(2026, 1, 1)
             mock_date.side_effect = date
             
@@ -375,7 +375,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         )
         
         # Mock today as June 15, 2026 (middle of year)
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             mock_date.today.return_value = date(2026, 6, 15)
             mock_date.side_effect = date
             
@@ -403,7 +403,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         )
         
         # Mock today as December 15, 2025 (December of previous year)
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             mock_date.today.return_value = date(2025, 12, 15)
             mock_date.side_effect = date
             
@@ -422,7 +422,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         # No members with birthdays in May
         
         # Mock today as February 1, 2026
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             mock_date.today.return_value = date(2026, 2, 1)
             mock_date.side_effect = date
             
@@ -449,7 +449,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         )
         
         # Mock today as June 15, 2026
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             mock_date.today.return_value = date(2026, 6, 15)
             mock_date.side_effect = date
             
@@ -506,7 +506,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             primary_instrument=self.trumpet,
         )
 
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             self._mock_today(mock_date, date(2026, 7, 1))
 
             out = StringIO()
@@ -530,7 +530,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             primary_instrument=self.trumpet,
         )
 
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             self._mock_today(mock_date, date(2026, 7, 1))
 
             out = StringIO()
@@ -551,7 +551,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             primary_instrument=self.snare,
         )
 
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             self._mock_today(mock_date, date(2026, 7, 1))
 
             out = StringIO()
@@ -573,7 +573,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             primary_instrument=self.trumpet,
         )
 
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             self._mock_today(mock_date, date(2026, 7, 1))
 
             out = StringIO()
@@ -594,7 +594,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             self.assertIn('Trumpet', email.body)
 
     def test_command_no_birthdays_skips_email(self):
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             self._mock_today(mock_date, date(2026, 7, 1))
 
             out = StringIO()
@@ -618,7 +618,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             primary_instrument=self.trumpet,
         )
 
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             self._mock_today(mock_date, date(2026, 7, 1))
 
             with self.assertRaises(CommandError) as cm:
@@ -640,7 +640,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
 
     def test_command_skips_on_non_sunday(self):
         """The weekly mode should be a no-op on days other than Sunday"""
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             self._mock_today(mock_date, date(2026, 7, 1))  # Wednesday
 
             out = StringIO()
@@ -661,7 +661,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             primary_instrument=self.trumpet,
         )
 
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             self._mock_today(mock_date, date(2026, 7, 5))  # Sunday
 
             out = StringIO()
@@ -682,7 +682,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             primary_instrument=self.trumpet,
         )
 
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             self._mock_today(mock_date, date(2026, 7, 1))
 
             out = StringIO()
@@ -703,7 +703,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             primary_instrument=self.trumpet,
         )
 
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             self._mock_today(mock_date, date(2026, 12, 28))
 
             out = StringIO()
@@ -725,7 +725,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             primary_instrument=self.trumpet,
         )
 
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             self._mock_today(mock_date, date(2026, 7, 1))
 
             # Default 7-day window excludes the birthday (10 days out)
@@ -755,7 +755,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
         MemberInstrument.objects.create(member=member, instrument=self.trombone)
         MemberInstrument.objects.create(member=member, instrument=self.snare)
 
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             self._mock_today(mock_date, date(2026, 7, 1))
 
             out = StringIO()
@@ -779,7 +779,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             primary_instrument=self.trumpet,
         )
 
-        with patch('blowcomotion.management.commands.send_monthly_birthday_summary.date') as mock_date:
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             self._mock_today(mock_date, date(2026, 7, 1))
 
             call_command('send_monthly_birthday_summary', '--days', '--ignore-date-check')

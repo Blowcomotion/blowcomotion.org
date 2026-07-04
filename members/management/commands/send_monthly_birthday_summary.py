@@ -44,7 +44,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import render_to_string
 
 from blowcomotion.models import Member, SiteSettings
-from blowcomotion.views import get_birthday, get_next_year_birthday_info
+from members.birthdays import get_birthday, get_next_year_birthday_info
 
 logger = logging.getLogger(__name__)
 

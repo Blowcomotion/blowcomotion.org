@@ -4,8 +4,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from blowcomotion.member_auth import create_member_user
 from blowcomotion.models import Member, PasswordSetToken
+from members.auth import create_member_user
 
 User = get_user_model()
 
@@ -18,7 +18,7 @@ def make_member(**kwargs):
 
 # Patch reCAPTCHA to always pass in tests
 recaptcha_pass = patch(
-    "blowcomotion.member_views._validate_recaptcha", return_value=(True, None)
+    "members.views._validate_recaptcha", return_value=(True, None)
 )
 
 
@@ -45,7 +45,7 @@ class LoginViewTests(TestCase):
 
     def test_recaptcha_fail_stays_on_login(self):
         with patch(
-            "blowcomotion.member_views._validate_recaptcha",
+            "members.views._validate_recaptcha",
             return_value=(False, "reCAPTCHA failed"),
         ):
             response = self.client.post(
@@ -215,7 +215,7 @@ class GetAccessViewTests(TestCase):
                    FROM_EMAIL="noreply@blowcomotion.org")
 class SetPasswordReactivationTests(TestCase):
     def test_set_password_reactivates_inactive_member(self):
-        with patch("blowcomotion.member_views._validate_recaptcha", return_value=(True, None)):
+        with patch("members.views._validate_recaptcha", return_value=(True, None)):
             member = make_member(email="dormant@example.com", is_active=False)
             create_member_user(member)
             token = PasswordSetToken.objects.create(member=member)
@@ -228,7 +228,7 @@ class SetPasswordReactivationTests(TestCase):
             self.assertTrue(member.is_active)
 
     def test_set_password_active_member_stays_active(self):
-        with patch("blowcomotion.member_views._validate_recaptcha", return_value=(True, None)):
+        with patch("members.views._validate_recaptcha", return_value=(True, None)):
             member = make_member(email="active@example.com")
             create_member_user(member)
             token = PasswordSetToken.objects.create(member=member)

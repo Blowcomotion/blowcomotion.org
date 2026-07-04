@@ -5,8 +5,8 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import TestCase
 
-from blowcomotion.member_auth import create_member_user
 from blowcomotion.models import Member
+from members.auth import create_member_user
 
 User = get_user_model()
 
@@ -17,7 +17,7 @@ def make_member(email, active=True, **kwargs):
     )
 
 
-patch_email = patch("blowcomotion.management.commands.invite_members.send_set_password_email")
+patch_email = patch("members.management.commands.invite_members.send_set_password_email")
 
 
 class InviteMembersCommandTests(TestCase):
