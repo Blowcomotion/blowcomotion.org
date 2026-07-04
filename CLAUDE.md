@@ -48,7 +48,7 @@ python manage.py collectstatic --noinput
 
 **Member portal** is a separate set of views in `members/views.py` with its own URLs in `members/urls.py`, mounted at `/member/`. It uses Django's built-in auth views as base classes.
 
-**Attendance and birthdays** are protected by HTTP Basic Auth via a custom `@http_basic_auth` decorator that reads passwords from `SiteSettings` (Wagtail admin > Settings).
+**Attendance and birthdays** are protected by role-based access: `@login_required` plus `@permission_required('blowcomotion.add_attendancerecord', ...)` or `@permission_required('blowcomotion.view_attendancerecord', ...)` (granted via the Attendance Taker role). This replaced the old shared HTTP Basic Auth password scheme.
 
 **StreamField blocks** are defined in the `blowcomotion/blocks/` package (`layout.py`, `content.py`, `forms.py`, `media.py`, re-exported from `blowcomotion/blocks/__init__.py`) and rendered by templates in `templates/blocks/`. New page content types are added as blocks on `BlankCanvasPage`.
 
