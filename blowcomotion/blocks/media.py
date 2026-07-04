@@ -1,4 +1,6 @@
 import os
+import re
+from urllib.parse import parse_qs, urlparse
 
 from wagtail import blocks
 from wagtail.embeds.blocks import EmbedBlock
@@ -193,17 +195,23 @@ class VideoFeedBlock(blocks.StructBlock):
             # Fallback: construct embed URL from source URL
             if not embed_url:
                 url = embed_value.url
+                parsed_url = urlparse(url)
+                hostname = (parsed_url.hostname or "").lower()
+
                 # YouTube
-                if "youtube.com/watch?v=" in url:
-                    video_id = url.split("watch?v=")[-1].split("&")[0]
-                    embed_url = f"https://www.youtube.com/embed/{video_id}"
-                elif "youtu.be/" in url:
-                    video_id = url.split("youtu.be/")[-1].split("?")[0]
-                    embed_url = f"https://www.youtube.com/embed/{video_id}"
+                if hostname in {"youtube.com", "www.youtube.com", "m.youtube.com"}:
+                    video_id = parse_qs(parsed_url.query).get("v", [None])[0]
+                    if video_id:
+                        embed_url = f"https://www.youtube.com/embed/{video_id}"
+                elif hostname in {"youtu.be", "www.youtu.be"}:
+                    video_id = parsed_url.path.lstrip("/").split("/")[0]
+                    if video_id:
+                        embed_url = f"https://www.youtube.com/embed/{video_id}"
                 # Vimeo
-                elif "vimeo.com/" in url:
-                    video_id = url.split("vimeo.com/")[-1].split("?")[0]
-                    embed_url = f"https://player.vimeo.com/video/{video_id}"
+                elif hostname == "vimeo.com" or hostname.endswith(".vimeo.com"):
+                    video_id = parsed_url.path.lstrip("/").split("/")[0]
+                    if video_id:
+                        embed_url = f"https://player.vimeo.com/video/{video_id}"
             
             return {
                 'embed_url': embed_url,
