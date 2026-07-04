@@ -914,43 +914,6 @@ def export_members_csv(request):
             logger.warning("Temporary file %s could not be removed after member export", temp_path)
 
 
-def export_charts_csv(request):
-    if not request.user.has_perm('blowcomotion.access_real_data_exports'):
-        logger.warning("Unauthorized access attempt to export charts by user %s", request.user.username)
-        return JsonResponse({'error': 'You do not have permission to access this feature'}, status=403)
-
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
-    temp_path = temp_file.name
-    temp_file.close()
-
-    try:
-        logger.info("Starting chart export by user %s", request.user.username)
-        call_command(
-            'export_charts_to_csv',
-            output_path=temp_path,
-            stdout=StringIO(),
-        )
-
-    except Exception as e:
-        logger.error("Error during chart export by user %s: %s", request.user.username, str(e))
-        return JsonResponse({'error': str(e)}, status=500)
-    else:
-        with open(temp_path, 'rb') as csv_file:
-            csv_data = csv_file.read()
-
-        timestamp = timezone.now().strftime('%Y%m%d-%H%M%S')
-        filename = f'charts_export_{timestamp}.csv'
-        response = HttpResponse(csv_data, content_type='text/csv')
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        logger.info("Chart export completed successfully by user %s", request.user.username)
-        return response
-    finally:
-        try:
-            os.remove(temp_path)
-        except OSError:
-            logger.warning("Temporary file %s could not be removed after chart export", temp_path)
-
-
 def export_library_instruments_csv(request):
     if not request.user.has_perm('blowcomotion.access_real_data_exports'):
         logger.warning("Unauthorized access attempt to export library instruments by user %s", request.user.username)

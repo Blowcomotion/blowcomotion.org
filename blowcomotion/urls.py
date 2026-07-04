@@ -7,7 +7,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 import blowcomotion.views as blowcomotion_views
-from blowcomotion import chart_api, member_urls
+from blowcomotion import member_urls
 from search import views as search_views
 
 urlpatterns = [
@@ -21,14 +21,8 @@ urlpatterns = [
 
     # Birthdays URL
     path("birthdays/", blowcomotion_views.birthdays, name="birthdays"),
-    
-    # Chart Library API
-    path("charts/instruments/", chart_api.instruments_with_charts, name="chart-instruments-list"),
-    path("charts/songs/<int:instrument_id>/", chart_api.songs_for_instrument, name="chart-songs-for-instrument"),
-    # Legacy endpoints (kept for backwards compatibility)
-    path("charts/songs/", chart_api.songs_with_charts, name="chart-songs"),
-    path("charts/instruments/<int:song_id>/", chart_api.instruments_for_song, name="chart-instruments"),
-    path("charts/parts/<int:song_id>/<int:instrument_id>/", chart_api.charts_for_song_instrument, name="chart-parts"),
+
+    path("charts/", include("charts.urls")),
 
     path("instrument-rental/staying/", blowcomotion_views.instrument_rental_staying, name="instrument-rental-staying"),
     path("instrument-rental/patreon-updated/", blowcomotion_views.instrument_rental_patreon_updated, name="instrument-rental-patreon-updated"),

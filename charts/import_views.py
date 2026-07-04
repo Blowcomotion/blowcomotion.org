@@ -9,7 +9,8 @@ from django.db.models import Max
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from blowcomotion.drive_sync import (
+from blowcomotion.models import Chart, Instrument, Song
+from charts.drive_sync import (
     _KEY_INSTRUMENT_MAP,
     ARCHIVE_FOLDERS,
     EXCLUDE_FOLDERS,
@@ -19,7 +20,6 @@ from blowcomotion.drive_sync import (
     reconcile_file,
     resolve_drive_file,
 )
-from blowcomotion.models import Chart, Instrument, Song
 
 logger = logging.getLogger(__name__)
 

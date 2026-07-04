@@ -1,6 +1,6 @@
 from django.test import TestCase, override_settings
 
-from blowcomotion.drive_sync import ParsedFile, parse_filename
+from charts.drive_sync import ParsedFile, parse_filename
 
 
 class TestParseFilename(TestCase):
@@ -338,7 +338,7 @@ class TestParseFilename(TestCase):
 import datetime
 from unittest.mock import MagicMock
 
-from blowcomotion.drive_sync import (
+from charts.drive_sync import (
     ReconcileResult,
     match_instrument,
     match_song,
@@ -481,7 +481,7 @@ class TestReconcileFile(TestCase):
         return c
 
     def _parsed(self):
-        from blowcomotion.drive_sync import ParsedFile
+        from charts.drive_sync import ParsedFile
         return ParsedFile(instrument_hint="Trumpet", part_ordinal="1st", is_score=False)
 
     def test_exact_newer_modified_is_auto(self):
@@ -560,7 +560,7 @@ class TestPickerView(TestCase):
         self.client = Client()
         self.client.login(username="admin", password="password")
 
-    @patch("blowcomotion.views_chart_import.list_song_folders")
+    @patch("charts.import_views.list_song_folders")
     @override_settings(GDRIVE_CHARTS_FOLDER_ID="root_folder_id")
     def test_picker_lists_folders(self, mock_list):
         mock_list.return_value = [{"id": "f1", "name": "Soul Finger"}]
@@ -585,7 +585,7 @@ class TestImportView(TestCase):
         self.song = Song.objects.create(title="Soul Finger")
         self.instrument = Instrument.objects.create(name="Trumpet")
 
-    @patch("blowcomotion.views_chart_import.list_pdfs_in_folder")
+    @patch("charts.import_views.list_pdfs_in_folder")
     def test_review_get_renders(self, mock_list):
         mock_list.return_value = [{
             "id": "f1", "name": "Soul_Finger_Tmpt_1.pdf",
@@ -598,7 +598,7 @@ class TestImportView(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Soul_Finger_Tmpt_1.pdf")
 
-    @patch("blowcomotion.views_chart_import.list_pdfs_in_folder")
+    @patch("charts.import_views.list_pdfs_in_folder")
     def test_import_post_creates_chart(self, mock_list):
         mock_list.return_value = [{
             "id": "f1", "name": "Soul_Finger_Tmpt_1.pdf",
@@ -633,8 +633,8 @@ class TestSyncChartsCommand(TestCase):
         self.song = Song.objects.create(title="Soul Finger")
         self.instrument = Instrument.objects.create(name="Trumpet")
 
-    @patch("blowcomotion.management.commands.sync_charts.list_pdfs_in_folder")
-    @patch("blowcomotion.management.commands.sync_charts._get_drive_service")
+    @patch("charts.management.commands.sync_charts.list_pdfs_in_folder")
+    @patch("charts.management.commands.sync_charts._get_drive_service")
     @override_settings(GDRIVE_CHARTS_FOLDER_ID="root_id", GDRIVE_API_KEY="test-key")
     def test_dry_run_makes_no_writes(self, mock_service, mock_list):
         mock_list.return_value = []
@@ -643,8 +643,8 @@ class TestSyncChartsCommand(TestCase):
         call_command("sync_charts", "--dry-run", stdout=StringIO())
         self.assertEqual(Chart.objects.count(), initial)
 
-    @patch("blowcomotion.management.commands.sync_charts.list_pdfs_in_folder")
-    @patch("blowcomotion.management.commands.sync_charts._get_drive_service")
+    @patch("charts.management.commands.sync_charts.list_pdfs_in_folder")
+    @patch("charts.management.commands.sync_charts._get_drive_service")
     @override_settings(GDRIVE_CHARTS_FOLDER_ID="root_id", GDRIVE_API_KEY="test-key")
     def test_exact_match_updates_chart(self, mock_service, mock_list):
         import datetime

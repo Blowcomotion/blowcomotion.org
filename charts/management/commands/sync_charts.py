@@ -4,13 +4,13 @@ from datetime import datetime
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from blowcomotion.drive_sync import (
+from blowcomotion.models import Chart, Instrument
+from charts.drive_sync import (
     _get_drive_service,
     list_pdfs_in_folder,
     reconcile_file,
     resolve_drive_file,
 )
-from blowcomotion.models import Chart, Instrument
 
 logger = logging.getLogger(__name__)
 

@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "blowcomotion",
     "gigs",
     "attendance",
+    "charts",
     "search",
     "compressor",
     "livereload",
