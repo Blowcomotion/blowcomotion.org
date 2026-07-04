@@ -10,11 +10,11 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from attendance.views import export_attendance_csv
-from blowcomotion.views import (
-    dump_data,
+from blowcomotion.views import dump_data, export_members_csv, fetch_embed_data
+from charts.views import export_charts_csv
+from gigs.views import sync_gigs_admin
+from instruments.views import (
     export_library_instruments_csv,
-    export_members_csv,
-    fetch_embed_data,
     instrument_library_available,
     instrument_library_needs_repair,
     instrument_library_rented,
@@ -22,8 +22,6 @@ from blowcomotion.views import (
     rental_request_review,
     rental_requests_dashboard,
 )
-from charts.views import export_charts_csv
-from gigs.views import sync_gigs_admin
 
 from .chooser_viewsets import (
     event_chooser_viewset,

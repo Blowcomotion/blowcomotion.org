@@ -24,9 +24,7 @@ urlpatterns = [
 
     path("charts/", include("charts.urls")),
 
-    path("instrument-rental/staying/", blowcomotion_views.instrument_rental_staying, name="instrument-rental-staying"),
-    path("instrument-rental/patreon-updated/", blowcomotion_views.instrument_rental_patreon_updated, name="instrument-rental-patreon-updated"),
-    path("instrument-rental/return/", blowcomotion_views.instrument_rental_return, name="instrument-rental-return"),
+    path("instrument-rental/", include("instruments.urls")),
 
     path("member/", include(member_urls)),
 ]

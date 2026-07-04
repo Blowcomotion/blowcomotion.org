@@ -45,8 +45,8 @@ from blowcomotion.models import (
     PasswordSetToken,
     SiteSettings,
 )
-from blowcomotion.patreon_client import check_patreon_membership
 from blowcomotion.views import _validate_recaptcha
+from instruments.patreon import check_patreon_membership
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

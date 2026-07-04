@@ -8,7 +8,7 @@ from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
 
 from blowcomotion.models import InstrumentRentalNagLog, LibraryInstrument, SiteSettings
-from blowcomotion.views import _build_nag_email
+from instruments.views import _build_nag_email
 
 
 class Command(BaseCommand):

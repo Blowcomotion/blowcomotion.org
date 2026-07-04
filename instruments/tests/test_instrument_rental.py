@@ -14,7 +14,7 @@ from blowcomotion.models import (
     Member,
     SiteSettings,
 )
-from blowcomotion.patreon_client import check_patreon_membership
+from instruments.patreon import check_patreon_membership
 
 
 def make_instrument(name="Trumpet"):
@@ -463,7 +463,7 @@ class RentalRequestsAdminViewTest(TestCase):
         response = self.client.get(reverse("rental_requests_dashboard"))
         self.assertIn(response.status_code, [302, 403])
 
-    @patch("blowcomotion.views._MemberEmail")
+    @patch("instruments.views._MemberEmail")
     def test_approve_updates_submission_and_unit(self, mock_email_cls):
         mock_email_cls.return_value.send.return_value = None
         self.client.post(
@@ -477,7 +477,7 @@ class RentalRequestsAdminViewTest(TestCase):
         self.assertEqual(self.li.status, LibraryInstrument.STATUS_RENTED)
         self.assertEqual(self.li.member, self.member)
 
-    @patch("blowcomotion.views._MemberEmail")
+    @patch("instruments.views._MemberEmail")
     def test_approve_sets_member_renting(self, mock_email_cls):
         mock_email_cls.return_value.send.return_value = None
         self.client.post(
@@ -487,7 +487,7 @@ class RentalRequestsAdminViewTest(TestCase):
         self.member.refresh_from_db()
         self.assertTrue(self.member.renting)
 
-    @patch("blowcomotion.views._MemberEmail")
+    @patch("instruments.views._MemberEmail")
     def test_approve_sends_email(self, mock_email_cls):
         mock_email_cls.return_value.send.return_value = None
         self.client.post(
@@ -496,7 +496,7 @@ class RentalRequestsAdminViewTest(TestCase):
         )
         self.assertEqual(mock_email_cls.call_count, 1)
 
-    @patch("blowcomotion.views._MemberEmail")
+    @patch("instruments.views._MemberEmail")
     def test_deny_updates_submission(self, mock_email_cls):
         mock_email_cls.return_value.send.return_value = None
         self.client.post(
@@ -787,7 +787,7 @@ class PatreonClientTest(TestCase):
         resp.json.return_value = payload
         return resp
 
-    @patch("blowcomotion.patreon_client.requests.get")
+    @patch("instruments.patreon.requests.get")
     def test_active_patron_returns_true(self, mock_get):
 
 
@@ -798,7 +798,7 @@ class PatreonClientTest(TestCase):
             result = check_patreon_membership("patron@example.com")
         self.assertTrue(result["is_active"])
 
-    @patch("blowcomotion.patreon_client.requests.get")
+    @patch("instruments.patreon.requests.get")
     def test_declined_patron_returns_false(self, mock_get):
 
 
@@ -809,7 +809,7 @@ class PatreonClientTest(TestCase):
             result = check_patreon_membership("lapsed@example.com")
         self.assertFalse(result["is_active"])
 
-    @patch("blowcomotion.patreon_client.requests.get")
+    @patch("instruments.patreon.requests.get")
     def test_member_not_found_returns_false(self, mock_get):
 
 
@@ -832,7 +832,7 @@ class PatreonClientTest(TestCase):
             result = check_patreon_membership("any@example.com")
         self.assertIsNone(result)
 
-    @patch("blowcomotion.patreon_client.requests.get")
+    @patch("instruments.patreon.requests.get")
     def test_email_match_is_case_insensitive(self, mock_get):
 
 
@@ -843,7 +843,7 @@ class PatreonClientTest(TestCase):
             result = check_patreon_membership("patron@example.com")
         self.assertTrue(result["is_active"])
 
-    @patch("blowcomotion.patreon_client.requests.get")
+    @patch("instruments.patreon.requests.get")
     def test_member_found_on_second_page(self, mock_get):
         """Email appears on page 2 — pagination must be followed."""
 
@@ -861,7 +861,7 @@ class PatreonClientTest(TestCase):
         self.assertTrue(result["is_active"])
         self.assertEqual(mock_get.call_count, 2)
 
-    @patch("blowcomotion.patreon_client.requests.get")
+    @patch("instruments.patreon.requests.get")
     def test_timeout_returns_none(self, mock_get):
         import requests as req_lib
 
@@ -872,7 +872,7 @@ class PatreonClientTest(TestCase):
             result = check_patreon_membership("patron@example.com")
         self.assertIsNone(result)
 
-    @patch("blowcomotion.patreon_client.requests.get")
+    @patch("instruments.patreon.requests.get")
     def test_connection_error_returns_none(self, mock_get):
         import requests as req_lib
 
@@ -883,7 +883,7 @@ class PatreonClientTest(TestCase):
             result = check_patreon_membership("patron@example.com")
         self.assertIsNone(result)
 
-    @patch("blowcomotion.patreon_client.requests.get")
+    @patch("instruments.patreon.requests.get")
     def test_http_error_returns_none(self, mock_get):
         import requests as req_lib
 

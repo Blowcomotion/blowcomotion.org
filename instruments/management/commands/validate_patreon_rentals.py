@@ -6,7 +6,7 @@ from blowcomotion.models import (
     LibraryInstrument,
     Member,
 )
-from blowcomotion.patreon_client import MIN_RENTAL_PLEDGE_CENTS, fetch_all_members
+from instruments.patreon import MIN_RENTAL_PLEDGE_CENTS, fetch_all_members
 
 _SUB_SAVE_FIELDS = [
     "patreon_validated",

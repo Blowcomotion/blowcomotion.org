@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "gigs",
     "attendance",
     "charts",
+    "instruments",
     "search",
     "compressor",
     "livereload",
