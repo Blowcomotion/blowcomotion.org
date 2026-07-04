@@ -7,7 +7,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 import blowcomotion.views as blowcomotion_views
-from blowcomotion import chart_api, member_urls
+from members import birthdays as member_birthday_views
 from search import views as search_views
 
 urlpatterns = [
@@ -16,31 +16,17 @@ urlpatterns = [
     path("documents/", include(wagtaildocs_urls)),
     path("search/", search_views.search, name="search"),
     path("process-form/", blowcomotion_views.process_form, name="process-form"),
-    
-    # Attendance URLs
-    path("attendance/", blowcomotion_views.attendance_capture, name="attendance-main"),
-    path("attendance/reports/", blowcomotion_views.attendance_reports, name="attendance-reports"),
-    path("attendance/reports/<str:section_slug>/", blowcomotion_views.attendance_section_report_new, name="attendance-section-report"),
-    path("attendance/gigs-for-date/", blowcomotion_views.gigs_for_date, name="gigs-for-date"),
-    path("attendance/inactive-members/", blowcomotion_views.inactive_members, name="inactive-members"),
-    path("attendance/<str:section_slug>/", blowcomotion_views.attendance_capture, name="attendance-capture"),
-    
+
+    path("attendance/", include("attendance.urls")),
+
     # Birthdays URL
-    path("birthdays/", blowcomotion_views.birthdays, name="birthdays"),
-    
-    # Chart Library API
-    path("charts/instruments/", chart_api.instruments_with_charts, name="chart-instruments-list"),
-    path("charts/songs/<int:instrument_id>/", chart_api.songs_for_instrument, name="chart-songs-for-instrument"),
-    # Legacy endpoints (kept for backwards compatibility)
-    path("charts/songs/", chart_api.songs_with_charts, name="chart-songs"),
-    path("charts/instruments/<int:song_id>/", chart_api.instruments_for_song, name="chart-instruments"),
-    path("charts/parts/<int:song_id>/<int:instrument_id>/", chart_api.charts_for_song_instrument, name="chart-parts"),
+    path("birthdays/", member_birthday_views.birthdays, name="birthdays"),
 
-    path("instrument-rental/staying/", blowcomotion_views.instrument_rental_staying, name="instrument-rental-staying"),
-    path("instrument-rental/patreon-updated/", blowcomotion_views.instrument_rental_patreon_updated, name="instrument-rental-patreon-updated"),
-    path("instrument-rental/return/", blowcomotion_views.instrument_rental_return, name="instrument-rental-return"),
+    path("charts/", include("charts.urls")),
 
-    path("member/", include(member_urls)),
+    path("instrument-rental/", include("instruments.urls")),
+
+    path("member/", include("members.urls")),
 ]
 
 

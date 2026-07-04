@@ -9,21 +9,20 @@ from django.urls import path, reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from blowcomotion.views import (
-    dump_data,
-    export_attendance_csv,
-    export_charts_csv,
+from attendance.views import export_attendance_csv
+from blowcomotion.views import dump_data, fetch_embed_data
+from charts.views import export_charts_csv
+from gigs.views import sync_gigs_admin
+from instruments.views import (
     export_library_instruments_csv,
-    export_members_csv,
-    fetch_embed_data,
     instrument_library_available,
     instrument_library_needs_repair,
     instrument_library_rented,
     rental_request_return,
     rental_request_review,
     rental_requests_dashboard,
-    sync_gigs_admin,
 )
+from members.views import export_members_csv
 
 from .chooser_viewsets import (
     event_chooser_viewset,
@@ -116,7 +115,7 @@ def register_admin_urls():
 def register_chart_import_urls():
     from django.urls import path
 
-    from blowcomotion import views_chart_import
+    from charts import import_views as views_chart_import
     return [
         path("chart-import/", views_chart_import.picker, name="chart_import_picker"),
         path("chart-import/review/", views_chart_import.review, name="chart_import_review"),

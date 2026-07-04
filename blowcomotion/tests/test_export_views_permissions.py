@@ -42,9 +42,11 @@ class ExportViewsPermissionTests(TestCase):
             response = self.client.get(reverse(url_name))
             self.assertEqual(response.status_code, 403, url_name)
 
+    @patch('attendance.views.call_command')
     @patch('blowcomotion.views.call_command')
-    def test_data_analyst_allowed(self, mock_call_command):
+    def test_data_analyst_allowed(self, mock_call_command, mock_attendance_call_command):
         mock_call_command.return_value = None
+        mock_attendance_call_command.return_value = None
         user = User.objects.create_user(username='analyst', password='pw', is_staff=True)
         user.user_permissions.add(self.analyst_perm)
         if self.admin_perm:
@@ -61,6 +63,7 @@ class ExportViewsPermissionTests(TestCase):
         self.client.login(username='admin', password='pw')
         for url_name in EXPORT_URL_NAMES:
             with patch('blowcomotion.views.call_command'), \
+                 patch('attendance.views.call_command'), \
                  patch('builtins.open', create=True) as mock_open:
                 mock_open.return_value.__enter__.return_value.read.return_value = b'csv,data'
                 response = self.client.get(reverse(url_name))
