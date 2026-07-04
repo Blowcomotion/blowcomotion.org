@@ -664,9 +664,9 @@ def export_members_csv(request):
             stdout=StringIO(),
         )
 
-    except Exception as e:
-        logger.error("Error during member export by user %s: %s", request.user.username, str(e))
-        return JsonResponse({'error': str(e)}, status=500)
+    except Exception:
+        logger.exception("Error during member export by user %s", request.user.username)
+        return JsonResponse({'error': 'An internal error occurred while exporting members'}, status=500)
     else:
         with open(temp_path, 'rb') as csv_file:
             csv_data = csv_file.read()

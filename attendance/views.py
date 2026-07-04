@@ -770,9 +770,9 @@ def export_attendance_csv(request):
 
         call_command('export_attendance_to_csv', **command_kwargs)
 
-    except Exception as e:
-        logger.error("Error during attendance export by user %s: %s", request.user.username, str(e))
-        return JsonResponse({'error': str(e)}, status=500)
+    except Exception:
+        logger.exception("Error during attendance export by user %s", request.user.username)
+        return JsonResponse({'error': 'An internal error occurred while exporting attendance data.'}, status=500)
     else:
         with open(temp_path, 'rb') as csv_file:
             csv_data = csv_file.read()

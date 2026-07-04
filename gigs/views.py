@@ -118,5 +118,5 @@ def gigs_for_date(request):
         # Use the original date parameter from request if available, otherwise 'unknown'
         date_param = request.GET.get('date', 'unknown')
         logger.error("Unexpected error in gigs_for_date for date %s: %s", date_param, e, exc_info=True)
-        return JsonResponse({'error': f'Error fetching gigs: {str(e)}'}, status=500)
+        return JsonResponse({'error': 'An internal error occurred while fetching gigs'}, status=500)
 
