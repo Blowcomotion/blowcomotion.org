@@ -99,11 +99,6 @@
         {% if form.profile_photo.errors %}<div class="text-danger small">{{ form.profile_photo.errors }}</div>{% endif %}
     </div>
 
-    <h5 class="mt-4 mb-3">Notification Preferences</h5>
-    <div class="form-check mb-2">{{ form.notify_rental_updates }}<label class="form-check-label" for="{{ form.notify_rental_updates.id_for_label }}">Rental status updates</label></div>
-    <div class="form-check mb-2">{{ form.notify_reminders }}<label class="form-check-label" for="{{ form.notify_reminders.id_for_label }}">Operational reminders</label></div>
-    <div class="form-check mb-2">{{ form.notify_announcements }}<label class="form-check-label" for="{{ form.notify_announcements.id_for_label }}">Band announcements</label></div>
-
     <h5 class="mt-4 mb-3">Health &amp; Preferences</h5>
 
     <div class="mb-3">
