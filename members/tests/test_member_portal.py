@@ -81,9 +81,6 @@ class ProfileViewTests(TestCase):
                 "last_name": "Player",
                 "preferred_name": "Robbie",
                 "email": "robin@example.com",
-                "notify_rental_updates": True,
-                "notify_reminders": True,
-                "notify_announcements": True,
             },
             follow=True,
         )
@@ -103,9 +100,6 @@ class ProfileViewTests(TestCase):
                     "first_name": "Robin",
                     "last_name": "Player",
                     "email": "newemail@example.com",
-                    "notify_rental_updates": True,
-                    "notify_reminders": True,
-                    "notify_announcements": True,
                 },
             )
         self.member.refresh_from_db()
@@ -151,9 +145,6 @@ class ProfileViewTests(TestCase):
                     "first_name": "Robin",
                     "last_name": "Player",
                     "email": "robin@example.com",  # same email
-                    "notify_rental_updates": True,
-                    "notify_reminders": True,
-                    "notify_announcements": True,
                 },
             )
         self.assertEqual(len(mail.outbox), 0)
@@ -166,9 +157,6 @@ class ProfileViewTests(TestCase):
                 "last_name": "Player",
                 "preferred_name": "Robbie",
                 "email": "robin@example.com",
-                "notify_rental_updates": True,
-                "notify_reminders": True,
-                "notify_announcements": True,
             },
         )
         self.assertEqual(Revision.objects.for_instance(self.member).count(), 1)

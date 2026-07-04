@@ -327,9 +327,6 @@ class MemberProfileForm(forms.ModelForm):
             "bio",
             "inspired_by",
             "primary_instrument",
-            "notify_rental_updates",
-            "notify_reminders",
-            "notify_announcements",
         ]
         widgets = {
             "bio": forms.Textarea(attrs={"rows": 4}),
