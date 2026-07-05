@@ -34,9 +34,13 @@ def send_sms(to_phone, body):
 
 
 def _send_email(subject, body, to):
-    _MemberEmail(
-        subject=subject, body=body, from_email=settings.FROM_EMAIL, to=to
-    ).send(fail_silently=True)
+    # Runs in transaction.on_commit after the bid succeeded — never propagate.
+    try:
+        _MemberEmail(
+            subject=subject, body=body, from_email=settings.FROM_EMAIL, to=to
+        ).send()
+    except Exception:
+        logger.exception("Failed to send auction email to %s", to)
 
 
 def notify_outbid(previous_top_bid, new_bid):
