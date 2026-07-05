@@ -1,5 +1,6 @@
 from wagtail import blocks
 
+from auction.blocks import AuctionBlock
 from blowcomotion.blocks.content import (
     AlignableRichtextBlock,
     ButtonBlock,
@@ -71,6 +72,7 @@ class AccordionListBlock(blocks.StructBlock):
 
 class ColumnContentBlock(blocks.StreamBlock):
     accordion_list = AccordionListBlock()
+    auction = AuctionBlock()
     booking_form = BookingFormBlock(group="Forms")
     button = ButtonBlock()
     contact_form = ContactFormBlock(group="Forms")
