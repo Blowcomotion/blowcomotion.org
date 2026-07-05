@@ -77,3 +77,18 @@ def close_expired_items(auction=None):
                 a.save(update_fields=["summary_sent_at"])
                 transaction.on_commit(lambda a=a: notifications.send_auction_summary(a))
     return closed
+
+
+def promote_backup(item):
+    """Auctioneer action: the winner flaked, promote the backup and notify them."""
+    from auction import notifications
+
+    with transaction.atomic():
+        item = AuctionItem.objects.select_for_update().get(pk=item.pk)
+        if not item.backup_bid:
+            raise BidError("This item has no backup bidder to promote.")
+        item.winning_bid = item.backup_bid
+        item.backup_bid = None
+        item.winner_notified_at = timezone.now()
+        item.save(update_fields=["winning_bid", "backup_bid", "winner_notified_at"])
+        transaction.on_commit(lambda: notifications.notify_winner(item))

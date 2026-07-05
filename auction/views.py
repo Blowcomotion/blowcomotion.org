@@ -1,12 +1,13 @@
 import logging
 
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from auction.forms import BidderRegistrationForm, BidForm
 from auction.models import Auction, AuctionItem, Bidder
-from auction.services import BidError, close_expired_items, place_bid
+from auction.services import BidError, close_expired_items, place_bid, promote_backup
 from blowcomotion import views as blowcomotion_views
 
 logger = logging.getLogger(__name__)
@@ -155,3 +156,25 @@ def place_bid_view(request, auction_id, number):
             salt=BIDDER_COOKIE_SALT, max_age=BIDDER_COOKIE_MAX_AGE, httponly=True, samesite="Lax",
         )
     return detail
+
+
+@login_required
+@permission_required("auction.change_auctionitem", raise_exception=True)
+def manage(request):
+    auctions = Auction.objects.prefetch_related(
+        "items__winning_bid__bidder", "items__backup_bid__bidder", "items__bids"
+    )
+    return render(request, "auction/manage.html", {"auctions": auctions})
+
+
+@login_required
+@permission_required("auction.change_auctionitem", raise_exception=True)
+@require_POST
+def promote(request, pk):
+    item = get_object_or_404(AuctionItem, pk=pk)
+    try:
+        promote_backup(item)
+        messages.success(request, f"Backup promoted to winner on #{item.number} {item.title}.")
+    except BidError as exc:
+        messages.error(request, str(exc))
+    return redirect("auction-manage")
