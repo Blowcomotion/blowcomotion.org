@@ -3,6 +3,7 @@ import logging
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
+from django.db import IntegrityError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -105,11 +106,17 @@ def _get_or_register_bidder(request, auction):
             existing.member = member
             existing.save(update_fields=["member"])
             return existing, None
-        bidder, created = Bidder.objects.get_or_create(
-            auction=auction, member=member,
-            defaults=dict(name=data["name"], email=data["email"],
-                          phone=data["phone"], sms_opt_in=data["sms_opt_in"]),
-        )
+        try:
+            bidder, created = Bidder.objects.get_or_create(
+                auction=auction, member=member,
+                defaults=dict(name=data["name"], email=data["email"],
+                              phone=data["phone"], sms_opt_in=data["sms_opt_in"]),
+            )
+        except IntegrityError:
+            return None, (
+                "That email or phone is already registered in this auction. "
+                "Enter the exact same email AND phone you registered with."
+            )
         if not created:
             return bidder, None
     else:

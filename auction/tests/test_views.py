@@ -115,6 +115,39 @@ class BidViewTests(TestCase):
         bidder = Bidder.objects.get(auction=self.auction)
         self.assertEqual(bidder.member_id, member.pk)
 
+    def test_member_bid_with_conflicting_phone_shows_friendly_error(self, _):
+        # Guest registers and bids first, establishing a guest Bidder with
+        # email=robin@example.com / phone=512-555-1234.
+        self.register_and_bid()
+        self.client.cookies.clear()
+
+        # A different person -- a member with a DIFFERENT email but the SAME
+        # phone number as the guest bidder -- logs in and tries to bid using
+        # their own email. The exact-match reattach lookup (email AND phone)
+        # doesn't fire because the email differs, so the get_or_create INSERT
+        # collides with the guest's phone-uniqueness constraint. This must
+        # not 500; it should show the friendly "already registered" error
+        # and must not link the guest bidder to this member.
+        member = Member.objects.create(
+            first_name="Sam", last_name="Horn", email="sam@example.com",
+            phone="512-555-1234",
+        )
+        user = create_member_user(member)
+        user.set_password("Pass123!")
+        user.save()
+        self.client.login(username="sam@example.com", password="Pass123!")
+
+        response = self.client.post(self.bid_url, {
+            "name": "Sam Horn", "email": "sam@example.com", "phone": "512-555-1234",
+            "amount": "30",
+        }, follow=True)
+
+        self.assertContains(response, "already registered in this auction")
+        self.assertEqual(self.item.bids.count(), 1)
+        self.assertEqual(Bidder.objects.filter(auction=self.auction).count(), 1)
+        guest_bidder = Bidder.objects.get(auction=self.auction)
+        self.assertIsNone(guest_bidder.member_id)
+
     def test_expired_item_lazily_closed_on_view(self, _):
         self.item.close_time = timezone.now() - timedelta(minutes=1)
         self.item.save()
