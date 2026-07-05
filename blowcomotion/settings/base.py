@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "charts",
     "instruments",
     "members",
+    "auction",
     "search",
     "compressor",
     "livereload",
