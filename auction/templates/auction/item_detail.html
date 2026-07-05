@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  {% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}
+  <h1>#{{ item.number }} {{ item.title }}</h1>
+  <p>{{ item.description|linebreaks }}</p>
+  <p>Current bid: ${{ item.top_bid.amount|default:item.starting_bid }} — minimum next bid: ${{ item.minimum_bid }}</p>
+
+  {% if item.is_open %}
+  <form method="post" action="{% url 'auction-place-bid' auction.pk item.number %}" data-recaptcha>
+    {% csrf_token %}
+    {% if not bidder %}
+      <p><a href="/member/login/?next={{ request.path|urlencode }}">Band member? Log in to skip this form.</a></p>
+      {{ registration_form.as_p }}
+    {% else %}
+      <p>Bidding as {{ bidder.display_name }}</p>
+    {% endif %}
+    {{ bid_form.as_p }}
+    <button type="submit" class="site-btn">Place bid</button>
+  </form>
+  {% else %}
+    <p>Bidding closed.{% if item.winning_bid %} Won by {{ item.winning_bid.bidder.display_name }} (${{ item.winning_bid.amount }}).{% endif %}</p>
+  {% endif %}
+
+  <h2>Bid history</h2>
+  <ul>{% for bid in bids %}<li>${{ bid.amount }} — {{ bid.bidder.display_name }} ({{ bid.created_at }})</li>{% empty %}<li>No bids yet.</li>{% endfor %}</ul>
+</div>
+{% endblock %}

@@ -19,6 +19,8 @@ urlpatterns = [
 
     path("attendance/", include("attendance.urls")),
 
+    path("auction/", include("auction.urls")),
+
     # Birthdays URL
     path("birthdays/", member_birthday_views.birthdays, name="birthdays"),
 
