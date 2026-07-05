@@ -1,0 +1,13 @@
+{% if value.intro %}<div class="mb-3">{{ value.intro }}</div>{% endif %}
+<div class="d-flex justify-content-end mb-2">
+  <button type="button" class="site-btn"
+          onclick="htmx.trigger('#auction-grid-{{ value.auction.pk }}', 'refreshAuction')">
+    Refresh now
+  </button>
+</div>
+<div id="auction-grid-{{ value.auction.pk }}"
+     hx-get="{% url 'auction-grid' value.auction.pk %}"
+     hx-trigger="every 60s, refreshAuction"
+     hx-swap="innerHTML">
+  {% include "auction/_grid.html" with auction=value.auction open_items=value.auction.open_items_list closed_items=value.auction.closed_items_list %}
+</div>

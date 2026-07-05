@@ -72,6 +72,17 @@ def item_detail(request, auction_id, number):
     })
 
 
+def grid_partial(request, auction_id):
+    auction = get_object_or_404(Auction, pk=auction_id)
+    _lazy_close(auction)
+    items = list(auction.items.prefetch_related("images", "bids"))
+    return render(request, "auction/_grid.html", {
+        "auction": auction,
+        "open_items": [i for i in items if i.is_open],
+        "closed_items": [i for i in items if not i.is_open],
+    })
+
+
 def _get_or_register_bidder(request, auction):
     """Returns (bidder, error_message)."""
     bidder = resolve_bidder(request, auction)

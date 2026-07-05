@@ -1,10 +1,42 @@
 {% extends "base.html" %}
+{% load wagtailimages_tags %}
 {% block content %}
 <div class="container py-4">
   {% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}
   <h1>#{{ item.number }} {{ item.title }}</h1>
+
+  {% with images=item.images.all %}
+  {% if images|length > 1 %}
+  <div id="item-carousel-{{ item.pk }}" class="carousel slide mb-3" data-bs-ride="carousel">
+    <div class="carousel-inner">
+      {% for img in images %}
+      <div class="carousel-item {% if forloop.first %}active{% endif %}">{% image img.image width-800 class="d-block w-100" %}</div>
+      {% endfor %}
+    </div>
+    <button class="carousel-control-prev" type="button" data-bs-target="#item-carousel-{{ item.pk }}" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
+    <button class="carousel-control-next" type="button" data-bs-target="#item-carousel-{{ item.pk }}" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
+  </div>
+  {% elif images %}{% image images.0.image width-800 class="img-fluid mb-3" %}{% endif %}
+  {% endwith %}
+
   <p>{{ item.description|linebreaks }}</p>
-  <p>Current bid: ${{ item.top_bid.amount|default:item.starting_bid }} — minimum next bid: ${{ item.minimum_bid }}</p>
+
+  <div class="d-flex justify-content-end mb-2">
+    <button type="button" class="site-btn"
+            onclick="htmx.trigger('#bid-state', 'refreshAuction')">
+      Refresh now
+    </button>
+  </div>
+  <div id="bid-state"
+       hx-get="{{ request.path }}"
+       hx-select="#bid-state" hx-target="#bid-state" hx-swap="outerHTML"
+       hx-trigger="every 60s, refreshAuction">
+    <p>Current bid: ${{ item.top_bid.amount|default:item.starting_bid }} — minimum next bid: ${{ item.minimum_bid }}</p>
+
+    <h2>Bid history</h2>
+    <ul>{% for bid in bids %}<li>${{ bid.amount }} — {{ bid.bidder.display_name }} ({{ bid.created_at }})</li>{% empty %}<li>No bids yet.</li>{% endfor %}</ul>
+    <p class="text-muted mt-2"><small>Last refreshed: {% now "g:i:s A" %} — updates automatically every minute.</small></p>
+  </div>
 
   {% if item.is_open %}
   <form method="post" action="{% url 'auction-place-bid' auction.pk item.number %}" data-recaptcha>
@@ -21,8 +53,5 @@
   {% else %}
     <p>Bidding closed.{% if item.winning_bid %} Won by {{ item.winning_bid.bidder.display_name }} (${{ item.winning_bid.amount }}).{% endif %}</p>
   {% endif %}
-
-  <h2>Bid history</h2>
-  <ul>{% for bid in bids %}<li>${{ bid.amount }} — {{ bid.bidder.display_name }} ({{ bid.created_at }})</li>{% empty %}<li>No bids yet.</li>{% endfor %}</ul>
 </div>
 {% endblock %}

@@ -49,6 +49,12 @@ class Auction(ClusterableModel):
     def __str__(self):
         return self.name
 
+    def open_items_list(self):
+        return [i for i in self.items.prefetch_related("images", "bids") if i.is_open]
+
+    def closed_items_list(self):
+        return [i for i in self.items.prefetch_related("images", "bids") if not i.is_open]
+
 
 class AuctionItem(ClusterableModel):
     auction = models.ForeignKey(Auction, on_delete=models.CASCADE, related_name="items")

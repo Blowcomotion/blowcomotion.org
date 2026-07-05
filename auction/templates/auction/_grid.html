@@ -1,0 +1,34 @@
+{% load wagtailimages_tags %}
+<div class="row g-3">
+  {% for item in open_items %}
+  <div class="col-6 col-md-4 col-lg-3">
+    <div class="card h-100">
+      {% with cover=item.images.first %}
+        {% if cover %}{% image cover.image fill-400x300 class="card-img-top" %}{% endif %}
+      {% endwith %}
+      <div class="card-body">
+        <h5 class="card-title">#{{ item.number }} {{ item.title }}</h5>
+        <p class="card-text">
+          Current: ${{ item.top_bid.amount|default:item.starting_bid }}<br>
+          <small>{{ item.bids.count }} bid{{ item.bids.count|pluralize }} — closes {{ item.effective_close_time|date:"M j, g:i A" }}</small>
+        </p>
+        <a class="site-btn" href="{% url 'auction-item-detail' auction.pk item.number %}">View &amp; bid</a>
+      </div>
+    </div>
+  </div>
+  {% empty %}<p>No open items right now.</p>{% endfor %}
+</div>
+
+{% if closed_items %}
+<h3 class="mt-4">Completed</h3>
+<ul class="list-unstyled">
+  {% for item in closed_items %}
+  <li>
+    #{{ item.number }} {{ item.title }} —
+    {% if item.winning_bid %}won by {{ item.winning_bid.bidder.display_name }} (${{ item.winning_bid.amount }}){% else %}no bids{% endif %}
+    <a href="{% url 'auction-item-detail' auction.pk item.number %}">details</a>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+<p class="text-muted mt-2"><small>Last refreshed: {% now "g:i:s A" %} — updates automatically every minute.</small></p>
