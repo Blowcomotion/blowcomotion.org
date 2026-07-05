@@ -1,3 +1,9 @@
+# Models for the domain apps (gigs, attendance, charts, instruments, members) live here,
+# not in those apps, because centralizing them here during the #312 hybrid-app split avoided
+# migration/content-type risk on existing production data. That constraint doesn't apply to
+# apps that don't exist yet — a genuinely new domain app going forward may define its own
+# models.py/migrations with its own tables.
+
 from blowcomotion.models.attendance import AttendanceRecord
 from blowcomotion.models.band import Instrument, Section, SectionInstructor
 from blowcomotion.models.core import (

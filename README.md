@@ -7,6 +7,16 @@ Stores the codebase for the blowcomotion.org website
 
 The templates for this codebase are derived from the [Djoz theme](https://themewagon.com/themes/free-bootstrap-responsive-personal-portfolio-template-djoz/)
 
+## Project Structure
+
+This is a Django + Wagtail CMS project with a hybrid app layout:
+
+- `blowcomotion` — CMS core: Wagtail admin wiring, StreamField blocks, the public form pipeline, settings, root URLs, base templates, and **all models** (in `blowcomotion/models/`)
+- `gigs`, `attendance`, `charts`, `instruments`, `members` — domain apps holding views, forms, URLs, templates, tests, and management commands for their domain
+
+**Models live centrally in `blowcomotion/models/`, not in the domain apps that use them.** This is legacy from the #312 hybrid-app split: at the time, moving models into their own apps would have required `SeparateDatabaseAndState` migrations and Wagtail content-type surgery on live production data, for no real benefit (the domains are FK-entangled anyway). So `gigs`, `attendance`, `charts`, `instruments`, and `members` must not gain a `models.py` or `migrations/` of their own — new models for those domains go in `blowcomotion/models/`.
+
+**Going forward, new apps for genuinely new domains are not bound by that constraint** — since there's no existing production data to migrate around, a new domain app can define its own `models.py` and own its own tables like a normal Django app.
 
 ## Installation
 - Clone the repository
