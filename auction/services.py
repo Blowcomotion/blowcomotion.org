@@ -38,3 +38,42 @@ def place_bid(item_id, bidder, amount, source=Bid.SOURCE_WEB):
 
             transaction.on_commit(lambda: notifications.notify_outbid(previous_top, bid))
         return bid
+
+
+def close_expired_items(auction=None):
+    """Pick winner + backup for every expired, unprocessed item. Idempotent."""
+    from django.db.models import Q
+
+    from auction import notifications
+    from auction.models import Auction
+
+    now = timezone.now()
+    closed = 0
+    qs = AuctionItem.objects.filter(winner_notified_at__isnull=True).filter(
+        Q(close_time__lte=now) | Q(close_time__isnull=True, auction__close_time__lte=now)
+    )
+    if auction is not None:
+        qs = qs.filter(auction=auction)
+    touched_auction_ids = set()
+    with transaction.atomic():
+        for item in qs.select_for_update().select_related("auction"):
+            top = item.top_bid
+            if top:
+                item.winning_bid = top
+                item.backup_bid = (
+                    item.bids.exclude(bidder=top.bidder).order_by("-amount", "created_at").first()
+                )
+            item.winner_notified_at = now
+            item.save(update_fields=["winning_bid", "backup_bid", "winner_notified_at"])
+            touched_auction_ids.add(item.auction_id)
+            closed += 1
+            if top:
+                transaction.on_commit(lambda i=item: notifications.notify_winner(i))
+        for a in Auction.objects.select_for_update().filter(
+            pk__in=touched_auction_ids, summary_sent_at__isnull=True
+        ):
+            if not a.items.filter(winner_notified_at__isnull=True).exists():
+                a.summary_sent_at = now
+                a.save(update_fields=["summary_sent_at"])
+                transaction.on_commit(lambda a=a: notifications.send_auction_summary(a))
+    return closed
