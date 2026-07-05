@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import get_object_or_404, redirect, render
@@ -97,6 +98,13 @@ def _get_or_register_bidder(request, auction):
         request.user.is_authenticated and hasattr(request.user, "member")
     ) else None
     if member:
+        existing = Bidder.objects.filter(
+            auction=auction, email__iexact=data["email"], phone=data["phone"]
+        ).first()
+        if existing and not existing.member_id:
+            existing.member = member
+            existing.save(update_fields=["member"])
+            return existing, None
         bidder, created = Bidder.objects.get_or_create(
             auction=auction, member=member,
             defaults=dict(name=data["name"], email=data["email"],
@@ -154,6 +162,7 @@ def place_bid_view(request, auction_id, number):
         detail.set_signed_cookie(
             _cookie_name(auction), bidder.pk,
             salt=BIDDER_COOKIE_SALT, max_age=BIDDER_COOKIE_MAX_AGE, httponly=True, samesite="Lax",
+            secure=not settings.DEBUG,
         )
     return detail
 

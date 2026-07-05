@@ -88,6 +88,33 @@ class BidViewTests(TestCase):
         bidder = Bidder.objects.get(auction=self.auction, member=member)
         self.assertEqual(self.item.bids.first().bidder, bidder)
 
+    def test_guest_bidder_reattaches_to_member_on_login(self, _):
+        # Guest registers and bids first.
+        self.register_and_bid()
+        self.client.cookies.clear()
+
+        # Same person later logs in as a member with the same email/phone and bids
+        # again. This must not 500 with an IntegrityError, and the guest Bidder row
+        # should be reattached to the member rather than duplicated.
+        member = Member.objects.create(
+            first_name="Robin", last_name="Player", email="robin@example.com",
+            phone="512-555-1234",
+        )
+        user = create_member_user(member)
+        user.set_password("Pass123!")
+        user.save()
+        self.client.login(username="robin@example.com", password="Pass123!")
+
+        response = self.client.post(self.bid_url, {
+            "name": "Robin Player", "email": "robin@example.com", "phone": "512-555-1234",
+            "amount": "30",
+        })
+        self.assertRedirects(response, self.detail_url)
+
+        self.assertEqual(Bidder.objects.filter(auction=self.auction).count(), 1)
+        bidder = Bidder.objects.get(auction=self.auction)
+        self.assertEqual(bidder.member_id, member.pk)
+
     def test_expired_item_lazily_closed_on_view(self, _):
         self.item.close_time = timezone.now() - timedelta(minutes=1)
         self.item.save()
