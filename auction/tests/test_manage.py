@@ -39,6 +39,28 @@ class ManageViewTests(TestCase):
         response = self.client.get(reverse("auction-manage"))
         self.assertEqual(response.status_code, 302)  # to login
 
+    def test_anonymous_promote_denied(self):
+        original_bid = self.item.winning_bid.pk
+        response = self.client.post(reverse("auction-promote", args=[self.item.pk]))
+        self.assertEqual(response.status_code, 302)  # to login
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.winning_bid.pk, original_bid)  # no mutation
+
+    def test_unprivileged_user_manage_denied(self):
+        unprivileged = User.objects.create_user(username="alice", password="Pass123!")
+        self.client.login(username="alice", password="Pass123!")
+        response = self.client.get(reverse("auction-manage"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_unprivileged_user_promote_denied(self):
+        unprivileged = User.objects.create_user(username="alice", password="Pass123!")
+        self.client.login(username="alice", password="Pass123!")
+        original_bid = self.item.winning_bid.pk
+        response = self.client.post(reverse("auction-promote", args=[self.item.pk]))
+        self.assertEqual(response.status_code, 403)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.winning_bid.pk, original_bid)  # no mutation
+
     def test_auctioneer_sees_winner_and_backup(self):
         self.client.login(username="beej", password="Pass123!")
         response = self.client.get(reverse("auction-manage"))
