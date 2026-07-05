@@ -19,10 +19,18 @@ Scale target: up to 100 items per auction (~12 typical).
    fundraiser page), NOT a views-only portal and NOT items-as-StructBlocks
    (bids need FK targets, so items must be DB rows). App views handle item
    detail, bid POSTs, and the Twilio webhook.
-2. **Bidder identity:** name + email + phone registration on first bid, no
-   passwords. Signed cookie remembers the bidder; re-entering the same
-   email + phone on another device retrieves the same account/bids (help text
-   states this).
+2. **Bidder identity:** two paths.
+   - **Member login:** many bidders already have member accounts. A
+     logged-in user with a linked Member gets a Bidder auto-created for the
+     auction, prefilled from their profile (name, email, phone); they
+     confirm phone + SMS opt-in once per auction on first bid. Identity
+     comes from the session — no cookie needed, works across devices. The
+     registration form links to the member login ("Band member? Log in to
+     skip this form").
+   - **Guest:** name + email + phone registration on first bid, no
+     passwords. Signed cookie remembers the bidder; re-entering the same
+     email + phone on another device retrieves the same account/bids (help
+     text states this).
 3. **Notifications:** email always; SMS only for bidders who opted in.
    Bidders can bid back via SMS reply: `BID <item#> <amount>`, plus `HELP`.
    Auth for inbound SMS = Twilio `From` number matched to registered bidder.
@@ -63,9 +71,12 @@ re-exports `AuctionBlock`; `BlankCanvasPage` gains it as a block type.
   image + sort order. One or more images per item → carousel on the detail
   page, first image on the grid card. The 7 saved merchant icons are usable
   directly.
-- **Bidder**: `auction` FK (registration is per event), `name`, `email`,
-  `phone` (normalized to E.164 on save so Twilio `From` matching works),
-  `sms_opt_in`. Unique together (auction, phone) and (auction, email).
+- **Bidder**: `auction` FK (registration is per event), `member` FK
+  (nullable — set when created via member login), `name`, `email`, `phone`
+  (normalized to E.164 on save so Twilio `From` matching works),
+  `sms_opt_in`. Unique together (auction, phone), (auction, email), and
+  (auction, member). Bidder resolution order in views: logged-in member
+  match → signed cookie → email+phone re-entry.
 - **Bid**: `item` FK, `bidder` FK, `amount` (Decimal), `source`
   (`web`/`sms`), `created_at`. Created inside a transaction with
   `select_for_update()` on the item; validation: item open; first bid must
@@ -86,9 +97,13 @@ only auction models.
   item `#number`. Cards link to the item detail view.
 - Item detail view (`/auction/<auction_id>/item/<number>/`): image carousel,
   description, bid history (bidders displayed as "First L."), bid form.
-- First bid on a device: form includes name, email, phone, SMS opt-in
-  checkbox, amount. Success sets a signed `auction_bidder` cookie; later
-  bids are amount-only. Help text on the registration form: "Already
+- First bid, logged-in member (`request.user.member`): form is prefilled
+  from the profile; they confirm/edit phone and tick SMS opt-in, then later
+  bids are amount-only on any device where they're logged in.
+- First bid, guest: form includes name, email, phone, SMS opt-in checkbox,
+  amount, plus a "Band member? Log in to skip this form" link to the member
+  login (with `?next=` back to the item). Success sets a signed
+  `auction_bidder` cookie; later bids are amount-only. Help text: "Already
   registered on another device? Enter the same email and phone to continue
   bidding as the same person." Matching email+phone reattaches the cookie.
 - Grid and detail auto-refresh prices via htmx polling; both show
