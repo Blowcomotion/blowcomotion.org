@@ -1,6 +1,8 @@
 from decimal import Decimal
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core import mail
 from django.test import TestCase, override_settings
 
@@ -54,3 +56,53 @@ class NotificationTests(TestCase):
         mock_client.return_value.messages.create.assert_called_once_with(
             to="+15125551234", from_="+15550000000", body="hello"
         )
+
+
+class AuctionSummaryTests(TestCase):
+    def setUp(self):
+        self.auction = make_auction(name="Fall Fundraiser")
+        self.item1 = make_item(self.auction, title="Yeti Cooler")
+        self.item2 = make_item(self.auction, title="Gift Card")
+        self.alice = make_bidder(self.auction, name="Alice Smith", email="alice@example.com")
+        self.bob = make_bidder(self.auction, name="Bob Jones", email="bob@example.com", phone="512-555-9999")
+
+        self.winning_bid = Bid.objects.create(item=self.item1, bidder=self.alice, amount=Decimal("100"))
+        self.backup_bid = Bid.objects.create(item=self.item1, bidder=self.bob, amount=Decimal("90"))
+        self.item1.winning_bid = self.winning_bid
+        self.item1.backup_bid = self.backup_bid
+        self.item1.save()
+        # item2 has no bids at all.
+
+        self.auctioneer_group = Group.objects.create(name="Auctioneer")
+        self.auctioneer = get_user_model().objects.create_user(
+            username="auctioneer", email="auctioneer@example.com", password="password"
+        )
+        self.auctioneer.groups.add(self.auctioneer_group)
+
+    def test_summary_sent_to_auctioneer_group_with_formatted_body(self):
+        notifications.send_auction_summary(self.auction)
+
+        self.assertEqual(len(mail.outbox), 1)
+        message = mail.outbox[0]
+        self.assertIn("auctioneer@example.com", message.to)
+        self.assertEqual(message.subject, "Auction results: Fall Fundraiser")
+
+        self.assertIn("Fall Fundraiser — final results", message.body)
+        self.assertIn(
+            f"#{self.item1.number} Yeti Cooler: $100.00 — Alice Smith (alice@example.com, +15125551234)"
+            " [backup: Bob Jones $90.00]",
+            message.body,
+        )
+        self.assertIn(f"#{self.item2.number} Gift Card: no bids", message.body)
+        self.assertIn("Total raised: $100.00", message.body)
+
+    def test_no_email_when_auctioneer_group_missing(self):
+        self.auctioneer_group.delete()
+        notifications.send_auction_summary(self.auction)  # must not raise
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_no_email_when_auctioneer_group_has_no_users_with_email(self):
+        self.auctioneer.email = ""
+        self.auctioneer.save()
+        notifications.send_auction_summary(self.auction)  # must not raise
+        self.assertEqual(len(mail.outbox), 0)
