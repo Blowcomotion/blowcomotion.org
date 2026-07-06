@@ -1,4 +1,5 @@
 <div class="container">
+  {% if value.auction %}
   {% if value.intro %}<div class="mb-3">{{ value.intro }}</div>{% endif %}
   <div class="d-flex justify-content-end mb-2">
     <button type="button" class="site-btn"
@@ -12,4 +13,7 @@
        hx-swap="innerHTML">
     {% include "auction/_grid.html" with auction=value.auction open_items=value.auction.open_items_list closed_items=value.auction.closed_items_list %}
   </div>
+  {% else %}
+  <p class="text-muted">Select an auction to display.</p>
+  {% endif %}
 </div>
