@@ -15,6 +15,8 @@ import os
 import sys
 from datetime import timedelta
 
+from django.contrib.messages import constants as message_constants
+
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE_DIR = os.path.dirname(PROJECT_DIR)
 
@@ -351,3 +353,10 @@ WAGTAILIMAGES_AVIF_QUALITY = 80
 
 # Use reCAPTCHA v3 (invisible, score-based)
 RECAPTCHA_REQUIRED_SCORE = 0.5  # Score threshold (0.0 to 1.0, higher = more strict)
+
+# Django's default ERROR tag is "error", but Bootstrap has no alert-error class
+# (only alert-danger) — templates render `alert-{{ message.tags }}`, so without
+# this mapping messages.error() renders unstyled.
+MESSAGE_TAGS = {
+    message_constants.ERROR: "danger",
+}
