@@ -71,7 +71,7 @@ def item_detail(request, auction_id, number):
         "bidder": bidder,
         "bids": item.bids.select_related("bidder").order_by("-amount"),
         "registration_form": BidderRegistrationForm(initial=_registration_initial(request)),
-        "bid_form": BidForm(),
+        "bid_form": BidForm(initial={"amount": item.minimum_bid}),
         "include_form_js": True,
     })
 

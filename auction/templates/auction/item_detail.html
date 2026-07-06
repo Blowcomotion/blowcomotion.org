@@ -23,7 +23,11 @@
        hx-get="{{ request.path }}"
        hx-select="#bid-state" hx-target="#bid-state" hx-swap="outerHTML"
        hx-trigger="every 60s, refreshAuction">
-    <p>Current bid: ${{ item.top_bid.amount|default:item.starting_bid }} — minimum next bid: ${{ item.minimum_bid }}</p>
+    {% if item.top_bid %}
+    <p>Current bid: ${{ item.top_bid.amount }} — minimum next bid: ${{ item.minimum_bid }}</p>
+    {% else %}
+    <p>Starting bid: ${{ item.minimum_bid }}</p>
+    {% endif %}
 
     <h2>Bid history</h2>
     <ul>{% for bid in bids %}<li>${{ bid.amount }} — {{ bid.bidder.display_name }} ({{ bid.created_at }})</li>{% empty %}<li>No bids yet.</li>{% endfor %}</ul>
