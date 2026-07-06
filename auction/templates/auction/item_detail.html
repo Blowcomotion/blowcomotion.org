@@ -2,6 +2,16 @@
 {% load wagtailimages_tags %}
 {% block content %}
 <div class="container py-4">
+  {% with auction_page=auction.get_page %}
+  {% if auction_page %}
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{{ auction_page.url }}">{{ auction.name }}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">#{{ item.number }} {{ item.title }}</li>
+    </ol>
+  </nav>
+  {% endif %}
+  {% endwith %}
   {% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}
   <h1>#{{ item.number }} {{ item.title }}</h1>
 

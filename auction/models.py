@@ -55,6 +55,19 @@ class Auction(ClusterableModel):
     def closed_items_list(self):
         return [i for i in self.items.prefetch_related("images", "bids") if not i.is_open]
 
+    def get_page(self):
+        """The live page that embeds this auction via an AuctionBlock, if any."""
+        from wagtail.models import Page, ReferenceIndex
+
+        from django.contrib.contenttypes.models import ContentType
+
+        ref = ReferenceIndex.get_references_to(self).filter(
+            base_content_type=ContentType.objects.get_for_model(Page)
+        ).first()
+        if not ref:
+            return None
+        return Page.objects.live().filter(pk=ref.object_id).first()
+
 
 class AuctionItem(ClusterableModel):
     auction = models.ForeignKey(Auction, on_delete=models.CASCADE, related_name="items")
