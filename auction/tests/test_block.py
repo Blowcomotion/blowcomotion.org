@@ -16,7 +16,9 @@ class GridPartialTests(TestCase):
         )
 
     def test_grid_splits_open_and_completed(self):
-        response = self.client.get(reverse("auction-grid", args=[self.auction.pk]))
+        response = self.client.get(
+            reverse("auction-grid", args=[self.auction.pk]), HTTP_HX_REQUEST="true"
+        )
         self.assertContains(response, "Yeti Cooler")
         self.assertContains(response, "Gift Card")
         self.assertContains(response, "Completed")

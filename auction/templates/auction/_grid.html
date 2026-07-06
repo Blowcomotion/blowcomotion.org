@@ -1,8 +1,8 @@
 {% load wagtailimages_tags %}
 {% if auction.description %}<p>{{ auction.description|linebreaks }}</p>{% endif %}
-<div class="row g-3">
+<div class="row">
   {% for item in open_items %}
-  <div class="col-6 col-md-4 col-lg-3">
+  <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
     <div class="card h-100">
       {% with cover=item.images.first %}
         {% if cover %}{% image cover.image fill-400x300 class="card-img-top" %}{% endif %}

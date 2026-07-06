@@ -226,14 +226,9 @@ class ImageCarouselBlock(blocks.StructBlock):
                     'open_in_new_tab': img_block.get('open_in_new_tab', False),
                 })
         
-        # Calculate responsive column class based on slides_to_show
-        slides = int(value.get('slides_to_show', 4))
-        col_class = f"col-lg-{12 // slides}"
-        
         context.update({
             'carousel_id': carousel_id,
             'processed_images': processed_images,
-            'col_class': col_class,
         })
         
         return context

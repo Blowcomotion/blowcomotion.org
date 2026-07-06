@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db import IntegrityError
+from django.http import HttpResponseNotFound
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -76,6 +77,8 @@ def item_detail(request, auction_id, number):
 
 
 def grid_partial(request, auction_id):
+    if request.headers.get("HX-Request") != "true":
+        return HttpResponseNotFound()
     auction = get_object_or_404(Auction, pk=auction_id)
     _lazy_close(auction)
     items = list(auction.items.prefetch_related("images", "bids"))

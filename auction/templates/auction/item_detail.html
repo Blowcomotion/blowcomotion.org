@@ -7,15 +7,7 @@
 
   {% with images=item.images.all %}
   {% if images|length > 1 %}
-  <div id="item-carousel-{{ item.pk }}" class="carousel slide mb-3" data-bs-ride="carousel">
-    <div class="carousel-inner">
-      {% for img in images %}
-      <div class="carousel-item {% if forloop.first %}active{% endif %}">{% image img.image width-800 class="d-block w-100" %}</div>
-      {% endfor %}
-    </div>
-    <button class="carousel-control-prev" type="button" data-bs-target="#item-carousel-{{ item.pk }}" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-    <button class="carousel-control-next" type="button" data-bs-target="#item-carousel-{{ item.pk }}" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-  </div>
+  {% include "image_gallery.html" with images=images carousel_id="item-images" %}
   {% elif images %}{% image images.0.image width-800 class="img-fluid mb-3" %}{% endif %}
   {% endwith %}
 

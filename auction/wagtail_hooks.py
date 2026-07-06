@@ -24,7 +24,7 @@ class AuctionItemViewSet(SnippetViewSet):
     model = AuctionItem
     menu_label = "Items"
     icon = "clipboard-list"
-    list_display = ["number", "title", "auction", "starting_bid"]
+    list_display = ["title", "number", "auction", "starting_bid"]
     list_filter = ["auction"]
     panels = [
         FieldPanel("auction"),
