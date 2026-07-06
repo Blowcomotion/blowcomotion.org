@@ -28,7 +28,7 @@ python manage.py collectstatic --noinput
 
 ## Static files — source vs. collected
 
-**Always edit files under `blowcomotion/static/`**, never under `static/` (the collected root). Django's `collectstatic` copies from `blowcomotion/static/` → `static/`; changes to `static/` are invisible to git and get overwritten on next deploy.
+**Always edit files under `[app_name]/static/`**, never under `static/` (the collected root). Django's `collectstatic` copies from `blowcomotion/static/` → `static/`; changes to `static/` are invisible to git and get overwritten on next deploy.
 
 ## Settings split
 
