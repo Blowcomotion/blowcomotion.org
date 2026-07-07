@@ -72,7 +72,7 @@ class ChartImportConductorPostTests(TestCase):
         self.client.login(username='importer', password='pw')
         self.song = Song.objects.create(title="Test Song")
 
-    @patch('blowcomotion.views_chart_import.list_pdfs_in_folder', return_value=[])
+    @patch('charts.import_views.list_pdfs_in_folder', return_value=[])
     def test_post_conductor_row_creates_conductor_chart(self, _mock):
         post_data = {
             'song_id': str(self.song.id),
