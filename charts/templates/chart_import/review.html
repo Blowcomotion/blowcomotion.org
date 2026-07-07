@@ -25,7 +25,7 @@
                     <li><span style="color:green;font-weight:bold">✓</span> High confidence — matched exactly or via known alias.</li>
                     <li><span style="color:#c4780a;font-weight:bold">⚠</span> Ambiguous — choose from the dropdown.</li>
                     <li><span style="color:#c0392b;font-weight:bold">?</span> Low confidence — review and correct before importing.</li>
-                    <li><span style="color:#5a3a9e;font-weight:bold">Conductor Score</span> — full score/conductor chart (no instrument required).</li>
+                    <li><strong>Conductor Score</strong> — full score/conductor chart. Uncheck the checkbox to assign a specific instrument instead.</li>
                 </ul>
                 <strong>Part field</strong> — leave blank for single-part charts. Use <em>1st Trumpet</em>, <em>2nd Trumpet</em> etc. for multi-part.<br><br>
                 <strong>Action column</strong> — <em>new</em> creates a chart record; <em>update</em> replaces the Drive URL on an existing one. Uncheck any row to skip it.<br><br>
@@ -91,8 +91,20 @@
                 </td>
                 <td>
                     {% if row.is_conductor_chart %}
-                        <input type="hidden" name="row_{{ i }}_is_conductor" value="1">
-                        <span style="color:#5a3a9e;font-weight:bold">Conductor Score</span>
+                        <div id="inst-cell-{{ i }}">
+                            <label style="white-space:nowrap">
+                                <input type="checkbox" name="row_{{ i }}_is_conductor" value="1"
+                                    checked onchange="toggleConductor({{ i }}, this)">
+                                <strong>Conductor Score</strong>
+                            </label>
+                            <div id="conductor-inst-override-{{ i }}" style="display:none;margin-top:.3rem">
+                                <select name="row_{{ i }}_instrument_id">
+                                    {% for inst in instruments %}
+                                    <option value="{{ inst.id }}">{{ inst.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
                     {% elif row.inst_conf == "key" %}
                         <input type="hidden" name="row_{{ i }}_is_key" value="1">
                         <span style="color:#6f42c1;font-weight:bold;margin-right:4px" title="Key-based chart — select all instruments that use this key">♪</span>
@@ -132,7 +144,13 @@
                         </div>
                     {% endif %}
                 </td>
-                <td>{% if not row.is_conductor_chart and row.inst_conf != "key" %}<input type="text" name="row_{{ i }}_part" value="{{ row.part }}">{% endif %}</td>
+                <td>
+                    {% if row.is_conductor_chart %}
+                        <input type="text" id="part-cell-{{ i }}" name="row_{{ i }}_part" value="" style="display:none">
+                    {% elif row.inst_conf != "key" %}
+                        <input type="text" name="row_{{ i }}_part" value="{{ row.part }}">
+                    {% endif %}
+                </td>
                 <td>{% if row.existing_chart %}update{% else %}new{% endif %}</td>
                 <input type="hidden" name="row_{{ i }}_file_id" value="{{ row.drive_file.id }}">
                 <input type="hidden" name="row_{{ i }}_filename" value="{{ row.drive_file.name }}">
@@ -276,6 +294,14 @@ function switchToMulti(idx) {
 function switchToSingle(idx) {
     const cell = document.getElementById('inst-cell-' + idx);
     if (cell.dataset.original) cell.innerHTML = cell.dataset.original;
+}
+
+function toggleConductor(idx, cb) {
+    const override = document.getElementById('conductor-inst-override-' + idx);
+    const partInput = document.getElementById('part-cell-' + idx);
+    const show = !cb.checked;
+    override.style.display = show ? '' : 'none';
+    if (partInput) partInput.style.display = show ? '' : 'none';
 }
 </script>
 {% endblock %}
