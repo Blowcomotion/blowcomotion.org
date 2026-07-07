@@ -62,19 +62,19 @@ class Command(BaseCommand):
                 self.stderr.write(f"Drive error for {song.title}: {e}")
                 raise SystemExit(1)
 
-            # Pre-group drive files by their resolved (instrument_id, part) tuple.
+            # Pre-group drive files by their resolved (inst_id_or_None, part, is_conductor) tuple.
             # If multiple files map to the same tuple, flag all as review-needed.
-            tuple_map = {}  # (inst_id_or_None, part) -> list of (drive_file, parsed, matched_inst)
+            tuple_map = {}
             for drive_file in drive_files:
                 resolved = resolve_drive_file(drive_file, instruments)
                 matched_inst = resolved.matched_inst
                 part = resolved.part
-                key = (matched_inst.id if matched_inst else None, part)
-                tuple_map.setdefault(key, []).append((drive_file, resolved.parsed, matched_inst, part))
+                key = (matched_inst.id if matched_inst else None, part, resolved.is_conductor_chart)
+                tuple_map.setdefault(key, []).append((drive_file, resolved.parsed, matched_inst, part, resolved.is_conductor_chart))
 
             for key, file_entries in tuple_map.items():
                 if len(file_entries) > 1:
-                    for drive_file, parsed, matched_inst, part in file_entries:
+                    for drive_file, parsed, matched_inst, part, is_conductor_chart in file_entries:
                         review_needed += 1
                         logger.info(
                             "Multiple drive files map to same tuple %s — needs review: %s",
@@ -83,11 +83,14 @@ class Command(BaseCommand):
                         )
                     continue
 
-                drive_file, parsed, matched_inst, part = file_entries[0]
-                tuple_charts = [
-                    c for c in song_charts
-                    if matched_inst and c.instrument_id == matched_inst.id and (c.part or "") == part
-                ]
+                drive_file, parsed, matched_inst, part, is_conductor_chart = file_entries[0]
+                if is_conductor_chart:
+                    tuple_charts = [c for c in song_charts if c.is_conductor_chart]
+                else:
+                    tuple_charts = [
+                        c for c in song_charts
+                        if matched_inst and c.instrument_id == matched_inst.id and (c.part or "") == part
+                    ]
                 result = reconcile_file(drive_file, parsed, tuple_charts)
 
                 if result.apply == "review":

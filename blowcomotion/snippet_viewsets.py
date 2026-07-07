@@ -40,6 +40,7 @@ class ChartViewSet(SnippetViewSet):
         'drive_pdf_url',
         'part',
         'instrument',
+        'is_conductor_chart',
     ]
 
     def __init__(self, *args, **kwargs):

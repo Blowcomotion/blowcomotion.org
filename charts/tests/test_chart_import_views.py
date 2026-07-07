@@ -1,11 +1,13 @@
 """
-Unit tests for chart import view permission gates.
+Unit tests for chart import view permission gates and import POST logic.
 """
+from unittest.mock import patch
+
 from django.contrib.auth.models import ContentType, Permission, User
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from blowcomotion.models import Chart
+from blowcomotion.models import Chart, Song
 
 
 class ChartImportPermissionTests(TestCase):
@@ -55,3 +57,38 @@ class ChartImportPermissionTests(TestCase):
     def test_anonymous_redirected(self):
         response = self.client.get(reverse('chart_import_picker'))
         self.assertEqual(response.status_code, 302)
+
+
+class ChartImportConductorPostTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        ct = ContentType.objects.get_for_model(Chart)
+        change_perm = Permission.objects.get(content_type=ct, codename='change_chart')
+        access_admin_perm = Permission.objects.get(
+            content_type__app_label='wagtailadmin', codename='access_admin'
+        )
+        self.user = User.objects.create_user(username='importer', password='pw', is_staff=True)
+        self.user.user_permissions.add(change_perm, access_admin_perm)
+        self.client.login(username='importer', password='pw')
+        self.song = Song.objects.create(title="Test Song")
+
+    @patch('charts.import_views.list_pdfs_in_folder', return_value=[])
+    def test_post_conductor_row_creates_conductor_chart(self, _mock):
+        post_data = {
+            'song_id': str(self.song.id),
+            'folder_name': 'Test Song',
+            'folder_id': 'fake_folder',
+            'rows': ['0'],
+            'row_0_file_id': 'file_abc',
+            'row_0_filename': 'TestSong_Score.pdf',
+            'row_0_modified': '2024-01-01T00:00:00.000Z',
+            'row_0_is_conductor': '1',
+            'row_0_chart_id': '',
+            'row_0_part': '',
+        }
+        response = self.client.post(reverse('chart_import_review'), post_data)
+        self.assertRedirects(response, reverse('chart_import_picker'), fetch_redirect_response=False)
+        chart = Chart.objects.get(song=self.song)
+        self.assertTrue(chart.is_conductor_chart)
+        self.assertIsNone(chart.instrument)
+        self.assertEqual(chart.drive_file_id, 'file_abc')

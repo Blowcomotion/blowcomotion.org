@@ -381,6 +381,24 @@ class TestResolveDriveFile(TestCase):
         self.assertIsNotNone(result.matched_inst)
         self.assertEqual(result.matched_inst.name, "Quad Tenors")
 
+    def test_score_file_is_conductor_chart(self):
+        result = resolve_drive_file(self._file("MySong_Score.pdf"), self._instruments())
+        self.assertTrue(result.is_conductor_chart)
+        self.assertIsNone(result.matched_inst)
+        self.assertEqual(result.inst_conf, "conductor")
+
+    def test_conductor_file_is_conductor_chart(self):
+        result = resolve_drive_file(self._file("MySong_Conductor.pdf"), self._instruments())
+        self.assertTrue(result.is_conductor_chart)
+        self.assertIsNone(result.matched_inst)
+
+    def test_numeric_song_with_alt_hint_is_not_conductor_chart(self):
+        # "7.40 - Flute.pdf" triggers is_score but alt_hint resolves to Flute — not a conductor chart.
+        result = resolve_drive_file(self._file("7.40 - Flute.pdf"), self._instruments())
+        self.assertFalse(result.is_conductor_chart)
+        self.assertIsNotNone(result.matched_inst)
+        self.assertEqual(result.matched_inst.name, "Flute")
+
 
 class TestMatchSong(TestCase):
     def _song(self, title):
@@ -460,6 +478,9 @@ class TestMatchInstrument(TestCase):
         self.assertEqual(conf, "low")
 
     def test_conductor(self):
+        # match_instrument still resolves "Conductor" when the instrument exists in the DB.
+        # resolve_drive_file no longer calls match_instrument for score files — it returns
+        # is_conductor_chart=True directly — but the function itself still works.
         inst, conf = match_instrument("Conductor", self._instruments())
         self.assertEqual(inst.name, "Conductor")
         self.assertEqual(conf, "high")
