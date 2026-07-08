@@ -418,7 +418,6 @@ class LibraryInstrumentViewSet(SnippetViewSet):
     menu_label = 'Library Instruments'
     menu_name = 'library_instruments'
     menu_icon = 'french-horn'
-    search_fields = ('instrument__name', 'serial_number', 'member__first_name', 'member__last_name', 'comments')
     list_display = [
         'instrument',
         'serial_number',
