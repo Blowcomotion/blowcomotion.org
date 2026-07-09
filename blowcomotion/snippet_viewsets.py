@@ -90,6 +90,7 @@ class SongViewSet(SnippetViewSet):
     filterset_class = None  # Set in __init__
     ordering = ['title']
     panels = [
+        'active',
         'title',
         MediaChooserPanel('recording', help_text="Select the audio recording for this song.", media_type='audio'),
         InlinePanel('videos', label="Source Videos", help_text="Add YouTube or other video links for reference performances."),
@@ -111,7 +112,6 @@ class SongViewSet(SnippetViewSet):
         MultipleChooserPanel("conductors", chooser_field_name="member", help_text="Select the members that usually conduct this song."),
         MultipleChooserPanel("soloists", chooser_field_name="member", help_text="If this song has soloists, select the members that usually solo on this song."),
         'source_band',
-        'active',
     ]
 
     def __init__(self, *args, **kwargs):
