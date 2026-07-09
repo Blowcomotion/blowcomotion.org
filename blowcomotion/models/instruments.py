@@ -143,9 +143,18 @@ class LibraryInstrument(DraftStateMixin, RevisionMixin, LockableMixin, Clusterab
 
     search_fields = [
         index.SearchField("serial_number"),
-        index.SearchField("instrument_name"),
         index.SearchField("comments"),
         index.AutocompleteField("serial_number"),
+        index.RelatedFields("instrument", [
+            index.SearchField("name"),
+            index.AutocompleteField("name"),
+        ]),
+        index.RelatedFields("member", [
+            index.SearchField("first_name"),
+            index.SearchField("last_name"),
+            index.AutocompleteField("first_name"),
+            index.AutocompleteField("last_name"),
+        ]),
     ]
 
     class Meta:

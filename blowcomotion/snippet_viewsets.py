@@ -40,6 +40,7 @@ class ChartViewSet(SnippetViewSet):
         'drive_pdf_url',
         'part',
         'instrument',
+        'is_conductor_chart',
     ]
 
     def __init__(self, *args, **kwargs):
@@ -89,6 +90,7 @@ class SongViewSet(SnippetViewSet):
     filterset_class = None  # Set in __init__
     ordering = ['title']
     panels = [
+        'active',
         'title',
         MediaChooserPanel('recording', help_text="Select the audio recording for this song.", media_type='audio'),
         InlinePanel('videos', label="Source Videos", help_text="Add YouTube or other video links for reference performances."),
@@ -110,7 +112,6 @@ class SongViewSet(SnippetViewSet):
         MultipleChooserPanel("conductors", chooser_field_name="member", help_text="Select the members that usually conduct this song."),
         MultipleChooserPanel("soloists", chooser_field_name="member", help_text="If this song has soloists, select the members that usually solo on this song."),
         'source_band',
-        'active',
     ]
 
     def __init__(self, *args, **kwargs):
@@ -417,7 +418,6 @@ class LibraryInstrumentViewSet(SnippetViewSet):
     menu_label = 'Library Instruments'
     menu_name = 'library_instruments'
     menu_icon = 'french-horn'
-    search_fields = ('instrument__name', 'serial_number', 'member__first_name', 'member__last_name', 'comments')
     list_display = [
         'instrument',
         'serial_number',
