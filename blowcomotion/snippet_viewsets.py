@@ -226,7 +226,7 @@ class InstrumentViewSet(SnippetViewSet):
     menu_label = 'Instrument Types'
     menu_name = 'instruments'
     icon = 'french-horn'
-    list_display = ["name", "section", "hide_from_rental", "hide_from_member_forms", UpdatedAtColumn()]
+    list_display = ["name", "section", "hide_from_rental", "hide_from_member_forms"]
     list_filter = ["section"]
     search_fields = ("name", "description")
     panels = [
