@@ -1,6 +1,6 @@
 {% load wagtailimages_tags %}
 <div class="col-6 col-md-4 col-lg-3 mb-3">
-    <label class="attendance-member-card d-block h-100 m-0" for="member_{{ entry.member.id }}">
+    <label class="attendance-member-card d-block h-100 m-0">
         <span class="attendance-member-card__checkbox-wrap">
             <input class="attendance-member-card__input" type="checkbox"
                    id="member_{{ entry.member.id }}" name="member_{{ entry.member.id }}">
@@ -16,7 +16,7 @@
             <span class="attendance-member-card__photo">
                 {% if entry.member.image %}
                     {% image entry.member.image fill-220x220 as member_photo %}
-                    <img src="{{ member_photo.url }}" alt="" loading="lazy">
+                    <img src="{{ member_photo.url }}" alt="{{ entry.member }}" loading="lazy">
                 {% else %}
                     <span class="attendance-member-card__default-photo" aria-hidden="true">
                         <svg class="attendance-member-card__default-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
