@@ -1,0 +1,162 @@
+<style>
+.htmx-request .htmx-indicator {
+    display: inline-block !important;
+}
+
+.htmx-request button[type="submit"] {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+#attendance-container.htmx-swapping {
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+}
+
+.btn .htmx-indicator {
+    display: none;
+}
+
+.htmx-request .btn .htmx-indicator {
+    display: inline-block !important;
+}
+
+.attendance-member-card {
+    position: relative;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.attendance-member-card__body {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    height: 100%;
+    padding: 0.75rem 0.5rem 1rem;
+    border: 3px solid #e1e1e1;
+    border-radius: 0.75rem;
+    background: #fff;
+    text-align: center;
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Touch feedback: hover doesn't fire on mobile, so :active carries the tap cue */
+.attendance-member-card:active .attendance-member-card__body {
+    background-color: #f5f5f5;
+}
+
+.attendance-member-card:has(.attendance-member-card__input:checked) .attendance-member-card__body {
+    border-color: #5b1a76;
+    background-color: rgba(91, 26, 118, 0.08);
+    box-shadow: 0 2px 8px rgba(91, 26, 118, 0.25);
+}
+
+/* Keyboard/switch-access focus ring */
+.attendance-member-card:has(.attendance-member-card__input:focus-visible) .attendance-member-card__body {
+    outline: 3px solid #5b1a76;
+    outline-offset: 2px;
+}
+
+.attendance-member-card__checkbox-wrap {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 2;
+    width: 1.75rem;
+    height: 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.attendance-member-card__input {
+    width: 1.15rem;
+    height: 1.15rem;
+    margin: 0;
+    accent-color: #5b1a76;
+    cursor: pointer;
+}
+
+/* Below Bootstrap's md breakpoint, cards run 2-per-row and feel cramped at full size */
+@media (max-width: 767.98px) {
+    .attendance-member-card__checkbox-wrap {
+        width: 1.4rem;
+        height: 1.4rem;
+    }
+
+    .attendance-member-card__input {
+        width: 0.95rem;
+        height: 0.95rem;
+    }
+}
+
+.attendance-member-card__photo {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-width: 140px;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.attendance-member-card__photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Fallback for members without a photo: brand-purple tile with a user glyph */
+.attendance-member-card__default-photo {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #5b1a76;
+}
+
+.attendance-member-card__default-icon {
+    width: 45%;
+    height: 45%;
+    fill: #fff;
+}
+
+.attendance-member-card__name-wrap {
+    display: flex;
+    flex: 1 1 auto;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+}
+
+.attendance-member-card__name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.2;
+    word-break: break-word;
+}
+
+/* "Already recorded" ribbon — top-left, visually distinct from the selection checkmark */
+.attendance-member-card__recorded-tag {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 1rem;
+    background: #28a745;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.attendance-member-card__badge {
+    font-size: 0.7rem;
+}
+</style>
