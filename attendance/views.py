@@ -602,6 +602,20 @@ def inactive_members(request):
 
 
 @login_required
+@permission_required('blowcomotion.add_attendancerecord', raise_exception=True)
+def attendance_secondary_design(request):
+    """Preview view for the in-progress 'Secondary design' card mockup, shown under its own tab."""
+    context = {
+        'sections': Section.objects.all().order_by('name'),
+    }
+
+    if request.headers.get('HX-Request'):
+        return render(request, 'attendance/partials/secondary_design_content.html', context)
+
+    return render(request, 'attendance/secondary_design.html', context)
+
+
+@login_required
 @permission_required('blowcomotion.view_attendancerecord', raise_exception=True)
 def attendance_reports(request):
     """View for attendance reports - overall summary"""

@@ -18,28 +18,6 @@
 </div>
 
 {% block extra_css %}
-<style>
-.htmx-request .htmx-indicator {
-    display: inline-block !important;
-}
-
-.htmx-request button[type="submit"] {
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-#attendance-container.htmx-swapping {
-    opacity: 0.5;
-    transition: opacity 0.2s ease;
-}
-
-.btn .htmx-indicator {
-    display: none;
-}
-
-.htmx-request .btn .htmx-indicator {
-    display: inline-block !important;
-}
-</style>
+<link rel="stylesheet" href="{% static 'css/attendance-list.css' %}" type="text/css">
 {% endblock %}
 {% endblock %}
