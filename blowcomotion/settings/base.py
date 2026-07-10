@@ -167,6 +167,11 @@ AXES_FAILURE_LIMIT = 5
 AXES_COOLOFF_TIME = timedelta(minutes=30)
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_PARAMETERS = [["ip_address"], ["username"]]
+# PythonAnywhere's load balancer hides client IPs behind REMOTE_ADDR (10.x);
+# the real client IP arrives in X-Real-IP, set by their proxy (not spoofable).
+AXES_CLIENT_IP_CALLABLE = lambda request: (
+    request.META.get("HTTP_X_REAL_IP") or request.META.get("REMOTE_ADDR")
+)
 
 # Disable axes rate-limiting during test runs
 # (test client doesn't pass request to authenticate())
