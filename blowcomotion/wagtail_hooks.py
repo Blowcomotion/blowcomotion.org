@@ -16,6 +16,7 @@ from gigs.views import sync_gigs_admin
 from instruments.views import (
     export_library_instruments_csv,
     instrument_library_available,
+    instrument_library_gallery,
     instrument_library_needs_repair,
     instrument_library_rented,
     rental_request_return,
@@ -99,6 +100,11 @@ def register_admin_urls():
             instrument_library_needs_repair,
             name="instrument_library_needs_repair",
         ),
+        path(
+            "instrument-library/gallery/",
+            instrument_library_gallery,
+            name="instrument_library_gallery",
+        ),
         # TODO(#250): delete — replaced by Rental Requests dashboard
         # path(
         #     "instrument-library/manage/",
@@ -128,7 +134,6 @@ EXPORTS_PERMISSIONS = ['blowcomotion.access_dev_tools', 'blowcomotion.access_rea
 # by anything nested inside it (PermissionSubmenuMenuItem.is_shown does not
 # fall back to "show if any child is visible").
 UTILITIES_PERMISSIONS = EXPORTS_PERMISSIONS + [
-    'blowcomotion.change_libraryinstrument',  # Library Dashboards submenu
     'blowcomotion.change_cachedgig',  # Sync Gigs
 ]
 
@@ -151,20 +156,9 @@ def register_management_menu_item():
                             permission='blowcomotion.access_real_data_exports'),
     ])
 
-    library_dashboards_submenu = Menu(items=[
-        PermissionMenuItem('Library: Rented', reverse('instrument_library_rented'), icon_name='french-horn',
-                            permission='blowcomotion.change_libraryinstrument'),
-        PermissionMenuItem('Library: Available', reverse('instrument_library_available'), icon_name='french-horn',
-                            permission='blowcomotion.change_libraryinstrument'),
-        PermissionMenuItem('Library: Maintenance', reverse('instrument_library_needs_repair'), icon_name='warning',
-                            permission='blowcomotion.change_libraryinstrument'),
-    ])
-
     submenu = Menu(items=[
         PermissionSubmenuMenuItem('Exports', exports_submenu, icon_name='download',
                                    permission=EXPORTS_PERMISSIONS),
-        PermissionSubmenuMenuItem('Library Dashboards', library_dashboards_submenu, icon_name='french-horn',
-                                   permission='blowcomotion.change_libraryinstrument'),
         PermissionMenuItem('Sync Gigs', reverse('sync_gigs'), icon_name='cog',
                             permission='blowcomotion.change_cachedgig'),
     ])
@@ -186,12 +180,21 @@ def register_management_menu_item():
 
 
 @hooks.register("register_admin_menu_item")
-def register_rental_requests_menu_item():
-    return PermissionMenuItem(
-        "Rental Requests",
-        reverse("rental_requests_dashboard"),
-        icon_name="french-horn",
-        order=295,
+def register_instrument_library_menu_item():
+    library_submenu = Menu(items=[
+        PermissionMenuItem('Rental Requests', reverse('rental_requests_dashboard'), icon_name='french-horn',
+                            permission='blowcomotion.change_libraryinstrument'),
+        PermissionMenuItem('Gallery', reverse('instrument_library_gallery'), icon_name='image',
+                            permission='blowcomotion.change_libraryinstrument'),
+        PermissionMenuItem('Rented', reverse('instrument_library_rented'), icon_name='french-horn',
+                            permission='blowcomotion.change_libraryinstrument'),
+        PermissionMenuItem('Available', reverse('instrument_library_available'), icon_name='french-horn',
+                            permission='blowcomotion.change_libraryinstrument'),
+        PermissionMenuItem('Maintenance', reverse('instrument_library_needs_repair'), icon_name='warning',
+                            permission='blowcomotion.change_libraryinstrument'),
+    ])
+    return PermissionSubmenuMenuItem(
+        'Instrument Library', library_submenu, icon_name='french-horn', order=295,
         permission='blowcomotion.change_libraryinstrument',
     )
 

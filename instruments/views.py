@@ -10,6 +10,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.core.mail import send_mail
 from django.core.management import call_command
+from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -18,9 +19,11 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from blowcomotion.models import (
+    Instrument,
     InstrumentHistoryLog,
     InstrumentRentalNagLog,
     InstrumentRentalRequestSubmission,
+    InstrumentStorageLocation,
     LibraryInstrument,
     Member,
     SiteSettings,
@@ -86,6 +89,60 @@ def instrument_library_needs_repair(request):
         {
             'page_title': 'Instruments Needing Repair / Maintenance',
             'instruments': instruments,
+        },
+    )
+
+
+GALLERY_PAGE_SIZE = 24
+
+
+@permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
+def instrument_library_gallery(request):
+    instruments = (
+        LibraryInstrument.objects.select_related('instrument', 'member', 'storage_location')
+        .prefetch_related('photos__image')
+        .order_by('instrument__name', 'serial_number')
+    )
+
+    status = request.GET.get('status', '')
+    instrument_id = request.GET.get('instrument', '')
+    storage_location_id = request.GET.get('storage_location', '')
+    query = request.GET.get('q', '').strip()
+
+    if status:
+        instruments = instruments.filter(status=status)
+    if instrument_id.isdigit():
+        instruments = instruments.filter(instrument_id=instrument_id)
+    if storage_location_id.isdigit():
+        instruments = instruments.filter(storage_location_id=storage_location_id)
+    if query:
+        instruments = instruments.filter(
+            Q(serial_number__icontains=query) | Q(instrument__name__icontains=query)
+        )
+
+    paginator = Paginator(instruments, GALLERY_PAGE_SIZE)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    querystring = request.GET.copy()
+    querystring.pop('page', None)
+    querystring = querystring.urlencode()
+    if querystring:
+        querystring += '&'
+
+    return render(
+        request,
+        'wagtailadmin/instrument_library_gallery.html',
+        {
+            'page_title': 'Instrument Gallery',
+            'page_obj': page_obj,
+            'status_choices': LibraryInstrument.STATUS_CHOICES,
+            'instrument_choices': Instrument.objects.order_by('name'),
+            'storage_location_choices': InstrumentStorageLocation.objects.order_by('name'),
+            'selected_status': status,
+            'selected_instrument': instrument_id,
+            'selected_storage_location': storage_location_id,
+            'query': query,
+            'querystring': querystring,
         },
     )
 

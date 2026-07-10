@@ -32,15 +32,18 @@ class AdminMenuVisibilityTests(TestCase):
         html = self._get_admin_home_html(user)
         self.assertIn('Utilities', html)
 
-    def test_library_manager_sees_rental_requests(self):
+    def test_library_manager_sees_instrument_library_menu(self):
         access_admin = Permission.objects.get(content_type__app_label='wagtailadmin', codename='access_admin')
         change_li = Permission.objects.get(content_type__app_label='blowcomotion', codename='change_libraryinstrument')
         user = User.objects.create_user(username='librarian', password='pw', is_staff=True)
         user.user_permissions.add(access_admin, change_li)
         html = self._get_admin_home_html(user)
+        self.assertIn('Instrument Library', html)
         self.assertIn('Rental Requests', html)
-        # Library Manager needs "Utilities" visible to reach "Library Dashboards" nested inside it.
-        self.assertIn('Utilities', html)
+        self.assertIn('Gallery', html)
+        # All library pages now live under "Instrument Library"; a librarian
+        # with no export/gig permissions has no reason to see "Utilities".
+        self.assertNotIn('Utilities', html)
 
     def test_gig_booker_sees_utilities_menu(self):
         access_admin = Permission.objects.get(content_type__app_label='wagtailadmin', codename='access_admin')
@@ -63,6 +66,7 @@ class AdminMenuVisibilityTests(TestCase):
         user = User.objects.create_superuser(username='admin', email='admin@example.com', password='pw')
         html = self._get_admin_home_html(user)
         self.assertIn('Utilities', html)
+        self.assertIn('Instrument Library', html)
         self.assertIn('Rental Requests', html)
         self.assertIn('Import Charts', html)
 
