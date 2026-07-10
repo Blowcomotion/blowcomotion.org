@@ -9,5 +9,6 @@ urlpatterns = [
     path("reports/<str:section_slug>/", views.attendance_section_report_new, name="attendance-section-report"),
     path("gigs-for-date/", gigs_views.gigs_for_date, name="gigs-for-date"),
     path("inactive-members/", views.inactive_members, name="inactive-members"),
+    path("secondary-design/", views.attendance_secondary_design, name="attendance-secondary-design"),
     path("<str:section_slug>/", views.attendance_capture, name="attendance-capture"),
 ]

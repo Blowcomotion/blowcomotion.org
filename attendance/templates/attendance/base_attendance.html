@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Attendance System{% endblock %}
 
@@ -17,6 +18,6 @@
 </div>
 
 {% block extra_css %}
-    {% include 'attendance/partials/attendance_card_styles.html' %}
+<link rel="stylesheet" href="{% static 'css/attendance-list.css' %}" type="text/css">
 {% endblock %}
 {% endblock %}
