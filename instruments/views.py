@@ -8,7 +8,6 @@ from django import forms as django_forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
-from django.core.mail import send_mail
 from django.core.management import call_command
 from django.core.paginator import Paginator
 from django.db.models import Q
@@ -30,7 +29,7 @@ from blowcomotion.models import (
 )
 from instruments.forms import LibraryInstrumentRentForm, LibraryInstrumentReturnForm
 from instruments.patreon import MIN_RENTAL_PLEDGE_CENTS, fetch_all_members
-from members.auth import _MemberEmail
+from members.auth import _MemberEmail, _send_mail
 
 logger = logging.getLogger(__name__)
 
@@ -574,7 +573,7 @@ def rental_requests_dashboard(request):
 
             subject, body = _build_nag_email(li, member, base_url, patreon_url, reasons)
             try:
-                send_mail(subject, body, settings.FROM_EMAIL, [member.email], fail_silently=False)
+                _send_mail(subject, body, settings.FROM_EMAIL, member.email)
             except Exception as exc:
                 LibraryInstrument.objects.filter(pk=li.pk).update(last_nag_sent=li.last_nag_sent)
                 messages.error(request, f"Failed to send nag email to {member.full_name}: {exc}")
@@ -612,7 +611,7 @@ def rental_requests_dashboard(request):
 
                 subject, body = _build_nag_email(li, member, base_url, patreon_url, reasons)
                 try:
-                    send_mail(subject, body, settings.FROM_EMAIL, [member.email], fail_silently=False)
+                    _send_mail(subject, body, settings.FROM_EMAIL, member.email)
                 except Exception as exc:
                     LibraryInstrument.objects.filter(pk=li.pk).update(last_nag_sent=li.last_nag_sent)
                     failed.append(f"{member.full_name} ({li.instrument.name}): {exc}")
@@ -647,10 +646,7 @@ def rental_requests_dashboard(request):
                 summary_body = "\n".join(summary_lines)
                 summary_subject = f"Instrument Rental Nag Summary — {today}"
                 if admin_recipients:
-                    send_mail(summary_subject, summary_body, settings.FROM_EMAIL, admin_recipients, fail_silently=False)
-                    extra = getattr(settings, "FORM_TEST_EMAIL", None)
-                    if extra:
-                        send_mail(f"[COPY] {summary_subject}", summary_body, settings.FROM_EMAIL, [extra], fail_silently=False)
+                    _MemberEmail(subject=summary_subject, body=summary_body, from_email=settings.FROM_EMAIL, to=admin_recipients).send(fail_silently=False)
                 msg = f"Nag all: {len(nagged)} email(s) sent, {skipped_cooldown} skipped (cooldown)"
                 if failed:
                     msg += f", {len(failed)} failed"

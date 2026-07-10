@@ -4,11 +4,11 @@ import re
 from wagtail.models import Site
 
 from django.conf import settings
-from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
 
 from blowcomotion.models import InstrumentRentalNagLog, LibraryInstrument, SiteSettings
 from instruments.views import _build_nag_email
+from members.auth import _MemberEmail, _send_mail
 
 
 class Command(BaseCommand):
@@ -100,7 +100,7 @@ class Command(BaseCommand):
         if dry_run:
             self.stdout.write(self.style.NOTICE(f"[Dry Run] Would email {member.email}:\nSubject: {subject}\n{message}\n"))
         else:
-            send_mail(subject, message, settings.FROM_EMAIL, [member.email], fail_silently=False)
+            _send_mail(subject, message, settings.FROM_EMAIL, member.email)
 
     def _send_admin_summary(self, nagged, skipped_cooldown, recipients, today, dry_run):
         lines = [
@@ -124,10 +124,7 @@ class Command(BaseCommand):
             return
 
         if recipients:
-            send_mail(subject, message, settings.FROM_EMAIL, recipients, fail_silently=False)
-            extra = getattr(settings, "FORM_TEST_EMAIL", None)
-            if extra:
-                send_mail(f"[COPY] {subject}", message, settings.FROM_EMAIL, [extra], fail_silently=False)
+            _MemberEmail(subject=subject, body=message, from_email=settings.FROM_EMAIL, to=recipients).send(fail_silently=False)
 
     def _get_site_settings(self):
         try:

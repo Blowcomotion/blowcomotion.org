@@ -642,11 +642,13 @@ class RentalRequestsAdminViewTest(TestCase):
             reverse("rental_requests_dashboard"),
             {"action": "nag_all"},
         )
-        # renter email + admin summary + FORM_TEST_EMAIL copy
-        self.assertEqual(len(mail.outbox), 3)
+        # renter email + copy, admin summary + copy
+        self.assertEqual(len(mail.outbox), 4)
         subjects = [m.subject for m in mail.outbox]
         self.assertTrue(any("Summary" in s for s in subjects))
-        self.assertTrue(any("[COPY]" in s for s in subjects))
+        recipients = [addr for m in mail.outbox for addr in m.to]
+        self.assertIn("test@example.com", recipients)
+        self.assertEqual(recipients.count("test@example.com"), 2)
 
     def test_nag_all_preview_lists_eligible_renter_with_reason(self):
         self.li.status = LibraryInstrument.STATUS_RENTED
