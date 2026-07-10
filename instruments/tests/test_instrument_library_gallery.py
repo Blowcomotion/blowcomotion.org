@@ -55,6 +55,18 @@ class InstrumentLibraryGalleryTests(TestCase):
         self.assertContains(response, "SN12345")
         self.assertNotContains(response, "No photo")
 
+    def test_create_new_button_requires_add_permission(self):
+        self.client.login(username='librarian', password='pw')
+        response = self.client.get(reverse('instrument_library_gallery'))
+        self.assertNotContains(response, "Create New")
+
+        ct = ContentType.objects.get_for_model(LibraryInstrument)
+        add_perm = Permission.objects.get(content_type=ct, codename='add_libraryinstrument')
+        self.librarian.user_permissions.add(add_perm)
+        response = self.client.get(reverse('instrument_library_gallery'))
+        self.assertContains(response, "Create New")
+        self.assertContains(response, reverse('wagtailsnippets_blowcomotion_libraryinstrument:add'))
+
     def test_no_photo_placeholder(self):
         instrument = make_instrument()
         make_library_instrument(instrument, serial="SN99999")

@@ -5,6 +5,9 @@
 <div class="nice-padding">
     <h1>Instrument Gallery</h1>
     <p>Browse every instrument in the library inventory with its photos. Use the filters below to narrow the list.</p>
+    {% if perms.blowcomotion.add_libraryinstrument %}
+    <p><a href="{% url 'wagtailsnippets_blowcomotion_libraryinstrument:add' %}" class="button bicolor button--icon"><span class="icon-wrapper"><svg class="icon icon-plus icon" aria-hidden="true"><use href="#icon-plus"></use></svg></span>Create New</a></p>
+    {% endif %}
 
     <style>
         .instrument-gallery-filters {
