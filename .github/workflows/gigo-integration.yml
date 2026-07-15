@@ -1,0 +1,165 @@
+name: GO3 Integration
+
+# Boots a real Gig-O-Matic (GO3) instance from source and runs our gigs sync
+# against it, as a live integration check on top of the mocked unit tests in
+# gigs/tests/. See https://github.com/Gig-o-Matic/GO3
+#
+# GO3 and blowcomotion.org pin different, incompatible Django versions, so
+# each project gets its own virtualenv inside the job rather than sharing one
+# Python environment.
+
+on:
+  pull_request:
+    branches: [ "development" ]
+  workflow_dispatch:
+
+jobs:
+  gigo-integration:
+    runs-on: ubuntu-latest
+    continue-on-error: false
+
+    steps:
+      - name: Checkout blowcomotion.org
+        uses: actions/checkout@v4
+        with:
+          path: blowcomotion.org
+
+      - name: Checkout Gig-O-Matic GO3
+        uses: actions/checkout@v4
+        with:
+          repository: Gig-o-Matic/GO3
+          path: GO3
+
+      - name: Set up Python for GO3
+        id: py-go3
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install GO3 dependencies
+        working-directory: GO3
+        run: |
+          "${{ steps.py-go3.outputs.python-path }}" -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
+
+      - name: Set up Python for blowcomotion.org
+        id: py-blowcomotion
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.1"
+
+      - name: Install blowcomotion.org dependencies
+        working-directory: blowcomotion.org
+        run: |
+          "${{ steps.py-blowcomotion.outputs.python-path }}" -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
+
+      # GO3's own README documents this exact DATABASE_URL/sqlite invocation
+      # under "Test Suite" as the way its CI runs without a Postgres server.
+      - name: Migrate and seed GO3
+        working-directory: GO3
+        env:
+          DATABASE_URL: "sqlite:///gig-o-matic-ci.sqlite3"
+          SECRET_KEY: "ci-test-secret-key"
+          DEBUG: "True"
+          CAPTCHA_ENABLE: "False"
+        run: |
+          .venv/bin/python manage.py migrate --noinput
+          .venv/bin/python manage.py collectstatic --noinput
+          .venv/bin/python manage.py shell -c "
+          from datetime import timedelta
+
+          from django.utils import timezone
+
+          from band.models import Assoc, Band
+          from band.util import AssocStatusChoices
+          from gig.models import Gig
+          from gig.util import GigStatusChoices
+          from member.models import Member
+
+          member, _ = Member.objects.get_or_create(
+              email='ci-integration@blowcomotion.org',
+              defaults={'username': 'ci-integration'},
+          )
+          member.api_key = 'gh-actions-gigo-ci-key'
+          member.save()
+
+          band, _ = Band.objects.get_or_create(name='Blowcomotion')
+
+          # The gigs API only returns gigs the member has plans for, and GO3
+          # auto-creates plans on gig save for members with a confirmed assoc,
+          # so the assoc must exist before the gig.
+          Assoc.objects.get_or_create(
+              member=member, band=band,
+              defaults={'status': AssocStatusChoices.CONFIRMED},
+          )
+
+          gig, _ = Gig.objects.get_or_create(
+              title='CI Integration Test Gig',
+              band=band,
+              defaults={
+                  'contact': member,
+                  'date': timezone.now() + timedelta(days=30),
+                  'address': '123 Test St, Austin, TX',
+                  'status': GigStatusChoices.CONFIRMED,
+              },
+          )
+
+          print(f'GO3 seeded: band={band.pk}, member={member.pk}, gig={gig.pk}')
+          "
+
+      - name: Start GO3 on port 8001
+        working-directory: GO3
+        env:
+          DATABASE_URL: "sqlite:///gig-o-matic-ci.sqlite3"
+          SECRET_KEY: "ci-test-secret-key"
+          DEBUG: "True"
+          CAPTCHA_ENABLE: "False"
+        run: |
+          nohup .venv/bin/python manage.py runserver 0.0.0.0:8001 > go3-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8001/api/docs > /dev/null; then
+              echo "GO3 is up"
+              break
+            fi
+            echo "Waiting for GO3 to start... ($i/30)"
+            sleep 2
+          done
+          curl -sf http://localhost:8001/api/docs > /dev/null || (echo "--- GO3 server log ---"; cat go3-server.log; exit 1)
+
+      - name: Prepare blowcomotion.org database
+        working-directory: blowcomotion.org
+        run: .venv/bin/python manage.py migrate --noinput
+
+      # This is the real integration check: an unmocked call against the
+      # live GO3 instance started above, not the mocked gigs/tests/ suite.
+      - name: Sync gigs against live GO3
+        working-directory: blowcomotion.org
+        env:
+          DJANGO_SETTINGS_MODULE: blowcomotion.settings.ci_gigo
+          GIGO_API_URL: "http://localhost:8001/api"
+          GIGO_API_KEY: "gh-actions-gigo-ci-key"
+          GIGO_BAND_NAME: "Blowcomotion"
+        run: |
+          .venv/bin/python manage.py sync_gigs --verbosity 2 | tee sync_gigs_output.txt
+          if grep -qi "Failed to fetch gigs from API" sync_gigs_output.txt || grep -qi "not configured" sync_gigs_output.txt; then
+            echo "sync_gigs could not reach the live GO3 instance"
+            exit 1
+          fi
+          .venv/bin/python manage.py shell -c "
+          from blowcomotion.models import CachedGig
+          count = CachedGig.objects.count()
+          assert count >= 1, f'Expected at least 1 synced gig in CachedGig, found {count}'
+          print(f'Integration check passed: {count} gig(s) synced from live GO3')
+          "
+
+      - name: Run gigs app test suite
+        working-directory: blowcomotion.org
+        run: .venv/bin/python manage.py test gigs
+
+      - name: Dump GO3 server log on failure
+        if: failure()
+        working-directory: GO3
+        run: cat go3-server.log || true
