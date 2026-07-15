@@ -473,7 +473,7 @@ def instrument_rental_request(request):
     if request.method == "POST":
         is_valid_captcha, captcha_error = _validate_recaptcha(request)
         if not is_valid_captcha:
-            form = InstrumentRentalRequestForm()
+            form = InstrumentRentalRequestForm(request.POST)
             return render(request, "member/instrument_rental_request.html", {
                 "member": member,
                 "form": form,

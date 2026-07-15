@@ -343,6 +343,26 @@ class InstrumentRentalRequestViewTest(TestCase):
         response = self._post()
         self.assertNotIn("patreon_url", response.context)
 
+    def test_post_shows_recaptcha_error(self):
+        with patch(
+            "members.views._validate_recaptcha",
+            return_value=(False, "reCAPTCHA verification failed. Please try again."),
+        ):
+            response = self._post()
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "reCAPTCHA verification failed. Please try again.")
+        self.assertEqual(InstrumentRentalRequestSubmission.objects.count(), 0)
+
+    def test_post_recaptcha_failure_preserves_submitted_choice(self):
+        with patch(
+            "members.views._validate_recaptcha",
+            return_value=(False, "reCAPTCHA verification failed. Please try again."),
+        ):
+            response = self._post({"notes": "prefer small bore"})
+        self.assertEqual(
+            response.context["form"].data.get("instrument"), str(self.instrument.pk)
+        )
+
 
 class InstrumentRentalFormV2Test(TestCase):
     def setUp(self):

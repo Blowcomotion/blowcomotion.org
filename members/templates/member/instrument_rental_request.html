@@ -17,6 +17,7 @@
     {% endif %}
   </div>
 {% else %}
+  {% if recaptcha_error %}<div class="alert alert-danger">{{ recaptcha_error }}</div>{% endif %}
   <p>Your contact information on file will be included with this request.
     <a href="{% url 'member-profile' %}">Need to update it?</a>
   </p>
