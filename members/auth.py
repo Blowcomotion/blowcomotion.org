@@ -1,5 +1,6 @@
 import email.policy
 import logging
+import threading
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -34,13 +35,42 @@ class _MemberEmail(EmailMessage):
         return result
 
 
-def _send_mail(subject, body, from_email, recipient):
-    _MemberEmail(
+def _dispatch_email(email_message, fail_silently=False, background=False):
+    """Send an EmailMessage, optionally off of the request/command thread.
+
+    Runs synchronously whenever the locmem test backend is active, so tests
+    can assert on mail.outbox immediately after the request/command returns.
+    Otherwise, when background=True, sends from a daemon thread so a slow
+    SMTP server can't stall the caller (e.g. a public form submission).
+
+    background should only be True for request-serving code paths: a daemon
+    thread is killed the instant its process exits, so one-shot management
+    commands must keep sending synchronously to avoid dropping mail.
+    """
+    if not background or settings.EMAIL_BACKEND == "django.core.mail.backends.locmem.EmailBackend":
+        email_message.send(fail_silently=fail_silently)
+        return
+
+    def _send():
+        try:
+            email_message.send(fail_silently=False)
+        except Exception:
+            logger.exception(
+                "Background email send failed (subject=%r, to=%r)",
+                email_message.subject, email_message.to,
+            )
+
+    threading.Thread(target=_send, daemon=True).start()
+
+
+def _send_mail(subject, body, from_email, recipient, background=False):
+    email_message = _MemberEmail(
         subject=subject,
         body=body,
         from_email=from_email,
         to=[recipient],
-    ).send(fail_silently=False)
+    )
+    _dispatch_email(email_message, fail_silently=False, background=background)
 
 
 def needs_set_password(member):
@@ -124,8 +154,13 @@ def send_email_change_confirmation(member, new_email, base_url):
     logger.info(f"Sent email-change confirmation to {new_email} for member {member.pk}")
 
 
-def send_member_signup_welcome_email(member, base_url):
-    """Create a PasswordSetToken and email the new member a welcome with both next steps."""
+def send_member_signup_welcome_email(member, base_url, background=False):
+    """Create a PasswordSetToken and email the new member a welcome with both next steps.
+
+    background=True sends the email from a daemon thread so a slow SMTP
+    server doesn't stall the signup request; pass it only from request-serving
+    call sites (see _dispatch_email).
+    """
     _supersede_set_password_tokens(member)
     token = PasswordSetToken.objects.create(member=member)
     set_password_url = f"{base_url}/member/set-password/{token.uuid}/"
@@ -138,7 +173,7 @@ def send_member_signup_welcome_email(member, base_url):
             "get_access_url": f"{base_url}{reverse('member-get-access')}",
         },
     )
-    _send_mail(subject, message, settings.FROM_EMAIL, member.email)
+    _send_mail(subject, message, settings.FROM_EMAIL, member.email, background=background)
     logger.info(f"Sent signup welcome email to member {member.pk} ({member.email})")
 
 
