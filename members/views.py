@@ -10,7 +10,11 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login, views as auth_views
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
+from django.contrib.auth.forms import (
+    AuthenticationForm,
+    PasswordResetForm,
+    SetPasswordForm,
+)
 from django.core.management import call_command
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -39,7 +43,9 @@ from members.auth import (
     create_member_user,
     ensure_set_password_flow,
     needs_set_password,
+    redeem_login_link_token,
     send_email_change_confirmation,
+    send_login_link_email,
     send_set_password_email,
     send_signup_invite_email,
 )
@@ -79,6 +85,57 @@ class MemberLoginView(auth_views.LoginView):
         ctx = super().get_context_data(**kwargs)
         ctx["include_form_js"] = True
         return ctx
+
+
+# ── Email login link ───────────────────────────────────────────────────────────
+
+@ratelimit(key="ip", rate="10/h", method="POST", block=True)
+def login_link_request(request):
+    """POST-only: email a single-use login link. Always responds with the same
+    neutral message so account existence can't be probed."""
+    if request.method != "POST":
+        return redirect("member-login")
+
+    is_valid, error = _validate_recaptcha(request)
+    if not is_valid:
+        return render(request, "member/login.html", {
+            "form": AuthenticationForm(),
+            "recaptcha_error": error,
+            "include_form_js": True,
+        })
+
+    email = (request.POST.get("email") or "").strip()
+    if email:
+        try:
+            member = Member.objects.get(email__iexact=email, is_active=True)
+        except (Member.DoesNotExist, Member.MultipleObjectsReturned):
+            logger.info("Login link requested for unknown or ambiguous email")
+        else:
+            base_url = f"{request.scheme}://{request.get_host()}"
+            if needs_set_password(member):
+                # No usable password yet — a login link would strand them in the
+                # portal without one; send the set-password flow instead
+                # (mirrors MemberPasswordResetView).
+                ensure_set_password_flow(member, base_url)
+                logger.info(f"Login link request: sent set-password email for member {member.pk}")
+            else:
+                send_login_link_email(member, base_url)
+                logger.info(f"Login link request: sent login link to member {member.pk}")
+
+    return render(request, "member/login.html", {
+        "form": AuthenticationForm(),
+        "login_link_sent": True,
+        "include_form_js": True,
+    })
+
+
+def login_link_redeem(request, token):
+    user = redeem_login_link_token(token)
+    if user is None:
+        return render(request, "member/login_link_invalid.html")
+    login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+    logger.info(f"User {user.pk} logged in via email login link")
+    return redirect(settings.LOGIN_REDIRECT_URL)
 
 
 # ── Set Password ───────────────────────────────────────────────────────────────

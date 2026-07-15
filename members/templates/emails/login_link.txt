@@ -1,0 +1,10 @@
+Hi {{ member.preferred_name|default:member.first_name }},
+
+Here is your one-time login link for the Blowcomotion member portal. It expires in 15 minutes and can only be used once.
+
+{{ login_url }}
+
+If you didn't request this, you can safely ignore this email.
+
+Start Wearing Purple,
+Blowcomotion
