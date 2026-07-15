@@ -11,6 +11,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model, login, views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
+from django.core.cache import cache
 from django.core.management import call_command
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -57,6 +58,48 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 TOKEN_EXPIRY_HOURS = 24
+PATREON_STATUS_CACHE_TTL = 60 * 60  # 1 hour
+
+
+def _patreon_configured():
+    return bool(
+        getattr(settings, "PATREON_ACCESS_TOKEN", None)
+        and getattr(settings, "PATREON_CAMPAIGN_ID", None)
+    )
+
+
+def _get_member_patreon_status(member):
+    """
+    Look up (and cache) the logged-in member's own Patreon pledge status.
+
+    Hits the Patreon API via instruments.patreon.check_patreon_membership,
+    which is a full paginated scan of the campaign's member list — too slow
+    to run on every profile page load, so the result is cached per-email for
+    PATREON_STATUS_CACHE_TTL seconds.
+
+    Returns None if the member has no email or the lookup fails; callers
+    should treat None as "unavailable" rather than erroring. Assumes the
+    caller has already confirmed Patreon is configured.
+    """
+    if not member.email:
+        return None
+
+    cache_key = f"member_patreon_status:{member.email.lower()}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    try:
+        result = check_patreon_membership(member.email)
+    except Exception:
+        logger.exception(
+            "profile_view: unexpected error checking Patreon status for member %s", member.pk
+        )
+        return None
+
+    if result is not None:
+        cache.set(cache_key, result, PATREON_STATUS_CACHE_TTL)
+    return result
 
 
 # ── Login ──────────────────────────────────────────────────────────────────────
@@ -225,6 +268,7 @@ def profile_view(request):
     original_email = member.email  # snapshot before form validation mutates member in place
 
     def _profile_context(form):
+        patreon_configured = _patreon_configured()
         return {
             "form": form,
             "member": member,
@@ -236,6 +280,8 @@ def profile_view(request):
             "attendance_this_year": member.attendance_records.filter(
                 date__year=date.today().year
             ).count(),
+            "patreon_configured": patreon_configured,
+            "patreon_status": _get_member_patreon_status(member) if patreon_configured else None,
         }
 
     if request.method == "POST":

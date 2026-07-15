@@ -23,6 +23,33 @@
         <a href="{% url 'member-attendance' %}" class="btn btn-sm site-btn">View Attendance Record</a>
     </div>
 </div>
+{% if patreon_configured %}
+<div class="card mb-4">
+    <div class="card-body">
+        <strong>Patreon:</strong>
+        {% if patreon_status is None %}
+            status temporarily unavailable
+        {% elif patreon_status.is_active %}
+            <span class="text-success">Active patron</span>
+            {% if patreon_status.pledge_cents is not None %}
+                &mdash; ${% widthratio patreon_status.pledge_cents 100 1 %}/mo
+            {% endif %}
+            {% if patreon_status.patron_since %}
+                <div class="form-text mb-0">Patron since {{ patreon_status.patron_since|date:"Y-m-d" }}</div>
+            {% endif %}
+            {% if patreon_status.last_charge_date %}
+                <div class="form-text mb-0">Last charge {{ patreon_status.last_charge_date|date:"Y-m-d" }}{% if patreon_status.last_charge_status %} ({{ patreon_status.last_charge_status }}){% endif %}</div>
+            {% endif %}
+            {% if patreon_status.lifetime_cents is not None %}
+                <div class="form-text mb-0">Lifetime support: ${% widthratio patreon_status.lifetime_cents 100 1 %}</div>
+            {% endif %}
+        {% else %}
+            <span class="text-danger">Not found or inactive</span>
+            <div class="form-text mb-0">We couldn't confirm an active Patreon pledge for your account email. If you believe this is an error, contact us.</div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
 <form method="post" enctype="multipart/form-data" id="member-form">
     {% csrf_token %}
     <input type="hidden" name="g-recaptcha-response" value="">
