@@ -3,7 +3,8 @@ Unit tests for Google Analytics (GA4) integration.
 """
 
 from django.template import Context, Template
-from django.test import TestCase, override_settings
+from django.template.loader import render_to_string
+from django.test import RequestFactory, TestCase, override_settings
 
 from blowcomotion.templatetags.blowco_tags import get_google_analytics_id
 
@@ -64,3 +65,28 @@ class HomePageRendersAnalyticsSnippetTests(TestCase):
     def test_404_page_includes_snippet_when_configured(self):
         response = self.client.get('/this-page-does-not-exist/')
         self.assertContains(response, 'googletagmanager.com/gtag/js?id=G-TESTID123', status_code=404)
+
+
+class GoogleAnalyticsPreviewSuppressionTests(TestCase):
+    """
+    Wagtail previews (split-panel and full-tab) are served through
+    PreviewableMixin.make_preview_request, which sets request.is_preview = True
+    on an otherwise front-end request. The snippet must not fire in that case,
+    since the rendered HTML is loaded in a real browser and would otherwise
+    send analytics events for editor previews.
+    """
+
+    def _render_head(self, is_preview):
+        request = RequestFactory().get('/')
+        request.is_preview = is_preview
+        return render_to_string('head.html', {'request': request}, request=request)
+
+    @override_settings(GOOGLE_ANALYTICS_ID='G-TESTID123')
+    def test_snippet_omitted_during_preview(self):
+        rendered = self._render_head(is_preview=True)
+        self.assertNotIn('googletagmanager.com', rendered)
+
+    @override_settings(GOOGLE_ANALYTICS_ID='G-TESTID123')
+    def test_snippet_included_outside_preview(self):
+        rendered = self._render_head(is_preview=False)
+        self.assertIn('googletagmanager.com/gtag/js?id=G-TESTID123', rendered)

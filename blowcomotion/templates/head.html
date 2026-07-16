@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     {% get_google_analytics_id as google_analytics_id %}
-    {% if google_analytics_id %}
+    {% if google_analytics_id and not request.is_preview %}
     <script async src="https://www.googletagmanager.com/gtag/js?id={{ google_analytics_id|urlencode }}"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
