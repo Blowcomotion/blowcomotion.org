@@ -23,6 +23,7 @@ from blowcomotion.models import (
     SiteSettings,
 )
 from members.auth import (
+    _dispatch_email,
     _MemberEmail,
     create_member_user,
     send_member_signup_welcome_email,
@@ -120,10 +121,15 @@ def _validate_recaptcha(request):
 
 
 def _send_form_email(subject, message, recipient_list):
-    """Send email for form submission."""
-    _MemberEmail(
+    """Send email for form submission.
+
+    Sent from a background thread (see _dispatch_email) so a slow SMTP
+    server can't stall the form-submission response.
+    """
+    email_message = _MemberEmail(
         subject=subject, body=message, from_email=settings.FROM_EMAIL, to=recipient_list
-    ).send(fail_silently=False)
+    )
+    _dispatch_email(email_message, fail_silently=False, background=True)
 
 
 def _create_email_message(form_type, name, email, **kwargs):
@@ -288,7 +294,9 @@ def _process_member_signup(request, form_data):
         if member.email:
             try:
                 create_member_user(member)
-                send_member_signup_welcome_email(member, f"{request.scheme}://{request.get_host()}")
+                send_member_signup_welcome_email(
+                    member, f"{request.scheme}://{request.get_host()}", background=True
+                )
                 logger.info(f"Sent signup welcome email to new member {member.pk}")
             except Exception as e:
                 logger.warning(f"Could not send welcome email to new member {member.pk}: {e}")
