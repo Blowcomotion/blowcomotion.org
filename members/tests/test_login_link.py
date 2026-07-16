@@ -101,42 +101,69 @@ class LoginLinkRedeemTests(TestCase):
         self.user.set_password("Str0ngP@ss!")
         self.user.save()
 
-    def _redeem(self, token):
+    def _get(self, token):
         return self.client.get(reverse("member-login-link", kwargs={"token": token}))
 
-    def test_valid_token_logs_in_and_redirects(self):
+    def _post(self, token):
+        return self.client.post(reverse("member-login-link", kwargs={"token": token}))
+
+    def test_get_renders_interstitial_without_logging_in(self):
+        """GET (as issued by email scanners) must not consume the token or log in."""
         token = make_login_link_token(self.user)
-        response = self._redeem(token)
+        response = self._get(token)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Continue to log in")
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_get_interstitial_has_post_form_with_csrf(self):
+        token = make_login_link_token(self.user)
+        response = self._get(token)
+        self.assertContains(response, 'id="login-continue-form"')
+        self.assertContains(response, 'method="post"')
+        self.assertContains(response, "csrfmiddlewaretoken")
+
+    def test_post_valid_token_logs_in_and_redirects(self):
+        token = make_login_link_token(self.user)
+        response = self._post(token)
+        self.assertRedirects(response, "/member/profile/", fetch_redirect_response=False)
+        self.assertEqual(int(self.client.session["_auth_user_id"]), self.user.pk)
+
+    def test_scanner_get_then_human_get_post_still_works(self):
+        """A scanner GET (or several) must not stop the human's GET + POST."""
+        token = make_login_link_token(self.user)
+        self._get(token)  # scanner prefetch
+        self._get(token)  # another scanner / human page load
+        response = self._post(token)
         self.assertRedirects(response, "/member/profile/", fetch_redirect_response=False)
         self.assertEqual(int(self.client.session["_auth_user_id"]), self.user.pk)
 
     def test_garbage_token_rejected(self):
-        response = self._redeem("not-a-real-token")
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "invalid or expired")
+        for response in (self._get("not-a-real-token"), self._post("not-a-real-token")):
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, "invalid or expired")
         self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_tampered_token_rejected(self):
         token = make_login_link_token(self.user)
-        response = self._redeem(token[:-3] + "abc")
-        self.assertContains(response, "invalid or expired")
+        for response in (self._get(token[:-3] + "abc"), self._post(token[:-3] + "abc")):
+            self.assertContains(response, "invalid or expired")
         self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_expired_token_rejected(self):
         token = make_login_link_token(self.user)
         with patch.object(members_auth, "LOGIN_LINK_MAX_AGE", -1):
-            response = self._redeem(token)
-        self.assertContains(response, "invalid or expired")
+            for response in (self._get(token), self._post(token)):
+                self.assertContains(response, "invalid or expired")
         self.assertNotIn("_auth_user_id", self.client.session)
 
-    def test_token_single_use(self):
+    def test_token_single_use_after_post(self):
         """Logging in updates last_login, invalidating the outstanding token."""
         token = make_login_link_token(self.user)
-        first = self._redeem(token)
+        first = self._post(token)
         self.assertRedirects(first, "/member/profile/", fetch_redirect_response=False)
         self.client.logout()
-        second = self._redeem(token)
-        self.assertContains(second, "invalid or expired")
+        for response in (self._get(token), self._post(token)):
+            self.assertContains(response, "invalid or expired")
         self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_token_invalid_after_password_login(self):
@@ -144,15 +171,15 @@ class LoginLinkRedeemTests(TestCase):
         token = make_login_link_token(self.user)
         self.client.login(username="sam@example.com", password="Str0ngP@ss!")
         self.client.logout()
-        response = self._redeem(token)
+        response = self._post(token)
         self.assertContains(response, "invalid or expired")
 
     def test_inactive_user_rejected(self):
         token = make_login_link_token(self.user)
         self.user.is_active = False
         self.user.save(update_fields=["is_active"])
-        response = self._redeem(token)
-        self.assertContains(response, "invalid or expired")
+        for response in (self._get(token), self._post(token)):
+            self.assertContains(response, "invalid or expired")
         self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_user_without_member_rejected(self):
@@ -160,6 +187,6 @@ class LoginLinkRedeemTests(TestCase):
             username="orphan@example.com", email="orphan@example.com", password="x"
         )
         token = make_login_link_token(orphan)
-        response = self._redeem(token)
-        self.assertContains(response, "invalid or expired")
+        for response in (self._get(token), self._post(token)):
+            self.assertContains(response, "invalid or expired")
         self.assertNotIn("_auth_user_id", self.client.session)

@@ -176,6 +176,11 @@ def login_link_redeem(request, token):
     user = redeem_login_link_token(token)
     if user is None:
         return render(request, "member/login_link_invalid.html")
+    if request.method != "POST":
+        # Email security scanners prefetch links with GET/HEAD. Logging in
+        # updates last_login, which is what makes the token single-use — so
+        # only a POST (via the auto-submitting interstitial) may consume it.
+        return render(request, "member/login_link_confirm.html")
     login(request, user, backend="django.contrib.auth.backends.ModelBackend")
     logger.info(f"User {user.pk} logged in via email login link")
     return redirect(settings.LOGIN_REDIRECT_URL)
