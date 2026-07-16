@@ -318,7 +318,7 @@ class Command(BaseCommand):
             is_active=True,
             birth_month=target_month,
             birth_day__isnull=False,
-        ).select_related('primary_instrument').prefetch_related('additional_instruments__instrument').order_by('birth_day', 'first_name', 'last_name')
+        ).select_related('user', 'primary_instrument').prefetch_related('additional_instruments__instrument').order_by('birth_day', 'user__first_name', 'user__last_name')
 
         upcoming_birthdays = []
 
@@ -358,7 +358,7 @@ class Command(BaseCommand):
             birth_month__isnull=False,
             birth_day__isnull=False,
             birth_month__in=relevant_months,
-        ).select_related('primary_instrument').prefetch_related('additional_instruments__instrument').order_by('first_name', 'last_name')
+        ).select_related('user', 'primary_instrument').prefetch_related('additional_instruments__instrument').order_by('user__first_name', 'user__last_name')
 
         upcoming_birthdays = []
 

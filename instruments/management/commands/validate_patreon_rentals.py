@@ -98,7 +98,7 @@ class Command(BaseCommand):
 
         # --- update Member cache for every member with an email in the Patreon list ---
         member_updated = 0
-        for member in Member.objects.exclude(email="").only("pk", "email", *_MEMBER_SAVE_FIELDS):
+        for member in Member.objects.exclude(user__isnull=True).exclude(user__email="").select_related("user"):
             result = all_members.get(member.email.lower())
             if result is None:
                 continue  # only update members we found; leave unknown ones untouched

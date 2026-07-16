@@ -89,6 +89,24 @@ class ProfileViewTests(TestCase):
         self.member.refresh_from_db()
         self.assertEqual(self.member.preferred_name, "Robbie")
 
+    def test_profile_name_change_writes_through_to_user(self):
+        response = self.client.post(
+            reverse("member-profile"),
+            {
+                "first_name": "Robyn",
+                "last_name": "Musician",
+                "email": "robin@example.com",
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, "Robyn")
+        self.assertEqual(self.user.last_name, "Musician")
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.first_name, "Robyn")
+        self.assertEqual(self.member.last_name, "Musician")
+
     def test_email_change_sets_pending_email(self):
         from django.test import override_settings
         with override_settings(

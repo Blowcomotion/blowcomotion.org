@@ -150,10 +150,12 @@ class LibraryInstrument(DraftStateMixin, RevisionMixin, LockableMixin, Clusterab
             index.AutocompleteField("name"),
         ]),
         index.RelatedFields("member", [
-            index.SearchField("first_name"),
-            index.SearchField("last_name"),
-            index.AutocompleteField("first_name"),
-            index.AutocompleteField("last_name"),
+            index.RelatedFields("user", [
+                index.SearchField("first_name"),
+                index.SearchField("last_name"),
+                index.AutocompleteField("first_name"),
+                index.AutocompleteField("last_name"),
+            ]),
         ]),
     ]
 

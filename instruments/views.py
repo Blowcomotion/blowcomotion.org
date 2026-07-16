@@ -351,7 +351,7 @@ def rental_requests_dashboard(request):
                 sub.save(update_fields=_sub_fields)
                 updated += 1
 
-            for member in Member.objects.exclude(email="").exclude(email__isnull=True):
+            for member in Member.objects.filter(user__isnull=False).exclude(user__email="").select_related("user"):
                 result = patreon_data.get(member.email.lower())
                 if result is None:
                     continue
@@ -708,8 +708,8 @@ def _get_nag_all_candidates(cutoff):
     instruments = LibraryInstrument.objects.filter(
         status=LibraryInstrument.STATUS_RENTED,
         member__isnull=False,
-        member__email__isnull=False,
-    ).exclude(member__email="").select_related("member", "instrument")
+        member__user__isnull=False,
+    ).exclude(member__user__email="").select_related("member", "member__user", "instrument")
 
     candidates = []
     for li in instruments:

@@ -250,7 +250,7 @@ class MemberPasswordResetView(auth_views.PasswordResetView):
     def form_valid(self, form):
         email = form.cleaned_data["email"]
         try:
-            member = Member.objects.get(email__iexact=email, is_active=True)
+            member = Member.objects.get(user__email__iexact=email, is_active=True)
         except (Member.DoesNotExist, Member.MultipleObjectsReturned):
             logger.debug(f"Password reset attempted for non-member or ambiguous email: {email}")
             return redirect("password_reset_done")
@@ -284,7 +284,7 @@ def get_access_view(request):
         if form.is_valid():
             email = form.cleaned_data["email"]
             try:
-                member = Member.objects.get(email__iexact=email)
+                member = Member.objects.get(user__email__iexact=email)
                 if needs_set_password(member):
                     ensure_set_password_flow(member, f"{request.scheme}://{request.get_host()}")
                     logger.info(f"Get-access: sent set-password email to member {member.pk}")
@@ -327,7 +327,7 @@ def profile_view(request):
     if not hasattr(request.user, "member"):
         return redirect("/")
     member = request.user.member
-    original_email = member.email  # snapshot before form validation mutates member in place
+    original_email = member.email
 
     def _profile_context(form):
         patreon_configured = _patreon_configured()
@@ -356,11 +356,13 @@ def profile_view(request):
         form = MemberProfileForm(request.POST, request.FILES, instance=member)
         if form.is_valid():
             instance = form.save(commit=False)
+            # Names are already applied to the instance by
+            # MemberProfileForm._post_clean; they write through to the linked
+            # User when the member instance is saved. Email is deliberately
+            # NOT applied here: a changed address is held until confirmed via
+            # the emailed token.
             new_email = form.cleaned_data.get("email") or ""
             email_changed = new_email and new_email != original_email
-
-            if email_changed:
-                instance.email = original_email  # hold until confirmed
 
             photo = form.cleaned_data.get("profile_photo")
             old_image = instance.image if photo else None
@@ -736,12 +738,13 @@ def confirm_email_view(request, token_uuid):
     new_email = token.new_email
 
     with transaction.atomic():
+        # The email property writes through to the linked User; Member.save()
+        # persists the User change (and realigns User.username to the email).
         member.email = new_email
         member.pending_email = None
-        member.save(update_fields=["email", "pending_email"], sync_go3=False)
+        member.save(update_fields=["pending_email"], sync_go3=False)
         token.used = True
         token.save(update_fields=["used"])
-    # Member.save() email drift guard syncs User.email / User.username when "email" is in update_fields
 
     logger.info(f"Email confirmed for member {member.pk}: {new_email}")
     return render(request, "member/confirm_email_result.html", {"confirmed": True, "new_email": new_email})

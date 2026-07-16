@@ -224,7 +224,7 @@ def _process_member_signup(request, form_data):
         # Check for duplicate email before attempting to create a member.
         # Email is the login identifier, so a match means the person already has an account.
         email = form_data.get('email')
-        if email and Member.objects.filter(email__iexact=email).exists():
+        if email and Member.objects.filter(user__email__iexact=email).exists():
             logger.info(f"Member signup rejected: email already registered ({email})")
             return {
                 'template': 'forms/signup_duplicate_email.html',
@@ -537,10 +537,9 @@ def dump_data(request):
                     fields = item['fields']
                     
                     # Scrub sensitive fields while preserving structure and non-sensitive data
-                    fields['first_name'] = f'FirstName{idx}'
-                    fields['last_name'] = f'LastName{idx}'
+                    # (first_name / last_name / email live on auth.user, which is
+                    # excluded from the dump and has its FK nulled above)
                     fields['preferred_name'] = f'Preferred{idx}' if fields.get('preferred_name') else None
-                    fields['email'] = f'member{idx}@example.com' if fields.get('email') else None
                     fields['phone'] = f'555-{idx:04d}' if fields.get('phone') else None
                     fields['address'] = f'{idx} Main Street' if fields.get('address') else None
                     fields['city'] = 'Austin' if fields.get('city') else None
