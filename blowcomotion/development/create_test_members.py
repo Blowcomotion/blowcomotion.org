@@ -85,8 +85,8 @@ for section in sections:
     for i, member_data in enumerate(member_pool):
         # Try to find existing member first by name and original email
         existing_member = Member.objects.filter(
-            first_name=member_data["first_name"],
-            last_name=member_data["last_name"]
+            user__first_name=member_data["first_name"],
+            user__last_name=member_data["last_name"]
         ).first()
         
         if existing_member:
@@ -96,15 +96,16 @@ for section in sections:
             # Create new member with section-specific email
             email = member_data["email"].replace("@", f".{section.name.lower().replace(' ', '')}@")
             
-            member, created = Member.objects.get_or_create(
-                email=email,
-                defaults={
-                    "first_name": member_data["first_name"],
-                    "last_name": member_data["last_name"],
-                    "join_date": date(2024, 1 + (i % 12), 15),  # Spread join dates across months
-                    "is_active": True,
-                }
-            )
+            member = Member.objects.filter(user__email=email).first()
+            created = member is None
+            if created:
+                member = Member.objects.create(
+                    email=email,
+                    first_name=member_data["first_name"],
+                    last_name=member_data["last_name"],
+                    join_date=date(2024, 1 + (i % 12), 15),  # Spread join dates across months
+                    is_active=True,
+                )
             if created:
                 print(f"Created: {member.first_name} {member.last_name}")
             else:

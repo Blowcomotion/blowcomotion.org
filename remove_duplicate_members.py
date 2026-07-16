@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 import os
+
 import django
 
 # Setup Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'blowcomotion.settings.dev')
 django.setup()
 
-from blowcomotion.models import Member, MemberInstrument, AttendanceRecord
 from collections import defaultdict
+
+from blowcomotion.models import AttendanceRecord, Member, MemberInstrument
 
 print("Checking for duplicate members...")
 
@@ -92,8 +94,8 @@ print("\nVerifying cleanup...")
 remaining_duplicates = 0
 for (first_name, last_name), members in member_groups.items():
     current_members = Member.objects.filter(
-        first_name__iexact=first_name, 
-        last_name__iexact=last_name
+        user__first_name__iexact=first_name, 
+        user__last_name__iexact=last_name
     )
     if current_members.count() > 1:
         remaining_duplicates += 1

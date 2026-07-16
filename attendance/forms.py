@@ -87,7 +87,7 @@ class SectionAttendanceForm(forms.Form):
         
         if section:
             # Get all active members whose primary or additional instrument is in this section
-            section_members = section.get_members().order_by('first_name', 'last_name')
+            section_members = section.get_members().select_related('user').order_by('user__first_name', 'user__last_name')
             
             # Create checkbox field for each member
             for member in section_members:
@@ -185,7 +185,7 @@ class AttendanceReportFilterForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
     member = forms.ModelChoiceField(
-        queryset=Member.objects.filter(is_active=True).order_by('first_name', 'last_name'),
+        queryset=Member.objects.filter(is_active=True).select_related('user').order_by('user__first_name', 'user__last_name'),
         required=False,
         empty_label="All Members",
         widget=forms.Select(attrs={'class': 'form-control'})

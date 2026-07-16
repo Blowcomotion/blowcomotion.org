@@ -111,7 +111,7 @@ def attendance_capture(request, section_slug=None):
         section_members = Member.objects.filter(
             is_active=True,
             primary_instrument__isnull=True
-        ).select_related('primary_instrument').prefetch_related('additional_instruments__instrument').order_by('first_name', 'last_name')
+        ).select_related('primary_instrument', 'user').prefetch_related('additional_instruments__instrument').order_by('user__first_name', 'user__last_name')
 
         for member in section_members:
             entry, meta = build_member_entry(member, None)
@@ -125,7 +125,7 @@ def attendance_capture(request, section_slug=None):
         if section_member_ids:
             section_members = Member.objects.filter(
                 id__in=section_member_ids
-            ).select_related('primary_instrument').prefetch_related('additional_instruments__instrument').order_by('first_name', 'last_name')
+            ).select_related('primary_instrument', 'user').prefetch_related('additional_instruments__instrument').order_by('user__first_name', 'user__last_name')
         else:
             section_members = Member.objects.none()
 
@@ -359,22 +359,15 @@ def attendance_capture(request, section_slug=None):
         
         # Return success message for HTMX requests
         # Get all records for this date to show in success message
-        if section:
-            # Get all records for this date and section
+        if section or is_no_section:
+            # Get all records for this date and section (or no-section members)
             todays_records = AttendanceRecord.objects.filter(
                 date=attendance_date
             ).filter(
                 Q(member__in=section_members) | Q(member__isnull=True)
-            ).select_related('member', 'member__primary_instrument', 'played_instrument').order_by('member__first_name', 'member__last_name', 'guest_name')
-        elif is_no_section:
-            # Get all records for this date and no-section members
-            todays_records = AttendanceRecord.objects.filter(
-                date=attendance_date
-            ).filter(
-                Q(member__in=section_members) | Q(member__isnull=True)
-            ).select_related('member', 'member__primary_instrument', 'played_instrument').order_by('member__first_name', 'member__last_name', 'guest_name')
+            ).select_related('member', 'member__user', 'member__primary_instrument', 'played_instrument').order_by('member__user__first_name', 'member__user__last_name', 'guest_name')
         else:
-            todays_records = AttendanceRecord.objects.filter(date=attendance_date).select_related('member', 'member__primary_instrument', 'played_instrument')
+            todays_records = AttendanceRecord.objects.filter(date=attendance_date).select_related('member', 'member__user', 'member__primary_instrument', 'played_instrument')
         
         context = {
             'success_count': success_count,
@@ -536,7 +529,7 @@ def inactive_members(request):
     """View for managing inactive members - display list with reactivation buttons"""
     
     # Get all inactive members
-    inactive_members_list = Member.objects.filter(is_active=False).order_by('first_name', 'last_name')
+    inactive_members_list = Member.objects.filter(is_active=False).select_related('user').order_by('user__first_name', 'user__last_name')
     
     # Handle POST requests for member reactivation
     if request.method == 'POST':
@@ -558,7 +551,7 @@ def inactive_members(request):
                 
                 if request.headers.get('HX-Request'):
                     # Refresh the inactive members list after reactivation
-                    inactive_members_list = Member.objects.filter(is_active=False).order_by('first_name', 'last_name')
+                    inactive_members_list = Member.objects.filter(is_active=False).select_related('user').order_by('user__first_name', 'user__last_name')
                     context['inactive_members'] = inactive_members_list
                     return render(request, 'attendance/partials/inactive_members_content.html', context)
                 else:
@@ -663,7 +656,7 @@ def attendance_reports(request):
     
     context = {
         'filter_form': filter_form,
-        'attendance_records': attendance_records.select_related('member', 'member__primary_instrument', 'played_instrument').order_by('-date', 'member__first_name', 'member__last_name')[:100],  # Limit for performance
+        'attendance_records': attendance_records.select_related('member', 'member__user', 'member__primary_instrument', 'played_instrument').order_by('-date', 'member__user__first_name', 'member__user__last_name')[:100],  # Limit for performance
         'attendance_by_date': attendance_by_date,
         'total_records': total_records,
         'member_records': member_records,
@@ -698,8 +691,8 @@ def attendance_section_report_new(request, section_slug):
     
     # Include members whose primary or additional instruments belong to this section
     section_members = section.get_members().select_related(
-        'primary_instrument'
-    ).prefetch_related('additional_instruments__instrument').order_by('first_name', 'last_name')
+        'user', 'primary_instrument'
+    ).prefetch_related('additional_instruments__instrument').order_by('user__first_name', 'user__last_name')
     
     section_member_ids = list(section_members.values_list('id', flat=True))
     
@@ -741,7 +734,7 @@ def attendance_section_report_new(request, section_slug):
     context = {
         'section': section,
         'section_members': section_members,
-        'attendance_records': attendance_records.select_related('member', 'member__primary_instrument', 'played_instrument'),
+        'attendance_records': attendance_records.select_related('member', 'member__user', 'member__primary_instrument', 'played_instrument'),
         'member_attendance': member_attendance,
         'attendance_by_date': attendance_by_date,
         'start_date': start_date,

@@ -21,7 +21,7 @@ class LibraryInstrumentRentForm(forms.Form):
         widget=library_instrument_available_chooser_viewset.widget_class,
     )
     member = forms.ModelChoiceField(
-        queryset=Member.objects.filter(is_active=True).order_by("first_name", "last_name"),
+        queryset=Member.objects.filter(is_active=True).select_related("user").order_by("user__first_name", "user__last_name"),
         required=True,
         label="Member",
         help_text="Assign the instrument to an active member",

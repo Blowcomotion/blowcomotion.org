@@ -99,8 +99,8 @@ class Command(BaseCommand):
                 }
 
                 existing_member = Member.objects.filter(
-                    first_name__iexact=first_name,
-                    last_name__iexact=last_name,
+                    user__first_name__iexact=first_name,
+                    user__last_name__iexact=last_name,
                 ).first()
 
                 if existing_member:

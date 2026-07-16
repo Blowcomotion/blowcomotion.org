@@ -43,7 +43,7 @@ class AttendanceRecord(models.Model):
 
     class Meta:
         unique_together = ['date', 'member']
-        ordering = ['-date', 'member__last_name']
+        ordering = ['-date', 'member__user__last_name']
 
     def clean(self):
         if not self.member and not self.guest_name:

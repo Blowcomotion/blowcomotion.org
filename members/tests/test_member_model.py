@@ -227,9 +227,10 @@ class MemberGetGigoIdTests(TestCase):
         # Reload from database
         member.refresh_from_db()
         
-        # gigomatic_id should be saved, but first_name should not
+        # gigomatic_id should be saved. first_name writes through to the
+        # linked User, so the in-memory assignment is persisted by save().
         self.assertEqual(member.gigomatic_id, 999)
-        self.assertEqual(member.first_name, 'Henry')  # Not 'Hank'
+        self.assertEqual(member.first_name, 'Hank')
 
 
 class MemberSaveMethodTests(TestCase):
@@ -506,7 +507,7 @@ class MemberSaveMethodTests(TestCase):
         
         # Mutate is_active in memory but don't include it in update_fields
         member.is_active = False
-        member.save(update_fields=['first_name'])
+        member.save(update_fields=['notes'])
         
         # Should NOT call GO3 API because is_active wasn't in update_fields
         self.assertEqual(mock_api.call_count, 0)
@@ -673,7 +674,7 @@ class MemberReactivatedDateTests(TestCase):
         
         # Activate member with update_fields as a tuple
         member.is_active = True
-        member.save(update_fields=('is_active', 'email'), sync_go3=False)
+        member.save(update_fields=('is_active', 'notes'), sync_go3=False)
         
         # Verify reactivated_date was persisted
         member.refresh_from_db()
@@ -697,7 +698,7 @@ class MemberReactivatedDateTests(TestCase):
         
         # Activate member with update_fields as a set
         member.is_active = True
-        member.save(update_fields={'is_active', 'first_name'}, sync_go3=False)
+        member.save(update_fields={'is_active', 'notes'}, sync_go3=False)
         
         # Verify reactivated_date was persisted
         member.refresh_from_db()
@@ -723,7 +724,7 @@ class MemberReactivatedDateTests(TestCase):
         
         # Save with update_fields, but is_active stays True
         member.first_name = 'Evelyn'
-        member.save(update_fields=['first_name', 'is_active'], sync_go3=False)
+        member.save(update_fields=['is_active'], sync_go3=False)
         
         # Verify reactivated_date didn't change
         member.refresh_from_db()
@@ -772,7 +773,7 @@ class MemberReactivatedDateTests(TestCase):
 
 class MemberDisplayNameTests(TestCase):
     def test_display_name_sort_metadata(self):
-        self.assertEqual(Member.display_name.admin_order_field, 'first_name')
+        self.assertEqual(Member.display_name.admin_order_field, 'user__first_name')
         self.assertEqual(Member.display_name.short_description, 'Name')
 
     def test_display_name_returns_str(self):
