@@ -51,8 +51,8 @@ class Command(BaseCommand):
         instruments = LibraryInstrument.objects.filter(
             status=LibraryInstrument.STATUS_RENTED,
             member__isnull=False,
-            member__email__isnull=False,
-        ).exclude(member__email="").select_related("member", "instrument")
+            member__user__isnull=False,
+        ).exclude(member__user__email="").select_related("member", "member__user", "instrument")
 
         nagged = []
         skipped_cooldown = 0

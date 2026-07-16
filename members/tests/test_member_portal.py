@@ -3,7 +3,8 @@ from unittest.mock import patch
 from wagtail.models import Revision
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.core.cache import cache
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from blowcomotion.models import (
@@ -88,6 +89,24 @@ class ProfileViewTests(TestCase):
         self.member.refresh_from_db()
         self.assertEqual(self.member.preferred_name, "Robbie")
 
+    def test_profile_name_change_writes_through_to_user(self):
+        response = self.client.post(
+            reverse("member-profile"),
+            {
+                "first_name": "Robyn",
+                "last_name": "Musician",
+                "email": "robin@example.com",
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, "Robyn")
+        self.assertEqual(self.user.last_name, "Musician")
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.first_name, "Robyn")
+        self.assertEqual(self.member.last_name, "Musician")
+
     def test_email_change_sets_pending_email(self):
         from django.test import override_settings
         with override_settings(
@@ -163,6 +182,82 @@ class ProfileViewTests(TestCase):
         revision = Revision.objects.for_instance(self.member).first()
         self.assertEqual(revision.user, self.user)
         self.assertIn("Robbie", revision.content.get("preferred_name", ""))
+
+
+class ProfilePatreonStatusTests(TestCase):
+    def setUp(self):
+        self.member = make_member(email="patreontest@example.com")
+        self.user = create_member_user(self.member)
+        self.user.set_password("Pass123!")
+        self.user.save()
+        self.client.login(username="patreontest@example.com", password="Pass123!")
+        self._recaptcha = patch(
+            "members.views._validate_recaptcha", return_value=(True, None)
+        )
+        self._recaptcha.start()
+        cache.clear()
+
+    def tearDown(self):
+        self._recaptcha.stop()
+        cache.clear()
+
+    @override_settings(PATREON_ACCESS_TOKEN=None, PATREON_CAMPAIGN_ID=None)
+    def test_patreon_section_hidden_when_not_configured(self):
+        response = self.client.get(reverse("member-profile"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Patreon:")
+
+    @override_settings(PATREON_ACCESS_TOKEN="token", PATREON_CAMPAIGN_ID="123")
+    @patch("members.views.check_patreon_membership")
+    def test_patreon_active_status_shown(self, mock_check):
+        mock_check.return_value = {
+            "is_active": True,
+            "pledge_cents": 1000,
+            "last_charge_date": None,
+            "last_charge_status": "Paid",
+            "patron_since": None,
+            "lifetime_cents": 5000,
+        }
+        response = self.client.get(reverse("member-profile"))
+        self.assertContains(response, "Active patron")
+        self.assertContains(response, "$10")
+        mock_check.assert_called_once_with("patreontest@example.com")
+
+    @override_settings(PATREON_ACCESS_TOKEN="token", PATREON_CAMPAIGN_ID="123")
+    @patch("members.views.check_patreon_membership")
+    def test_patreon_inactive_status_shown(self, mock_check):
+        mock_check.return_value = {
+            "is_active": False,
+            "pledge_cents": None,
+            "last_charge_date": None,
+            "last_charge_status": None,
+            "patron_since": None,
+            "lifetime_cents": None,
+        }
+        response = self.client.get(reverse("member-profile"))
+        self.assertContains(response, "Not found or inactive")
+
+    @override_settings(PATREON_ACCESS_TOKEN="token", PATREON_CAMPAIGN_ID="123")
+    @patch("members.views.check_patreon_membership")
+    def test_patreon_unavailable_when_api_errors(self, mock_check):
+        mock_check.return_value = None
+        response = self.client.get(reverse("member-profile"))
+        self.assertContains(response, "status temporarily unavailable")
+
+    @override_settings(PATREON_ACCESS_TOKEN="token", PATREON_CAMPAIGN_ID="123")
+    @patch("members.views.check_patreon_membership")
+    def test_patreon_status_is_cached(self, mock_check):
+        mock_check.return_value = {
+            "is_active": True,
+            "pledge_cents": 1000,
+            "last_charge_date": None,
+            "last_charge_status": "Paid",
+            "patron_since": None,
+            "lifetime_cents": 5000,
+        }
+        self.client.get(reverse("member-profile"))
+        self.client.get(reverse("member-profile"))
+        mock_check.assert_called_once_with("patreontest@example.com")
 
 
 class ConfirmEmailViewTests(TestCase):

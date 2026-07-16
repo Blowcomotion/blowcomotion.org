@@ -190,8 +190,8 @@ class SectionMembersPanel(Panel):
             context = super().get_context_data(parent_context)
             context["members"] = (
                 self.instance.get_members()
-                .select_related("primary_instrument")
-                .order_by("first_name", "last_name")
+                .select_related("primary_instrument", "user")
+                .order_by("user__first_name", "user__last_name")
             )
             return context
 
@@ -269,7 +269,10 @@ class MemberViewSet(SnippetViewSet):
     menu_label = 'Members'
     menu_name = 'members'
     menu_icon = 'group'
-    search_fields = ("first_name", "last_name", "preferred_name", "gigomatic_username", "email")
+    # Name/email live on the linked auth User. Unset search_backend_name so the
+    # index view searches via the Django ORM, which can traverse user__ lookups.
+    search_backend_name = None
+    search_fields = ("user__first_name", "user__last_name", "preferred_name", "gigomatic_username", "user__email")
     list_display = [
         'display_name',
         Column('primary_instrument', label='Instrument', sort_key='primary_instrument__name'),
@@ -280,10 +283,13 @@ class MemberViewSet(SnippetViewSet):
         UpdatedAtColumn()
     ]
     filterset_class = None  # Set in __init__
-    ordering = ['last_name', 'first_name']
+    ordering = ['user__last_name', 'user__first_name']
     panels = [
-        "first_name",
-        "last_name",
+        # first_name / last_name / email are form-only fields declared on
+        # MemberAdminForm (they live on the linked auth User), so they need
+        # explicit FieldPanels rather than field-name strings.
+        FieldPanel("first_name"),
+        FieldPanel("last_name"),
         "preferred_name",
         "gigomatic_username",
         "gigomatic_id",
@@ -303,7 +309,7 @@ class MemberViewSet(SnippetViewSet):
         "renting",
         "last_seen",
         "separation_date",
-        "email",
+        FieldPanel("email"),
         "phone",
         "address",
         "city",
@@ -336,7 +342,7 @@ class MemberViewSet(SnippetViewSet):
         super().__init__(*args, **kwargs)
 
     def get_queryset(self, request):
-        return super().get_queryset(request) or self.model.objects.select_related('primary_instrument')
+        return super().get_queryset(request) or self.model.objects.select_related('primary_instrument', 'user')
 
 
 class AttendanceRecordFilterSet(WagtailFilterSet):
@@ -358,7 +364,7 @@ class AttendanceRecordViewSet(SnippetViewSet):
     menu_label = 'Attendance Records'
     menu_name = 'attendance_records'
     menu_icon = 'check'
-    search_fields = ('member__first_name', 'member__last_name', 'guest_name', 'notes', 'played_instrument__name')
+    search_fields = ('member__user__first_name', 'member__user__last_name', 'guest_name', 'notes', 'played_instrument__name')
     list_display = [
         '__str__',
         DateColumn('date', label='Date'),

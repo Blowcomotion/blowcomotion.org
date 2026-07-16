@@ -10,7 +10,12 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login, views as auth_views
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
+from django.contrib.auth.forms import (
+    AuthenticationForm,
+    PasswordResetForm,
+    SetPasswordForm,
+)
+from django.core.cache import cache
 from django.core.management import call_command
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -39,7 +44,9 @@ from members.auth import (
     create_member_user,
     ensure_set_password_flow,
     needs_set_password,
+    redeem_login_link_token,
     send_email_change_confirmation,
+    send_login_link_email,
     send_set_password_email,
     send_signup_invite_email,
 )
@@ -57,6 +64,48 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 TOKEN_EXPIRY_HOURS = 24
+PATREON_STATUS_CACHE_TTL = 60 * 60  # 1 hour
+
+
+def _patreon_configured():
+    return bool(
+        getattr(settings, "PATREON_ACCESS_TOKEN", None)
+        and getattr(settings, "PATREON_CAMPAIGN_ID", None)
+    )
+
+
+def _get_member_patreon_status(member):
+    """
+    Look up (and cache) the logged-in member's own Patreon pledge status.
+
+    Hits the Patreon API via instruments.patreon.check_patreon_membership,
+    which is a full paginated scan of the campaign's member list — too slow
+    to run on every profile page load, so the result is cached per-email for
+    PATREON_STATUS_CACHE_TTL seconds.
+
+    Returns None if the member has no email or the lookup fails; callers
+    should treat None as "unavailable" rather than erroring. Assumes the
+    caller has already confirmed Patreon is configured.
+    """
+    if not member.email:
+        return None
+
+    cache_key = f"member_patreon_status:{member.email.lower()}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    try:
+        result = check_patreon_membership(member.email)
+    except Exception:
+        logger.exception(
+            "profile_view: unexpected error checking Patreon status for member %s", member.pk
+        )
+        return None
+
+    if result is not None:
+        cache.set(cache_key, result, PATREON_STATUS_CACHE_TTL)
+    return result
 
 
 # ── Login ──────────────────────────────────────────────────────────────────────
@@ -79,6 +128,62 @@ class MemberLoginView(auth_views.LoginView):
         ctx = super().get_context_data(**kwargs)
         ctx["include_form_js"] = True
         return ctx
+
+
+# ── Email login link ───────────────────────────────────────────────────────────
+
+@ratelimit(key="ip", rate="10/h", method="POST", block=True)
+def login_link_request(request):
+    """POST-only: email a single-use login link. Always responds with the same
+    neutral message so account existence can't be probed."""
+    if request.method != "POST":
+        return redirect("member-login")
+
+    is_valid, error = _validate_recaptcha(request)
+    if not is_valid:
+        return render(request, "member/login.html", {
+            "form": AuthenticationForm(),
+            "recaptcha_error": error,
+            "include_form_js": True,
+        })
+
+    email = (request.POST.get("email") or "").strip()
+    if email:
+        try:
+            member = Member.objects.get(email__iexact=email, is_active=True)
+        except (Member.DoesNotExist, Member.MultipleObjectsReturned):
+            logger.info("Login link requested for unknown or ambiguous email")
+        else:
+            base_url = f"{request.scheme}://{request.get_host()}"
+            if needs_set_password(member):
+                # No usable password yet — a login link would strand them in the
+                # portal without one; send the set-password flow instead
+                # (mirrors MemberPasswordResetView).
+                ensure_set_password_flow(member, base_url)
+                logger.info(f"Login link request: sent set-password email for member {member.pk}")
+            else:
+                send_login_link_email(member, base_url)
+                logger.info(f"Login link request: sent login link to member {member.pk}")
+
+    return render(request, "member/login.html", {
+        "form": AuthenticationForm(),
+        "login_link_sent": True,
+        "include_form_js": True,
+    })
+
+
+def login_link_redeem(request, token):
+    user = redeem_login_link_token(token)
+    if user is None:
+        return render(request, "member/login_link_invalid.html")
+    if request.method != "POST":
+        # Email security scanners prefetch links with GET/HEAD. Logging in
+        # updates last_login, which is what makes the token single-use — so
+        # only a POST (via the auto-submitting interstitial) may consume it.
+        return render(request, "member/login_link_confirm.html")
+    login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+    logger.info(f"User {user.pk} logged in via email login link")
+    return redirect(settings.LOGIN_REDIRECT_URL)
 
 
 # ── Set Password ───────────────────────────────────────────────────────────────
@@ -145,7 +250,7 @@ class MemberPasswordResetView(auth_views.PasswordResetView):
     def form_valid(self, form):
         email = form.cleaned_data["email"]
         try:
-            member = Member.objects.get(email__iexact=email, is_active=True)
+            member = Member.objects.get(user__email__iexact=email, is_active=True)
         except (Member.DoesNotExist, Member.MultipleObjectsReturned):
             logger.debug(f"Password reset attempted for non-member or ambiguous email: {email}")
             return redirect("password_reset_done")
@@ -179,7 +284,7 @@ def get_access_view(request):
         if form.is_valid():
             email = form.cleaned_data["email"]
             try:
-                member = Member.objects.get(email__iexact=email)
+                member = Member.objects.get(user__email__iexact=email)
                 if needs_set_password(member):
                     ensure_set_password_flow(member, f"{request.scheme}://{request.get_host()}")
                     logger.info(f"Get-access: sent set-password email to member {member.pk}")
@@ -222,9 +327,10 @@ def profile_view(request):
     if not hasattr(request.user, "member"):
         return redirect("/")
     member = request.user.member
-    original_email = member.email  # snapshot before form validation mutates member in place
+    original_email = member.email
 
     def _profile_context(form):
+        patreon_configured = _patreon_configured()
         return {
             "form": form,
             "member": member,
@@ -236,6 +342,8 @@ def profile_view(request):
             "attendance_this_year": member.attendance_records.filter(
                 date__year=date.today().year
             ).count(),
+            "patreon_configured": patreon_configured,
+            "patreon_status": _get_member_patreon_status(member) if patreon_configured else None,
         }
 
     if request.method == "POST":
@@ -248,11 +356,13 @@ def profile_view(request):
         form = MemberProfileForm(request.POST, request.FILES, instance=member)
         if form.is_valid():
             instance = form.save(commit=False)
+            # Names are already applied to the instance by
+            # MemberProfileForm._post_clean; they write through to the linked
+            # User when the member instance is saved. Email is deliberately
+            # NOT applied here: a changed address is held until confirmed via
+            # the emailed token.
             new_email = form.cleaned_data.get("email") or ""
             email_changed = new_email and new_email != original_email
-
-            if email_changed:
-                instance.email = original_email  # hold until confirmed
 
             photo = form.cleaned_data.get("profile_photo")
             old_image = instance.image if photo else None
@@ -473,7 +583,7 @@ def instrument_rental_request(request):
     if request.method == "POST":
         is_valid_captcha, captcha_error = _validate_recaptcha(request)
         if not is_valid_captcha:
-            form = InstrumentRentalRequestForm()
+            form = InstrumentRentalRequestForm(request.POST)
             return render(request, "member/instrument_rental_request.html", {
                 "member": member,
                 "form": form,
@@ -628,12 +738,13 @@ def confirm_email_view(request, token_uuid):
     new_email = token.new_email
 
     with transaction.atomic():
+        # The email property writes through to the linked User; Member.save()
+        # persists the User change (and realigns User.username to the email).
         member.email = new_email
         member.pending_email = None
-        member.save(update_fields=["email", "pending_email"], sync_go3=False)
+        member.save(update_fields=["pending_email"], sync_go3=False)
         token.used = True
         token.save(update_fields=["used"])
-    # Member.save() email drift guard syncs User.email / User.username when "email" is in update_fields
 
     logger.info(f"Email confirmed for member {member.pk}: {new_email}")
     return render(request, "member/confirm_email_result.html", {"confirmed": True, "new_email": new_email})

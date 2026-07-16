@@ -1,5 +1,56 @@
 (function ($) {
+    // Forms that go through the shared public-form pipeline, or the member
+    // portal's plain-POST forms.
+    var FORM_SELECTOR = 'form[hx-post*="process-form"], form[action*="process-form"], form#member-form, form[data-recaptcha]';
+
+    // Disable the submit button and relabel it while a submission is in
+    // flight, so a slow response (e.g. a stalled SMTP send) can't be
+    // mistaken for a failed submit and re-clicked, creating duplicates.
+    function markSubmitting($form) {
+        var $btn = $form.find('button[type="submit"]').first();
+        if ($btn.length === 0 || $btn.prop('disabled')) return;
+        $btn.data('original-text', $btn.text());
+        $btn.prop('disabled', true).text('Sending...');
+    }
+
+    // Restore the button so the form can be resubmitted after an error.
+    // Not needed on the plain-POST path: the browser navigates away on submit.
+    function clearSubmitting($form) {
+        var $btn = $form.find('button[type="submit"]').first();
+        if ($btn.length === 0) return;
+        var original = $btn.data('original-text');
+        if (original !== undefined) {
+            $btn.text(original);
+        }
+        $btn.prop('disabled', false);
+    }
+
     $(document).ready(function() {
+        // Plain (non-HTMX) forms: the browser navigates away on submit, so
+        // only disabling is needed. Bound directly (matching how the
+        // reCAPTCHA handler below binds) and registered first, so it runs
+        // before that handler's `return false` can stop propagation.
+        $(FORM_SELECTOR).not('[hx-post]').on('submit', function() {
+            markSubmitting($(this));
+        });
+
+        // HTMX forms: htmx does not disable buttons on its own. Disable as
+        // soon as the request starts and re-enable once it completes, in
+        // case the response leaves the form in place (e.g. a validation error).
+        document.body.addEventListener('htmx:beforeRequest', function(event) {
+            var form = event.detail.elt;
+            if (form.tagName !== 'FORM') form = form.closest('form');
+            if (!form || !$(form).is(FORM_SELECTOR)) return;
+            markSubmitting($(form));
+        });
+
+        document.body.addEventListener('htmx:afterRequest', function(event) {
+            var form = event.detail.elt;
+            if (form.tagName !== 'FORM') form = form.closest('form');
+            if (!form || !$(form).is(FORM_SELECTOR)) return;
+            clearSubmitting($(form));
+        });
+
         // reCAPTCHA disclosure notice (required when hiding the badge)
         $('form[hx-post*="process-form"], form[action*="process-form"], form#member-form, form[data-recaptcha]').each(function() {
             var $form = $(this);

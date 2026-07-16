@@ -30,7 +30,7 @@ class Command(BaseCommand):
         directory = os.path.dirname(os.path.abspath(output_path)) or "."
         os.makedirs(directory, exist_ok=True)
 
-        members = Member.objects.all().order_by("last_name", "first_name", "id")
+        members = Member.objects.select_related("user").order_by("user__last_name", "user__first_name", "id")
         if not members.exists():
             self.stdout.write(self.style.WARNING("No members found to export."))
 
