@@ -15,7 +15,6 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
-from django.views.decorators.http import require_http_methods
 
 from blowcomotion.models import (
     Instrument,
@@ -27,7 +26,6 @@ from blowcomotion.models import (
     Member,
     SiteSettings,
 )
-from instruments.forms import LibraryInstrumentRentForm, LibraryInstrumentReturnForm
 from instruments.patreon import MIN_RENTAL_PLEDGE_CENTS, fetch_all_members
 from members.auth import _MemberEmail, _send_mail
 
@@ -144,155 +142,6 @@ def instrument_library_gallery(request):
             'querystring': querystring,
         },
     )
-
-
-@require_http_methods(["GET", "POST"])
-def instrument_library_quick_rent(request):
-    available_qs = LibraryInstrument.objects.filter(
-        status=LibraryInstrument.STATUS_AVAILABLE
-    ).select_related('instrument')
-    rented_qs = LibraryInstrument.objects.filter(
-        status=LibraryInstrument.STATUS_RENTED
-    ).select_related('instrument', 'member')
-
-    instrument_id = request.GET.get('instrument')
-    initial_instrument = None
-    if instrument_id:
-        try:
-            initial_instrument = available_qs.get(pk=instrument_id)
-        except LibraryInstrument.DoesNotExist:
-            messages.error(request, "That instrument is no longer available to rent.")
-            return redirect('instrument_library_quick_rent')
-
-    action = request.POST.get('action') if request.method == 'POST' else None
-
-    rent_form = LibraryInstrumentRentForm(
-        request.POST if action == 'rent' else None,
-        instrument_queryset=available_qs,
-        initial_instrument=initial_instrument,
-    )
-    return_form = LibraryInstrumentReturnForm(
-        request.POST if action == 'return' else None,
-    )
-
-    if request.method == 'POST':
-        if action == 'rent':
-            if rent_form.is_valid():
-                instrument = rent_form.cleaned_data['instrument']
-                member = rent_form.cleaned_data['member']
-
-                if instrument.status != LibraryInstrument.STATUS_AVAILABLE:
-                    messages.error(request, "Instrument is no longer available to rent.")
-                    rent_form.add_error('instrument', "Instrument is no longer available to rent.")
-                else:
-                    instrument.member = member
-                    instrument.status = LibraryInstrument.STATUS_RENTED
-                    instrument.rental_date = (
-                        rent_form.cleaned_data['rental_date'] or timezone.localdate()
-                    )
-                    # TODO(#250): remove — agreement_signed_date dropped in rental v2
-                    # instrument.agreement_signed_date = rent_form.cleaned_data[
-                    #     'agreement_signed_date'
-                    # ]
-                    instrument.patreon_active = rent_form.cleaned_data['patreon_active']
-                    instrument.patreon_amount = rent_form.cleaned_data['patreon_amount']
-                    comments = rent_form.cleaned_data['comments']
-                    if comments:
-                        instrument.comments = comments
-
-                    instrument.save()
-
-                    # Update member's renting status
-                    member.renting = True
-                    member.save()
-
-                    # TODO(#250): remove — LibraryInstrumentDocument dropped in rental v2
-                    # rental_document = rent_form.cleaned_data.get('rental_document')
-                    # if rental_document:
-                    #     LibraryInstrumentDocument.objects.create(
-                    #         library_instrument=instrument,
-                    #         document=rental_document,
-                    #         description=rent_form.cleaned_data.get('document_description', ''),
-                    #     )
-
-                    if comments:
-                        InstrumentHistoryLog.objects.create(
-                            library_instrument=instrument,
-                            event_category=InstrumentHistoryLog.EVENT_RENTAL_NOTE,
-                            event_date=timezone.localdate(),
-                            notes=f"Rental notes: {comments}",
-                            user=request.user,
-                        )
-
-                    messages.success(
-                        request,
-                        f"{instrument.instrument.name} rented to {member.full_name}.",
-                    )
-                    return redirect('instrument_library_quick_rent')
-
-        elif action == 'return':
-            if return_form.is_valid():
-                instrument = return_form.cleaned_data['instrument']
-                condition_notes = return_form.cleaned_data['condition_notes']
-                previous_member = instrument.member
-
-                if instrument.status != LibraryInstrument.STATUS_RENTED:
-                    messages.error(request, "Instrument is not currently rented out.")
-                    return_form.add_error('instrument', "Instrument is not currently rented out.")
-                else:
-                    instrument.status = LibraryInstrument.STATUS_AVAILABLE
-                    instrument.member = None
-                    instrument.rental_date = None
-                    # instrument.agreement_signed_date = None  # TODO(#250): remove
-                    instrument.patreon_active = False
-                    instrument.patreon_amount = None
-                    instrument.save()
-
-                    # Update previous member's renting status if they have no other rentals
-                    if previous_member:
-                        still_renting = LibraryInstrument.objects.filter(
-                            member=previous_member,
-                            status=LibraryInstrument.STATUS_RENTED
-                        ).exists()
-                        if not still_renting:
-                            previous_member.renting = False
-                            previous_member.save()
-
-                    if condition_notes:
-                        InstrumentHistoryLog.objects.create(
-                            library_instrument=instrument,
-                            event_category=InstrumentHistoryLog.EVENT_RETURN_NOTE,
-                            event_date=timezone.localdate(),
-                            notes=f"Return notes: {condition_notes}",
-                            user=request.user,
-                        )
-
-                    renter_display = (
-                        previous_member.full_name if previous_member else 'previous renter'
-                    )
-                    messages.success(
-                        request,
-                        f"{instrument.instrument.name} returned from {renter_display}.",
-                    )
-                    return redirect('instrument_library_quick_rent')
-            else:
-                # Form validation failed - likely no instrument selected
-                if 'instrument' in return_form.errors:
-                    messages.error(
-                        request,
-                        "Please select an instrument to return by clicking the 'Return' button next to it in the 'Currently rented' list above."
-                    )
-
-    context = {
-        'page_title': 'Instrument Library Quick Rent',
-        'rent_form': rent_form,
-        'return_form': return_form,
-        'available_instruments': available_qs,
-        'rented_instruments': rented_qs,
-        'selected_instrument': initial_instrument,
-    }
-
-    return render(request, 'instrument_library/manage.html', context)
 
 
 def export_library_instruments_csv(request):
