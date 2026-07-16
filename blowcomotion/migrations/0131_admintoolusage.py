@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('blowcomotion', '0127_backfill_conductor_charts'),
+        ('blowcomotion', '0130_member_invite_sent_at_alter_member_user'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
