@@ -105,12 +105,6 @@ def register_admin_urls():
             instrument_library_gallery,
             name="instrument_library_gallery",
         ),
-        # TODO(#250): delete — replaced by Rental Requests dashboard
-        # path(
-        #     "instrument-library/manage/",
-        #     instrument_library_quick_rent,
-        #     name="instrument_library_quick_rent",
-        # ),
         path("rental-requests/", rental_requests_dashboard, name="rental_requests_dashboard"),
         path("rental-requests/<int:pk>/", rental_request_review, name="rental_request_review"),
         path("rental-requests/<int:pk>/return/", rental_request_return, name="rental_request_return"),
@@ -166,17 +160,6 @@ def register_management_menu_item():
         'Utilities', submenu, icon_name='cogs', order=10000,
         permission=UTILITIES_PERMISSIONS,
     )
-
-
-# TODO(#250): delete — replaced by Rental Requests dashboard
-# @hooks.register("register_admin_menu_item")
-# def register_library_quick_rent_menu_item():
-#     return MenuItem(
-#         'Library: Quick Rent',
-#         reverse('instrument_library_quick_rent'),
-#         icon_name='french-horn',
-#         order=295,
-#     )
 
 
 @hooks.register("register_admin_menu_item")
