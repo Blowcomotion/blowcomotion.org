@@ -16,6 +16,7 @@ urlpatterns = [
     path("documents/", include(wagtaildocs_urls)),
     path("search/", search_views.search, name="search"),
     path("process-form/", blowcomotion_views.process_form, name="process-form"),
+    path("admin-tool-usage/", blowcomotion_views.log_admin_tool_usage, name="admin-tool-usage"),
 
     path("attendance/", include("attendance.urls")),
 

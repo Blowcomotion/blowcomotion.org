@@ -259,3 +259,15 @@ def video_title_resolver_js():
         '<script src="{}"></script>',
         static('js/video-title-resolver.js')
     )
+
+
+@hooks.register('insert_global_admin_js')
+def admin_tool_usage_js():
+    """
+    Load the admin tool usage tracker (see issue #311). Records page views
+    and clicks on admin pages so the team can see which tools are used most.
+    """
+    return format_html(
+        '<script src="{}"></script>',
+        static('js/admin-tool-usage.js')
+    )

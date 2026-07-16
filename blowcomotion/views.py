@@ -9,11 +9,12 @@ import requests
 from django.conf import settings
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.management import call_command
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
 from blowcomotion.models import (
+    AdminToolUsage,
     BookingFormSubmission,
     ContactFormSubmission,
     DonateFormSubmission,
@@ -780,3 +781,35 @@ def fetch_embed_data(request):
     except Exception as e:
         logger.error(f"Unexpected error fetching embed data for URL {url}: {e}", exc_info=True)
         return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
+
+
+@require_http_methods(["POST"])
+def log_admin_tool_usage(request):
+    """
+    Record a single admin-tool usage event (a page view or a button/link
+    click on a Wagtail admin page). Called from JS registered via the
+    insert_global_admin_js hook (see wagtail_hooks.py). CSRF-protected like
+    any other POST endpoint; the JS supplies the token via the standard
+    X-CSRFToken header or a csrfmiddlewaretoken field, depending on how it
+    sends the request.
+    """
+    if not (request.user.is_authenticated and request.user.is_staff):
+        return JsonResponse({'error': 'Authentication required'}, status=403)
+
+    data = {}
+    if request.body:
+        try:
+            data = json.loads(request.body)
+        except (ValueError, TypeError):
+            data = {}
+    if not data:
+        data = request.POST
+
+    tool = str(data.get('tool') or '').strip()[:255]
+    action = str(data.get('action') or '').strip()[:255]
+
+    if not tool:
+        return JsonResponse({'error': 'tool is required'}, status=400)
+
+    AdminToolUsage.objects.create(user=request.user, tool=tool, action=action)
+    return HttpResponse(status=204)
