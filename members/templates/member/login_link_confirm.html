@@ -5,12 +5,17 @@
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-md-6 col-lg-5 text-center">
-            <h1 class="mb-4">Almost there</h1>
-            <p class="text-muted mb-4">Click the button below to finish logging in to the member portal.</p>
+            <h1 class="mb-4">Logging you in&hellip;</h1>
+            <p class="text-muted mb-4">Click continue if you are not redirected automatically.</p>
             <form id="login-continue-form" method="post" action="">
                 {% csrf_token %}
                 <button type="submit" class="site-btn">Continue to log in</button>
             </form>
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    document.getElementById('login-continue-form').submit();
+                });
+            </script>
         </div>
     </div>
 </div>

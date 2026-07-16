@@ -122,6 +122,14 @@ class LoginLinkRedeemTests(TestCase):
         self.assertContains(response, 'method="post"')
         self.assertContains(response, "csrfmiddlewaretoken")
 
+    def test_get_interstitial_auto_submits_form(self):
+        """The page auto-submits via JS so users never see the interstitial."""
+        token = make_login_link_token(self.user)
+        response = self._get(token)
+        self.assertContains(
+            response, "document.getElementById('login-continue-form').submit()"
+        )
+
     def test_post_valid_token_logs_in_and_redirects(self):
         token = make_login_link_token(self.user)
         response = self._post(token)
