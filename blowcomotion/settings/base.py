@@ -345,6 +345,11 @@ WAGTAILDOCS_MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10MB
 WAGTAILIMAGES_JPEG_QUALITY = 85
 WAGTAILIMAGES_AVIF_QUALITY = 80
 
+# Google Analytics (GA4)
+# Set GOOGLE_ANALYTICS_ID (e.g. "G-XXXXXXXXXX") in local.py for production.
+# When unset, the gtag.js snippet is not rendered.
+GOOGLE_ANALYTICS_ID = None
+
 # reCAPTCHA Settings
 # Set RECAPTCHA_PUBLIC_KEY and RECAPTCHA_PRIVATE_KEY in local.py for production.
 # If keys are missing, validation is skipped only when DEBUG=True; when DEBUG=False submissions are rejected.
