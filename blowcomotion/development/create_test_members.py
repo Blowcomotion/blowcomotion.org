@@ -97,8 +97,7 @@ for section in sections:
             email = member_data["email"].replace("@", f".{section.name.lower().replace(' ', '')}@")
             
             member = Member.objects.filter(user__email=email).first()
-            created = member is None
-            if created:
+            if member is None:
                 member = Member.objects.create(
                     email=email,
                     first_name=member_data["first_name"],
@@ -106,7 +105,6 @@ for section in sections:
                     join_date=date(2024, 1 + (i % 12), 15),  # Spread join dates across months
                     is_active=True,
                 )
-            if created:
                 print(f"Created: {member.first_name} {member.last_name}")
             else:
                 print(f"Already exists: {member.first_name} {member.last_name}")
