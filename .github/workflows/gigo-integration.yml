@@ -13,6 +13,9 @@ on:
     branches: [ "development" ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   gigo-integration:
     runs-on: ubuntu-latest
