@@ -35,11 +35,17 @@ from .chooser_viewsets import (
     section_chooser_viewset,
     song_chooser_viewset,
 )
-from .snippet_viewsets import BandViewSetGroup, FormsViewSetGroup, SyncViewSetGroup
+from .snippet_viewsets import (
+    AdminToolUsageViewSet,
+    BandViewSetGroup,
+    FormsViewSetGroup,
+    SyncViewSetGroup,
+)
 
 register_snippet(BandViewSetGroup)
 register_snippet(FormsViewSetGroup)
 register_snippet(SyncViewSetGroup)
+register_snippet(AdminToolUsageViewSet)
 
 
 def _permission_granted(user, permission):

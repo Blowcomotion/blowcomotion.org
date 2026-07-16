@@ -653,6 +653,55 @@ class EquipmentViewSet(SnippetViewSet):
         return super().get_queryset(request) or self.model.objects.select_related('storage_location')
 
 
+class AdminToolUsageFilterSet(WagtailFilterSet):
+    timestamp = django_filters.DateFromToRangeFilter(
+        widget=DateRangePickerWidget,
+        label='Date Range',
+    )
+
+    class Meta:
+        model = None
+        fields = {
+            'tool': ['exact'],
+            'user': ['exact'],
+        }
+
+
+class AdminToolUsageViewSet(SnippetViewSet):
+    model = None
+    menu_label = 'Admin Tool Usage'
+    menu_name = 'admin_tool_usage'
+    menu_icon = 'cogs'
+    search_fields = ('tool', 'action', 'user__first_name', 'user__last_name')
+    list_display = [
+        'tool',
+        'action',
+        'user',
+        DateColumn('timestamp', label='Timestamp'),
+    ]
+    filterset_class = None  # Set in __init__
+    ordering = ['-timestamp']
+    panels = [
+        'tool',
+        'action',
+        'user',
+    ]
+
+    def __init__(self, *args, **kwargs):
+        from .models import AdminToolUsage
+
+        class AdminToolUsageFilterSetWithModel(AdminToolUsageFilterSet):
+            class Meta(AdminToolUsageFilterSet.Meta):
+                model = AdminToolUsage
+
+        self.model = AdminToolUsage
+        self.filterset_class = AdminToolUsageFilterSetWithModel
+        super().__init__(*args, **kwargs)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request) or self.model.objects.select_related('user')
+
+
 class BandViewSetGroup(SnippetViewSetGroup):
     items = (EventViewSet, SectionViewSet, InstrumentViewSet, MemberViewSet, SongViewSet, ChartViewSet, AttendanceRecordViewSet, LibraryInstrumentViewSet, InstrumentHistoryLogViewSet, InstrumentStorageLocationViewSet, EquipmentViewSet)
     menu_icon = 'drum'
