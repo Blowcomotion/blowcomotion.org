@@ -150,7 +150,7 @@ def login_link_request(request):
     email = (request.POST.get("email") or "").strip()
     if email:
         try:
-            member = Member.objects.get(email__iexact=email, is_active=True)
+            member = Member.objects.get(user__email__iexact=email, is_active=True)
         except (Member.DoesNotExist, Member.MultipleObjectsReturned):
             logger.info("Login link requested for unknown or ambiguous email")
         else:
