@@ -7,6 +7,7 @@ import json
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.middleware.csrf import get_token
 from django.test import Client, RequestFactory, TestCase
 from django.utils import timezone
@@ -21,10 +22,18 @@ class AdminToolUsageViewTests(TestCase):
         self.client = Client()
         self.url = '/admin-tool-usage/'
 
-        self.staff_user = User.objects.create_user(
-            username='staff',
+        # Real Wagtail admin users are typically is_staff=False with the
+        # wagtailadmin.access_admin permission (Wagtail never sets is_staff);
+        # the view must accept them — see the prod bug this shape caught.
+        self.admin_user = User.objects.create_user(
+            username='wagtailadmin',
             password='testpass',
-            is_staff=True,
+        )
+        self.admin_user.user_permissions.add(
+            Permission.objects.get(
+                codename='access_admin',
+                content_type__app_label='wagtailadmin',
+            )
         )
         self.regular_user = User.objects.create_user(
             username='regular',
@@ -32,8 +41,8 @@ class AdminToolUsageViewTests(TestCase):
             is_staff=False,
         )
 
-    def test_staff_post_creates_record(self):
-        self.client.login(username='staff', password='testpass')
+    def test_admin_user_post_creates_record(self):
+        self.client.login(username='wagtailadmin', password='testpass')
         response = self.client.post(
             self.url,
             data=json.dumps({'tool': '/admin/images/', 'action': 'upload-button'}),
@@ -42,12 +51,12 @@ class AdminToolUsageViewTests(TestCase):
         self.assertEqual(response.status_code, 204)
         self.assertEqual(AdminToolUsage.objects.count(), 1)
         record = AdminToolUsage.objects.first()
-        self.assertEqual(record.user, self.staff_user)
+        self.assertEqual(record.user, self.admin_user)
         self.assertEqual(record.tool, '/admin/images/')
         self.assertEqual(record.action, 'upload-button')
 
-    def test_staff_post_without_action_creates_page_view_record(self):
-        self.client.login(username='staff', password='testpass')
+    def test_admin_user_post_without_action_creates_page_view_record(self):
+        self.client.login(username='wagtailadmin', password='testpass')
         response = self.client.post(
             self.url,
             data=json.dumps({'tool': '/admin/pages/'}),
@@ -59,7 +68,7 @@ class AdminToolUsageViewTests(TestCase):
         self.assertEqual(record.action, '')
 
     def test_missing_tool_returns_400(self):
-        self.client.login(username='staff', password='testpass')
+        self.client.login(username='wagtailadmin', password='testpass')
         response = self.client.post(
             self.url,
             data=json.dumps({'action': 'click'}),
@@ -77,7 +86,7 @@ class AdminToolUsageViewTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(AdminToolUsage.objects.count(), 0)
 
-    def test_non_staff_post_is_rejected(self):
+    def test_user_without_admin_access_is_rejected(self):
         self.client.login(username='regular', password='testpass')
         response = self.client.post(
             self.url,
@@ -87,8 +96,23 @@ class AdminToolUsageViewTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(AdminToolUsage.objects.count(), 0)
 
+    def test_is_staff_alone_is_not_enough(self):
+        # is_staff is a Django-admin concept and does not grant Wagtail admin
+        # access; the view keys off wagtailadmin.access_admin instead.
+        User.objects.create_user(
+            username='djangostaff', password='testpass', is_staff=True,
+        )
+        self.client.login(username='djangostaff', password='testpass')
+        response = self.client.post(
+            self.url,
+            data=json.dumps({'tool': '/admin/images/'}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(AdminToolUsage.objects.count(), 0)
+
     def test_get_is_rejected(self):
-        self.client.login(username='staff', password='testpass')
+        self.client.login(username='wagtailadmin', password='testpass')
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 405)
 
@@ -101,7 +125,7 @@ class AdminToolUsageViewTests(TestCase):
         regression here (e.g. reading request.POST before request.body).
         """
         csrf_client = Client(enforce_csrf_checks=True)
-        csrf_client.force_login(self.staff_user)
+        csrf_client.force_login(self.admin_user)
 
         # Populate the csrftoken cookie the same way a real browser session
         # would: any admin page rendering {% csrf_token %} calls get_token()

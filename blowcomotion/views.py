@@ -796,7 +796,9 @@ def log_admin_tool_usage(request):
     X-CSRFToken header or a csrfmiddlewaretoken field, depending on how it
     sends the request.
     """
-    if not (request.user.is_authenticated and request.user.is_staff):
+    # Wagtail admin users are not necessarily is_staff (Wagtail gates on the
+    # access_admin permission), so check that, like fetch_embed_data does.
+    if not (request.user.is_authenticated and request.user.has_perm('wagtailadmin.access_admin')):
         return JsonResponse({'error': 'Authentication required'}, status=403)
 
     data = {}
