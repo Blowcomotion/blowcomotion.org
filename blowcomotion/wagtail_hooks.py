@@ -10,7 +10,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from attendance.views import export_attendance_csv
-from blowcomotion.views import dump_data, fetch_embed_data
+from blowcomotion.views import admin_tool_usage_dashboard, dump_data, fetch_embed_data
 from charts.views import export_charts_csv
 from gigs.views import sync_gigs_admin
 from instruments.views import (
@@ -85,6 +85,7 @@ def register_admin_urls():
     """
     return [
         path("dump_data/", dump_data, name="dump_data"),
+        path("tool-usage/", admin_tool_usage_dashboard, name="admin_tool_usage_dashboard"),
         path("sync_gigs/", sync_gigs_admin, name="sync_gigs"),
         path("export_members/", export_members_csv, name="export_members"),
         path("export_attendance/", export_attendance_csv, name="export_attendance"),
@@ -135,6 +136,7 @@ EXPORTS_PERMISSIONS = ['blowcomotion.access_dev_tools', 'blowcomotion.access_rea
 # fall back to "show if any child is visible").
 UTILITIES_PERMISSIONS = EXPORTS_PERMISSIONS + [
     'blowcomotion.change_cachedgig',  # Sync Gigs
+    'blowcomotion.view_admintoolusage',  # Tool Usage dashboard
 ]
 
 
@@ -161,6 +163,8 @@ def register_management_menu_item():
                                    permission=EXPORTS_PERMISSIONS),
         PermissionMenuItem('Sync Gigs', reverse('sync_gigs'), icon_name='cog',
                             permission='blowcomotion.change_cachedgig'),
+        PermissionMenuItem('Tool Usage', reverse('admin_tool_usage_dashboard'), icon_name='cogs',
+                            permission='blowcomotion.view_admintoolusage'),
     ])
     return PermissionSubmenuMenuItem(
         'Utilities', submenu, icon_name='cogs', order=10000,
