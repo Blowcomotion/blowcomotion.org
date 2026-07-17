@@ -1,16 +1,19 @@
 import json
 import logging
-from collections import defaultdict
-from datetime import date, datetime
+from collections import Counter, defaultdict
+from datetime import date, datetime, timedelta
 from io import StringIO
 
 import requests
 
 from django.conf import settings
+from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.management import call_command
+from django.db.models import Count
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from blowcomotion.models import (
@@ -813,3 +816,89 @@ def log_admin_tool_usage(request):
 
     AdminToolUsage.objects.create(user=request.user, tool=tool, action=action)
     return HttpResponse(status=204)
+
+
+ADMIN_TOOL_USAGE_PERIODS = (7, 30, 90)
+
+
+@permission_required('blowcomotion.view_admintoolusage', raise_exception=True)
+def admin_tool_usage_dashboard(request):
+    """
+    Wagtail admin dashboard visualizing AdminToolUsage records (issue #333):
+    most-used tools, usage per day, per-user breakdown, and most-clicked
+    actions, over a selectable 7/30/90-day period.
+    """
+    try:
+        days = int(request.GET.get('days', 30))
+    except (TypeError, ValueError):
+        days = 30
+    if days not in ADMIN_TOOL_USAGE_PERIODS:
+        days = 30
+
+    today = timezone.localdate()
+    start_date = today - timedelta(days=days - 1)
+    since = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+    records = AdminToolUsage.objects.filter(timestamp__gte=since)
+
+    # Bucketed in Python rather than TruncDate: on MySQL (production) that
+    # compiles to CONVERT_TZ, which silently returns NULL unless the server's
+    # timezone tables are loaded. Volume is small (admin clicks only).
+    per_day_counts = Counter(
+        timezone.localtime(ts).date()
+        for ts in records.values_list('timestamp', flat=True)
+    )
+
+    top_tools = list(
+        records.values('tool').annotate(count=Count('id')).order_by('-count')[:20]
+    )
+    max_tool_count = top_tools[0]['count'] if top_tools else 0
+    for row in top_tools:
+        row['pct'] = round(row['count'] / max_tool_count * 100) if max_tool_count else 0
+
+    max_day_count = max(per_day_counts.values(), default=0)
+    usage_by_day = []
+    for i in range(days):
+        day = start_date + timedelta(days=i)
+        count = per_day_counts.get(day, 0)
+        usage_by_day.append({
+            'day': day,
+            'count': count,
+            'pct': round(count / max_day_count * 100) if max_day_count else 0,
+        })
+
+    # Per-user totals with each user's top 3 tools, from one grouped query.
+    user_tool_counts = (
+        records.values('user__username', 'user__first_name', 'user__last_name', 'tool')
+        .annotate(count=Count('id'))
+        .order_by('-count')
+    )
+    per_user = {}
+    for row in user_tool_counts:
+        name = f"{row['user__first_name'] or ''} {row['user__last_name'] or ''}".strip()
+        label = name or row['user__username'] or 'deleted user'
+        entry = per_user.setdefault(label, {'user': label, 'count': 0, 'top_tools': []})
+        entry['count'] += row['count']
+        if len(entry['top_tools']) < 3:
+            entry['top_tools'].append(f"{row['tool']} ({row['count']})")
+    per_user = sorted(per_user.values(), key=lambda e: e['count'], reverse=True)
+
+    top_actions = list(
+        records.exclude(action='')
+        .values('tool', 'action')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:20]
+    )
+
+    return render(
+        request,
+        'wagtailadmin/admin_tool_usage_dashboard.html',
+        {
+            'days': days,
+            'period_options': ADMIN_TOOL_USAGE_PERIODS,
+            'total_events': sum(per_day_counts.values()),
+            'top_tools': top_tools,
+            'usage_by_day': usage_by_day,
+            'per_user': per_user,
+            'top_actions': top_actions,
+        },
+    )
