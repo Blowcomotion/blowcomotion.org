@@ -4,6 +4,7 @@ from modelcluster.fields import ParentalKey
 from wagtail.admin.panels import FieldPanel, MultipleChooserPanel
 from wagtail.fields import StreamField
 from wagtail.models import Orderable, Page
+from wagtailseo.models import SeoMixin
 
 from django.db import models
 
@@ -11,7 +12,8 @@ from blowcomotion import blocks as blowcomotion_blocks
 from blowcomotion.models.core import NotificationBanner
 
 
-class BasePage(Page):
+class BasePage(SeoMixin, Page):
+    promote_panels = SeoMixin.seo_panels
     class Meta:
         abstract = True
 
