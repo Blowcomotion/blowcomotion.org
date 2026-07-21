@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load wagtailimages_tags %}
+{% block content %}
+<div class="container py-4">
+  {% with auction_page=auction.get_page %}
+  {% if auction_page %}
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{{ auction_page.url }}">{{ auction.name }}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">#{{ item.number }} {{ item.title }}</li>
+    </ol>
+  </nav>
+  {% endif %}
+  {% endwith %}
+  {% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}
+  <h1>#{{ item.number }} {{ item.title }}</h1>
+
+  {% with images=item.images.all %}
+  {% if images|length > 1 %}
+  {% include "image_gallery.html" with images=images carousel_id="item-images" %}
+  {% elif images %}{% image images.0.image width-800 class="img-fluid mb-3" %}{% endif %}
+  {% endwith %}
+
+  <p>{{ item.description|linebreaks }}</p>
+
+  <div class="d-flex justify-content-end mb-2">
+    <button type="button" class="site-btn"
+            onclick="htmx.trigger('#bid-state', 'refreshAuction')">
+      Refresh now
+    </button>
+  </div>
+  <div id="bid-state"
+       hx-get="{{ request.path }}"
+       hx-select="#bid-state" hx-target="#bid-state" hx-swap="outerHTML"
+       hx-trigger="every 60s, refreshAuction">
+    {% if item.top_bid %}
+    <p>Current bid: ${{ item.top_bid.amount }} — minimum next bid: ${{ item.minimum_bid }}</p>
+    {% else %}
+    <p>Starting bid: ${{ item.minimum_bid }}</p>
+    {% endif %}
+
+    <h2>Bid history</h2>
+    <ul>{% for bid in bids %}<li>${{ bid.amount }} — {{ bid.bidder.display_name }} ({{ bid.created_at }})</li>{% empty %}<li>No bids yet.</li>{% endfor %}</ul>
+    <p class="text-muted mt-2"><small>Last refreshed: {% now "g:i:s A" %} — updates automatically every minute.</small></p>
+  </div>
+
+  {% if item.is_open %}
+  <form method="post" action="{% url 'auction-place-bid' auction.pk item.number %}" data-recaptcha>
+    {% csrf_token %}
+    {% if not bidder %}
+      <p><a href="/member/login/?next={{ request.path|urlencode }}">Band member? Log in to skip this form.</a></p>
+      {{ registration_form.as_p }}
+    {% else %}
+      <p>Bidding as {{ bidder.display_name }}</p>
+    {% endif %}
+    {{ bid_form.as_p }}
+    <button type="submit" class="site-btn">Place bid</button>
+  </form>
+  {% else %}
+    <p>Bidding closed.{% if item.winning_bid %} Won by {{ item.winning_bid.bidder.display_name }} (${{ item.winning_bid.amount }}).{% endif %}</p>
+  {% endif %}
+</div>
+{% endblock %}

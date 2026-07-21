@@ -14,6 +14,7 @@ from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
 
+from auction.models import Auction, AuctionItem, AuctionItemImage, Bid, Bidder
 from blowcomotion.models import (
     AttendanceRecord,
     CachedGig,
@@ -71,6 +72,16 @@ ROLE_PERMISSIONS = {
     # public attendance/birthday views (attendance_capture, birthdays, etc.),
     # which now check add/view_attendancerecord instead of a shared password.
     "Attendance Taker": lambda: _model_perms(AttendanceRecord) + ACCESS_ADMIN(),
+    # Grants admin access to the auction snippets and gates the auction
+    # manage/promote views, which check change_auctionitem.
+    "Auctioneer": lambda: (
+        _model_perms(Auction)
+        + _model_perms(AuctionItem)
+        + _model_perms(AuctionItemImage)
+        + _model_perms(Bidder)
+        + _model_perms(Bid)
+        + ACCESS_ADMIN()
+    ),
 }
 
 # tier: "editor" (add/change) or "moderator" (add/change/publish/delete/lock)
@@ -150,6 +161,16 @@ class Command(BaseCommand):
                 f"{'Created' if created else 'Updated'} group '{name}' "
                 f"({group.permissions.count()} perms)"
             )
+
+        # Auctioneers upload item photos, so they need image permissions on
+        # the root collection (flat model perms are not enough for choosers).
+        auctioneer = Group.objects.get(name="Auctioneer")
+        _grant_collection_perms(
+            auctioneer,
+            Collection.get_first_root_node(),
+            {WagtailImage: ("add", "change", "view", "choose")},
+        )
+        self.stdout.write("Granted image collection permissions to 'Auctioneer'")
 
         self._patch_editor_groups()
 

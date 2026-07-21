@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <h1>Auction management</h1>
+  {% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}
+  {% for auction in auctions %}
+  <h2>{{ auction.name }}</h2>
+  <div class="table-responsive"><table class="table">
+    <thead><tr><th>Item</th><th>Bids</th><th>Winner</th><th>Backup</th><th></th></tr></thead>
+    <tbody>
+      {% for item in auction.items.all %}
+      <tr>
+        <td>#{{ item.number }} {{ item.title }}</td>
+        <td>{{ item.bids.count }}</td>
+        <td>{% if item.winning_bid %}{{ item.winning_bid.bidder.display_name }} (${{ item.winning_bid.amount }}){% elif item.winner_notified_at %}no bids{% else %}open{% endif %}</td>
+        <td>{% if item.backup_bid %}{{ item.backup_bid.bidder.display_name }} (${{ item.backup_bid.amount }}){% endif %}</td>
+        <td>
+          {% if item.backup_bid %}
+          <form method="post" action="{% url 'auction-promote' item.pk %}" onsubmit="return confirm('Promote backup to winner? They will be notified.')">
+            {% csrf_token %}<button type="submit" class="site-btn">Promote backup</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+  {% endfor %}
+</div>
+{% endblock %}
