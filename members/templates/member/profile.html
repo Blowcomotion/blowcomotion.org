@@ -1,5 +1,5 @@
 {% extends "member/portal_base.html" %}
-{% load wagtailimages_tags %}
+{% load wagtailimages_tags humanize %}
 {% block title %}My Profile — Blowcomotion{% endblock %}
 {% block portal_content %}
 <h2 class="mb-4">My Profile</h2>
@@ -35,13 +35,14 @@
                 &mdash; ${% widthratio patreon_status.pledge_cents 100 1 %}/mo
             {% endif %}
             {% if patreon_status.patron_since %}
-                <div class="form-text mb-0">Patron since {{ patreon_status.patron_since|date:"Y-m-d" }}</div>
+                <div class="form-text mb-0">Patron since {{ patreon_status.patron_since|naturalday:"F j, Y" }}</div>
             {% endif %}
             {% if patreon_status.last_charge_date %}
-                <div class="form-text mb-0">Last charge {{ patreon_status.last_charge_date|date:"Y-m-d" }}{% if patreon_status.last_charge_status %} ({{ patreon_status.last_charge_status }}){% endif %}</div>
+                <div class="form-text mb-0">Last charge {{ patreon_status.last_charge_date|naturaltime }}{% if patreon_status.last_charge_status %} ({{ patreon_status.last_charge_status }}){% endif %}</div>
             {% endif %}
             {% if patreon_status.lifetime_cents is not None %}
-                <div class="form-text mb-0">Lifetime support: ${% widthratio patreon_status.lifetime_cents 100 1 %}</div>
+                {% widthratio patreon_status.lifetime_cents 100 1 as lifetime_dollars %}
+                <div class="form-text mb-0">Lifetime support: ${{ lifetime_dollars|intcomma }}</div>
             {% endif %}
         {% else %}
             <span class="text-danger">Not found or inactive</span>
