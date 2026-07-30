@@ -1,6 +1,12 @@
 from wagtail import hooks
 from wagtail.admin.menu import Menu, MenuItem, SubmenuMenuItem
 from wagtail.admin.ui.components import Component
+from wagtail.images.formats import (
+    FORMATS_BY_NAME,
+    Format,
+    register_image_format,
+    unregister_image_format,
+)
 from wagtail.snippets.models import register_snippet
 
 from django.conf import settings as django_settings
@@ -46,6 +52,23 @@ register_snippet(BandViewSetGroup)
 register_snippet(FormsViewSetGroup)
 register_snippet(SyncViewSetGroup)
 register_snippet(AdminToolUsageViewSet)
+
+
+def _add_img_fluid_to_richtext_image_formats():
+    """
+    Wagtail's built-in rich text image formats (full width/left/right) don't
+    scale on mobile by default. Append the site's "img-fluid" class so every
+    image inserted through a RichTextField/RichTextBlock scales responsively,
+    matching how images are already rendered everywhere else on the site.
+    """
+    for name, fmt in list(FORMATS_BY_NAME.items()):
+        unregister_image_format(name)
+        register_image_format(
+            Format(fmt.name, fmt.label, f"{fmt.classname} img-fluid", fmt.filter_spec)
+        )
+
+
+_add_img_fluid_to_richtext_image_formats()
 
 
 def _permission_granted(user, permission):
