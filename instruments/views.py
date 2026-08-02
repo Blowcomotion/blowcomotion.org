@@ -295,6 +295,31 @@ def _send_rental_returned_email(request, submission, condition_notes):
         ).send(fail_silently=True)
 
 
+# Sortable dashboard columns: URL key -> model field, and the header labels in table order.
+RENTAL_DASHBOARD_SORTS = {
+    "member": "name",
+    "instrument": "instrument__name",
+    "submitted": "date_submitted",
+    "status": "status",
+    "patreon": "patreon_validated",
+    "pledge": "patreon_pledge_cents",
+    "last_charge": "patreon_last_charge_date",
+    "patron_since": "patreon_patron_since",
+    "lifetime": "patreon_lifetime_cents",
+}
+RENTAL_DASHBOARD_COLUMNS = [
+    ("member", "Member"),
+    ("instrument", "1st Choice"),
+    ("submitted", "Submitted"),
+    ("status", "Status"),
+    ("patreon", "Patreon"),
+    ("pledge", "Pledge/mo"),
+    ("last_charge", "Last charge"),
+    ("patron_since", "Patron since"),
+    ("lifetime", "Lifetime"),
+]
+
+
 @permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
 def rental_requests_dashboard(request):
     import re as _re
@@ -516,6 +541,24 @@ def rental_requests_dashboard(request):
             messages.success(request, f"Deleted denied rental request from {name}.")
             return redirect("rental_requests_dashboard")
 
+    sort = request.GET.get("sort", "")
+    sort_field = RENTAL_DASHBOARD_SORTS.get(sort.lstrip("-"))
+    if sort_field:
+        order_by = ["-" + sort_field if sort.startswith("-") else sort_field, "-date_submitted"]
+    else:
+        sort = ""
+        order_by = ["status_order", "-date_submitted"]
+
+    sort_columns = [
+        {
+            "label": label,
+            # clicking the column you're already sorting ascending flips it to descending
+            "url": f"?sort={'-' if sort == key else ''}{key}",
+            "arrow": "▲" if sort == key else ("▼" if sort == "-" + key else ""),
+        }
+        for key, label in RENTAL_DASHBOARD_COLUMNS
+    ]
+
     submissions = list(
         InstrumentRentalRequestSubmission.objects.annotate(
             status_order=Case(
@@ -524,7 +567,7 @@ def rental_requests_dashboard(request):
                 output_field=IntegerField(),
             )
         )
-        .order_by("status_order", "-date_submitted")
+        .order_by(*order_by)
         .select_related("member", "instrument", "second_choice", "third_choice", "assigned_unit",
                         "assigned_unit__member", "assigned_unit__instrument")
     )
@@ -571,6 +614,7 @@ def rental_requests_dashboard(request):
 
     return render(request, "wagtailadmin/rental_requests_dashboard.html", {
         "submissions": submissions,
+        "sort_columns": sort_columns,
         "nag_all_preview": nag_all_preview,
         "nag_all_confirm_message": nag_all_confirm_message,
     })
