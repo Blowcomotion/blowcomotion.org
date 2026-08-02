@@ -71,15 +71,9 @@
     <table class="listing">
         <thead>
             <tr>
-                <th>Member</th>
-                <th>1st Choice</th>
-                <th>Submitted</th>
-                <th>Status</th>
-                <th>Patreon</th>
-                <th>Pledge/mo</th>
-                <th>Last charge</th>
-                <th>Patron since</th>
-                <th>Lifetime</th>
+                {% for col in sort_columns %}
+                <th><a href="{{ col.url }}" title="Sort by {{ col.label }}">{{ col.label }}{% if col.arrow %} <span aria-hidden="true">{{ col.arrow }}</span>{% endif %}</a></th>
+                {% endfor %}
                 <th></th>
             </tr>
         </thead>

@@ -474,6 +474,27 @@ class RentalRequestsAdminViewTest(TestCase):
         response = self.client.get(reverse("rental_requests_dashboard"))
         self.assertEqual(response.status_code, 200)
 
+    def test_dashboard_sorting(self):
+        other = InstrumentRentalRequestSubmission.objects.create(
+            name="Aaron Aardvark",
+            email="aaron@example.com",
+            instrument=self.instrument,
+            status=InstrumentRentalRequestSubmission.STATUS_APPROVED,
+            policy_acknowledged=True,
+        )
+
+        def names(query):
+            response = self.client.get(reverse("rental_requests_dashboard") + query)
+            self.assertEqual(response.status_code, 200)
+            return [s.name for s in response.context["submissions"]]
+
+        # default: pending first regardless of name
+        self.assertEqual(names("")[0], self.submission.name)
+        self.assertEqual(names("?sort=member"), [other.name, self.submission.name])
+        self.assertEqual(names("?sort=-member"), [self.submission.name, other.name])
+        # unknown sort keys fall back to the default ordering, not a 500
+        self.assertEqual(names("?sort=bogus")[0], self.submission.name)
+
     def test_review_get_returns_200(self):
         response = self.client.get(reverse("rental_request_review", args=[self.submission.pk]))
         self.assertEqual(response.status_code, 200)
