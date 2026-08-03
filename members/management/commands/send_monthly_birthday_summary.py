@@ -420,74 +420,16 @@ class Command(BaseCommand):
 
     def _generate_text_content(self, context):
         """Generate plain text version of the monthly email"""
-        upcoming_birthdays = context['upcoming_birthdays']
-        month_name = context['month_name']
-        year = context['year']
-
-        text_lines = [
-            f"Monthly Birthday Summary - {month_name} {year}",
-            "=" * 50,
-            "",
-            f"Here are the upcoming birthdays for {month_name} {year}.",
-            "Don't forget to celebrate our amazing band members!",
-            "",
-        ]
-
-        if upcoming_birthdays:
-            text_lines.append(f"🎉 Upcoming Birthdays ({len(upcoming_birthdays)} total):")
-            text_lines.append("")
-            text_lines.extend(self._format_birthday_lines(upcoming_birthdays))
-        else:
-            text_lines.extend([
-                f"🎈 No birthdays scheduled for {month_name} {year}.",
-                "Enjoy the break from birthday celebrations!",
-                "",
-            ])
-
-        text_lines.extend([
-            "",
-            "Start Wearing Purple,",
-            "Blowcomotion Band Management",
-            "",
-            "This is an automated monthly birthday summary.",
-            "For questions, contact the band leadership.",
-        ])
-
-        return "\n".join(text_lines)
+        return self._generate_birthday_text(context['upcoming_birthdays'])
 
     def _generate_window_text_content(self, context):
         """Generate plain text version of the rolling-window update email"""
-        upcoming_birthdays = context['upcoming_birthdays']
-        today = context['today']
-        days_ahead = context['days_ahead']
+        return self._generate_birthday_text(context['upcoming_birthdays'])
 
-        text_lines = [
-            f"Weekly Birthday Update - {today.strftime('%B %d, %Y')}",
-            "=" * 50,
-            "",
-            f"Here are the upcoming birthdays for the next {days_ahead} days.",
-            "",
-        ]
-
-        if upcoming_birthdays:
-            text_lines.append(f"🎉 Upcoming Birthdays ({len(upcoming_birthdays)} total):")
-            text_lines.append("")
-            text_lines.extend(self._format_birthday_lines(upcoming_birthdays))
-        else:
-            text_lines.extend([
-                f"🎈 No birthdays scheduled in the next {days_ahead} days.",
-                "",
-            ])
-
-        text_lines.extend([
-            "",
-            "Start Wearing Purple,",
-            "Blowcomotion Band Management",
-            "",
-            "This is an automated weekly birthday update.",
-            "For questions, contact the band leadership.",
-        ])
-
+    def _generate_birthday_text(self, upcoming_birthdays):
+        """Generate the shared plain text body: a BIRTHDAYS header and one line per member"""
+        text_lines = ["BIRTHDAYS"]
+        text_lines.extend(self._format_birthday_lines(upcoming_birthdays))
         return "\n".join(text_lines)
 
     def _format_birthday_lines(self, upcoming_birthdays):
@@ -495,22 +437,8 @@ class Command(BaseCommand):
         text_lines = []
         for birthday in upcoming_birthdays:
             member = birthday['member']
-
-            # Format name with preferred name if available
-            if member.preferred_name:
-                name = f'"{member.preferred_name}" {member.first_name} {member.last_name}'
-            else:
-                name = f'{member.first_name} {member.last_name}'
-
-            # Format birthday date
-            birthday_date = birthday['birthday'].strftime('%B %d')
-
-            # Add age if available
-            age_info = f" - Turning {birthday['age']}" if birthday.get('age') else ""
-            instruments = birthday.get('instruments', [])
-            instruments_info = f" (🎵 {', '.join(instruments)})" if instruments else ""
-
-            text_lines.append(f"• {name}")
-            text_lines.append(f"  {birthday_date}{age_info}{instruments_info}")
-            text_lines.append("")
+            name = f'{member.first_name} {member.last_name}'
+            birthday_date = birthday['birthday'].strftime('%B %-d')
+            instruments = ", ".join(birthday.get('instruments', []))
+            text_lines.append(f"{name} - {instruments} - {birthday_date}")
         return text_lines
