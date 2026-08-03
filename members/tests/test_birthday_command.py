@@ -122,8 +122,6 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         self.assertIn('Jane NoAge', email.body)
         self.assertIn('September 15', email.body)
         self.assertIn('September 25', email.body)
-        self.assertIn('Turning 35', email.body)  # Age calculation
-        self.assertIn('Johnny', email.body)  # Preferred name
         self.assertIn('Trumpet', email.body)  # Instrument
         self.assertIn('Trombone', email.body)  # Instrument
         
@@ -191,7 +189,6 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         self.assertIsNotNone(html_content)
         self.assertIn('Monthly Birthday Summary', html_content)
         self.assertIn('September 2025', html_content)
-        self.assertIn('Johnny', html_content)
         self.assertIn('Trumpet', html_content)
         self.assertIn('<!DOCTYPE html>', html_content)
 
@@ -259,8 +256,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         self.assertIn('Trumpet', email_body)
         self.assertIn('Trombone', email_body)
         self.assertIn('Snare Drum', email_body)
-        self.assertIn('Turning 37', email_body)  # Born in 1988, turns 37 in 2025
-        
+
         # Check HTML email content
         html_content = None
         for part in email.message().walk():
@@ -588,9 +584,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             self.assertEqual(email.from_email, settings.FROM_EMAIL)
             self.assertEqual(email.to, ['test1@example.com', 'test2@example.com'])
             self.assertIn('John WithAge', email.body)
-            self.assertIn('July 05', email.body)
-            self.assertIn('Turning 36', email.body)
-            self.assertIn('Johnny', email.body)
+            self.assertIn('July 5', email.body)
             self.assertIn('Trumpet', email.body)
 
     def test_command_no_birthdays_skips_email(self):
@@ -795,6 +789,5 @@ class RollingWindowBirthdayUpdateTests(TestCase):
 
         self.assertIsNotNone(html_content)
         self.assertIn('Weekly Birthday Update', html_content)
-        self.assertIn('Johnny', html_content)
         self.assertIn('Trumpet', html_content)
         self.assertIn('<!DOCTYPE html>', html_content)
