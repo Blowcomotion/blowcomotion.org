@@ -6,7 +6,7 @@
 </head>
 <body>
 <pre><b><u>BIRTHDAYS</u></b>
-{% for birthday in upcoming_birthdays %}{{ birthday.member.first_name }} {{ birthday.member.last_name }} - {{ birthday.instruments|join:", " }} - {{ birthday.birthday|date:"F j" }}
+{% for birthday in upcoming_birthdays %}{{ birthday.member }} - {{ birthday.instruments|join:", " }} - {{ birthday.birthday|date:"F j" }}
 {% endfor %}</pre>
 </body>
 </html>

@@ -437,8 +437,7 @@ class Command(BaseCommand):
         text_lines = []
         for birthday in upcoming_birthdays:
             member = birthday['member']
-            name = f'{member.first_name} {member.last_name}'
             birthday_date = birthday['birthday'].strftime('%B %-d')
             instruments = ", ".join(birthday.get('instruments', []))
-            text_lines.append(f"{name} - {instruments} - {birthday_date}")
+            text_lines.append(f"{member} - {instruments} - {birthday_date}")
         return text_lines
