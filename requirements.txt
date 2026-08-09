@@ -1,7 +1,7 @@
 argon2-cffi
 google-api-python-client
 mutagen
-Django==6.0.6
+Django==6.0.7
 requests
 django-axes
 django-compressor==4.6.0
