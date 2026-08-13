@@ -60,6 +60,8 @@ python manage.py collectstatic --noinput
 
 If either setting is absent the check is skipped silently (field stays None).
 
+**Auction app:** `auction/` is a new-domain app that owns its own `models.py` and `migrations/` (per the hybrid-layout exception). Public bidding views (guest identity via signed per-auction cookie, member identity via login) live in `auction/views.py`; bid/close/promote business logic in `auction/services.py` (all winning-state mutations go through `select_for_update` there); email/SMS notifications in `auction/notifications.py`; the inbound Twilio SMS bidding webhook (`/auction/sms/`, validates `X-Twilio-Signature`, fails closed in production) in `auction/sms.py`. The `AuctionBlock` StreamField block renders a 60s-polled live grid on `BlankCanvasPage`. Access to the Wagtail snippet admin and the `/auction/manage/` dashboard is granted via the Auctioneer role (`setup_roles`). Twilio settings in `local.py` are optional — `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`; absent → SMS is skipped, email still sends. Ops: run `close_auction_items` hourly (cron) — page views also lazily close expired items — and point the Twilio number's inbound webhook at `https://<host>/auction/sms/`.
+
 ## reCAPTCHA — required on every public form
 
 **Every form that accepts public POST submissions must:**

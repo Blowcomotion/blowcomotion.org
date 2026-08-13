@@ -1,7 +1,5 @@
 {% load wagtailcore_tags wagtailimages_tags static %}
 
-<link rel="stylesheet" href="{% static 'css/image-carousel.css' %}">
-
 {% if processed_images %}
 <section class="image-carousel-block my-5">
     <div class="container">
@@ -19,45 +17,7 @@
                 {% endif %}
 
                 {# Image Carousel - Using Owl Carousel #}
-                <div class="image-carousel__grid">
-                    <div class="images__slider owl-carousel"
-                         data-autoplay="{{ value.autoplay|yesno:'true,false' }}"
-                         data-autoplay-speed="{{ value.autoplay_speed }}"
-                         data-show-dots="{{ value.show_dots|yesno:'true,false' }}"
-                         data-slides-to-show="{{ value.slides_to_show }}"
-                         data-carousel-id="{{ carousel_id }}">
-                        {% for img in processed_images %}
-                        <div class="{{ col_class }}">
-                            <div class="image-carousel__item">
-                                {% image img.image fill-250x250 as carousel_img %}
-                                {% image img.image original as full_img %}
-                                
-                                <div class="image-carousel__item-pic image-popup-trigger"
-                                     data-carousel-id="{{ carousel_id }}"
-                                     data-image-index="{{ forloop.counter0 }}"
-                                     data-image-url="{{ full_img.url }}"
-                                     data-caption="{{ img.caption|default:'' }}"
-                                     data-has-link="{% if img.url %}true{% else %}false{% endif %}"
-                                     {% if img.url %}
-                                     data-link-url="{{ img.url }}"
-                                     data-link-target="{% if img.open_in_new_tab %}_blank{% else %}_self{% endif %}"
-                                     {% endif %}>
-                                    <img src="{{ carousel_img.url }}" alt="{{ img.caption|default:carousel_img.alt }}" class="img-fluid w-100">
-                                    <div class="image-carousel__overlay">
-                                        <i class="fa fa-search-plus"></i>
-                                    </div>
-                                </div>
-                                
-                                {% if img.caption %}
-                                <div class="image-carousel__item-text">
-                                    <p>{{ img.caption }}</p>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
+                {% include "image_gallery.html" with images=processed_images carousel_id=carousel_id autoplay=value.autoplay autoplay_speed=value.autoplay_speed show_dots=value.show_dots slides_to_show=value.slides_to_show %}
             </div>
         </div>
     </div>

@@ -1,0 +1,43 @@
+{% load wagtailimages_tags static %}
+
+<link rel="stylesheet" href="{% static 'css/image-carousel.css' %}">
+
+<div class="image-carousel__grid">
+    <div class="images__slider owl-carousel"
+         data-autoplay="{{ autoplay|yesno:'true,false' }}"
+         data-autoplay-speed="{{ autoplay_speed|default:3000 }}"
+         data-show-dots="{% if show_dots is False %}false{% else %}true{% endif %}"
+         data-slides-to-show="{{ slides_to_show|default:4 }}"
+         data-carousel-id="{{ carousel_id }}">
+        {% for img in images %}
+        <div class="image-carousel__col">
+            <div class="image-carousel__item">
+                {% image img.image fill-250x250 as carousel_img %}
+                {% image img.image original as full_img %}
+
+                <div class="image-carousel__item-pic image-popup-trigger"
+                     data-carousel-id="{{ carousel_id }}"
+                     data-image-index="{{ forloop.counter0 }}"
+                     data-image-url="{{ full_img.url }}"
+                     data-caption="{{ img.caption|default:'' }}"
+                     data-has-link="{% if img.url %}true{% else %}false{% endif %}"
+                     {% if img.url %}
+                     data-link-url="{{ img.url }}"
+                     data-link-target="{% if img.open_in_new_tab %}_blank{% else %}_self{% endif %}"
+                     {% endif %}>
+                    <img src="{{ carousel_img.url }}" alt="{{ img.caption|default:carousel_img.alt }}" class="img-fluid w-100">
+                    <div class="image-carousel__overlay">
+                        <i class="fa fa-search-plus"></i>
+                    </div>
+                </div>
+
+                {% if img.caption %}
+                <div class="image-carousel__item-text">
+                    <p>{{ img.caption }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>

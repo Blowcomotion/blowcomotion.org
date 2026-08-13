@@ -2,7 +2,7 @@
 
 /* Carousel Image Items */
 .image-carousel__item-pic {
-    width: 250px;
+    width: 100%;
     height: 250px;
     display: flex;
     align-items: center;
@@ -188,7 +188,11 @@
     .image-carousel__item-pic {
         height: 200px;
     }
-    
+
+    .image-carousel__grid .owl-nav {
+        height: 200px;
+    }
+
     .image-modal .modal-dialog {
         max-width: 95vw;
     }
@@ -212,7 +216,11 @@
     .image-carousel__item-pic {
         height: 180px;
     }
-    
+
+    .image-carousel__grid .owl-nav {
+        height: 180px;
+    }
+
     .image-modal__nav {
         width: 35px;
         height: 35px;
@@ -228,23 +236,72 @@
     }
 }
 
+/* Owl Carousel Nav Arrows for Image Carousel */
+/* Owl appends `.owl-nav` as a sibling *after* the image stage, followed by
+   `.owl-dots` — both add to `.owl-carousel`'s height. Pin `.owl-nav` to the
+   image height (kept in sync with `.image-carousel__item-pic` below) so the
+   buttons' `top: 50%` centers on the image row, not the taller stack with
+   dots included. */
+.image-carousel__grid .owl-nav {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 250px;
+    pointer-events: none;
+}
+
+/* owl.carousel.min.css ships `.owl-nav button.owl-prev/.owl-next { background: 0 0 }`
+   at equal specificity, so these selectors must match it (button.owl-prev/next)
+   to win the cascade instead of losing to a plain `button` selector. */
+.image-carousel__grid .owl-nav button.owl-prev,
+.image-carousel__grid .owl-nav button.owl-next {
+    font-size: 24px;
+    color: #888888 !important;
+    height: 50px;
+    width: 50px;
+    background: #ffffff !important;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    line-height: 50px;
+    text-align: center;
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    transform: translateY(-50%);
+    transition: color 0.3s ease;
+    pointer-events: auto;
+}
+
+.image-carousel__grid .owl-nav button.owl-prev:hover,
+.image-carousel__grid .owl-nav button.owl-next:hover {
+    transition: color 0.3s ease;
+    color: white !important;
+    background-color: #5b1a76 !important;
+}
+
+.image-carousel__grid .owl-nav button.owl-next {
+    left: auto;
+    right: 15px;
+}
+
 /* Owl Carousel Dots Styling for Image Carousel */
-.image-carousel-block .owl-dots {
+.image-carousel__grid .owl-dots {
     text-align: center;
     margin-top: 20px;
     display: block !important; /* Force show even when Owl Carousel sets disabled */
 }
 
-.image-carousel-block .owl-dots.disabled {
+.image-carousel__grid .owl-dots.disabled {
     display: block !important; /* Override Owl Carousel's disabled state */
 }
 
-.image-carousel-block .owl-dot {
+.image-carousel__grid .owl-dot {
     display: inline-block;
     margin: 0 5px;
 }
 
-.image-carousel-block .owl-dot span {
+.image-carousel__grid .owl-dot span {
     width: 12px;
     height: 12px;
     background: #d6d6d6;
@@ -253,11 +310,11 @@
     transition: all 0.3s ease;
 }
 
-.image-carousel-block .owl-dot:hover span {
+.image-carousel__grid .owl-dot:hover span {
     background: #999999;
 }
 
-.image-carousel-block .owl-dot.active span {
+.image-carousel__grid .owl-dot.active span {
     background: #5b1a76;
     width: 14px;
     height: 14px;

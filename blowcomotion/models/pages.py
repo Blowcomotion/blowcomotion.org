@@ -37,6 +37,7 @@ class BlankCanvasPage(BasePage):
     body = StreamField(
         [
             ("accordion_list", blowcomotion_blocks.AccordionListBlock()),
+            ("auction", blowcomotion_blocks.AuctionBlock()),
             ("booking_form", blowcomotion_blocks.BookingFormBlock(group="Forms")),
             ("button", blowcomotion_blocks.ButtonBlock()),
             ("chart_library", blowcomotion_blocks.ChartLibraryBlock()),

@@ -1,3 +1,4 @@
+from auction.blocks import AuctionBlock
 from blowcomotion.blocks.content import (
     AlignableRichtextBlock,
     ButtonBlock,
@@ -51,6 +52,7 @@ __all__ = [
     "AccordionListBlock",
     "AdjustableSpacerBlock",
     "AlignableRichtextBlock",
+    "AuctionBlock",
     "BookingFormBlock",
     "ButtonBlock",
     "CarouselImageBlock",
