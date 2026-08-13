@@ -8,7 +8,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('blowcomotion', '0125_remove_sitesettings_attendance_password_and_more'),
+        ('blowcomotion', '0132_blankcanvaspage_canonical_url_and_more'),
     ]
 
     operations = [

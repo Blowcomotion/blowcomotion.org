@@ -8,7 +8,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('blowcomotion', '0126_alter_blankcanvaspage_body'),
+        ('blowcomotion', '0133_alter_blankcanvaspage_body'),
     ]
 
     operations = [
