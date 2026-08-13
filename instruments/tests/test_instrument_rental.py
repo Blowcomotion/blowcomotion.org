@@ -343,6 +343,26 @@ class InstrumentRentalRequestViewTest(TestCase):
         response = self._post()
         self.assertNotIn("patreon_url", response.context)
 
+    def test_post_shows_recaptcha_error(self):
+        with patch(
+            "members.views._validate_recaptcha",
+            return_value=(False, "reCAPTCHA verification failed. Please try again."),
+        ):
+            response = self._post()
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "reCAPTCHA verification failed. Please try again.")
+        self.assertEqual(InstrumentRentalRequestSubmission.objects.count(), 0)
+
+    def test_post_recaptcha_failure_preserves_submitted_choice(self):
+        with patch(
+            "members.views._validate_recaptcha",
+            return_value=(False, "reCAPTCHA verification failed. Please try again."),
+        ):
+            response = self._post({"notes": "prefer small bore"})
+        self.assertEqual(
+            response.context["form"].data.get("instrument"), str(self.instrument.pk)
+        )
+
 
 class InstrumentRentalFormV2Test(TestCase):
     def setUp(self):
@@ -453,6 +473,27 @@ class RentalRequestsAdminViewTest(TestCase):
     def test_dashboard_returns_200(self):
         response = self.client.get(reverse("rental_requests_dashboard"))
         self.assertEqual(response.status_code, 200)
+
+    def test_dashboard_sorting(self):
+        other = InstrumentRentalRequestSubmission.objects.create(
+            name="Aaron Aardvark",
+            email="aaron@example.com",
+            instrument=self.instrument,
+            status=InstrumentRentalRequestSubmission.STATUS_APPROVED,
+            policy_acknowledged=True,
+        )
+
+        def names(query):
+            response = self.client.get(reverse("rental_requests_dashboard") + query)
+            self.assertEqual(response.status_code, 200)
+            return [s.name for s in response.context["submissions"]]
+
+        # default: pending first regardless of name
+        self.assertEqual(names("")[0], self.submission.name)
+        self.assertEqual(names("?sort=member"), [other.name, self.submission.name])
+        self.assertEqual(names("?sort=-member"), [self.submission.name, other.name])
+        # unknown sort keys fall back to the default ordering, not a 500
+        self.assertEqual(names("?sort=bogus")[0], self.submission.name)
 
     def test_review_get_returns_200(self):
         response = self.client.get(reverse("rental_request_review", args=[self.submission.pk]))
@@ -642,11 +683,13 @@ class RentalRequestsAdminViewTest(TestCase):
             reverse("rental_requests_dashboard"),
             {"action": "nag_all"},
         )
-        # renter email + admin summary + FORM_TEST_EMAIL copy
-        self.assertEqual(len(mail.outbox), 3)
+        # renter email + copy, admin summary + copy
+        self.assertEqual(len(mail.outbox), 4)
         subjects = [m.subject for m in mail.outbox]
         self.assertTrue(any("Summary" in s for s in subjects))
-        self.assertTrue(any("[COPY]" in s for s in subjects))
+        recipients = [addr for m in mail.outbox for addr in m.to]
+        self.assertIn("test@example.com", recipients)
+        self.assertEqual(recipients.count("test@example.com"), 2)
 
     def test_nag_all_preview_lists_eligible_renter_with_reason(self):
         self.li.status = LibraryInstrument.STATUS_RENTED

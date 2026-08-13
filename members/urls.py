@@ -5,6 +5,8 @@ from members import views as member_views
 
 urlpatterns = [
     path("login/", member_views.MemberLoginView.as_view(), name="member-login"),
+    path("login/link/", member_views.login_link_request, name="member-login-link-request"),
+    path("login/link/<str:token>/", member_views.login_link_redeem, name="member-login-link"),
     path("logout/", auth_views.LogoutView.as_view(), name="member-logout"),
     path("set-password/<uuid:token_uuid>/", member_views.set_password_view, name="member-set-password"),
     path("get-access/", member_views.get_access_view, name="member-get-access"),

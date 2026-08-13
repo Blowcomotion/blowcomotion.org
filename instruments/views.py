@@ -8,26 +8,26 @@ from django import forms as django_forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
-from django.core.mail import send_mail
 from django.core.management import call_command
+from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
-from django.views.decorators.http import require_http_methods
 
 from blowcomotion.models import (
+    Instrument,
     InstrumentHistoryLog,
     InstrumentRentalNagLog,
     InstrumentRentalRequestSubmission,
+    InstrumentStorageLocation,
     LibraryInstrument,
     Member,
     SiteSettings,
 )
-from instruments.forms import LibraryInstrumentRentForm, LibraryInstrumentReturnForm
 from instruments.patreon import MIN_RENTAL_PLEDGE_CENTS, fetch_all_members
-from members.auth import _MemberEmail
+from members.auth import _MemberEmail, _send_mail
 
 logger = logging.getLogger(__name__)
 
@@ -90,153 +90,58 @@ def instrument_library_needs_repair(request):
     )
 
 
-@require_http_methods(["GET", "POST"])
-def instrument_library_quick_rent(request):
-    available_qs = LibraryInstrument.objects.filter(
-        status=LibraryInstrument.STATUS_AVAILABLE
-    ).select_related('instrument')
-    rented_qs = LibraryInstrument.objects.filter(
-        status=LibraryInstrument.STATUS_RENTED
-    ).select_related('instrument', 'member')
+GALLERY_PAGE_SIZE = 24
 
-    instrument_id = request.GET.get('instrument')
-    initial_instrument = None
-    if instrument_id:
-        try:
-            initial_instrument = available_qs.get(pk=instrument_id)
-        except LibraryInstrument.DoesNotExist:
-            messages.error(request, "That instrument is no longer available to rent.")
-            return redirect('instrument_library_quick_rent')
 
-    action = request.POST.get('action') if request.method == 'POST' else None
-
-    rent_form = LibraryInstrumentRentForm(
-        request.POST if action == 'rent' else None,
-        instrument_queryset=available_qs,
-        initial_instrument=initial_instrument,
-    )
-    return_form = LibraryInstrumentReturnForm(
-        request.POST if action == 'return' else None,
+@permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
+def instrument_library_gallery(request):
+    instruments = (
+        LibraryInstrument.objects.select_related('instrument', 'member', 'storage_location')
+        .prefetch_related('photos__image')
+        .order_by('instrument__name', 'serial_number')
     )
 
-    if request.method == 'POST':
-        if action == 'rent':
-            if rent_form.is_valid():
-                instrument = rent_form.cleaned_data['instrument']
-                member = rent_form.cleaned_data['member']
+    status = request.GET.get('status', '')
+    instrument_id = request.GET.get('instrument', '')
+    storage_location_id = request.GET.get('storage_location', '')
+    query = request.GET.get('q', '').strip()
 
-                if instrument.status != LibraryInstrument.STATUS_AVAILABLE:
-                    messages.error(request, "Instrument is no longer available to rent.")
-                    rent_form.add_error('instrument', "Instrument is no longer available to rent.")
-                else:
-                    instrument.member = member
-                    instrument.status = LibraryInstrument.STATUS_RENTED
-                    instrument.rental_date = (
-                        rent_form.cleaned_data['rental_date'] or timezone.localdate()
-                    )
-                    # TODO(#250): remove — agreement_signed_date dropped in rental v2
-                    # instrument.agreement_signed_date = rent_form.cleaned_data[
-                    #     'agreement_signed_date'
-                    # ]
-                    instrument.patreon_active = rent_form.cleaned_data['patreon_active']
-                    instrument.patreon_amount = rent_form.cleaned_data['patreon_amount']
-                    comments = rent_form.cleaned_data['comments']
-                    if comments:
-                        instrument.comments = comments
+    if status:
+        instruments = instruments.filter(status=status)
+    if instrument_id.isdigit():
+        instruments = instruments.filter(instrument_id=instrument_id)
+    if storage_location_id.isdigit():
+        instruments = instruments.filter(storage_location_id=storage_location_id)
+    if query:
+        instruments = instruments.filter(
+            Q(serial_number__icontains=query) | Q(instrument__name__icontains=query)
+        )
 
-                    instrument.save()
+    paginator = Paginator(instruments, GALLERY_PAGE_SIZE)
+    page_obj = paginator.get_page(request.GET.get('page'))
 
-                    # Update member's renting status
-                    member.renting = True
-                    member.save()
+    querystring = request.GET.copy()
+    querystring.pop('page', None)
+    querystring = querystring.urlencode()
+    if querystring:
+        querystring += '&'
 
-                    # TODO(#250): remove — LibraryInstrumentDocument dropped in rental v2
-                    # rental_document = rent_form.cleaned_data.get('rental_document')
-                    # if rental_document:
-                    #     LibraryInstrumentDocument.objects.create(
-                    #         library_instrument=instrument,
-                    #         document=rental_document,
-                    #         description=rent_form.cleaned_data.get('document_description', ''),
-                    #     )
-
-                    if comments:
-                        InstrumentHistoryLog.objects.create(
-                            library_instrument=instrument,
-                            event_category=InstrumentHistoryLog.EVENT_RENTAL_NOTE,
-                            event_date=timezone.localdate(),
-                            notes=f"Rental notes: {comments}",
-                            user=request.user,
-                        )
-
-                    messages.success(
-                        request,
-                        f"{instrument.instrument.name} rented to {member.full_name}.",
-                    )
-                    return redirect('instrument_library_quick_rent')
-
-        elif action == 'return':
-            if return_form.is_valid():
-                instrument = return_form.cleaned_data['instrument']
-                condition_notes = return_form.cleaned_data['condition_notes']
-                previous_member = instrument.member
-
-                if instrument.status != LibraryInstrument.STATUS_RENTED:
-                    messages.error(request, "Instrument is not currently rented out.")
-                    return_form.add_error('instrument', "Instrument is not currently rented out.")
-                else:
-                    instrument.status = LibraryInstrument.STATUS_AVAILABLE
-                    instrument.member = None
-                    instrument.rental_date = None
-                    # instrument.agreement_signed_date = None  # TODO(#250): remove
-                    instrument.patreon_active = False
-                    instrument.patreon_amount = None
-                    instrument.save()
-
-                    # Update previous member's renting status if they have no other rentals
-                    if previous_member:
-                        still_renting = LibraryInstrument.objects.filter(
-                            member=previous_member,
-                            status=LibraryInstrument.STATUS_RENTED
-                        ).exists()
-                        if not still_renting:
-                            previous_member.renting = False
-                            previous_member.save()
-
-                    if condition_notes:
-                        InstrumentHistoryLog.objects.create(
-                            library_instrument=instrument,
-                            event_category=InstrumentHistoryLog.EVENT_RETURN_NOTE,
-                            event_date=timezone.localdate(),
-                            notes=f"Return notes: {condition_notes}",
-                            user=request.user,
-                        )
-
-                    renter_display = (
-                        previous_member.full_name if previous_member else 'previous renter'
-                    )
-                    messages.success(
-                        request,
-                        f"{instrument.instrument.name} returned from {renter_display}.",
-                    )
-                    return redirect('instrument_library_quick_rent')
-            else:
-                # Form validation failed - likely no instrument selected
-                if 'instrument' in return_form.errors:
-                    messages.error(
-                        request,
-                        "Please select an instrument to return by clicking the 'Return' button next to it in the 'Currently rented' list above."
-                    )
-
-    context = {
-        'page_title': 'Instrument Library Quick Rent',
-        'rent_form': rent_form,
-        'return_form': return_form,
-        'available_instruments': available_qs,
-        'rented_instruments': rented_qs,
-        'selected_instrument': initial_instrument,
-    }
-
-    return render(request, 'instrument_library/manage.html', context)
+    return render(
+        request,
+        'wagtailadmin/instrument_library_gallery.html',
+        {
+            'page_title': 'Instrument Gallery',
+            'page_obj': page_obj,
+            'status_choices': LibraryInstrument.STATUS_CHOICES,
+            'instrument_choices': Instrument.objects.order_by('name'),
+            'storage_location_choices': InstrumentStorageLocation.objects.order_by('name'),
+            'selected_status': status,
+            'selected_instrument': instrument_id,
+            'selected_storage_location': storage_location_id,
+            'query': query,
+            'querystring': querystring,
+        },
+    )
 
 
 def export_library_instruments_csv(request):
@@ -390,6 +295,31 @@ def _send_rental_returned_email(request, submission, condition_notes):
         ).send(fail_silently=True)
 
 
+# Sortable dashboard columns: URL key -> model field, and the header labels in table order.
+RENTAL_DASHBOARD_SORTS = {
+    "member": "name",
+    "instrument": "instrument__name",
+    "submitted": "date_submitted",
+    "status": "status",
+    "patreon": "patreon_validated",
+    "pledge": "patreon_pledge_cents",
+    "last_charge": "patreon_last_charge_date",
+    "patron_since": "patreon_patron_since",
+    "lifetime": "patreon_lifetime_cents",
+}
+RENTAL_DASHBOARD_COLUMNS = [
+    ("member", "Member"),
+    ("instrument", "1st Choice"),
+    ("submitted", "Submitted"),
+    ("status", "Status"),
+    ("patreon", "Patreon"),
+    ("pledge", "Pledge/mo"),
+    ("last_charge", "Last charge"),
+    ("patron_since", "Patron since"),
+    ("lifetime", "Lifetime"),
+]
+
+
 @permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
 def rental_requests_dashboard(request):
     import re as _re
@@ -446,7 +376,7 @@ def rental_requests_dashboard(request):
                 sub.save(update_fields=_sub_fields)
                 updated += 1
 
-            for member in Member.objects.exclude(email="").exclude(email__isnull=True):
+            for member in Member.objects.filter(user__isnull=False).exclude(user__email="").select_related("user"):
                 result = patreon_data.get(member.email.lower())
                 if result is None:
                     continue
@@ -517,7 +447,7 @@ def rental_requests_dashboard(request):
 
             subject, body = _build_nag_email(li, member, base_url, patreon_url, reasons)
             try:
-                send_mail(subject, body, settings.FROM_EMAIL, [member.email], fail_silently=False)
+                _send_mail(subject, body, settings.FROM_EMAIL, member.email)
             except Exception as exc:
                 LibraryInstrument.objects.filter(pk=li.pk).update(last_nag_sent=li.last_nag_sent)
                 messages.error(request, f"Failed to send nag email to {member.full_name}: {exc}")
@@ -555,7 +485,7 @@ def rental_requests_dashboard(request):
 
                 subject, body = _build_nag_email(li, member, base_url, patreon_url, reasons)
                 try:
-                    send_mail(subject, body, settings.FROM_EMAIL, [member.email], fail_silently=False)
+                    _send_mail(subject, body, settings.FROM_EMAIL, member.email)
                 except Exception as exc:
                     LibraryInstrument.objects.filter(pk=li.pk).update(last_nag_sent=li.last_nag_sent)
                     failed.append(f"{member.full_name} ({li.instrument.name}): {exc}")
@@ -590,10 +520,7 @@ def rental_requests_dashboard(request):
                 summary_body = "\n".join(summary_lines)
                 summary_subject = f"Instrument Rental Nag Summary — {today}"
                 if admin_recipients:
-                    send_mail(summary_subject, summary_body, settings.FROM_EMAIL, admin_recipients, fail_silently=False)
-                    extra = getattr(settings, "FORM_TEST_EMAIL", None)
-                    if extra:
-                        send_mail(f"[COPY] {summary_subject}", summary_body, settings.FROM_EMAIL, [extra], fail_silently=False)
+                    _MemberEmail(subject=summary_subject, body=summary_body, from_email=settings.FROM_EMAIL, to=admin_recipients).send(fail_silently=False)
                 msg = f"Nag all: {len(nagged)} email(s) sent, {skipped_cooldown} skipped (cooldown)"
                 if failed:
                     msg += f", {len(failed)} failed"
@@ -614,6 +541,24 @@ def rental_requests_dashboard(request):
             messages.success(request, f"Deleted denied rental request from {name}.")
             return redirect("rental_requests_dashboard")
 
+    sort = request.GET.get("sort", "")
+    sort_field = RENTAL_DASHBOARD_SORTS.get(sort.lstrip("-"))
+    if sort_field:
+        order_by = ["-" + sort_field if sort.startswith("-") else sort_field, "-date_submitted"]
+    else:
+        sort = ""
+        order_by = ["status_order", "-date_submitted"]
+
+    sort_columns = [
+        {
+            "label": label,
+            # clicking the column you're already sorting ascending flips it to descending
+            "url": f"?sort={'-' if sort == key else ''}{key}",
+            "arrow": "▲" if sort == key else ("▼" if sort == "-" + key else ""),
+        }
+        for key, label in RENTAL_DASHBOARD_COLUMNS
+    ]
+
     submissions = list(
         InstrumentRentalRequestSubmission.objects.annotate(
             status_order=Case(
@@ -622,7 +567,7 @@ def rental_requests_dashboard(request):
                 output_field=IntegerField(),
             )
         )
-        .order_by("status_order", "-date_submitted")
+        .order_by(*order_by)
         .select_related("member", "instrument", "second_choice", "third_choice", "assigned_unit",
                         "assigned_unit__member", "assigned_unit__instrument")
     )
@@ -669,6 +614,7 @@ def rental_requests_dashboard(request):
 
     return render(request, "wagtailadmin/rental_requests_dashboard.html", {
         "submissions": submissions,
+        "sort_columns": sort_columns,
         "nag_all_preview": nag_all_preview,
         "nag_all_confirm_message": nag_all_confirm_message,
     })
@@ -806,8 +752,8 @@ def _get_nag_all_candidates(cutoff):
     instruments = LibraryInstrument.objects.filter(
         status=LibraryInstrument.STATUS_RENTED,
         member__isnull=False,
-        member__email__isnull=False,
-    ).exclude(member__email="").select_related("member", "instrument")
+        member__user__isnull=False,
+    ).exclude(member__user__email="").select_related("member", "member__user", "instrument")
 
     candidates = []
     for li in instruments:

@@ -25,7 +25,16 @@ class Chart(models.Model):
         null=True,
         help_text=" e.g. '2nd Trombone' If left blank, instrument name will be used.",
     )
-    instrument = models.ForeignKey("blowcomotion.Instrument", on_delete=models.CASCADE)
+    instrument = models.ForeignKey(
+        "blowcomotion.Instrument",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+    )
+    is_conductor_chart = models.BooleanField(
+        default=False,
+        help_text="Check for conductor/full scores. When checked, instrument is not required.",
+    )
     drive_file_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     drive_modified_time = models.DateTimeField(null=True, blank=True)
     drive_imported_at = models.DateTimeField(null=True, blank=True)
@@ -39,9 +48,16 @@ class Chart(models.Model):
     def clean(self):
         if not self.pdf and not self.drive_pdf_url:
             raise ValidationError("A chart must have either a PDF document or a Drive PDF URL.")
+        if self.is_conductor_chart and self.instrument:
+            raise ValidationError("A conductor chart cannot also have an instrument assigned.")
+        if not self.is_conductor_chart and not self.instrument:
+            raise ValidationError("A chart must have an instrument unless it is a conductor chart.")
 
     def __str__(self):
-        return f"{self.song.title} - {self.instrument.name} - {self.part}" if self.part else f"{self.song.title} - {self.instrument.name}"
+        if self.is_conductor_chart:
+            return f"{self.song.title} - Conductor Score"
+        inst_name = self.instrument.name if self.instrument else "?"
+        return f"{self.song.title} - {inst_name} - {self.part}" if self.part else f"{self.song.title} - {inst_name}"
 
 
 class SongConductor(Orderable):

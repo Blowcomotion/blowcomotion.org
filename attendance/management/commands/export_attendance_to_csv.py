@@ -38,11 +38,12 @@ class Command(BaseCommand):
 
         queryset = AttendanceRecord.objects.all().select_related(
             "member",
+            "member__user",
             "member__primary_instrument",
             "member__primary_instrument__section",
             "played_instrument",
             "played_instrument__section",
-        ).order_by("date", "member__last_name", "member__first_name", "guest_name")
+        ).order_by("date", "member__user__last_name", "member__user__first_name", "guest_name")
 
         if start_date:
             queryset = queryset.filter(date__gte=start_date)

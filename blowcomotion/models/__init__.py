@@ -4,6 +4,7 @@
 # apps that don't exist yet — a genuinely new domain app going forward may define its own
 # models.py/migrations with its own tables.
 
+from blowcomotion.models.admin_tools import AdminToolUsage
 from blowcomotion.models.attendance import AttendanceRecord
 from blowcomotion.models.band import Instrument, Section, SectionInstructor
 from blowcomotion.models.core import (

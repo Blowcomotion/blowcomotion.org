@@ -43,3 +43,11 @@ def get_recaptcha_site_key():
     public_key = getattr(django_settings, 'RECAPTCHA_PUBLIC_KEY', None)
     private_key = getattr(django_settings, 'RECAPTCHA_PRIVATE_KEY', None)
     return public_key if (public_key and private_key) else ''
+
+
+@register.simple_tag
+def get_google_analytics_id():
+    """
+    Return the configured Google Analytics (GA4) measurement ID, or empty string if unset.
+    """
+    return getattr(django_settings, 'GOOGLE_ANALYTICS_ID', None) or ''

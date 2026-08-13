@@ -1,0 +1,85 @@
+{% extends "wagtailadmin/base.html" %}
+{% block titletag %}Admin Tool Usage{% endblock %}
+{% block content %}
+<div class="nice-padding">
+    <h1>Admin Tool Usage</h1>
+    <p>Which admin tools get used, by whom, and how often. Events are recorded automatically on every admin page view and button click (see issue #311).</p>
+
+    <div style="margin-bottom:1.5rem;display:flex;gap:0.5rem;align-items:center;">
+        <span>Period:</span>
+        {% for option in period_options %}
+        <a href="?days={{ option }}" class="button button-small {% if option != days %}button-secondary{% endif %}">Last {{ option }} days</a>
+        {% endfor %}
+        <span style="color:var(--w-color-text-meta);">{{ total_events }} event{{ total_events|pluralize }} in period</span>
+    </div>
+
+    {% if total_events %}
+    <h2>Usage over time</h2>
+    <div style="display:flex;align-items:flex-end;gap:2px;height:120px;max-width:800px;border-bottom:1px solid var(--w-color-border-furniture);margin-bottom:0.25rem;">
+        {% for d in usage_by_day %}
+        <div title="{{ d.day|date:'M j' }}: {{ d.count }} event{{ d.count|pluralize }}"
+             style="flex:1;min-width:2px;background:var(--w-color-secondary);border-radius:2px 2px 0 0;height:{{ d.pct }}%;"></div>
+        {% endfor %}
+    </div>
+    <div style="display:flex;justify-content:space-between;max-width:800px;color:var(--w-color-text-meta);font-size:0.85em;margin-bottom:1.5rem;">
+        <span>{{ usage_by_day.0.day|date:"M j" }}</span>
+        <span>{% with last_day=usage_by_day|last %}{{ last_day.day|date:"M j" }}{% endwith %}</span>
+    </div>
+
+    <h2>Most-used tools</h2>
+    <table class="listing" style="max-width:800px;">
+        <thead>
+            <tr><th>Tool</th><th style="width:6em;">Events</th><th style="width:40%;"></th></tr>
+        </thead>
+        <tbody>
+            {% for t in top_tools %}
+            <tr>
+                <td>{{ t.tool }}</td>
+                <td>{{ t.count }}</td>
+                <td><div style="background:var(--w-color-secondary);border-radius:2px;height:0.75rem;width:{{ t.pct }}%;"></div></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Per-user breakdown</h2>
+    <table class="listing" style="max-width:800px;">
+        <thead>
+            <tr><th>User</th><th style="width:6em;">Events</th><th>Top tools (events)</th></tr>
+        </thead>
+        <tbody>
+            {% for u in per_user %}
+            <tr>
+                <td>{{ u.user }}</td>
+                <td>{{ u.count }}</td>
+                <td>{{ u.top_tools|join:", " }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Most-clicked actions</h2>
+    <p style="color:var(--w-color-text-meta);">Button and link clicks within tools; plain page views are excluded.</p>
+    {% if top_actions %}
+    <table class="listing" style="max-width:800px;">
+        <thead>
+            <tr><th>Tool</th><th>Action</th><th style="width:6em;">Clicks</th></tr>
+        </thead>
+        <tbody>
+            {% for a in top_actions %}
+            <tr>
+                <td>{{ a.tool }}</td>
+                <td>{{ a.action }}</td>
+                <td>{{ a.count }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No clicks recorded in this period.</p>
+    {% endif %}
+    {% else %}
+    <p>No usage recorded in this period.</p>
+    {% endif %}
+</div>
+{% endblock %}

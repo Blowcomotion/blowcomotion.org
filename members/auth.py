@@ -1,8 +1,11 @@
 import email.policy
+import hashlib
 import logging
+import threading
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core import signing
 from django.core.cache import cache
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
@@ -34,13 +37,42 @@ class _MemberEmail(EmailMessage):
         return result
 
 
-def _send_mail(subject, body, from_email, recipient):
-    _MemberEmail(
+def _dispatch_email(email_message, fail_silently=False, background=False):
+    """Send an EmailMessage, optionally off of the request/command thread.
+
+    Runs synchronously whenever the locmem test backend is active, so tests
+    can assert on mail.outbox immediately after the request/command returns.
+    Otherwise, when background=True, sends from a daemon thread so a slow
+    SMTP server can't stall the caller (e.g. a public form submission).
+
+    background should only be True for request-serving code paths: a daemon
+    thread is killed the instant its process exits, so one-shot management
+    commands must keep sending synchronously to avoid dropping mail.
+    """
+    if not background or settings.EMAIL_BACKEND == "django.core.mail.backends.locmem.EmailBackend":
+        email_message.send(fail_silently=fail_silently)
+        return
+
+    def _send():
+        try:
+            email_message.send(fail_silently=False)
+        except Exception:
+            logger.exception(
+                "Background email send failed (subject=%r, to=%r)",
+                email_message.subject, email_message.to,
+            )
+
+    threading.Thread(target=_send, daemon=True).start()
+
+
+def _send_mail(subject, body, from_email, recipient, background=False):
+    email_message = _MemberEmail(
         subject=subject,
         body=body,
         from_email=from_email,
         to=[recipient],
-    ).send(fail_silently=False)
+    )
+    _dispatch_email(email_message, fail_silently=False, background=background)
 
 
 def needs_set_password(member):
@@ -124,8 +156,13 @@ def send_email_change_confirmation(member, new_email, base_url):
     logger.info(f"Sent email-change confirmation to {new_email} for member {member.pk}")
 
 
-def send_member_signup_welcome_email(member, base_url):
-    """Create a PasswordSetToken and email the new member a welcome with both next steps."""
+def send_member_signup_welcome_email(member, base_url, background=False):
+    """Create a PasswordSetToken and email the new member a welcome with both next steps.
+
+    background=True sends the email from a daemon thread so a slow SMTP
+    server doesn't stall the signup request; pass it only from request-serving
+    call sites (see _dispatch_email).
+    """
     _supersede_set_password_tokens(member)
     token = PasswordSetToken.objects.create(member=member)
     set_password_url = f"{base_url}/member/set-password/{token.uuid}/"
@@ -138,8 +175,55 @@ def send_member_signup_welcome_email(member, base_url):
             "get_access_url": f"{base_url}{reverse('member-get-access')}",
         },
     )
-    _send_mail(subject, message, settings.FROM_EMAIL, member.email)
+    _send_mail(subject, message, settings.FROM_EMAIL, member.email, background=background)
     logger.info(f"Sent signup welcome email to member {member.pk} ({member.email})")
+
+
+# ── Email login link ───────────────────────────────────────────────────────────
+
+LOGIN_LINK_MAX_AGE = 900  # seconds (15 minutes)
+_LOGIN_LINK_SALT = "members.login-link"
+
+
+def _last_login_fragment(user):
+    """Hash fragment derived from last_login. Logging in updates last_login,
+    which invalidates any outstanding token — making login links single-use
+    (same trick Django's PasswordResetTokenGenerator uses)."""
+    ts = user.last_login.isoformat() if user.last_login else ""
+    return hashlib.sha256(ts.encode()).hexdigest()[:16]
+
+
+def make_login_link_token(user):
+    return signing.dumps(
+        {"uid": user.pk, "ll": _last_login_fragment(user)}, salt=_LOGIN_LINK_SALT
+    )
+
+
+def redeem_login_link_token(token):
+    """Return the User for a valid, unexpired, not-yet-used token; None otherwise."""
+    try:
+        payload = signing.loads(token, salt=_LOGIN_LINK_SALT, max_age=LOGIN_LINK_MAX_AGE)
+    except signing.BadSignature:  # covers SignatureExpired too
+        return None
+    user = User.objects.filter(pk=payload.get("uid"), is_active=True).first()
+    if user is None or not hasattr(user, "member"):
+        return None
+    if payload.get("ll") != _last_login_fragment(user):
+        return None  # user has logged in since the link was issued
+    return user
+
+
+def send_login_link_email(member, base_url):
+    """Email the member a single-use, short-expiry login link."""
+    token = make_login_link_token(member.user)
+    login_url = f"{base_url}/member/login/link/{token}/"
+    subject = "Your Blowcomotion login link"
+    message = render_to_string(
+        "emails/login_link.txt",
+        {"member": member, "login_url": login_url},
+    )
+    _send_mail(subject, message, settings.FROM_EMAIL, member.email)
+    logger.info(f"Sent login link email to member {member.pk} ({member.email})")
 
 
 def send_signup_invite_email(email, base_url):

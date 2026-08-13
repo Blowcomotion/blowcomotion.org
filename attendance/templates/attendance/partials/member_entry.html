@@ -1,16 +1,25 @@
+{% load wagtailimages_tags %}
 <div class="col-12 col-md-6 col-lg-4 mb-3">
     <div class="attendance-member-item border rounded py-2 px-3 h-100">
         <div class="form-check m-0">
             <input class="form-check-input" type="checkbox"
                    id="member_{{ entry.member.id }}" name="member_{{ entry.member.id }}">
-            <label class="form-check-label fw-semibold" for="member_{{ entry.member.id }}">
-                {% if entry.member.id in recorded_member_ids %}
-                    <i class="fa fa-check-circle text-success me-1" title="Already recorded for this date"></i>
+            <label class="form-check-label fw-semibold d-flex align-items-center" for="member_{{ entry.member.id }}">
+                {% if entry.member.image %}
+                    <div class="flex-shrink-0 mr-2">
+                        {% image entry.member.image width-40 as member_photo %}
+                        <img src="{{ member_photo.url }}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:50%;">
+                    </div>
                 {% endif %}
-                {{ entry.member }}
-                {% if entry.is_additional_for_section %}
-                    <span class="badge bg-warning text-dark ms-2">Additional</span>
-                {% endif %}
+                <div>
+                    {% if entry.member.id in recorded_member_ids %}
+                        <i class="fa fa-check-circle text-success me-1" title="Already recorded for this date"></i>
+                    {% endif %}
+                    {{ entry.member }}
+                    {% if entry.is_additional_for_section %}
+                        <span class="badge bg-warning text-dark ms-2">Additional</span>
+                    {% endif %}
+                </div>
             </label>
         </div>
     </div>

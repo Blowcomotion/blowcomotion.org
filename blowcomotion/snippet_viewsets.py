@@ -40,6 +40,7 @@ class ChartViewSet(SnippetViewSet):
         'drive_pdf_url',
         'part',
         'instrument',
+        'is_conductor_chart',
     ]
 
     def __init__(self, *args, **kwargs):
@@ -89,6 +90,7 @@ class SongViewSet(SnippetViewSet):
     filterset_class = None  # Set in __init__
     ordering = ['title']
     panels = [
+        'active',
         'title',
         MediaChooserPanel('recording', help_text="Select the audio recording for this song.", media_type='audio'),
         InlinePanel('videos', label="Source Videos", help_text="Add YouTube or other video links for reference performances."),
@@ -110,7 +112,6 @@ class SongViewSet(SnippetViewSet):
         MultipleChooserPanel("conductors", chooser_field_name="member", help_text="Select the members that usually conduct this song."),
         MultipleChooserPanel("soloists", chooser_field_name="member", help_text="If this song has soloists, select the members that usually solo on this song."),
         'source_band',
-        'active',
     ]
 
     def __init__(self, *args, **kwargs):
@@ -189,8 +190,8 @@ class SectionMembersPanel(Panel):
             context = super().get_context_data(parent_context)
             context["members"] = (
                 self.instance.get_members()
-                .select_related("primary_instrument")
-                .order_by("first_name", "last_name")
+                .select_related("primary_instrument", "user")
+                .order_by("user__first_name", "user__last_name")
             )
             return context
 
@@ -225,7 +226,7 @@ class InstrumentViewSet(SnippetViewSet):
     menu_label = 'Instrument Types'
     menu_name = 'instruments'
     icon = 'french-horn'
-    list_display = ["name", "section", "hide_from_rental", "hide_from_member_forms", UpdatedAtColumn()]
+    list_display = ["name", "section", "hide_from_rental", "hide_from_member_forms"]
     list_filter = ["section"]
     search_fields = ("name", "description")
     panels = [
@@ -268,7 +269,10 @@ class MemberViewSet(SnippetViewSet):
     menu_label = 'Members'
     menu_name = 'members'
     menu_icon = 'group'
-    search_fields = ("first_name", "last_name", "preferred_name", "gigomatic_username", "email")
+    # Name/email live on the linked auth User. Unset search_backend_name so the
+    # index view searches via the Django ORM, which can traverse user__ lookups.
+    search_backend_name = None
+    search_fields = ("user__first_name", "user__last_name", "preferred_name", "gigomatic_username", "user__email")
     list_display = [
         'display_name',
         Column('primary_instrument', label='Instrument', sort_key='primary_instrument__name'),
@@ -279,10 +283,13 @@ class MemberViewSet(SnippetViewSet):
         UpdatedAtColumn()
     ]
     filterset_class = None  # Set in __init__
-    ordering = ['last_name', 'first_name']
+    ordering = ['user__last_name', 'user__first_name']
     panels = [
-        "first_name",
-        "last_name",
+        # first_name / last_name / email are form-only fields declared on
+        # MemberAdminForm (they live on the linked auth User), so they need
+        # explicit FieldPanels rather than field-name strings.
+        FieldPanel("first_name"),
+        FieldPanel("last_name"),
         "preferred_name",
         "gigomatic_username",
         "gigomatic_id",
@@ -302,7 +309,7 @@ class MemberViewSet(SnippetViewSet):
         "renting",
         "last_seen",
         "separation_date",
-        "email",
+        FieldPanel("email"),
         "phone",
         "address",
         "city",
@@ -335,7 +342,7 @@ class MemberViewSet(SnippetViewSet):
         super().__init__(*args, **kwargs)
 
     def get_queryset(self, request):
-        return super().get_queryset(request) or self.model.objects.select_related('primary_instrument')
+        return super().get_queryset(request) or self.model.objects.select_related('primary_instrument', 'user')
 
 
 class AttendanceRecordFilterSet(WagtailFilterSet):
@@ -357,7 +364,7 @@ class AttendanceRecordViewSet(SnippetViewSet):
     menu_label = 'Attendance Records'
     menu_name = 'attendance_records'
     menu_icon = 'check'
-    search_fields = ('member__first_name', 'member__last_name', 'guest_name', 'notes', 'played_instrument__name')
+    search_fields = ('member__user__first_name', 'member__user__last_name', 'guest_name', 'notes', 'played_instrument__name')
     list_display = [
         '__str__',
         DateColumn('date', label='Date'),
@@ -417,7 +424,6 @@ class LibraryInstrumentViewSet(SnippetViewSet):
     menu_label = 'Library Instruments'
     menu_name = 'library_instruments'
     menu_icon = 'french-horn'
-    search_fields = ('instrument__name', 'serial_number', 'member__first_name', 'member__last_name', 'comments')
     list_display = [
         'instrument',
         'serial_number',
@@ -645,6 +651,55 @@ class EquipmentViewSet(SnippetViewSet):
 
     def get_queryset(self, request):
         return super().get_queryset(request) or self.model.objects.select_related('storage_location')
+
+
+class AdminToolUsageFilterSet(WagtailFilterSet):
+    timestamp = django_filters.DateFromToRangeFilter(
+        widget=DateRangePickerWidget,
+        label='Date Range',
+    )
+
+    class Meta:
+        model = None
+        fields = {
+            'tool': ['exact'],
+            'user': ['exact'],
+        }
+
+
+class AdminToolUsageViewSet(SnippetViewSet):
+    model = None
+    menu_label = 'Admin Tool Usage'
+    menu_name = 'admin_tool_usage'
+    menu_icon = 'cogs'
+    search_fields = ('tool', 'action', 'user__first_name', 'user__last_name')
+    list_display = [
+        'tool',
+        'action',
+        'user',
+        DateColumn('timestamp', label='Timestamp'),
+    ]
+    filterset_class = None  # Set in __init__
+    ordering = ['-timestamp']
+    panels = [
+        'tool',
+        'action',
+        'user',
+    ]
+
+    def __init__(self, *args, **kwargs):
+        from .models import AdminToolUsage
+
+        class AdminToolUsageFilterSetWithModel(AdminToolUsageFilterSet):
+            class Meta(AdminToolUsageFilterSet.Meta):
+                model = AdminToolUsage
+
+        self.model = AdminToolUsage
+        self.filterset_class = AdminToolUsageFilterSetWithModel
+        super().__init__(*args, **kwargs)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request) or self.model.objects.select_related('user')
 
 
 class BandViewSetGroup(SnippetViewSetGroup):

@@ -174,11 +174,12 @@ class DumpDataViewTests(TestCase):
         self.assertIsNotNone(member1_record)
         fields = member1_record['fields']
         
-        # Verify scrubbed fields
-        self.assertEqual(fields['first_name'], 'FirstName1')
-        self.assertEqual(fields['last_name'], 'LastName1')
+        # Verify scrubbed fields (first_name / last_name / email live on
+        # auth.user, which is excluded from the dump entirely)
+        self.assertNotIn('first_name', fields)
+        self.assertNotIn('last_name', fields)
+        self.assertNotIn('email', fields)
         self.assertEqual(fields['preferred_name'], 'Preferred1')
-        self.assertEqual(fields['email'], 'member1@example.com')
         self.assertEqual(fields['phone'], '555-0001')
         self.assertEqual(fields['address'], '1 Main Street')
         self.assertEqual(fields['city'], 'Austin')
@@ -217,11 +218,9 @@ class DumpDataViewTests(TestCase):
         self.assertIsNotNone(member1_record)
         fields = member1_record['fields']
         
-        # Verify real data is present
-        self.assertEqual(fields['first_name'], 'John')
-        self.assertEqual(fields['last_name'], 'Doe')
+        # Verify real data is present (name/email live on auth.user, which
+        # is excluded from the dump)
         self.assertEqual(fields['preferred_name'], 'Johnny')
-        self.assertEqual(fields['email'], 'john.doe@example.com')
         self.assertEqual(fields['phone'], '555-1234')
         self.assertEqual(fields['address'], '123 Real St')
         self.assertEqual(fields['city'], 'Austin')
@@ -275,10 +274,10 @@ class DumpDataViewTests(TestCase):
         pks2 = [m['pk'] for m in members2]
         self.assertEqual(pks1, pks2, "Member PKs should be in consistent order")
         
-        # Names should be consistent
-        names1 = [(m['fields']['first_name'], m['fields']['last_name']) for m in members1]
-        names2 = [(m['fields']['first_name'], m['fields']['last_name']) for m in members2]
-        self.assertEqual(names1, names2, "Scrubbed member names should be deterministic")
+        # Scrubbed values should be consistent
+        names1 = [m['fields']['preferred_name'] for m in members1]
+        names2 = [m['fields']['preferred_name'] for m in members2]
+        self.assertEqual(names1, names2, "Scrubbed member fields should be deterministic")
 
     def test_preserves_expected_member_fields(self):
         """Test that the expected member fields are included in scrubbed output"""
@@ -293,8 +292,8 @@ class DumpDataViewTests(TestCase):
             
             # Check all expected fields are present
             expected_fields = [
-                'first_name', 'last_name', 'preferred_name', 'primary_instrument',
-                'birth_month', 'birth_day', 'birth_year', 'email', 'phone',
+                'preferred_name', 'primary_instrument',
+                'birth_month', 'birth_day', 'birth_year', 'phone',
                 'address', 'city', 'state', 'zip_code', 'country',
                 'emergency_contact', 'inspired_by', 'is_active', 'instructor',
                 'board_member', 'join_date', 'last_seen', 'separation_date',

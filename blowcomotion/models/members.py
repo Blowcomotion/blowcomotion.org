@@ -3,14 +3,17 @@ import uuid as uuid_module
 
 from modelcluster.fields import ParentalKey
 from modelcluster.models import ClusterableModel
+from wagtail.admin.forms import WagtailAdminModelForm
 from wagtail.models import Orderable, RevisionMixin
 from wagtail.search import index
 
+from django import forms
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from members.utils import validate_birthday
+from members.utils import generate_unique_username, validate_birthday
 
 
 class MemberInstrument(Orderable):
@@ -26,9 +29,12 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
     """
     Model for members of the organization
 
+    Name and email live on the linked auth User (single source of truth);
+    ``first_name``, ``last_name`` and ``email`` are exposed as write-through
+    properties that delegate to ``self.user``. Values assigned before a User
+    exists are buffered and materialized into a new User on save().
+
     Attributes:
-        first_name: CharField
-        last_name: CharField
         preferred_name: CharField
         primary_instrument: ForeignKey - primary instrument (single choice)
         additional_instruments: ManyToManyField - additional instruments through MemberInstrument
@@ -44,7 +50,6 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
         renting: BooleanField
         last_seen: DateField
         separation_date: DateField
-        email: EmailField
         gigomatic_username: CharField
         gigomatic_id: IntegerField
         phone: CharField
@@ -57,8 +62,6 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
         emergency_contact: TextField
     """
 
-    first_name = models.CharField(max_length=255)
-    last_name = models.CharField(max_length=255)
     preferred_name = models.CharField(
         max_length=255,
         blank=True,
@@ -112,7 +115,6 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
     last_seen = models.DateField(blank=True, null=True, help_text="This field auto-populates whenever attendance is taken.")
     separation_date = models.DateField(blank=True, null=True, help_text="Date of separation from the organization.")
     reactivated_date = models.DateField(blank=True, null=True, help_text="Date when the member was reactivated (is_active changed to True).")
-    email = models.EmailField()
     gigomatic_username = models.CharField(
         max_length=255,
         blank=True,
@@ -206,10 +208,15 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
         settings.AUTH_USER_MODEL,
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name="member",
     )
     pending_email = models.EmailField(null=True, blank=True)
+    invite_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the set-password invite email was last sent by invite_members",
+    )
 
     # Notification preferences
     notify_rental_updates = models.BooleanField(default=True)
@@ -228,16 +235,18 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
     # Commenting out search_fields to avoid FTS indexing issues
     # Admin search still works via snippet_viewsets.py search_fields
     search_fields = [
-        index.SearchField("first_name"),
-        index.SearchField("last_name"),
+        index.RelatedFields("user", [
+            index.SearchField("first_name"),
+            index.SearchField("last_name"),
+            index.SearchField("email"),
+            index.AutocompleteField("first_name"),
+            index.AutocompleteField("last_name"),
+        ]),
         index.SearchField("preferred_name"),
         index.SearchField("gigomatic_username"),
-        index.AutocompleteField("first_name"),
-        index.AutocompleteField("last_name"),
         index.AutocompleteField("preferred_name"),
         index.AutocompleteField("gigomatic_username"),
         index.SearchField("bio"),
-        index.SearchField("email"),
         index.SearchField("phone"),
         index.SearchField("address"),
         index.SearchField("city"),
@@ -247,14 +256,141 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
         index.SearchField("notes"),
     ]
 
+    # ── Name/email delegation to the linked User ──────────────────────────────
+    # The auth User is the single source of truth for first_name, last_name
+    # and email. Assignments made before a User exists are buffered in
+    # _pending_user_data and materialized into a User by save().
+
+    @property
+    def _pending_user_fields(self):
+        return self.__dict__.setdefault("_pending_user_data", {})
+
+    @property
+    def first_name(self):
+        if self.user is not None:
+            return self.user.first_name
+        return self._pending_user_fields.get("first_name", "")
+
+    @first_name.setter
+    def first_name(self, value):
+        value = value or ""
+        if self.user is not None:
+            if self.user.first_name != value:
+                self.user.first_name = value
+                self._user_sync_needed = True
+        else:
+            self._pending_user_fields["first_name"] = value
+
+    @property
+    def last_name(self):
+        if self.user is not None:
+            return self.user.last_name
+        return self._pending_user_fields.get("last_name", "")
+
+    @last_name.setter
+    def last_name(self, value):
+        value = value or ""
+        if self.user is not None:
+            if self.user.last_name != value:
+                self.user.last_name = value
+                self._user_sync_needed = True
+        else:
+            self._pending_user_fields["last_name"] = value
+
+    @property
+    def email(self):
+        if self.user is not None:
+            return self.user.email
+        return self._pending_user_fields.get("email", "")
+
+    @email.setter
+    def email(self, value):
+        value = (value or "").strip()
+        if self.user is not None:
+            if self.user.email != value:
+                self.user.email = value
+                self._user_sync_needed = True
+        else:
+            self._pending_user_fields["email"] = value
+
+    def _sync_user_fields(self):
+        """Persist buffered/dirty name and email values onto the linked User.
+
+        Called from save(). Creates a User when the member has none yet but
+        has buffered values; keeps User.username aligned with the email
+        address (the login identifier) when it can do so without colliding
+        with another account.
+
+        Security: a member with no linked User NEVER adopts a pre-existing
+        auth User, even one whose username matches the member's email. That
+        account could belong to unrelated (e.g. staff) auth-only users with
+        no Member row, and adopting it would let a public signup rename/take
+        over someone else's account. Linking a member to an already-existing
+        account is only ever done by the invite/set-password flow
+        (members.auth.create_member_user) or the one-time migration.
+        """
+        UserModel = get_user_model()
+        pending = self.__dict__.pop("_pending_user_data", None)
+
+        if not self.user_id:
+            if not pending or not any(pending.values()):
+                return
+            email = (pending.get("email") or "").strip()
+            first_name = pending.get("first_name", "")
+            last_name = pending.get("last_name", "")
+
+            user = UserModel(
+                username=generate_unique_username(email, first_name, last_name),
+                email=email,
+            )
+            user.set_unusable_password()
+            if first_name:
+                user.first_name = first_name
+            if last_name:
+                user.last_name = last_name
+            user.save()
+            self.user = user
+            return
+
+        if not pending and not getattr(self, "_user_sync_needed", False):
+            return
+
+        user = self.user
+        if pending:
+            # Values assigned before the user was linked; apply them now.
+            for field in ("first_name", "last_name", "email"):
+                value = pending.get(field)
+                if value and getattr(user, field) != value:
+                    setattr(user, field, value)
+                    self._user_sync_needed = True
+
+        if getattr(self, "_user_sync_needed", False):
+            # Truncate consistently with generate_unique_username: auth_user
+            # .username is varchar(150); leave room and check the collision
+            # against the value that will actually be assigned.
+            desired_username = (user.email or "").strip()[:140]
+            if desired_username and user.username != desired_username:
+                collision = (
+                    UserModel.objects.exclude(pk=user.pk)
+                    .filter(username__iexact=desired_username)
+                    .exists()
+                )
+                if not collision:
+                    user.username = desired_username
+            if user.pk:
+                user.save(update_fields=["first_name", "last_name", "email", "username"])
+            else:
+                user.save()
+            self._user_sync_needed = False
+
     def clean(self):
         from django.core.exceptions import ValidationError
 
         # Check for duplicate members based on first and last name
         if self.first_name and self.last_name:
             existing_members = Member.objects.filter(
-                first_name__iexact=self.first_name,
-                last_name__iexact=self.last_name
+                user__first_name__iexact=self.first_name,
+                user__last_name__iexact=self.last_name
             )
 
             # If this is an update (not a new member), exclude the current instance
@@ -380,13 +516,12 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
 
         # Extract update_fields to check if specific fields are being updated
         update_fields = kwargs.get('update_fields')
-        # Capture caller's value before any mutation (used by email drift guard below)
-        _caller_update_fields = update_fields
 
-        # Determine if this save operation can affect fields relevant for GO3 sync
+        # Determine if this save operation can affect fields relevant for GO3 sync.
+        # Email changes flow through the linked User; they reach this method via
+        # full saves (update_fields=None), e.g. the Wagtail admin form.
         sync_relevant_fields = (
             update_fields is None
-            or 'email' in update_fields
             or 'is_active' in update_fields
         )
 
@@ -440,23 +575,16 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
                 update_fields = {update_fields}
             update_fields.add('reactivated_date')
             kwargs['update_fields'] = update_fields
-        # Call parent save first
-        super().save(*args, **kwargs)
 
-        # Sync User.email and User.username if admin changed Member.email
-        if self.user_id and (_caller_update_fields is None or "email" in _caller_update_fields):
-            from django.contrib.auth import get_user_model as _get_user_model
-            _User = _get_user_model()
-            try:
-                _user = _User.objects.get(pk=self.user_id)
-                new_email = self.email or ""
-                if _user.email != new_email or _user.username != new_email:
-                    _user.email = new_email
-                    _user.username = new_email
-                    _user.save(update_fields=["email", "username"])
-                    logger.info(f"Synced User email/username for member {self.pk}")
-            except _User.DoesNotExist:
-                pass
+        # Persist name/email changes (and create a User for brand-new members)
+        # before saving the member row, so self.user_id is set for the insert.
+        had_user = bool(self.user_id)
+        self._sync_user_fields()
+        if not had_user and self.user_id and kwargs.get('update_fields') is not None:
+            kwargs['update_fields'] = set(kwargs['update_fields']) | {'user'}
+
+        # Call parent save
+        super().save(*args, **kwargs)
 
         # Only query GO3 when sync_go3=True AND sync_relevant_fields=True AND one of these conditions is met:
         # 1. gigomatic_id or gigomatic_username is missing
@@ -564,8 +692,39 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
     def display_name(self):
         # ponytail: __str__ unsortable in Wagtail admin (label_for_field returns builtin str as attr); this wrapper exposes admin_order_field
         return str(self)
-    display_name.admin_order_field = 'first_name'
+    display_name.admin_order_field = 'user__first_name'
     display_name.short_description = 'Name'
+
+
+class MemberAdminForm(WagtailAdminModelForm):
+    """Wagtail admin form for Member.
+
+    first_name / last_name / email are not model fields anymore — they live on
+    the linked auth User. Declaring them here keeps the existing FieldPanels
+    working; values are applied to the instance (write-through properties)
+    before model validation so the duplicate-name check in Member.clean() sees
+    the submitted values.
+    """
+
+    first_name = forms.CharField(max_length=150, required=True)
+    last_name = forms.CharField(max_length=150, required=True)
+    email = forms.EmailField(required=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance is not None and self.instance.pk:
+            self.initial.setdefault("first_name", self.instance.first_name)
+            self.initial.setdefault("last_name", self.instance.last_name)
+            self.initial.setdefault("email", self.instance.email)
+
+    def _post_clean(self):
+        for field in ("first_name", "last_name", "email"):
+            if field in self.cleaned_data:
+                setattr(self.instance, field, self.cleaned_data[field])
+        super()._post_clean()
+
+
+Member.base_form_class = MemberAdminForm
 
 
 class PasswordSetToken(models.Model):

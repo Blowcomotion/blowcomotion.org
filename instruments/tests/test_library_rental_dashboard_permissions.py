@@ -11,6 +11,7 @@ DASHBOARD_URL_NAMES = [
     'instrument_library_rented',
     'instrument_library_available',
     'instrument_library_needs_repair',
+    'instrument_library_gallery',
     'rental_requests_dashboard',
 ]
 

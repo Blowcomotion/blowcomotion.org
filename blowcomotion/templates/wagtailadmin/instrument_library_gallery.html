@@ -1,0 +1,170 @@
+{% extends "wagtailadmin/base.html" %}
+{% load wagtailimages_tags %}
+{% block titletag %}Instrument Gallery{% endblock %}
+{% block content %}
+<div class="nice-padding">
+    <h1>Instrument Gallery</h1>
+    <p>Browse every instrument in the library inventory with its photos. Use the filters below to narrow the list.</p>
+    {% if perms.blowcomotion.add_libraryinstrument %}
+    <p><a href="{% url 'wagtailsnippets_blowcomotion_libraryinstrument:add' %}" class="button bicolor button--icon"><span class="icon-wrapper"><svg class="icon icon-plus icon" aria-hidden="true"><use href="#icon-plus"></use></svg></span>Create New</a></p>
+    {% endif %}
+
+    <style>
+        .instrument-gallery-filters {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            margin-bottom: 1.5rem;
+        }
+        .instrument-gallery-filters label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+        .instrument-gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .instrument-gallery-card {
+            border: 1px solid var(--w-color-border-furniture);
+            border-radius: 6px;
+            padding: 0.75rem;
+            background: var(--w-color-surface-page);
+        }
+        .instrument-gallery-card h3 {
+            margin: 0.5rem 0 0.25rem;
+            font-size: 1rem;
+        }
+        .instrument-gallery-card h3 a {
+            color: var(--w-color-text-link-default);
+        }
+        .instrument-gallery-photo-main {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            border-radius: 4px;
+            background: var(--w-color-surface-field-inactive);
+        }
+        .instrument-gallery-no-photo {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            background: var(--w-color-surface-field-inactive);
+            color: var(--w-color-text-meta);
+        }
+        .instrument-gallery-thumbnails {
+            display: flex;
+            gap: 0.25rem;
+            margin-top: 0.25rem;
+            flex-wrap: wrap;
+        }
+        .instrument-gallery-thumbnails img {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 3px;
+        }
+        .instrument-gallery-meta {
+            font-size: 0.85rem;
+            color: var(--w-color-text-meta);
+        }
+        .instrument-gallery-pagination {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+    </style>
+
+    <form method="get" class="instrument-gallery-filters">
+        <div>
+            <label for="id_status">Status</label>
+            <select name="status" id="id_status">
+                <option value="">All</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}"{% if value == selected_status %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="id_instrument">Instrument</label>
+            <select name="instrument" id="id_instrument">
+                <option value="">All</option>
+                {% for instrument in instrument_choices %}
+                <option value="{{ instrument.pk }}"{% if selected_instrument == instrument.pk|stringformat:"s" %} selected{% endif %}>{{ instrument.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="id_storage_location">Storage Location</label>
+            <select name="storage_location" id="id_storage_location">
+                <option value="">All</option>
+                {% for location in storage_location_choices %}
+                <option value="{{ location.pk }}"{% if selected_storage_location == location.pk|stringformat:"s" %} selected{% endif %}>{{ location.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="id_q">Search</label>
+            <input type="text" name="q" id="id_q" value="{{ query }}" placeholder="Serial number or instrument name">
+        </div>
+        <div>
+            <button type="submit" class="button">Filter</button>
+            <a href="{% url 'instrument_library_gallery' %}" class="button button-secondary">Clear</a>
+        </div>
+    </form>
+
+    {% if page_obj %}
+    <div class="instrument-gallery-grid">
+        {% for li in page_obj %}
+        <div class="instrument-gallery-card">
+            {% with photos=li.photos.all %}
+            {% if photos %}
+            {% image photos.0.image fill-300x300 as main_photo %}
+            <img class="instrument-gallery-photo-main" src="{{ main_photo.url }}" alt="{{ li.instrument.name }}">
+            {% if photos|length > 1 %}
+            <div class="instrument-gallery-thumbnails">
+                {% for photo in photos %}
+                {% image photo.image fill-100x100 as thumb %}
+                <img src="{{ thumb.url }}" alt="{{ li.instrument.name }} photo">
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="instrument-gallery-no-photo">No photo</div>
+            {% endif %}
+            {% endwith %}
+            <h3><a href="{% url 'wagtailsnippets_blowcomotion_libraryinstrument:edit' li.pk %}">{{ li.instrument.name }}</a></h3>
+            <div class="instrument-gallery-meta">
+                <div>Serial: {{ li.serial_number }}</div>
+                <div>Status: {{ li.get_status_display }}</div>
+                {% if li.member %}
+                <div>Member: {{ li.member }}</div>
+                {% endif %}
+                {% if li.storage_location %}
+                <div>Location: {{ li.storage_location }}</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="instrument-gallery-pagination">
+        {% if page_obj.has_previous %}
+        <a class="button button-small" href="?{{ querystring }}page={{ page_obj.previous_page_number }}">Previous</a>
+        {% endif %}
+        <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a class="button button-small" href="?{{ querystring }}page={{ page_obj.next_page_number }}">Next</a>
+        {% endif %}
+    </div>
+    {% else %}
+    <p>No instruments to display.</p>
+    {% endif %}
+</div>
+{% endblock %}

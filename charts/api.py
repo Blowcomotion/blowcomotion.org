@@ -49,9 +49,22 @@ def instruments_with_charts(request):
             'name': instrument.name,
         })
     
-    # Convert to list sorted by section name
     sections_list = sorted(sections_data.values(), key=lambda x: x['name'])
-    
+
+    # Add a synthetic "Scores" section if any conductor charts exist
+    has_conductor = Chart.objects.filter(
+        has_pdf,
+        song__active=True,
+        is_conductor_chart=True,
+    ).exists()
+    if has_conductor:
+        sections_list.append({
+            'id': -1,
+            'name': 'Conductor',
+            'instruments': [{'id': 'conductor', 'name': 'Conductor'}],
+        })
+        sections_list.sort(key=lambda x: (x['id'] != -1, x['name']))
+
     return JsonResponse({'sections': sections_list})
 
 
@@ -255,6 +268,74 @@ def instruments_for_song(request, song_id):
         'song_id': song.id,
         'song_title': song.title,
         'sections': sections_list
+    })
+
+
+def songs_for_conductor(request):
+    """
+    GET /charts/songs/conductor/
+    GET /charts/songs/conductor/?search=<query>
+
+    Returns songs that have conductor charts, with chart data inline.
+    """
+    search_query = request.GET.get('search', '').strip()
+
+    has_pdf = Q(pdf__isnull=False) | Q(drive_pdf_url__isnull=False)
+    song_ids = Chart.objects.filter(
+        has_pdf,
+        is_conductor_chart=True,
+    ).values_list('song_id', flat=True).distinct()
+
+    charts_prefetch = Prefetch(
+        'charts',
+        queryset=Chart.objects.filter(
+            has_pdf,
+            is_conductor_chart=True,
+        ).select_related('pdf').order_by('part'),
+        to_attr='conductor_charts',
+    )
+
+    songs = Song.objects.filter(
+        pk__in=song_ids,
+        active=True,
+    ).select_related(
+        'recording'
+    ).prefetch_related(
+        'videos',
+        charts_prefetch,
+    ).order_by('title')
+
+    if search_query:
+        songs = songs.filter(title__icontains=search_query)
+
+    data = []
+    for song in songs:
+        videos = [{'url': v.url, 'title': v.title} for v in song.videos.all()]
+        charts_data = []
+        for chart in song.conductor_charts:
+            charts_data.append({
+                'id': chart.id,
+                'part': chart.part or 'Conductor',
+                'pdf_url': chart.drive_pdf_url or (chart.pdf.url if chart.pdf else None),
+                'pdf_title': chart.pdf.title if chart.pdf else None,
+            })
+
+        song_data = {
+            'id': song.id,
+            'title': song.title,
+            'has_recording': bool(song.recording and song.recording.file),
+            'has_video': len(videos) > 0,
+            'videos': videos,
+            'charts': charts_data,
+        }
+        if song.recording and song.recording.file:
+            song_data['recording_url'] = song.recording.file.url
+        data.append(song_data)
+
+    return JsonResponse({
+        'instrument_id': 'conductor',
+        'instrument_name': 'Conductor',
+        'songs': data,
     })
 
 

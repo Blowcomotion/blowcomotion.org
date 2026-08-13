@@ -1,19 +1,23 @@
 import json
 import logging
-from collections import defaultdict
-from datetime import date, datetime
+from collections import Counter, defaultdict
+from datetime import date, datetime, timedelta
 from io import StringIO
 
 import requests
 
 from django.conf import settings
+from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.management import call_command
-from django.http import JsonResponse
+from django.db.models import Count
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from blowcomotion.models import (
+    AdminToolUsage,
     BookingFormSubmission,
     ContactFormSubmission,
     DonateFormSubmission,
@@ -23,6 +27,7 @@ from blowcomotion.models import (
     SiteSettings,
 )
 from members.auth import (
+    _dispatch_email,
     _MemberEmail,
     create_member_user,
     send_member_signup_welcome_email,
@@ -120,10 +125,15 @@ def _validate_recaptcha(request):
 
 
 def _send_form_email(subject, message, recipient_list):
-    """Send email for form submission."""
-    _MemberEmail(
+    """Send email for form submission.
+
+    Sent from a background thread (see _dispatch_email) so a slow SMTP
+    server can't stall the form-submission response.
+    """
+    email_message = _MemberEmail(
         subject=subject, body=message, from_email=settings.FROM_EMAIL, to=recipient_list
-    ).send(fail_silently=False)
+    )
+    _dispatch_email(email_message, fail_silently=False, background=True)
 
 
 def _create_email_message(form_type, name, email, **kwargs):
@@ -218,7 +228,7 @@ def _process_member_signup(request, form_data):
         # Check for duplicate email before attempting to create a member.
         # Email is the login identifier, so a match means the person already has an account.
         email = form_data.get('email')
-        if email and Member.objects.filter(email__iexact=email).exists():
+        if email and Member.objects.filter(user__email__iexact=email).exists():
             logger.info(f"Member signup rejected: email already registered ({email})")
             return {
                 'template': 'forms/signup_duplicate_email.html',
@@ -288,7 +298,9 @@ def _process_member_signup(request, form_data):
         if member.email:
             try:
                 create_member_user(member)
-                send_member_signup_welcome_email(member, f"{request.scheme}://{request.get_host()}")
+                send_member_signup_welcome_email(
+                    member, f"{request.scheme}://{request.get_host()}", background=True
+                )
                 logger.info(f"Sent signup welcome email to new member {member.pk}")
             except Exception as e:
                 logger.warning(f"Could not send welcome email to new member {member.pk}: {e}")
@@ -529,10 +541,9 @@ def dump_data(request):
                     fields = item['fields']
                     
                     # Scrub sensitive fields while preserving structure and non-sensitive data
-                    fields['first_name'] = f'FirstName{idx}'
-                    fields['last_name'] = f'LastName{idx}'
+                    # (first_name / last_name / email live on auth.user, which is
+                    # excluded from the dump and has its FK nulled above)
                     fields['preferred_name'] = f'Preferred{idx}' if fields.get('preferred_name') else None
-                    fields['email'] = f'member{idx}@example.com' if fields.get('email') else None
                     fields['phone'] = f'555-{idx:04d}' if fields.get('phone') else None
                     fields['address'] = f'{idx} Main Street' if fields.get('address') else None
                     fields['city'] = 'Austin' if fields.get('city') else None
@@ -773,3 +784,123 @@ def fetch_embed_data(request):
     except Exception as e:
         logger.error(f"Unexpected error fetching embed data for URL {url}: {e}", exc_info=True)
         return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
+
+
+@require_http_methods(["POST"])
+def log_admin_tool_usage(request):
+    """
+    Record a single admin-tool usage event (a page view or a button/link
+    click on a Wagtail admin page). Called from JS registered via the
+    insert_global_admin_js hook (see wagtail_hooks.py). CSRF-protected like
+    any other POST endpoint; the JS supplies the token via the standard
+    X-CSRFToken header or a csrfmiddlewaretoken field, depending on how it
+    sends the request.
+    """
+    # Wagtail admin users are not necessarily is_staff (Wagtail gates on the
+    # access_admin permission), so check that, like fetch_embed_data does.
+    if not (request.user.is_authenticated and request.user.has_perm('wagtailadmin.access_admin')):
+        return JsonResponse({'error': 'Authentication required'}, status=403)
+
+    data = {}
+    if request.body:
+        try:
+            data = json.loads(request.body)
+        except (ValueError, TypeError):
+            data = {}
+    if not data:
+        data = request.POST
+
+    tool = str(data.get('tool') or '').strip()[:255]
+    action = str(data.get('action') or '').strip()[:255]
+
+    if not tool:
+        return JsonResponse({'error': 'tool is required'}, status=400)
+
+    AdminToolUsage.objects.create(user=request.user, tool=tool, action=action)
+    return HttpResponse(status=204)
+
+
+ADMIN_TOOL_USAGE_PERIODS = (7, 30, 90)
+
+
+@permission_required('blowcomotion.view_admintoolusage', raise_exception=True)
+def admin_tool_usage_dashboard(request):
+    """
+    Wagtail admin dashboard visualizing AdminToolUsage records (issue #333):
+    most-used tools, usage per day, per-user breakdown, and most-clicked
+    actions, over a selectable 7/30/90-day period.
+    """
+    try:
+        days = int(request.GET.get('days', 30))
+    except (TypeError, ValueError):
+        days = 30
+    if days not in ADMIN_TOOL_USAGE_PERIODS:
+        days = 30
+
+    today = timezone.localdate()
+    start_date = today - timedelta(days=days - 1)
+    since = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+    records = AdminToolUsage.objects.filter(timestamp__gte=since)
+
+    # Bucketed in Python rather than TruncDate: on MySQL (production) that
+    # compiles to CONVERT_TZ, which silently returns NULL unless the server's
+    # timezone tables are loaded. Volume is small (admin clicks only).
+    per_day_counts = Counter(
+        timezone.localtime(ts).date()
+        for ts in records.values_list('timestamp', flat=True)
+    )
+
+    top_tools = list(
+        records.values('tool').annotate(count=Count('id')).order_by('-count')[:20]
+    )
+    max_tool_count = top_tools[0]['count'] if top_tools else 0
+    for row in top_tools:
+        row['pct'] = round(row['count'] / max_tool_count * 100) if max_tool_count else 0
+
+    max_day_count = max(per_day_counts.values(), default=0)
+    usage_by_day = []
+    for i in range(days):
+        day = start_date + timedelta(days=i)
+        count = per_day_counts.get(day, 0)
+        usage_by_day.append({
+            'day': day,
+            'count': count,
+            'pct': round(count / max_day_count * 100) if max_day_count else 0,
+        })
+
+    # Per-user totals with each user's top 3 tools, from one grouped query.
+    user_tool_counts = (
+        records.values('user__username', 'user__first_name', 'user__last_name', 'tool')
+        .annotate(count=Count('id'))
+        .order_by('-count')
+    )
+    per_user = {}
+    for row in user_tool_counts:
+        name = f"{row['user__first_name'] or ''} {row['user__last_name'] or ''}".strip()
+        label = name or row['user__username'] or 'deleted user'
+        entry = per_user.setdefault(label, {'user': label, 'count': 0, 'top_tools': []})
+        entry['count'] += row['count']
+        if len(entry['top_tools']) < 3:
+            entry['top_tools'].append(f"{row['tool']} ({row['count']})")
+    per_user = sorted(per_user.values(), key=lambda e: e['count'], reverse=True)
+
+    top_actions = list(
+        records.exclude(action='')
+        .values('tool', 'action')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:20]
+    )
+
+    return render(
+        request,
+        'wagtailadmin/admin_tool_usage_dashboard.html',
+        {
+            'days': days,
+            'period_options': ADMIN_TOOL_USAGE_PERIODS,
+            'total_events': sum(per_day_counts.values()),
+            'top_tools': top_tools,
+            'usage_by_day': usage_by_day,
+            'per_user': per_user,
+            'top_actions': top_actions,
+        },
+    )

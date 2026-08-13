@@ -1,6 +1,12 @@
 from wagtail import hooks
 from wagtail.admin.menu import Menu, MenuItem, SubmenuMenuItem
 from wagtail.admin.ui.components import Component
+from wagtail.images.formats import (
+    FORMATS_BY_NAME,
+    Format,
+    register_image_format,
+    unregister_image_format,
+)
 from wagtail.snippets.models import register_snippet
 
 from django.conf import settings as django_settings
@@ -10,12 +16,13 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from attendance.views import export_attendance_csv
-from blowcomotion.views import dump_data, fetch_embed_data
+from blowcomotion.views import admin_tool_usage_dashboard, dump_data, fetch_embed_data
 from charts.views import export_charts_csv
 from gigs.views import sync_gigs_admin
 from instruments.views import (
     export_library_instruments_csv,
     instrument_library_available,
+    instrument_library_gallery,
     instrument_library_needs_repair,
     instrument_library_rented,
     rental_request_return,
@@ -34,11 +41,34 @@ from .chooser_viewsets import (
     section_chooser_viewset,
     song_chooser_viewset,
 )
-from .snippet_viewsets import BandViewSetGroup, FormsViewSetGroup, SyncViewSetGroup
+from .snippet_viewsets import (
+    AdminToolUsageViewSet,
+    BandViewSetGroup,
+    FormsViewSetGroup,
+    SyncViewSetGroup,
+)
 
 register_snippet(BandViewSetGroup)
 register_snippet(FormsViewSetGroup)
 register_snippet(SyncViewSetGroup)
+register_snippet(AdminToolUsageViewSet)
+
+
+def _add_img_fluid_to_richtext_image_formats():
+    """
+    Wagtail's built-in rich text image formats (full width/left/right) don't
+    scale on mobile by default. Append the site's "img-fluid" class so every
+    image inserted through a RichTextField/RichTextBlock scales responsively,
+    matching how images are already rendered everywhere else on the site.
+    """
+    for name, fmt in list(FORMATS_BY_NAME.items()):
+        unregister_image_format(name)
+        register_image_format(
+            Format(fmt.name, fmt.label, f"{fmt.classname} img-fluid", fmt.filter_spec)
+        )
+
+
+_add_img_fluid_to_richtext_image_formats()
 
 
 def _permission_granted(user, permission):
@@ -78,6 +108,7 @@ def register_admin_urls():
     """
     return [
         path("dump_data/", dump_data, name="dump_data"),
+        path("tool-usage/", admin_tool_usage_dashboard, name="admin_tool_usage_dashboard"),
         path("sync_gigs/", sync_gigs_admin, name="sync_gigs"),
         path("export_members/", export_members_csv, name="export_members"),
         path("export_attendance/", export_attendance_csv, name="export_attendance"),
@@ -99,12 +130,11 @@ def register_admin_urls():
             instrument_library_needs_repair,
             name="instrument_library_needs_repair",
         ),
-        # TODO(#250): delete — replaced by Rental Requests dashboard
-        # path(
-        #     "instrument-library/manage/",
-        #     instrument_library_quick_rent,
-        #     name="instrument_library_quick_rent",
-        # ),
+        path(
+            "instrument-library/gallery/",
+            instrument_library_gallery,
+            name="instrument_library_gallery",
+        ),
         path("rental-requests/", rental_requests_dashboard, name="rental_requests_dashboard"),
         path("rental-requests/<int:pk>/", rental_request_review, name="rental_request_review"),
         path("rental-requests/<int:pk>/return/", rental_request_return, name="rental_request_return"),
@@ -128,8 +158,8 @@ EXPORTS_PERMISSIONS = ['blowcomotion.access_dev_tools', 'blowcomotion.access_rea
 # by anything nested inside it (PermissionSubmenuMenuItem.is_shown does not
 # fall back to "show if any child is visible").
 UTILITIES_PERMISSIONS = EXPORTS_PERMISSIONS + [
-    'blowcomotion.change_libraryinstrument',  # Library Dashboards submenu
     'blowcomotion.change_cachedgig',  # Sync Gigs
+    'blowcomotion.view_admintoolusage',  # Tool Usage dashboard
 ]
 
 
@@ -151,22 +181,13 @@ def register_management_menu_item():
                             permission='blowcomotion.access_real_data_exports'),
     ])
 
-    library_dashboards_submenu = Menu(items=[
-        PermissionMenuItem('Library: Rented', reverse('instrument_library_rented'), icon_name='french-horn',
-                            permission='blowcomotion.change_libraryinstrument'),
-        PermissionMenuItem('Library: Available', reverse('instrument_library_available'), icon_name='french-horn',
-                            permission='blowcomotion.change_libraryinstrument'),
-        PermissionMenuItem('Library: Maintenance', reverse('instrument_library_needs_repair'), icon_name='warning',
-                            permission='blowcomotion.change_libraryinstrument'),
-    ])
-
     submenu = Menu(items=[
         PermissionSubmenuMenuItem('Exports', exports_submenu, icon_name='download',
                                    permission=EXPORTS_PERMISSIONS),
-        PermissionSubmenuMenuItem('Library Dashboards', library_dashboards_submenu, icon_name='french-horn',
-                                   permission='blowcomotion.change_libraryinstrument'),
         PermissionMenuItem('Sync Gigs', reverse('sync_gigs'), icon_name='cog',
                             permission='blowcomotion.change_cachedgig'),
+        PermissionMenuItem('Tool Usage', reverse('admin_tool_usage_dashboard'), icon_name='cogs',
+                            permission='blowcomotion.view_admintoolusage'),
     ])
     return PermissionSubmenuMenuItem(
         'Utilities', submenu, icon_name='cogs', order=10000,
@@ -174,24 +195,22 @@ def register_management_menu_item():
     )
 
 
-# TODO(#250): delete — replaced by Rental Requests dashboard
-# @hooks.register("register_admin_menu_item")
-# def register_library_quick_rent_menu_item():
-#     return MenuItem(
-#         'Library: Quick Rent',
-#         reverse('instrument_library_quick_rent'),
-#         icon_name='french-horn',
-#         order=295,
-#     )
-
-
 @hooks.register("register_admin_menu_item")
-def register_rental_requests_menu_item():
-    return PermissionMenuItem(
-        "Rental Requests",
-        reverse("rental_requests_dashboard"),
-        icon_name="french-horn",
-        order=295,
+def register_instrument_library_menu_item():
+    library_submenu = Menu(items=[
+        PermissionMenuItem('Rental Requests', reverse('rental_requests_dashboard'), icon_name='french-horn',
+                            permission='blowcomotion.change_libraryinstrument'),
+        PermissionMenuItem('Gallery', reverse('instrument_library_gallery'), icon_name='image',
+                            permission='blowcomotion.change_libraryinstrument'),
+        PermissionMenuItem('Rented', reverse('instrument_library_rented'), icon_name='french-horn',
+                            permission='blowcomotion.change_libraryinstrument'),
+        PermissionMenuItem('Available', reverse('instrument_library_available'), icon_name='french-horn',
+                            permission='blowcomotion.change_libraryinstrument'),
+        PermissionMenuItem('Maintenance', reverse('instrument_library_needs_repair'), icon_name='warning',
+                            permission='blowcomotion.change_libraryinstrument'),
+    ])
+    return PermissionSubmenuMenuItem(
+        'Instrument Library', library_submenu, icon_name='french-horn', order=295,
         permission='blowcomotion.change_libraryinstrument',
     )
 
@@ -272,4 +291,16 @@ def video_title_resolver_js():
     return format_html(
         '<script src="{}"></script>',
         static('js/video-title-resolver.js')
+    )
+
+
+@hooks.register('insert_global_admin_js')
+def admin_tool_usage_js():
+    """
+    Load the admin tool usage tracker (see issue #311). Records page views
+    and clicks on admin pages so the team can see which tools are used most.
+    """
+    return format_html(
+        '<script src="{}"></script>',
+        static('js/admin-tool-usage.js')
     )

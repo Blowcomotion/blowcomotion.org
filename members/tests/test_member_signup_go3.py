@@ -273,7 +273,7 @@ class MemberSignupGO3IntegrationTests(TestCase):
         response = self.client.post(reverse('process-form'), form_data)
         
         # Verify the member was created
-        member = Member.objects.get(email='john@example.com')
+        member = Member.objects.get(user__email='john@example.com')
         self.assertEqual(member.first_name, 'John')
         
         # Verify GO3 invite was called with the correct email
@@ -296,7 +296,7 @@ class MemberSignupGO3IntegrationTests(TestCase):
 
         response = self.client.post(reverse('process-form'), form_data)
 
-        self.assertFalse(Member.objects.filter(email='jane@example.com').exists())
+        self.assertFalse(Member.objects.filter(user__email='jane@example.com').exists())
         self.assertEqual(response.status_code, 200)
         self.assertIn('Required fields are missing: primary_instrument', response.content.decode())
 
@@ -319,7 +319,7 @@ class MemberSignupGO3IntegrationTests(TestCase):
         response = self.client.post(reverse('process-form'), form_data)
         
         # Since email is required and not provided, member should not be created
-        self.assertFalse(Member.objects.filter(first_name='Jane').exists())
+        self.assertFalse(Member.objects.filter(user__first_name='Jane').exists())
         
         # Response should show error message about missing required field
         self.assertEqual(response.status_code, 200)
@@ -352,7 +352,7 @@ class MemberSignupGO3IntegrationTests(TestCase):
         response = self.client.post(reverse('process-form'), form_data)
         
         # Verify the member was created despite GO3 failure
-        member = Member.objects.get(email='bob@example.com')
+        member = Member.objects.get(user__email='bob@example.com')
         self.assertEqual(member.first_name, 'Bob')
         
         # Verify we still sent the success page
@@ -493,7 +493,7 @@ class MemberSignupCreatesUserTests(TestCase):
         self.assertIn("gig-o-matic.com", welcome.body)
         # A User linked to the new Member should exist
         from blowcomotion.models import Member
-        member = Member.objects.get(email="alex@example.com")
+        member = Member.objects.get(user__email="alex@example.com")
         self.assertIsNotNone(member.user_id)
         user = User.objects.get(pk=member.user_id)
         self.assertFalse(user.has_usable_password())
@@ -542,7 +542,7 @@ class MemberSignupDuplicateEmailTests(TestCase):
         self.assertIn('An account with this email already exists', content)
         self.assertIn('/member/login/', content)
         # No second Member record should have been created
-        self.assertEqual(Member.objects.filter(email='existing@example.com').count(), 1)
+        self.assertEqual(Member.objects.filter(user__email='existing@example.com').count(), 1)
 
     @override_settings(
         GIGO_API_URL=None,
@@ -564,4 +564,70 @@ class MemberSignupDuplicateEmailTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn('An account with this email already exists', response.content.decode())
-        self.assertEqual(Member.objects.filter(email__iexact='existing@example.com').count(), 1)
+        self.assertEqual(Member.objects.filter(user__email__iexact='existing@example.com').count(), 1)
+
+
+class MemberSignupDoesNotAdoptStaffAccountTests(TestCase):
+    """Security regression: a public signup must never adopt/rename a
+    pre-existing auth User that has no linked Member — e.g. a staff account
+    whose username happens to match the submitted email. The duplicate-email
+    check only looks at Members, so nothing upstream blocks this; the
+    guarantee has to come from Member._sync_user_fields never adopting an
+    unlinked User."""
+
+    def setUp(self):
+        self.client = Client()
+        site = Site.objects.get(is_default_site=True)
+        SiteSettings.objects.create(
+            site=site,
+            member_signup_notification_recipients='admin@example.com',
+        )
+        section = Section.objects.create(name="Test Section")
+        self.instrument = Instrument.objects.create(name="Trumpet", section=section)
+
+    @override_settings(
+        GIGO_API_URL=None,
+        DEBUG=True,
+        RECAPTCHA_PUBLIC_KEY=None,
+        RECAPTCHA_PRIVATE_KEY=None,
+    )
+    @patch("blowcomotion.views.send_member_to_go3_band_invite")
+    def test_signup_does_not_modify_or_link_existing_staff_user(self, mock_go3):
+        mock_go3.return_value = {"status": "success", "message": "ok"}
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        staff_user = User.objects.create_user(
+            username="staffer@example.com",
+            email="staffer@example.com",
+            first_name="Staff",
+            last_name="Member",
+            is_staff=True,
+        )
+        staff_user.set_password("a-real-password-123")
+        staff_user.save()
+
+        response = self.client.post(
+            reverse('process-form'),
+            {
+                'form_type': 'member_signup_form',
+                'first_name': 'New',
+                'last_name': 'Person',
+                'email': 'staffer@example.com',
+                'primary_instrument': self.instrument.pk,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+
+        staff_user.refresh_from_db()
+        # The staff account is completely untouched.
+        self.assertEqual(staff_user.first_name, "Staff")
+        self.assertEqual(staff_user.last_name, "Member")
+        self.assertEqual(staff_user.username, "staffer@example.com")
+        self.assertTrue(staff_user.has_usable_password())
+        self.assertTrue(staff_user.is_staff)
+
+        # A new Member was created with its own, separate User account.
+        member = Member.objects.get(user__email__iexact="staffer@example.com", user__first_name="New")
+        self.assertNotEqual(member.user_id, staff_user.pk)
+        self.assertFalse(member.user.has_usable_password())

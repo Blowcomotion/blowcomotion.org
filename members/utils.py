@@ -55,6 +55,40 @@ def validate_birthday(birth_day, birth_month):
             )
 
 
+def generate_unique_username(email, first_name="", last_name="", user_queryset=None):
+    """
+    Build a unique auth username for a member's User account.
+
+    Prefers the email address (the login identifier). Falls back to a slug of
+    the member's name when no email is available. Appends a numeric suffix on
+    collision. Uses a case-insensitive uniqueness check so the result is safe
+    on MySQL's case-insensitive unique index.
+
+    Args:
+        email: Preferred username source (may be empty)
+        first_name / last_name: Fallback username source
+        user_queryset: Queryset to check collisions against (defaults to all users)
+    """
+    from django.contrib.auth import get_user_model
+    from django.utils.text import slugify
+
+    if user_queryset is None:
+        user_queryset = get_user_model().objects.all()
+
+    base = (email or "").strip()
+    if not base:
+        base = slugify(f"{first_name} {last_name}".strip()) or "member"
+    # auth_user.username is varchar(150); leave room for a collision suffix
+    base = base[:140]
+
+    username = base
+    suffix = 2
+    while user_queryset.filter(username__iexact=username).exists():
+        username = f"{base}-{suffix}"
+        suffix += 1
+    return username
+
+
 def send_member_to_go3_band_invite(email, use_local_band=False):
     """
     Send a member invitation to the GO3 band invite API.

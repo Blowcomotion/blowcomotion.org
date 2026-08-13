@@ -1206,3 +1206,161 @@ class SongsForInstrumentEndpointTests(TestCase):
         data = response.json()
         song = next(s for s in data['songs'] if s['title'] == 'Test Song 1')
         self.assertEqual(song['charts'][0]['pdf_url'], chart.drive_pdf_url)
+
+
+class SongsForConductorEndpointTests(TestCase):
+    """Test cases for the songs_for_conductor API endpoint (/charts/songs/conductor/)."""
+
+    def setUp(self):
+        self.client = Client()
+
+        self.song1 = Song.objects.create(title="Conductor Song A", active=True)
+        self.song2 = Song.objects.create(title="Conductor Song B", active=True)
+        self.inactive_song = Song.objects.create(title="Inactive", active=False)
+
+        self.chart1 = Chart.objects.create(
+            song=self.song1,
+            is_conductor_chart=True,
+            drive_pdf_url="https://drive.google.com/file/d/abc/view",
+            part="",
+        )
+        self.chart2 = Chart.objects.create(
+            song=self.song2,
+            is_conductor_chart=True,
+            drive_pdf_url="https://drive.google.com/file/d/def/view",
+            part="Full Score",
+        )
+        # Conductor chart for inactive song — should be excluded
+        Chart.objects.create(
+            song=self.inactive_song,
+            is_conductor_chart=True,
+            drive_pdf_url="https://drive.google.com/file/d/ghi/view",
+        )
+        # Conductor chart with no PDF — should be excluded
+        Chart.objects.create(
+            song=self.song1,
+            is_conductor_chart=True,
+        )
+
+    def test_endpoint_returns_200(self):
+        response = self.client.get(reverse('chart-songs-conductor'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_returns_only_active_songs_with_pdfs(self):
+        response = self.client.get(reverse('chart-songs-conductor'))
+        data = response.json()
+        titles = [s['title'] for s in data['songs']]
+        self.assertIn('Conductor Song A', titles)
+        self.assertIn('Conductor Song B', titles)
+        self.assertNotIn('Inactive', titles)
+
+    def test_charts_inline(self):
+        response = self.client.get(reverse('chart-songs-conductor'))
+        data = response.json()
+        song_a = next(s for s in data['songs'] if s['title'] == 'Conductor Song A')
+        self.assertEqual(len(song_a['charts']), 1)
+        self.assertEqual(song_a['charts'][0]['pdf_url'], 'https://drive.google.com/file/d/abc/view')
+
+    def test_empty_part_defaults_to_conductor(self):
+        response = self.client.get(reverse('chart-songs-conductor'))
+        data = response.json()
+        song_a = next(s for s in data['songs'] if s['title'] == 'Conductor Song A')
+        self.assertEqual(song_a['charts'][0]['part'], 'Conductor')
+
+    def test_explicit_part_preserved(self):
+        response = self.client.get(reverse('chart-songs-conductor'))
+        data = response.json()
+        song_b = next(s for s in data['songs'] if s['title'] == 'Conductor Song B')
+        self.assertEqual(song_b['charts'][0]['part'], 'Full Score')
+
+    def test_search_filter(self):
+        response = self.client.get(reverse('chart-songs-conductor'), {'search': 'Song A'})
+        data = response.json()
+        self.assertEqual(len(data['songs']), 1)
+        self.assertEqual(data['songs'][0]['title'], 'Conductor Song A')
+
+    def test_empty_results(self):
+        Chart.objects.filter(is_conductor_chart=True).delete()
+        response = self.client.get(reverse('chart-songs-conductor'))
+        data = response.json()
+        self.assertEqual(data['songs'], [])
+
+    def test_sorted_by_title(self):
+        response = self.client.get(reverse('chart-songs-conductor'))
+        data = response.json()
+        titles = [s['title'] for s in data['songs']]
+        self.assertEqual(titles, sorted(titles))
+
+    def test_response_shape(self):
+        response = self.client.get(reverse('chart-songs-conductor'))
+        data = response.json()
+        self.assertEqual(data['instrument_id'], 'conductor')
+        self.assertEqual(data['instrument_name'], 'Conductor')
+        self.assertIn('songs', data)
+
+
+class InstrumentsWithConductorSectionTests(TestCase):
+    """Conductor section appears in /charts/instruments/ when conductor charts exist."""
+
+    def setUp(self):
+        self.client = Client()
+        self.section = Section.objects.create(name="Brass")
+        self.trumpet = Instrument.objects.create(name="Trumpet", section=self.section)
+        self.song = Song.objects.create(title="Test Song", active=True)
+        from wagtail.documents.models import Document
+        self.pdf = Document.objects.create(title="Chart", file="chart.pdf")
+        Chart.objects.create(
+            song=self.song, instrument=self.trumpet, pdf=self.pdf, part="Trumpet"
+        )
+
+    def test_no_conductor_section_without_conductor_charts(self):
+        response = self.client.get(reverse('chart-instruments-list'))
+        data = response.json()
+        section_names = [s['name'] for s in data['sections']]
+        self.assertNotIn('Conductor', section_names)
+
+    def test_conductor_section_appears_when_conductor_chart_exists(self):
+        Chart.objects.create(
+            song=self.song,
+            is_conductor_chart=True,
+            drive_pdf_url="https://drive.google.com/file/d/abc/view",
+        )
+        response = self.client.get(reverse('chart-instruments-list'))
+        data = response.json()
+        section_names = [s['name'] for s in data['sections']]
+        self.assertIn('Conductor', section_names)
+
+    def test_conductor_section_contains_conductor_instrument(self):
+        Chart.objects.create(
+            song=self.song,
+            is_conductor_chart=True,
+            drive_pdf_url="https://drive.google.com/file/d/abc/view",
+        )
+        response = self.client.get(reverse('chart-instruments-list'))
+        data = response.json()
+        conductor_section = next(s for s in data['sections'] if s['name'] == 'Conductor')
+        self.assertEqual(len(conductor_section['instruments']), 1)
+        self.assertEqual(conductor_section['instruments'][0]['id'], 'conductor')
+        self.assertEqual(conductor_section['instruments'][0]['name'], 'Conductor')
+
+    def test_conductor_section_excluded_for_inactive_song(self):
+        inactive_song = Song.objects.create(title="Inactive", active=False)
+        Chart.objects.create(
+            song=inactive_song,
+            is_conductor_chart=True,
+            drive_pdf_url="https://drive.google.com/file/d/abc/view",
+        )
+        response = self.client.get(reverse('chart-instruments-list'))
+        data = response.json()
+        section_names = [s['name'] for s in data['sections']]
+        self.assertNotIn('Scores', section_names)
+
+    def test_conductor_section_appears_first(self):
+        Chart.objects.create(
+            song=self.song,
+            is_conductor_chart=True,
+            drive_pdf_url="https://drive.google.com/file/d/abc/view",
+        )
+        response = self.client.get(reverse('chart-instruments-list'))
+        data = response.json()
+        self.assertEqual(data['sections'][0]['name'], 'Conductor')

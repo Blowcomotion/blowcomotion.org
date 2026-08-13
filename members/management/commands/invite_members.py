@@ -8,7 +8,9 @@ import logging
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 from django.template.loader import render_to_string
+from django.utils import timezone
 
 from blowcomotion.models import Member
 from members.auth import create_member_user, send_set_password_email
@@ -42,7 +44,14 @@ class Command(BaseCommand):
         member_id = options["member_id"]
         preview_email = options["preview_email"]
 
-        qs = Member.objects.filter(is_active=True, user__isnull=True)
+        # Every member normally has a linked User (created on save with an
+        # unusable password), so "without accounts" means no usable password.
+        # invite_sent_at makes this idempotent: once an invite has been sent,
+        # re-running the command must not re-email the member on every run
+        # while they still haven't set a password.
+        qs = Member.objects.filter(is_active=True, invite_sent_at__isnull=True).filter(
+            Q(user__isnull=True) | Q(user__password__startswith="!") | Q(user__password="")
+        ).select_related("user")
         if member_id:
             qs = qs.filter(pk=member_id)
 
@@ -70,6 +79,8 @@ class Command(BaseCommand):
             try:
                 create_member_user(member)
                 send_set_password_email(member, base_url)
+                member.invite_sent_at = timezone.now()
+                member.save(update_fields=["invite_sent_at"])
                 self.stdout.write(f"  Invited: {member} <{member.email}>")
                 invited += 1
             except Exception as exc:

@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.humanize",
 ]
 
 MIDDLEWARE = [
@@ -170,6 +171,11 @@ AXES_FAILURE_LIMIT = 5
 AXES_COOLOFF_TIME = timedelta(minutes=30)
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_PARAMETERS = [["ip_address"], ["username"]]
+# PythonAnywhere's load balancer hides client IPs behind REMOTE_ADDR (10.x);
+# the real client IP arrives in X-Real-IP, set by their proxy (not spoofable).
+AXES_CLIENT_IP_CALLABLE = lambda request: (
+    request.META.get("HTTP_X_REAL_IP") or request.META.get("REMOTE_ADDR")
+)
 
 # Disable axes rate-limiting during test runs
 # (test client doesn't pass request to authenticate())
@@ -342,6 +348,11 @@ WAGTAILDOCS_MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10MB
 
 WAGTAILIMAGES_JPEG_QUALITY = 85
 WAGTAILIMAGES_AVIF_QUALITY = 80
+
+# Google Analytics (GA4)
+# Set GOOGLE_ANALYTICS_ID (e.g. "G-XXXXXXXXXX") in local.py for production.
+# When unset, the gtag.js snippet is not rendered.
+GOOGLE_ANALYTICS_ID = None
 
 # reCAPTCHA Settings
 # Set RECAPTCHA_PUBLIC_KEY and RECAPTCHA_PRIVATE_KEY in local.py for production.

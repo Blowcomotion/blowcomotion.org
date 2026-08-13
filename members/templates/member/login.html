@@ -7,9 +7,11 @@
         <div class="col-md-6 col-lg-5">
             <h1 class="mb-4 text-center">Member Login</h1>
             {% if recaptcha_error %}<div class="alert alert-danger">{{ recaptcha_error }}</div>{% endif %}
-            <form method="post" id="member-form">
+            {% if login_link_sent %}<div class="alert alert-success">If an account exists for that address, a login link has been sent. It expires in 15 minutes.</div>{% endif %}
+            <form method="post" action="{% url 'member-login' %}" id="member-form">
                 {% csrf_token %}
                 <input type="hidden" name="g-recaptcha-response" value="">
+                {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
                 <div class="mb-3">
                     <label for="id_username" class="form-label">Email address</label>
                     <input type="email" name="username" id="id_username" class="form-control" required autofocus>
@@ -28,6 +30,17 @@
                 &nbsp;|&nbsp;
                 <a href="{% url 'member-password-reset' %}">Forgot password?</a>
             </div>
+            <hr class="my-4">
+            <p class="text-muted small text-center mb-2">Can't remember your password? We can email you a one-time login link instead.</p>
+            <form method="post" action="{% url 'member-login-link-request' %}" data-recaptcha>
+                {% csrf_token %}
+                <input type="hidden" name="g-recaptcha-response" value="">
+                <div class="mb-3">
+                    <label for="id_link_email" class="form-label">Email address</label>
+                    <input type="email" name="email" id="id_link_email" class="form-control" required>
+                </div>
+                <button type="submit" class="site-btn w-100">Email me a login link</button>
+            </form>
         </div>
     </div>
 </div>

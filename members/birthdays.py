@@ -98,7 +98,7 @@ def birthdays(request):
         birth_month__isnull=False,
         birth_day__isnull=False,
         birth_month__in=relevant_months
-    ).select_related('primary_instrument').order_by('first_name', 'last_name')
+    ).select_related('primary_instrument', 'user').order_by('user__first_name', 'user__last_name')
     
     recent_birthdays = []
     upcoming_birthdays = []

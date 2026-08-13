@@ -12,18 +12,18 @@ from members.utils import validate_birthday
 class MemberSignupForm(forms.Form):
     """Form for new members to sign up and enter their profile data"""
     
-    # Required fields (matching Member model requirements)
+    # Required fields (stored on the linked auth User; max_length matches auth_user columns)
     first_name = forms.CharField(
-        max_length=255,
+        max_length=150,
         required=True,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
             'placeholder': 'First name'
         })
     )
-    
+
     last_name = forms.CharField(
-        max_length=255,
+        max_length=150,
         required=True,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
@@ -299,6 +299,15 @@ class GetAccessForm(forms.Form):
 
 
 class MemberProfileForm(forms.ModelForm):
+    # first_name / last_name / email live on the linked auth User (exposed as
+    # write-through properties on Member), so they are declared form fields
+    # rather than Meta.fields. Names are applied to the instance before model
+    # validation so the duplicate-name check sees them; email is handled by
+    # the view (held until confirmed via emailed token).
+    first_name = forms.CharField(max_length=150, required=True)
+    last_name = forms.CharField(max_length=150, required=True)
+    email = forms.EmailField(required=True)
+
     additional_instruments = forms.ModelMultipleChoiceField(
         queryset=Instrument.objects.filter(hide_from_member_forms=False).order_by("name"),
         required=False,
@@ -310,10 +319,7 @@ class MemberProfileForm(forms.ModelForm):
     class Meta:
         model = Member
         fields = [
-            "first_name",
-            "last_name",
             "preferred_name",
-            "email",
             "phone",
             "address",
             "city",
@@ -340,6 +346,9 @@ class MemberProfileForm(forms.ModelForm):
             hide_from_member_forms=False
         ).order_by("name")
         if self.instance and self.instance.pk:
+            self.initial.setdefault("first_name", self.instance.first_name)
+            self.initial.setdefault("last_name", self.instance.last_name)
+            self.initial.setdefault("email", self.instance.email)
             self.fields["additional_instruments"].initial = list(
                 self.instance.additional_instruments.values_list("instrument_id", flat=True)
             )
@@ -352,6 +361,15 @@ class MemberProfileForm(forms.ModelForm):
                 field.widget.attrs.setdefault("class", "form-check-input")
             else:
                 field.widget.attrs.setdefault("class", "form-control")
+
+    def _post_clean(self):
+        # Apply names before model validation so Member.clean()'s duplicate
+        # check sees the submitted values. Email is intentionally not applied
+        # (the view holds it until the new address is confirmed).
+        for field in ("first_name", "last_name"):
+            if field in self.cleaned_data:
+                setattr(self.instance, field, self.cleaned_data[field])
+        super()._post_clean()
 
 
 class InstrumentRentalRequestForm(forms.Form):

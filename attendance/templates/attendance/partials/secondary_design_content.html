@@ -1,0 +1,74 @@
+{% load static %}
+
+<div class="row">
+    <div class="col-12">
+        <h2 class="text-center mb-4">Secondary Design</h2>
+    </div>
+</div>
+
+<!-- Section Navigation -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Select Section</h5>
+            </div>
+            <div class="card-body">
+                <div class="btn-group flex-wrap" role="group">
+                    {% for sect in sections %}
+                        <a href="{% url 'attendance-capture' sect.name|lower|slugify %}"
+                           hx-get="{% url 'attendance-capture' sect.name|lower|slugify %}"
+                           hx-target="#attendance-container"
+                           hx-indicator="#section-loading-{{ sect.id }}"
+                           class="btn btn-outline-primary mb-2">
+                            <span id="section-loading-{{ sect.id }}" class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
+                            {{ sect.name }}
+                        </a>
+                    {% endfor %}
+                    <a href="{% url 'attendance-capture' 'no-section' %}"
+                       hx-get="{% url 'attendance-capture' 'no-section' %}"
+                       hx-target="#attendance-container"
+                       hx-indicator="#section-loading-no-section"
+                       class="btn btn-outline-secondary mb-2">
+                        <span id="section-loading-no-section" class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
+                        <i class="fa fa-question-circle"></i> No Section
+                    </a>
+                    <a href="{% url 'inactive-members' %}"
+                       hx-get="{% url 'inactive-members' %}"
+                       hx-target="#attendance-container"
+                       hx-indicator="#section-loading-inactive"
+                       class="btn btn-outline-warning mb-2">
+                        <span id="section-loading-inactive" class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
+                        <i class="fa fa-user-times"></i> Inactive Members
+                    </a>
+                    <a href="{% url 'attendance-secondary-design' %}"
+                       hx-get="{% url 'attendance-secondary-design' %}"
+                       hx-target="#attendance-container"
+                       hx-indicator="#section-loading-secondary-design"
+                       class="btn btn-primary mb-2">
+                        <span id="section-loading-secondary-design" class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
+                        <i class="fa fa-flask"></i> Secondary Design
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Secondary Design Content -->
+<div id="dynamic-content">
+    <div id="section-content">
+        {% include 'attendance/partials/secondary_design_demo.html' %}
+    </div>
+</div>
+
+<style>
+.htmx-request .htmx-indicator {
+    display: inline-block !important;
+}
+
+.htmx-request {
+    opacity: 0.7;
+    pointer-events: none;
+}
+</style>

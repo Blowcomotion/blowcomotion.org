@@ -38,3 +38,34 @@ class ChartCleanValidationTests(TestCase):
             drive_pdf_url="https://drive.google.com/file/d/f1/view",
         )
         chart.clean()
+
+    def test_clean_raises_when_no_instrument_and_not_conductor(self):
+        chart = Chart(song=self.song, drive_pdf_url="https://drive.google.com/file/d/f1/view")
+        with self.assertRaises(ValidationError):
+            chart.clean()
+
+    def test_clean_passes_conductor_chart_without_instrument(self):
+        chart = Chart(
+            song=self.song,
+            is_conductor_chart=True,
+            drive_pdf_url="https://drive.google.com/file/d/f1/view",
+        )
+        chart.clean()
+
+    def test_clean_raises_conductor_chart_with_instrument(self):
+        chart = Chart(
+            song=self.song,
+            instrument=self.instrument,
+            is_conductor_chart=True,
+            drive_pdf_url="https://drive.google.com/file/d/f1/view",
+        )
+        with self.assertRaises(ValidationError):
+            chart.clean()
+
+    def test_str_conductor_chart(self):
+        chart = Chart(
+            song=self.song,
+            is_conductor_chart=True,
+            drive_pdf_url="https://drive.google.com/file/d/f1/view",
+        )
+        self.assertEqual(str(chart), "Test Song - Conductor Score")

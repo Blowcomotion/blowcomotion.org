@@ -173,6 +173,9 @@ class LibraryInstrumentChooserViewset(ChooserViewSet):
 
 
 class BaseMemberChooseView(BaseChooseView):
+    def get_object_list(self):
+        return super().get_object_list().select_related("user")
+
     @property
     def columns(self):
         return [
@@ -208,19 +211,10 @@ class MemberChooserViewset(ChooserViewSet):
     edit_item_text = "Edit member"
     search_tab_label = "Search Members"
 
-    form_fields = [
-        "first_name",
-        "last_name",
-        "preferred_name",
-        "birth_month",
-        "birth_day", 
-        "birth_year",
-        "join_date",
-        "is_active",
-        "bio",
-        "instructor",
-        "board_member",
-    ]
+    # first_name / last_name / email live on the linked auth User; the custom
+    # form declares them and writes through to the User. Lazy dotted path
+    # because this module cannot import blowcomotion.models at import time.
+    creation_form_class = "blowcomotion.forms.MemberChooserCreationForm"
 
 
 class GigoAPIQuerySet(APIQuerySet):

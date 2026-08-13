@@ -85,6 +85,7 @@ def review(request):
             part = request.POST.get(f"row_{idx}_part", "")
             chart_id = request.POST.get(f"row_{idx}_chart_id")
             is_key = request.POST.get(f"row_{idx}_is_key") == "1"
+            is_conductor = request.POST.get(f"row_{idx}_is_conductor") == "1"
             drive_pdf_url = f"https://drive.google.com/file/d/{file_id}/view"
 
             try:
@@ -97,6 +98,25 @@ def review(request):
                         Chart.objects.create(
                             song=song,
                             instrument=Instrument.objects.get(id=inst_id),
+                            part="",
+                            drive_pdf_url=drive_pdf_url,
+                            drive_file_id=file_id,
+                            drive_modified_time=drive_time,
+                            drive_imported_at=now,
+                        )
+                elif is_conductor:
+                    if chart_id:
+                        chart = Chart.objects.get(id=chart_id)
+                        chart.is_conductor_chart = True
+                        chart.drive_pdf_url = drive_pdf_url
+                        chart.drive_file_id = file_id
+                        chart.drive_modified_time = drive_time
+                        chart.drive_imported_at = now
+                        chart.save()
+                    else:
+                        Chart.objects.create(
+                            song=song,
+                            is_conductor_chart=True,
                             part="",
                             drive_pdf_url=drive_pdf_url,
                             drive_file_id=file_id,
@@ -163,10 +183,13 @@ def review(request):
                     key_instrument_ids.add(inst.id)
                     key_instrument_names.append(inst.name)
 
-        tuple_charts = [
-            c for c in existing_charts
-            if matched_inst and c.instrument_id == matched_inst.id and (c.part or "") == part
-        ]
+        if resolved.is_conductor_chart:
+            tuple_charts = [c for c in existing_charts if c.is_conductor_chart]
+        else:
+            tuple_charts = [
+                c for c in existing_charts
+                if matched_inst and c.instrument_id == matched_inst.id and (c.part or "") == part
+            ]
         result = reconcile_file(drive_file, parsed, tuple_charts)
 
         rows.append({
@@ -179,6 +202,7 @@ def review(request):
             "existing_chart": result.existing_chart,
             "key_instrument_ids": key_instrument_ids,
             "key_instrument_names": key_instrument_names,
+            "is_conductor_chart": resolved.is_conductor_chart,
         })
 
     return render(request, "chart_import/review.html", {

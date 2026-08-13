@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Login Link — Blowcomotion{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5 text-center">
+            <h1 class="mb-4">Login link invalid or expired</h1>
+            <p class="text-muted mb-4">This login link is no longer valid. Links expire after 15 minutes and can only be used once. You can request a new one from the login page.</p>
+            <a href="{% url 'member-login' %}" class="site-btn">Back to login</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
