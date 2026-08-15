@@ -55,6 +55,7 @@ class Command(BaseCommand):
                 '--exclude', 'wagtailcore.taskstate',
                 '--exclude', 'wagtailcore.workflowstate',
                 '--exclude', 'wagtailcore.comment',
+                '--exclude', 'wagtailcore.commentreply',
                 # pagesubscription has a direct Page FK; exclude to avoid orphan crashes
                 '--exclude', 'wagtailcore.pagesubscription',
                 '--exclude', 'wagtailcore.groupcollectionpermission',
