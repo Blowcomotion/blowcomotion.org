@@ -616,6 +616,7 @@ class EquipmentFilterSet(WagtailFilterSet):
         fields = {
             'status': ['exact'],
             'storage_location': ['exact'],
+            'member': ['exact'],
         }
 
 
@@ -625,7 +626,7 @@ class EquipmentViewSet(SnippetViewSet):
     menu_name = 'equipment'
     menu_icon = 'folder-open-inverse'
     search_fields = ('name', 'serial_number', 'notes')
-    list_display = ['name', 'quantity', 'status', 'storage_location', UpdatedAtColumn()]
+    list_display = ['name', 'quantity', 'status', 'storage_location', 'member', UpdatedAtColumn()]
     filterset_class = None
     ordering = ['name']
     panels = [
@@ -633,6 +634,7 @@ class EquipmentViewSet(SnippetViewSet):
         'serial_number',
         FieldRowPanel(['quantity', 'status']),
         'storage_location',
+        'member',
         FieldRowPanel(['acquisition_cost', 'current_value', 'replacement_cost']),
         'notes',
         InlinePanel('photos', label="Photos"),
@@ -650,7 +652,7 @@ class EquipmentViewSet(SnippetViewSet):
         super().__init__(*args, **kwargs)
 
     def get_queryset(self, request):
-        return super().get_queryset(request) or self.model.objects.select_related('storage_location')
+        return super().get_queryset(request) or self.model.objects.select_related('storage_location', 'member')
 
 
 class AdminToolUsageFilterSet(WagtailFilterSet):
