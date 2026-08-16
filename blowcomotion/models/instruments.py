@@ -451,6 +451,14 @@ class Equipment(ClusterableModel):
         related_name="equipment",
         help_text="Where this item is stored (leave blank if location is unknown)",
     )
+    member = models.ForeignKey(
+        "blowcomotion.Member",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="assigned_equipment",
+        help_text="Member currently holding this item (leave blank if stored in a storage location)",
+    )
     acquisition_cost = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -481,6 +489,11 @@ class Equipment(ClusterableModel):
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        super().clean()
+        if self.member and self.storage_location:
+            raise ValidationError("An item cannot be assigned to a member and in a storage location at the same time. Please choose one or the other.")
 
     class Meta:
         ordering = ["name"]
