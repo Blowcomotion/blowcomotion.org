@@ -9,7 +9,7 @@ django-libsass==0.9
 django-livereload-server==0.5.1
 django-ratelimit
 queryish==0.3
-wagtail==7.4.2
+wagtail==7.4.3
 wagtailmedia==0.17.2
 wagtail-seo==3.1.1
 wagtailtwbsicons==1.0.1
