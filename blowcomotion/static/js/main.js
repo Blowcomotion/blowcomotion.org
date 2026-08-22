@@ -199,6 +199,8 @@
     // data-hero-header attribute (set in base.html, included in the
     // hx-select="main" fragment).
     document.body.addEventListener('htmx:afterSettle', function () {
+        $(".mobile-menu").slicknav("close");
+
         $(".header__menu a, .header__nav-auth-mobile a").each(function () {
             var linkPath = this.pathname;
             $(this).parent().toggleClass("active", linkPath === window.location.pathname);
