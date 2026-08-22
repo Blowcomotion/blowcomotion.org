@@ -3,6 +3,7 @@ import os
 import tempfile
 from datetime import date, timedelta
 from io import StringIO
+from types import SimpleNamespace
 
 from django import forms as django_forms
 from django.conf import settings
@@ -14,9 +15,11 @@ from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils import timezone
 
 from blowcomotion.models import (
+    Equipment,
     Instrument,
     InstrumentHistoryLog,
     InstrumentRentalNagLog,
@@ -93,31 +96,81 @@ def instrument_library_needs_repair(request):
 GALLERY_PAGE_SIZE = 24
 
 
-@permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
-def instrument_library_gallery(request):
-    instruments = (
-        LibraryInstrument.objects.select_related('instrument', 'member', 'storage_location')
-        .prefetch_related('photos__image')
-        .order_by('instrument__name', 'serial_number')
+def _gallery_item(*, item_type, name, serial_number, status_display, member, storage_location, photos, edit_url):
+    return SimpleNamespace(
+        item_type=item_type,
+        name=name,
+        serial_number=serial_number,
+        status_display=status_display,
+        member=member,
+        storage_location=storage_location,
+        photos=photos,
+        edit_url=edit_url,
     )
 
+
+@permission_required('blowcomotion.change_libraryinstrument', raise_exception=True)
+def instrument_library_gallery(request):
     status = request.GET.get('status', '')
     instrument_id = request.GET.get('instrument', '')
     storage_location_id = request.GET.get('storage_location', '')
+    item_type = request.GET.get('item_type', '')
     query = request.GET.get('q', '').strip()
 
-    if status:
-        instruments = instruments.filter(status=status)
-    if instrument_id.isdigit():
-        instruments = instruments.filter(instrument_id=instrument_id)
-    if storage_location_id.isdigit():
-        instruments = instruments.filter(storage_location_id=storage_location_id)
-    if query:
-        instruments = instruments.filter(
-            Q(serial_number__icontains=query) | Q(instrument__name__icontains=query)
+    items = []
+
+    if item_type != 'equipment':
+        instruments = LibraryInstrument.objects.select_related('instrument', 'member', 'storage_location').prefetch_related('photos__image')
+        if status:
+            instruments = instruments.filter(status=status)
+        if instrument_id.isdigit():
+            instruments = instruments.filter(instrument_id=instrument_id)
+        if storage_location_id.isdigit():
+            instruments = instruments.filter(storage_location_id=storage_location_id)
+        if query:
+            instruments = instruments.filter(
+                Q(serial_number__icontains=query) | Q(instrument__name__icontains=query)
+            )
+        items.extend(
+            _gallery_item(
+                item_type='instrument',
+                name=li.instrument.name,
+                serial_number=li.serial_number,
+                status_display=li.get_status_display(),
+                member=li.member,
+                storage_location=li.storage_location,
+                photos=list(li.photos.all()),
+                edit_url=reverse('wagtailsnippets_blowcomotion_libraryinstrument:edit', args=[li.pk]),
+            )
+            for li in instruments
         )
 
-    paginator = Paginator(instruments, GALLERY_PAGE_SIZE)
+    # A specific instrument filter only makes sense for LibraryInstrument rows.
+    if item_type != 'instrument' and not instrument_id:
+        equipment = Equipment.objects.select_related('member', 'storage_location').prefetch_related('photos__image')
+        if status:
+            equipment = equipment.filter(status=status)
+        if storage_location_id.isdigit():
+            equipment = equipment.filter(storage_location_id=storage_location_id)
+        if query:
+            equipment = equipment.filter(Q(serial_number__icontains=query) | Q(name__icontains=query))
+        items.extend(
+            _gallery_item(
+                item_type='equipment',
+                name=eq.name,
+                serial_number=eq.serial_number,
+                status_display=eq.get_status_display(),
+                member=eq.member,
+                storage_location=eq.storage_location,
+                photos=list(eq.photos.all()),
+                edit_url=reverse('wagtailsnippets_blowcomotion_equipment:edit', args=[eq.pk]),
+            )
+            for eq in equipment
+        )
+
+    items.sort(key=lambda item: (item.name, item.serial_number))
+
+    paginator = Paginator(items, GALLERY_PAGE_SIZE)
     page_obj = paginator.get_page(request.GET.get('page'))
 
     querystring = request.GET.copy()
@@ -126,18 +179,22 @@ def instrument_library_gallery(request):
     if querystring:
         querystring += '&'
 
+    status_choices = list(LibraryInstrument.STATUS_CHOICES)
+    status_choices += [c for c in Equipment.STATUS_CHOICES if c not in status_choices]
+
     return render(
         request,
         'wagtailadmin/instrument_library_gallery.html',
         {
-            'page_title': 'Instrument Gallery',
+            'page_title': 'Instrument & Equipment Gallery',
             'page_obj': page_obj,
-            'status_choices': LibraryInstrument.STATUS_CHOICES,
+            'status_choices': status_choices,
             'instrument_choices': Instrument.objects.order_by('name'),
             'storage_location_choices': InstrumentStorageLocation.objects.order_by('name'),
             'selected_status': status,
             'selected_instrument': instrument_id,
             'selected_storage_location': storage_location_id,
+            'selected_item_type': item_type,
             'query': query,
             'querystring': querystring,
         },

@@ -1,12 +1,15 @@
 {% extends "wagtailadmin/base.html" %}
 {% load wagtailimages_tags %}
-{% block titletag %}Instrument Gallery{% endblock %}
+{% block titletag %}Instrument & Equipment Gallery{% endblock %}
 {% block content %}
 <div class="nice-padding">
-    <h1>Instrument Gallery</h1>
-    <p>Browse every instrument in the library inventory with its photos. Use the filters below to narrow the list.</p>
+    <h1>Instrument & Equipment Gallery</h1>
+    <p>Browse every instrument and equipment item in the library inventory with its photos. Use the filters below to narrow the list.</p>
     {% if perms.blowcomotion.add_libraryinstrument %}
-    <p><a href="{% url 'wagtailsnippets_blowcomotion_libraryinstrument:add' %}" class="button bicolor button--icon"><span class="icon-wrapper"><svg class="icon icon-plus icon" aria-hidden="true"><use href="#icon-plus"></use></svg></span>Create New</a></p>
+    <p>
+        <a href="{% url 'wagtailsnippets_blowcomotion_libraryinstrument:add' %}" class="button bicolor button--icon"><span class="icon-wrapper"><svg class="icon icon-plus icon" aria-hidden="true"><use href="#icon-plus"></use></svg></span>Create New Instrument</a>
+        <a href="{% url 'wagtailsnippets_blowcomotion_equipment:add' %}" class="button bicolor button--icon"><span class="icon-wrapper"><svg class="icon icon-plus icon" aria-hidden="true"><use href="#icon-plus"></use></svg></span>Create New Equipment</a>
+    </p>
     {% endif %}
 
     <style>
@@ -83,6 +86,14 @@
 
     <form method="get" class="instrument-gallery-filters">
         <div>
+            <label for="id_item_type">Type</label>
+            <select name="item_type" id="id_item_type">
+                <option value="">All</option>
+                <option value="instrument"{% if selected_item_type == "instrument" %} selected{% endif %}>Instruments</option>
+                <option value="equipment"{% if selected_item_type == "equipment" %} selected{% endif %}>Equipment</option>
+            </select>
+        </div>
+        <div>
             <label for="id_status">Status</label>
             <select name="status" id="id_status">
                 <option value="">All</option>
@@ -121,17 +132,17 @@
 
     {% if page_obj %}
     <div class="instrument-gallery-grid">
-        {% for li in page_obj %}
+        {% for item in page_obj %}
         <div class="instrument-gallery-card">
-            {% with photos=li.photos.all %}
+            {% with photos=item.photos %}
             {% if photos %}
             {% image photos.0.image fill-300x300 as main_photo %}
-            <img class="instrument-gallery-photo-main" src="{{ main_photo.url }}" alt="{{ li.instrument.name }}">
+            <img class="instrument-gallery-photo-main" src="{{ main_photo.url }}" alt="{{ item.name }}">
             {% if photos|length > 1 %}
             <div class="instrument-gallery-thumbnails">
                 {% for photo in photos %}
                 {% image photo.image fill-100x100 as thumb %}
-                <img src="{{ thumb.url }}" alt="{{ li.instrument.name }} photo">
+                <img src="{{ thumb.url }}" alt="{{ item.name }} photo">
                 {% endfor %}
             </div>
             {% endif %}
@@ -139,15 +150,16 @@
             <div class="instrument-gallery-no-photo">No photo</div>
             {% endif %}
             {% endwith %}
-            <h3><a href="{% url 'wagtailsnippets_blowcomotion_libraryinstrument:edit' li.pk %}">{{ li.instrument.name }}</a></h3>
+            <h3><a href="{{ item.edit_url }}">{{ item.name }}</a></h3>
             <div class="instrument-gallery-meta">
-                <div>Serial: {{ li.serial_number }}</div>
-                <div>Status: {{ li.get_status_display }}</div>
-                {% if li.member %}
-                <div>Member: {{ li.member }}</div>
+                <div>Type: {{ item.item_type|title }}</div>
+                <div>Serial: {{ item.serial_number }}</div>
+                <div>Status: {{ item.status_display }}</div>
+                {% if item.member %}
+                <div>Member: {{ item.member }}</div>
                 {% endif %}
-                {% if li.storage_location %}
-                <div>Location: {{ li.storage_location }}</div>
+                {% if item.storage_location %}
+                <div>Location: {{ item.storage_location }}</div>
                 {% endif %}
             </div>
         </div>
