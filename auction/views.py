@@ -183,7 +183,11 @@ def manage(request):
     auctions = Auction.objects.prefetch_related(
         "items__winning_bid__bidder", "items__backup_bid__bidder", "items__bids"
     )
-    return render(request, "auction/manage.html", {"auctions": auctions})
+    return render(
+        request,
+        "auction/manage.html",
+        {"auctions": auctions, "meta_description": "Manage auction items, bids, and winners."},
+    )
 
 
 @login_required
