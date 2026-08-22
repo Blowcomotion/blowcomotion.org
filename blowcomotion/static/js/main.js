@@ -25,8 +25,22 @@
 	--------------------*/
     $(".mobile-menu").slicknav({
         prependTo: '#mobile-menu-wrap',
-        allowParentLinks: true
+        allowParentLinks: true,
+        // With the default nestedParentLinks:true, a menu item that has
+        // both its own page link and a submenu (e.g. Donate) gets nested
+        // <a> tags, and slicknav attaches a stopImmediatePropagation
+        // click handler to every such nested link - which fires before
+        // (and blocks) htmx's boost handler added below. Keeping the
+        // parent link and the toggle arrow as separate elements avoids
+        // both the invalid nested anchors and that handler.
+        nestedParentLinks: false
     });
+
+    // slicknav clones the nav into #mobile-menu-wrap for the hamburger
+    // menu; htmx only attaches boost listeners to elements present when
+    // it scans the DOM, so the clone needs an explicit process call to
+    // pick up hx-boost from the surrounding <header>.
+    htmx.process(document.getElementById('mobile-menu-wrap'));
 
     /*------------------------------------------------------------
         Content widgets: everything below targets elements that
