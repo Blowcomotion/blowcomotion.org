@@ -4,7 +4,12 @@
   <h1>Auction management</h1>
   {% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}
   {% for auction in auctions %}
-  <h2>{{ auction.name }}</h2>
+  {% with auction_page=auction.get_page %}
+  <div class="d-flex justify-content-between align-items-center">
+    <h2>{{ auction.name }}</h2>
+    {% if auction_page %}<a href="{{ auction_page.url }}" class="site-btn site-btn--small" hx-boost="true" hx-target="main" hx-select="main" hx-swap="innerHTML show:window:top">Back to auction page</a>{% endif %}
+  </div>
+  {% endwith %}
   <div class="table-responsive"><table class="table">
     <thead><tr><th>Item</th><th>Bids</th><th>Winner</th><th>Backup</th><th></th></tr></thead>
     <tbody>

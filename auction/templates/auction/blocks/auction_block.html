@@ -2,7 +2,10 @@
   {% if value.auction %}
   {% if value.intro %}<div class="mb-3">{{ value.intro }}</div>{% endif %}
   <div class="d-flex justify-content-end mb-2">
-    <button type="button" class="site-btn"
+    {% if perms.auction.change_auctionitem %}
+    <a href="{% url 'auction-manage' %}" class="site-btn site-btn--small mr-2" hx-boost="true" hx-target="main" hx-select="main" hx-swap="innerHTML show:window:top">Manage auction</a>
+    {% endif %}
+    <button type="button" class="site-btn site-btn--small"
             onclick="htmx.trigger('#auction-grid-{{ value.auction.pk }}', 'refreshAuction')">
       Refresh now
     </button>
