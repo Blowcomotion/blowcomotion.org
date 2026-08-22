@@ -69,4 +69,20 @@
     {% else %}
         <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
     {% endif %}
+
+    {% if 'admin' not in request.path and not request.is_preview %}
+    <script type="speculationrules">
+        {
+            "prerender": [{
+                "where": {
+                    "and": [
+                        {"href_matches": "/*"},
+                        {"not": {"href_matches": ["/member/login/*", "/member/logout/*", "/process-form/*"]}}
+                    ]
+                },
+                "eagerness": "moderate"
+            }]
+        }
+    </script>
+    {% endif %}
 </head>
