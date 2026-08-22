@@ -25,12 +25,40 @@
         $btn.prop('disabled', false);
     }
 
+    // Boosted navigation (header nav, member portal sidebar) swaps whole
+    // pages into <main> after this script's $(document).ready has already
+    // run, so any binding here needs to reach forms that don't exist yet.
+    // Delegating to $(document) covers those without re-binding on every swap.
+    var PLAIN_FORM_SELECTOR = FORM_SELECTOR.split(', ').map(function (sel) {
+        return sel + ':not([hx-post])';
+    }).join(', ');
+
+    function initRecaptchaUi(root) {
+        // reCAPTCHA disclosure notice (required when hiding the badge)
+        $(FORM_SELECTOR, root).each(function() {
+            var $form = $(this);
+            if ($form.find('.recaptcha-notice').length === 0) {
+                $form.append('<div class="recaptcha-notice" style="display: block; width: 100%; font-size: 0.75rem; color: #888; margin-top: 0.5rem; text-align: center;">This site is protected by reCAPTCHA.</div>');
+            }
+        });
+
+        if (typeof grecaptcha === 'undefined' || !window.RECAPTCHA_SITE_KEY) return;
+
+        // Add hidden token inputs to all reCAPTCHA-protected forms
+        $(FORM_SELECTOR, root).each(function() {
+            var $form = $(this);
+            if ($form.find('input[name="g-recaptcha-response"]').length === 0) {
+                $form.append('<input type="hidden" name="g-recaptcha-response" class="recaptcha-token" value="">');
+            }
+        });
+    }
+
     $(document).ready(function() {
         // Plain (non-HTMX) forms: the browser navigates away on submit, so
-        // only disabling is needed. Bound directly (matching how the
-        // reCAPTCHA handler below binds) and registered first, so it runs
-        // before that handler's `return false` can stop propagation.
-        $(FORM_SELECTOR).not('[hx-post]').on('submit', function() {
+        // only disabling is needed. Delegated (matching how the reCAPTCHA
+        // handler below binds) and registered first, so it runs before
+        // that handler's `return false` can stop propagation.
+        $(document).on('submit', PLAIN_FORM_SELECTOR, function() {
             markSubmitting($(this));
         });
 
@@ -51,25 +79,18 @@
             clearSubmitting($(form));
         });
 
-        // reCAPTCHA disclosure notice (required when hiding the badge)
-        $('form[hx-post*="process-form"], form[action*="process-form"], form#member-form, form[data-recaptcha]').each(function() {
-            var $form = $(this);
-            if ($form.find('.recaptcha-notice').length === 0) {
-                $form.append('<div class="recaptcha-notice" style="display: block; width: 100%; font-size: 0.75rem; color: #888; margin-top: 0.5rem; text-align: center;">This site is protected by reCAPTCHA.</div>');
-            }
+        initRecaptchaUi(document);
+
+        // Boosted navigation swaps a fresh page into <main> without a
+        // document.ready, so re-run the notice/token-input setup for
+        // whatever just landed there.
+        document.body.addEventListener('htmx:afterSwap', function(event) {
+            initRecaptchaUi(event.detail.target);
         });
 
         // reCAPTCHA v3 token injection and form handling
         if (typeof grecaptcha !== 'undefined' && window.RECAPTCHA_SITE_KEY) {
 
-            // Add hidden token inputs to all reCAPTCHA-protected forms
-            $('form[hx-post*="process-form"], form[action*="process-form"], form#member-form, form[data-recaptcha]').each(function() {
-                var $form = $(this);
-                if ($form.find('input[name="g-recaptcha-response"]').length === 0) {
-                    $form.append('<input type="hidden" name="g-recaptcha-response" class="recaptcha-token" value="">');
-                }
-            });
-            
             // Handle HTMX form submissions
             // Use htmx:beforeRequest to cancel request if no token, fetch token, then retry
             document.body.addEventListener('htmx:beforeRequest', function(event) {
@@ -129,10 +150,10 @@
             });
             
             // Pre-fetch reCAPTCHA token on form focus for faster submission
-            $('form[hx-post*="process-form"]').on('focusin', function() {
+            $(document).on('focusin', 'form[hx-post*="process-form"]', function() {
                 var $form = $(this);
                 var $tokenInput = $form.find('input[name="g-recaptcha-response"]');
-                
+
                 // Only fetch if we don't have a token yet
                 if ($tokenInput.length && !$tokenInput.val()) {
                     grecaptcha.ready(function() {
@@ -143,9 +164,9 @@
                     });
                 }
             });
-            
+
             // Handle regular (non-HTMX) form submissions
-            $('form[action*="process-form"], form#member-form, form[data-recaptcha]').not('[hx-post]').on('submit', function(event) {
+            $(document).on('submit', PLAIN_FORM_SELECTOR, function(event) {
                 var $form = $(this);
                 var $tokenInput = $form.find('input[name="g-recaptcha-response"]');
                 
@@ -175,12 +196,15 @@
                     grecaptcha.execute(window.RECAPTCHA_SITE_KEY, {action: 'submit'}).then(function(token) {
                         $tokenInput.val(token);
                         $tokenInput.attr('data-token-time', Date.now().toString());
-                        // Submit the form
-                        $form.off('submit').submit();
+                        // Native submit() doesn't fire the 'submit' event, so it
+                        // can't re-enter this delegated handler (unlike jQuery's
+                        // .submit(), which would loop since .off() can't remove
+                        // a document-level delegated handler from this element).
+                        $form[0].submit();
                     }).catch(function(error) {
                         console.error('reCAPTCHA error:', error);
                         // Allow form to submit anyway - server will handle validation
-                        $form.off('submit').submit();
+                        $form[0].submit();
                     });
                 });
                 

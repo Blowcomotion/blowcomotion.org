@@ -528,6 +528,7 @@ def attendance_view(request):
         "member": member,
         "stats": stats,
         "page_obj": page_obj,
+        "include_form_js": True,
     })
 
 
