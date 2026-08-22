@@ -8,7 +8,12 @@ from django.contrib.auth.models import ContentType, Permission, User
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from blowcomotion.models import Instrument, LibraryInstrument, LibraryInstrumentPhoto
+from blowcomotion.models import (
+    Equipment,
+    Instrument,
+    LibraryInstrument,
+    LibraryInstrumentPhoto,
+)
 
 Image = get_image_model()
 
@@ -21,6 +26,10 @@ def make_library_instrument(instrument, status=LibraryInstrument.STATUS_AVAILABL
     return LibraryInstrument.objects.create(
         instrument=instrument, serial_number=serial, status=status
     )
+
+
+def make_equipment(name="Canopy", status=Equipment.STATUS_AVAILABLE, serial="EQ001"):
+    return Equipment.objects.create(name=name, serial_number=serial, status=status)
 
 
 class InstrumentLibraryGalleryTests(TestCase):
@@ -148,3 +157,48 @@ class InstrumentLibraryGalleryTests(TestCase):
         self.assertNotContains(response, "OTHER001")
         # the filter must be preserved in the pagination links on page 2
         self.assertContains(response, "q=MATCH")
+
+    def test_equipment_appears_alongside_instruments_by_default(self):
+        instrument = make_instrument()
+        make_library_instrument(instrument, serial="SN00001")
+        make_equipment(serial="EQ00001")
+
+        self.client.login(username='librarian', password='pw')
+        response = self.client.get(reverse('instrument_library_gallery'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "SN00001")
+        self.assertContains(response, "EQ00001")
+        self.assertContains(response, reverse('wagtailsnippets_blowcomotion_equipment:edit', args=[Equipment.objects.get(serial_number="EQ00001").pk]))
+
+    def test_item_type_filter_equipment_excludes_instruments(self):
+        instrument = make_instrument()
+        make_library_instrument(instrument, serial="SN00002")
+        make_equipment(serial="EQ00002")
+
+        self.client.login(username='librarian', password='pw')
+        response = self.client.get(reverse('instrument_library_gallery'), {'item_type': 'equipment'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "EQ00002")
+        self.assertNotContains(response, "SN00002")
+
+    def test_item_type_filter_instrument_excludes_equipment(self):
+        instrument = make_instrument()
+        make_library_instrument(instrument, serial="SN00003")
+        make_equipment(serial="EQ00003")
+
+        self.client.login(username='librarian', password='pw')
+        response = self.client.get(reverse('instrument_library_gallery'), {'item_type': 'instrument'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "SN00003")
+        self.assertNotContains(response, "EQ00003")
+
+    def test_specific_instrument_filter_excludes_equipment(self):
+        instrument = make_instrument()
+        make_library_instrument(instrument, serial="SN00004")
+        make_equipment(serial="EQ00004")
+
+        self.client.login(username='librarian', password='pw')
+        response = self.client.get(reverse('instrument_library_gallery'), {'instrument': instrument.pk})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "SN00004")
+        self.assertNotContains(response, "EQ00004")
