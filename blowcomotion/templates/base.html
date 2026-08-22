@@ -33,7 +33,7 @@
 
         {% include "header.html" with request=request %}
 
-        <main>
+        <main hx-history-elt>
             <span id="page-meta" hidden data-hero-header="{{ hero_header|yesno:'true,false' }}"></span>
             {% block content %}
             {% endblock %}
