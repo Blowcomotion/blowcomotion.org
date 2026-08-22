@@ -199,6 +199,31 @@
         });
     });
 
+    // The Wagtail userbar (editors/staff only) lives outside <main> and is
+    // only ever rendered once, on the initial full page load - so its
+    // "Edit this page" / "Add child page" links stay pointed at whatever
+    // page was loaded first, even after boosted navigation to other pages.
+    // evt.detail.serverResponse is the *unfiltered* HTML htmx just fetched
+    // for the next page (hx-select trims it down to <main> afterwards), so
+    // pull that page's fresh userbar template out of it and reconnect the
+    // <wagtail-userbar> custom element, which rebuilds itself from whatever
+    // template is present at connect time. Re-running userbar.js itself
+    // (e.g. by swapping it into main) isn't an option: it calls
+    // customElements.define(), which throws if invoked a second time.
+    document.body.addEventListener('htmx:beforeSwap', function (evt) {
+        var oldUserbar = document.querySelector('wagtail-userbar');
+        if (!oldUserbar || !evt.detail.serverResponse) {
+            return;
+        }
+        var freshDoc = new DOMParser().parseFromString(evt.detail.serverResponse, 'text/html');
+        var freshTemplate = freshDoc.getElementById('wagtail-userbar-template');
+        if (!freshTemplate) {
+            return;
+        }
+        oldUserbar.parentNode.insertBefore(document.importNode(freshTemplate, true), oldUserbar);
+        oldUserbar.replaceWith(document.createElement('wagtail-userbar'));
+    });
+
     // Re-run content widget init for the freshly-swapped <main> after
     // an htmx-boosted navigation (header/footer are never swapped, so
     // they're intentionally excluded from this by scoping to evt.detail.target).
