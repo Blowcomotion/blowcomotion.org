@@ -206,6 +206,16 @@
 
         var isHeroHeader = $("#page-meta").data("hero-header") === true;
         $("header").toggleClass("header--normal", !isHeroHeader);
+
+        // Boosted navigations swap <main> via AJAX, so gtag's automatic
+        // page_view (sent once from head.html on the initial full load)
+        // never re-fires. Send it manually so GA still sees these views.
+        if (typeof gtag === "function") {
+            gtag("event", "page_view", {
+                page_location: window.location.href,
+                page_title: document.title
+            });
+        }
     });
 
     /*------------------
