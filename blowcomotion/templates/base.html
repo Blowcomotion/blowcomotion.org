@@ -13,7 +13,7 @@
     </title>
     {% include "head.html" %}
 
-    <body class="{% block body_class %}{% endblock %}" hx-target="main" hx-select="main" hx-swap="innerHTML show:window:top">
+    <body class="{% block body_class %}{% endblock %}">
         {% wagtailuserbar %}
 
         {% if debug %}
