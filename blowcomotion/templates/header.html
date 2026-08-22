@@ -1,5 +1,5 @@
 {% load wagtailimages_tags wagtailcore_tags %}
-<header class="header{% if not hero_header %} header--normal{% endif %}">
+<header class="header{% if not hero_header %} header--normal{% endif %}" hx-boost="true">
     <div class="container">
         <div class="row">
             <div class="col-lg-2 col-md-2">
@@ -56,7 +56,7 @@
                             {% if not request.user.is_staff or request.user.member %}
                                 <a href="{% url 'member-profile' %}" class="header__auth-link">My Profile</a>
                                 <span class="header__auth-sep">|</span>
-                                <form method="post" action="{% url 'member-logout' %}" style="display:inline;">
+                                <form method="post" action="{% url 'member-logout' %}" style="display:inline;" hx-boost="false">
                                     {% csrf_token %}
                                     <button type="submit" class="header__auth-logout">Log Out</button>
                                 </form>

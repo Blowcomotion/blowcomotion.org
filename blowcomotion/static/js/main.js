@@ -20,129 +20,178 @@
     });
 
     /*------------------
-        Background Set
-    --------------------*/
-    $('.set-bg').each(function () {
-        var bg = $(this).data('setbg');
-        $(this).css('background-image', 'url(' + bg + ')');
-    });
-
-    /*------------------
-		Navigation
+		Navigation (header chrome - initialized once, never re-run,
+		since htmx boost never swaps the header)
 	--------------------*/
     $(".mobile-menu").slicknav({
         prependTo: '#mobile-menu-wrap',
         allowParentLinks: true
     });
-    
-    /*--------------------------
-        Event Slider
-    ----------------------------*/
-    $(".event__slider").owlCarousel({
-        loop: true,
-        margin: 0,
-        items: 3,
-        dots: false,
-        nav: true,
-        navText: ["<i class='fa fa-angle-left' aria-hidden='true'></i>","<i class='fa fa-angle-right' aria-hidden='true'></i>"],
-        smartSpeed: 1200,
-        autoHeight: false,
-        autoplay: true,
-        responsive: {
-            992: {
-                items: 3,
-            },
-            768: {
-                items: 2,
-            },
-            0: {
-                items: 1,
-            },
-        }
-    });
-    $(".event__slider .owl-prev").attr("aria-label", "Previous");
-    $(".event__slider .owl-next").attr("aria-label", "Next");
-    
-    /*--------------------------
-        Videos Slider
-    ----------------------------*/
-    $(".videos__slider").owlCarousel({
-        loop: true,
-        margin: 0,
-        items: 4,
-        dots: false,
-        nav: true,
-        navText: ["<i class='fa fa-angle-left' aria-hidden='true'></i>","<i class='fa fa-angle-right' aria-hidden='true'></i>"],
-        smartSpeed: 1200,
-        autoHeight: false,
-        autoplay: true,
-        responsive: {
-            992: {
-                items: 4,
-            },
-            768: {
-                items: 3,
-            },
-            576: {
-                items: 2,
-            },
-            0: {
-                items: 1,
-            }
-        }
-    });
-    $(".videos__slider .owl-prev").attr("aria-label", "Previous");
-    $(".videos__slider .owl-next").attr("aria-label", "Next");
 
-    /*--------------------------
-        Image Carousel Slider
-    ----------------------------*/
-    $(".images__slider").each(function() {
-        var $slider = $(this);
-        var autoplay = $slider.data('autoplay') === 'true' || $slider.data('autoplay') === true;
-        var autoplaySpeed = $slider.data('autoplay-speed') || 3000;
-        var showDots = $slider.data('show-dots') === 'true' || $slider.data('show-dots') === true;
-        var slidesToShow = parseInt($slider.data('slides-to-show')) || 4;
-        
-        var owlConfig = {
+    /*------------------------------------------------------------
+        Content widgets: everything below targets elements that
+        live inside <main>, which htmx boost replaces on navigation
+        (see js.html). Re-run scoped to the swapped-in content so
+        these keep working after a boosted navigation, and scoped
+        to `context` so header/footer elements are never touched.
+    ------------------------------------------------------------*/
+    function initContentWidgets(context) {
+        context = context || document;
+
+        /*------------------
+            Background Set
+        --------------------*/
+        $('.set-bg', context).each(function () {
+            var bg = $(this).data('setbg');
+            $(this).css('background-image', 'url(' + bg + ')');
+        });
+
+        /*--------------------------
+            Event Slider
+        ----------------------------*/
+        $(".event__slider", context).owlCarousel({
             loop: true,
-            margin: 10,
-            items: slidesToShow,
-            dots: showDots,
-            dotsEach: false,
+            margin: 0,
+            items: 3,
+            dots: false,
             nav: true,
             navText: ["<i class='fa fa-angle-left' aria-hidden='true'></i>","<i class='fa fa-angle-right' aria-hidden='true'></i>"],
             smartSpeed: 1200,
             autoHeight: false,
-            autoplay: autoplay,
-            autoplayTimeout: autoplaySpeed,
-            autoplayHoverPause: true,
+            autoplay: true,
             responsive: {
                 992: {
-                    items: slidesToShow,
-                    dots: showDots
+                    items: 3,
                 },
                 768: {
-                    items: Math.min(3, slidesToShow),
-                    dots: showDots
-                },
-                576: {
-                    items: Math.min(2, slidesToShow),
-                    dots: showDots
+                    items: 2,
                 },
                 0: {
                     items: 1,
-                    dots: showDots
+                },
+            }
+        });
+        $(".event__slider .owl-prev", context).attr("aria-label", "Previous");
+        $(".event__slider .owl-next", context).attr("aria-label", "Next");
+
+        /*--------------------------
+            Videos Slider
+        ----------------------------*/
+        $(".videos__slider", context).owlCarousel({
+            loop: true,
+            margin: 0,
+            items: 4,
+            dots: false,
+            nav: true,
+            navText: ["<i class='fa fa-angle-left' aria-hidden='true'></i>","<i class='fa fa-angle-right' aria-hidden='true'></i>"],
+            smartSpeed: 1200,
+            autoHeight: false,
+            autoplay: true,
+            responsive: {
+                992: {
+                    items: 4,
+                },
+                768: {
+                    items: 3,
+                },
+                576: {
+                    items: 2,
+                },
+                0: {
+                    items: 1,
                 }
             }
-        };
-        
-        $slider.owlCarousel(owlConfig);
-        $slider.find(".owl-prev").attr("aria-label", "Previous");
-        $slider.find(".owl-next").attr("aria-label", "Next");
-        $slider.find(".owl-dot").each(function(i) {
-            $(this).attr("aria-label", "Slide " + (i + 1));
         });
+        $(".videos__slider .owl-prev", context).attr("aria-label", "Previous");
+        $(".videos__slider .owl-next", context).attr("aria-label", "Next");
+
+        /*--------------------------
+            Image Carousel Slider
+        ----------------------------*/
+        $(".images__slider", context).each(function() {
+            var $slider = $(this);
+            var autoplay = $slider.data('autoplay') === 'true' || $slider.data('autoplay') === true;
+            var autoplaySpeed = $slider.data('autoplay-speed') || 3000;
+            var showDots = $slider.data('show-dots') === 'true' || $slider.data('show-dots') === true;
+            var slidesToShow = parseInt($slider.data('slides-to-show')) || 4;
+
+            var owlConfig = {
+                loop: true,
+                margin: 10,
+                items: slidesToShow,
+                dots: showDots,
+                dotsEach: false,
+                nav: true,
+                navText: ["<i class='fa fa-angle-left' aria-hidden='true'></i>","<i class='fa fa-angle-right' aria-hidden='true'></i>"],
+                smartSpeed: 1200,
+                autoHeight: false,
+                autoplay: autoplay,
+                autoplayTimeout: autoplaySpeed,
+                autoplayHoverPause: true,
+                responsive: {
+                    992: {
+                        items: slidesToShow,
+                        dots: showDots
+                    },
+                    768: {
+                        items: Math.min(3, slidesToShow),
+                        dots: showDots
+                    },
+                    576: {
+                        items: Math.min(2, slidesToShow),
+                        dots: showDots
+                    },
+                    0: {
+                        items: 1,
+                        dots: showDots
+                    }
+                }
+            };
+
+            $slider.owlCarousel(owlConfig);
+            $slider.find(".owl-prev").attr("aria-label", "Previous");
+            $slider.find(".owl-next").attr("aria-label", "Next");
+            $slider.find(".owl-dot").each(function(i) {
+                $(this).attr("aria-label", "Slide " + (i + 1));
+            });
+        });
+
+        /*-------------------
+            Nice Scroll (jukebox track list)
+        --------------------- */
+        $(".nice-scroll", context).niceScroll({
+            cursorcolor: "#111111",
+            cursorwidth: "5px",
+            background: "#e1e1e1",
+            cursorborder: "",
+            autohidemode: false,
+            horizrailenabled: false
+        });
+    }
+
+    initContentWidgets(document);
+
+    // Re-run content widget init for the freshly-swapped <main> after
+    // an htmx-boosted navigation (header/footer are never swapped, so
+    // they're intentionally excluded from this by scoping to evt.detail.elt).
+    document.body.addEventListener('htmx:afterSwap', function (evt) {
+        initContentWidgets(evt.detail.target);
+    });
+
+    // Header nav "active" highlighting and the hero/normal header style are
+    // rendered server-side from request.path / hero_header, but boosted
+    // navigations never re-render the header. Recompute both client-side
+    // after each boosted swap, reading the new page's state off <main>'s
+    // data-hero-header attribute (set in base.html, included in the
+    // hx-select="main" fragment).
+    document.body.addEventListener('htmx:afterSettle', function () {
+        $(".header__menu a, .header__nav-auth-mobile a").each(function () {
+            var linkPath = this.pathname;
+            $(this).parent().toggleClass("active", linkPath === window.location.pathname);
+        });
+
+        var isHeroHeader = $("#page-meta").data("hero-header") === true;
+        $("header").toggleClass("header--normal", !isHeroHeader);
     });
 
     /*------------------
@@ -271,7 +320,7 @@
     /*------------------
 		Video Popup Modal
 	--------------------*/
-    $('.video-popup-trigger').on('click', function(e) {
+    $(document).on('click', '.video-popup-trigger', function(e) {
         e.preventDefault();
         
         var videoUrl = $(this).data('video-url');
@@ -334,18 +383,6 @@
 
     $('#bar3').barfiller({
         barColor: "#ffffff",
-    });
-
-    /*-------------------
-		Nice Scroll
-	--------------------- */
-    $(".nice-scroll").niceScroll({
-        cursorcolor: "#111111",
-        cursorwidth: "5px",
-        background: "#e1e1e1",
-        cursorborder: "",
-        autohidemode: false,
-        horizrailenabled: false
     });
 
 })(jQuery);

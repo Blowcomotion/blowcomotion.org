@@ -13,7 +13,7 @@
     </title>
     {% include "head.html" %}
 
-    <body class="{% block body_class %}{% endblock %}">
+    <body class="{% block body_class %}{% endblock %}" hx-target="main" hx-select="main" hx-swap="innerHTML show:window:top">
         {% wagtailuserbar %}
 
         {% if debug %}
@@ -34,6 +34,7 @@
         {% include "header.html" with request=request %}
 
         <main>
+            <span id="page-meta" hidden data-hero-header="{{ hero_header|yesno:'true,false' }}"></span>
             {% block content %}
             {% endblock %}
         </main>
