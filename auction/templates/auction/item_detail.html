@@ -4,7 +4,7 @@
 <div class="container py-4">
   {% with auction_page=auction.get_page %}
   {% if auction_page %}
-  <nav aria-label="breadcrumb">
+  <nav aria-label="breadcrumb" hx-boost="true" hx-target="main" hx-select="main" hx-swap="innerHTML show:window:top">
     <ol class="breadcrumb">
       <li class="breadcrumb-item"><a href="{{ auction_page.url }}">{{ auction.name }}</a></li>
       <li class="breadcrumb-item active" aria-current="page">#{{ item.number }} {{ item.title }}</li>

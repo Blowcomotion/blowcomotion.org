@@ -13,7 +13,7 @@
           Current: ${{ item.top_bid.amount|default:item.starting_bid }}<br>
           <small>{{ item.bids.count }} bid{{ item.bids.count|pluralize }} — closes {{ item.effective_close_time|date:"M j, g:i A" }}</small>
         </p>
-        <a class="site-btn" href="{% url 'auction-item-detail' auction.pk item.number %}">View &amp; bid</a>
+        <a class="site-btn" href="{% url 'auction-item-detail' auction.pk item.number %}" hx-boost="true" hx-target="main" hx-select="main" hx-swap="innerHTML show:window:top">View &amp; bid</a>
       </div>
     </div>
   </div>
@@ -27,7 +27,7 @@
   <li>
     #{{ item.number }} {{ item.title }} —
     {% if item.winning_bid %}won by {{ item.winning_bid.bidder.display_name }} (${{ item.winning_bid.amount }}){% else %}no bids{% endif %}
-    <a href="{% url 'auction-item-detail' auction.pk item.number %}">details</a>
+    <a href="{% url 'auction-item-detail' auction.pk item.number %}" hx-boost="true" hx-target="main" hx-select="main" hx-swap="innerHTML show:window:top">details</a>
   </li>
   {% endfor %}
 </ul>
