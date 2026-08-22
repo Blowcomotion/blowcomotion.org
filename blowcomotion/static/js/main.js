@@ -171,9 +171,23 @@
 
     initContentWidgets(document);
 
+    // niceScroll injects its own rail/cursor <div>s next to the elements it
+    // scrolls. Since htmx only replaces <main>'s innerHTML, those injected
+    // nodes are never automatically cleaned up when the old content goes
+    // away - destroy them explicitly before the swap, or they linger on
+    // the page after navigating away (e.g. leaving the jukebox block).
+    document.body.addEventListener('htmx:beforeSwap', function (evt) {
+        $(".nice-scroll", evt.detail.target).each(function () {
+            var instance = $(this).getNiceScroll();
+            if (instance) {
+                instance.remove();
+            }
+        });
+    });
+
     // Re-run content widget init for the freshly-swapped <main> after
     // an htmx-boosted navigation (header/footer are never swapped, so
-    // they're intentionally excluded from this by scoping to evt.detail.elt).
+    // they're intentionally excluded from this by scoping to evt.detail.target).
     document.body.addEventListener('htmx:afterSwap', function (evt) {
         initContentWidgets(evt.detail.target);
     });
