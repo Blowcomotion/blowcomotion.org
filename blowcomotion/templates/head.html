@@ -5,6 +5,8 @@
     <meta name="description" content="{{ meta_description }}" />
     {% elif page.search_description %}
     <meta name="description" content="{{ page.search_description }}" />
+    {% elif page.title %}
+    <meta name="description" content="{{ page.title }}" />
     {% endif %}
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     {% include "wagtailseo/meta.html" %}
