@@ -1,138 +1,147 @@
-{% extends "wagtailadmin/base.html" %}
-{% load i18n %}
+{% extends "base.html" %}
 
-{% block titletag %}Review Charts — {{ folder_name }}{% endblock %}
+{% block title %}Review Charts — {{ folder_name }}{% endblock %}
 
 {% block content %}
-<div class="nice-padding">
-    <nav style="font-size:.9em;margin-bottom:.75rem;opacity:.7">
-        <a href="{% url 'chart_import_picker' %}">Import Charts</a> / Review
+<style>.chart-import .form-check-input { width: 1.25rem; height: 1.25rem }</style>
+<div class="container py-4 chart-import">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb bg-transparent px-0">
+            <li class="breadcrumb-item"><a href="{% url 'chart_import_picker' %}">Import Charts</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Review</li>
+        </ol>
     </nav>
-    <h1 style="display:flex;align-items:center;gap:.5rem">
-        Review Charts
-        <span class="rc-help">
-            <button type="button" class="rc-help__btn" aria-label="How this works">?</button>
-            <span class="rc-help__tip" role="tooltip">
-                <strong>Status badges</strong> — how the file was matched to an existing chart:
-                <ul>
-                    <li><span class="tag tag--teal">Exact</span> Same Drive file ID, file has changed — will replace the existing PDF.</li>
-                    <li><span class="tag tag--primary">High</span> No stored file ID but one chart matches this instrument/part — likely a re-export.</li>
-                    <li><span class="tag tag--warning">Needs review</span> Multiple files map to the same instrument/part — pick the right one.</li>
-                    <li><span class="tag tag--salmon">New</span> No existing chart found — will create a new one.</li>
-                </ul>
-                <strong>Instrument confidence icons</strong> — how certain the parser is:
-                <ul>
-                    <li><span style="color:green;font-weight:bold">✓</span> High confidence — matched exactly or via known alias.</li>
-                    <li><span style="color:#c4780a;font-weight:bold">⚠</span> Ambiguous — choose from the dropdown.</li>
-                    <li><span style="color:#c0392b;font-weight:bold">?</span> Low confidence — review and correct before importing.</li>
-                    <li><strong>Conductor Score</strong> — full score/conductor chart. Uncheck the checkbox to assign a specific instrument instead.</li>
-                </ul>
-                <strong>Part field</strong> — leave blank for single-part charts. Use <em>1st Trumpet</em>, <em>2nd Trumpet</em> etc. for multi-part.<br><br>
-                <strong>Action column</strong> — <em>new</em> creates a chart record; <em>update</em> replaces the Drive URL on an existing one. Uncheck any row to skip it.<br><br>
-                <strong>Multi button</strong> — switch a row to a multi-instrument selector when one PDF covers multiple instruments. Each checked instrument gets its own chart record.
-            </span>
-        </span>
-    </h1>
+
+    <h1 class="h2 mb-3">Review Charts</h1>
+
+    {% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}
+
+    <details class="mb-4">
+        <summary class="font-weight-bold" style="cursor:pointer">How this works</summary>
+        <div class="mt-2 p-3 border-left border-secondary">
+            <p class="font-weight-bold mb-1">Status badges &mdash; how the file was matched to an existing chart:</p>
+            <ul>
+                <li><span class="badge badge-info">Exact</span> Same Drive file ID, file has changed &mdash; will replace the existing PDF.</li>
+                <li><span class="badge badge-primary">High</span> No stored file ID but one chart matches this instrument/part &mdash; likely a re-export.</li>
+                <li><span class="badge badge-warning">Needs review</span> Multiple files map to the same instrument/part &mdash; pick the right one.</li>
+                <li><span class="badge badge-danger">New</span> No existing chart found &mdash; will create a new one.</li>
+            </ul>
+            <p class="font-weight-bold mb-1">Instrument confidence icons &mdash; how certain the parser is:</p>
+            <ul>
+                <li><span class="text-success font-weight-bold">&#10003;</span> High confidence &mdash; matched exactly or via known alias.</li>
+                <li><span class="text-warning font-weight-bold">&#9888;</span> Ambiguous &mdash; choose from the dropdown.</li>
+                <li><span class="text-danger font-weight-bold">?</span> Low confidence &mdash; review and correct before importing.</li>
+                <li><strong>Conductor Score</strong> &mdash; full score/conductor chart. Uncheck the checkbox to assign a specific instrument instead.</li>
+            </ul>
+            <p><strong>Part field</strong> &mdash; leave blank for single-part charts. Use <em>1st Trumpet</em>, <em>2nd Trumpet</em> etc. for multi-part.</p>
+            <p><strong>Action</strong> &mdash; <em>will create</em> makes a new chart record; <em>will update</em> replaces the Drive URL on an existing one. Uncheck any card to skip it.</p>
+            <p class="mb-0"><strong>Multi button</strong> &mdash; switch a file to a multi-instrument selector when one PDF covers multiple instruments. Each checked instrument gets its own chart record.</p>
+        </div>
+    </details>
+
     <form method="post">
         {% csrf_token %}
         <input type="hidden" name="folder_id" value="{{ folder_id }}">
         <input type="hidden" name="folder_name" value="{{ folder_name }}">
 
-        <div style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;margin-bottom:1.25rem;padding:.875rem 1rem;background:rgba(128,128,128,.07);border:1px solid rgba(128,128,128,.2);border-radius:4px">
-            <div>
-                <div style="font-size:.8em;font-weight:600;text-transform:uppercase;letter-spacing:.06em;opacity:.75;margin-bottom:.2rem">Drive folder</div>
-                <strong style="font-size:1.05em">{{ folder_name }}</strong>
-            </div>
-            <div style="font-size:1.3em;opacity:.4;flex-shrink:0">→</div>
-            <div>
-                <label>
-                    <div style="font-size:.8em;font-weight:600;text-transform:uppercase;letter-spacing:.06em;opacity:.75;margin-bottom:.2rem">
+        <div class="card mb-4">
+            <div class="card-body">
+                <p class="text-uppercase small font-weight-bold mb-1">Drive folder</p>
+                <p class="lead mb-3">{{ folder_name }}</p>
+                <div class="form-group mb-1">
+                    <label for="song-select" class="text-uppercase small font-weight-bold">
                         Song
-                        {% if song %}<span style="font-weight:400;text-transform:none;letter-spacing:0;color:#1a7f4b;margin-left:.4em">&#10003; auto-detected</span>{% endif %}
-                    </div>
-                    <select name="song_id">
+                        {% if song %}<span class="text-success text-lowercase font-weight-normal">&#10003; auto-detected</span>{% endif %}
+                    </label>
+                    <select name="song_id" id="song-select" class="form-control">
                         <option value="new" {% if not song %}selected{% endif %}>— Create new song "{{ folder_name }}" —</option>
                         {% for s in songs %}
                         <option value="{{ s.id }}" {% if song and song.id == s.id %}selected{% endif %}>{{ s.title }}</option>
                         {% endfor %}
                     </select>
-                </label>
-                <div style="font-size:.85em;opacity:.6;margin-top:.3rem">If the wrong song was detected, choose the correct one from the dropdown.</div>
+                </div>
+                <small class="form-text text-muted">If the wrong song was detected, choose the correct one from the dropdown.</small>
             </div>
         </div>
 
-        <table class="listing">
-            <thead>
-                <tr>
-                    <th><button type="button" id="select-all-top" onclick="toggleAll(this)">Select all</button></th>
-                    <th>File</th>
-                    <th>Status</th>
-                    <th>Instrument</th>
-                    <th>Part</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for row in rows %}
-            {% with i=forloop.counter0 %}
-            {% if row.reconcile.apply != "noop" %}
-            <tr>
-                <td><input type="checkbox" name="rows" value="{{ i }}"
-                    {% if row.reconcile.apply == "auto" %}checked{% endif %}></td>
-                <td title="{{ row.drive_file.relative_path }}">{{ row.drive_file.name }}</td>
-                <td>
-                    <span class="tag
-                        {% if row.reconcile.reason == 'Exact' %}tag--teal
-                        {% elif row.reconcile.reason == 'High' %}tag--primary
-                        {% elif row.reconcile.reason == 'Needs review' %}tag--warning
-                        {% else %}tag--salmon{% endif %}">
-                        {{ row.reconcile.reason }}
-                    </span>
-                </td>
-                <td>
+        <button type="button" id="select-all-top" class="site-btn site-btn--small mb-3" onclick="toggleAll(this)">Select all</button>
+
+        {% for row in rows %}
+        {% with i=forloop.counter0 %}
+        {% if row.reconcile.apply != "noop" %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" name="rows" value="{{ i }}"
+                        id="row-check-{{ i }}"
+                        {% if row.reconcile.apply == "auto" %}checked{% endif %}>
+                    <label class="form-check-label pl-2" for="row-check-{{ i }}"
+                        title="{{ row.drive_file.relative_path }}">
+                        <strong>{{ row.drive_file.name }}</strong>
+                    </label>
+                </div>
+
+                <p class="mb-3">
+                    <span class="badge
+                        {% if row.reconcile.reason == 'Exact' %}badge-info
+                        {% elif row.reconcile.reason == 'High' %}badge-primary
+                        {% elif row.reconcile.reason == 'Needs review' %}badge-warning
+                        {% else %}badge-danger{% endif %}">{{ row.reconcile.reason }}</span>
+                    <span class="badge badge-secondary">will {% if row.existing_chart %}update{% else %}create{% endif %}</span>
+                </p>
+
+                <div class="form-group">
+                    <p class="text-uppercase small font-weight-bold mb-1">Instrument</p>
+                    <div class="inst-cell" id="inst-cell-{{ i }}">
                     {% if row.is_conductor_chart %}
-                        <div id="inst-cell-{{ i }}">
-                            <label style="white-space:nowrap">
-                                <input type="checkbox" name="row_{{ i }}_is_conductor" value="1"
-                                    checked onchange="toggleConductor({{ i }}, this)">
-                                <strong>Conductor Score</strong>
-                            </label>
-                            <div id="conductor-inst-override-{{ i }}" style="display:none;margin-top:.3rem">
-                                <select name="row_{{ i }}_instrument_id">
-                                    {% for inst in instruments %}
-                                    <option value="{{ inst.id }}">{{ inst.name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="row_{{ i }}_is_conductor"
+                                value="1" id="conductor-{{ i }}"
+                                checked onchange="toggleConductor({{ i }}, this)">
+                            <label class="form-check-label pl-2" for="conductor-{{ i }}"><strong>Conductor Score</strong></label>
+                        </div>
+                        <div id="conductor-inst-override-{{ i }}" style="display:none">
+                            <select name="row_{{ i }}_instrument_id" class="form-control"
+                                aria-label="Instrument for {{ row.drive_file.name }}">
+                                {% for inst in instruments %}
+                                <option value="{{ inst.id }}">{{ inst.name }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                     {% elif row.inst_conf == "key" %}
                         <input type="hidden" name="row_{{ i }}_is_key" value="1">
-                        <span style="color:#6f42c1;font-weight:bold;margin-right:4px" title="Key-based chart — select all instruments that use this key">♪</span>
-                        <strong>{{ row.parsed.instrument_hint }}</strong> key —
-                        <details class="key-picker" style="display:inline-block;vertical-align:top">
+                        <p class="mb-2">
+                            <span class="font-weight-bold" style="color:#6f42c1"
+                                title="Key-based chart — select all instruments that use this key">&#9834;</span>
+                            <strong>{{ row.parsed.instrument_hint }}</strong> key
+                        </p>
+                        <details class="key-picker">
                             <summary style="cursor:pointer">Select instruments</summary>
-                            <div style="max-height:200px;overflow-y:auto;border:1px solid rgba(128,128,128,.35);border-radius:4px;padding:.4rem .6rem;margin-top:.25rem">
+                            <div class="border rounded p-2 mt-2" style="max-height:200px;overflow-y:auto">
                             {% for inst in instruments %}
-                                <label style="display:block;white-space:nowrap">
-                                    <input type="checkbox" name="row_{{ i }}_instrument_ids" value="{{ inst.id }}"
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="row_{{ i }}_instrument_ids"
+                                        value="{{ inst.id }}" id="key-{{ i }}-{{ inst.id }}"
                                         {% if inst.id in row.key_instrument_ids %}checked{% endif %}
                                         onchange="updateKeyLabel(this)">
-                                    {{ inst.name }}
-                                </label>
+                                    <label class="form-check-label pl-2" for="key-{{ i }}-{{ inst.id }}">{{ inst.name }}</label>
+                                </div>
                             {% endfor %}
                             </div>
                         </details>
-                        <span class="key-selection-label" style="margin-left:.5rem;font-size:.9em;opacity:.75">{{ row.key_instrument_names|join:", "|default:"None selected" }}</span>
+                        <p class="key-selection-label small text-muted mt-2 mb-0">{{ row.key_instrument_names|join:", "|default:"None selected" }}</p>
                     {% else %}
-                        <div id="inst-cell-{{ i }}">
+                        <p class="mb-2">
                         {% if row.inst_conf == "high" %}
-                            <span style="color:green;font-weight:bold;margin-right:4px" title="High confidence">✓</span>
+                            <span class="text-success font-weight-bold" title="High confidence">&#10003; High confidence</span>
                         {% elif row.inst_conf == "ambiguous" %}
-                            <span style="color:#c4780a;font-weight:bold;margin-right:4px" title="Ambiguous — review required">⚠</span>
+                            <span class="text-warning font-weight-bold" title="Ambiguous — review required">&#9888; Ambiguous — review</span>
                         {% else %}
-                            <span style="color:#c0392b;font-weight:bold;margin-right:4px" title="Low confidence — review required">?</span>
+                            <span class="text-danger font-weight-bold" title="Low confidence — review required">? Low confidence — review</span>
                         {% endif %}
-                        <select name="row_{{ i }}_instrument_id">
+                        </p>
+                        <select name="row_{{ i }}_instrument_id" class="form-control mb-2"
+                            aria-label="Instrument for {{ row.drive_file.name }}">
                             {% for inst in instruments %}
                             <option value="{{ inst.id }}"
                                 {% if row.instrument and row.instrument.id == inst.id %}selected{% endif %}>
@@ -140,94 +149,42 @@
                             </option>
                             {% endfor %}
                         </select>
-                        <button type="button" style="margin-left:.4rem" onclick="switchToMulti({{ i }})">Multi</button>
-                        </div>
+                        <button type="button" class="site-btn site-btn--small" onclick="switchToMulti({{ i }})">Multi</button>
                     {% endif %}
-                </td>
-                <td>
-                    {% if row.is_conductor_chart %}
-                        <input type="text" id="part-cell-{{ i }}" name="row_{{ i }}_part" value="" style="display:none">
-                    {% elif row.inst_conf != "key" %}
-                        <input type="text" name="row_{{ i }}_part" value="{{ row.part }}">
-                    {% endif %}
-                </td>
-                <td>{% if row.existing_chart %}update{% else %}new{% endif %}</td>
+                    </div>
+                </div>
+
+                {% if row.is_conductor_chart %}
+                <div class="form-group" id="part-group-{{ i }}" style="display:none">
+                    <label class="text-uppercase small font-weight-bold" for="part-cell-{{ i }}">Part</label>
+                    <input type="text" class="form-control" id="part-cell-{{ i }}" name="row_{{ i }}_part" value="">
+                </div>
+                {% elif row.inst_conf != "key" %}
+                <div class="form-group">
+                    <label class="text-uppercase small font-weight-bold" for="part-cell-{{ i }}">Part</label>
+                    <input type="text" class="form-control" id="part-cell-{{ i }}" name="row_{{ i }}_part" value="{{ row.part }}">
+                </div>
+                {% endif %}
+
                 <input type="hidden" name="row_{{ i }}_file_id" value="{{ row.drive_file.id }}">
                 <input type="hidden" name="row_{{ i }}_filename" value="{{ row.drive_file.name }}">
                 <input type="hidden" name="row_{{ i }}_modified" value="{{ row.drive_file.modifiedTime }}">
                 <input type="hidden" name="row_{{ i }}_chart_id" value="{{ row.existing_chart.id|default:'' }}">
-            </tr>
-            {% endif %}
-            {% endwith %}
-            {% endfor %}
-            </tbody>
-        </table>
+            </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+        {% endfor %}
 
-        <div style="margin-top:1rem;display:flex;align-items:center;gap:1rem">
-            <button type="button" id="select-all-bottom" onclick="toggleAll(this)">Select all</button>
-            <button type="submit" class="button">Import selected</button>
-            <a href="{% url 'chart_import_picker' %}" class="button button-secondary">Cancel</a>
+        <div class="d-flex flex-wrap mt-4">
+            <button type="submit" class="site-btn mb-2 mr-3" style="max-width:20rem">Import selected</button>
+            <button type="button" id="select-all-bottom" class="site-btn site-btn--small mr-2 mb-2" onclick="toggleAll(this)">Select all</button>
+            <a href="{% url 'chart_import_picker' %}" class="site-btn site-btn--small mb-2">Cancel</a>
         </div>
     </form>
 </div>
-{% endblock %}
 
-{% block extra_css %}
-<style>
-.rc-help {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-}
-.rc-help__btn {
-    width: 1.35em;
-    height: 1.35em;
-    border-radius: 50%;
-    border: 2px solid currentColor;
-    background: none;
-    cursor: pointer;
-    font-size: .65em;
-    font-weight: bold;
-    line-height: 1;
-    color: inherit;
-    padding: 0;
-    transition: color .15s;
-}
-.rc-help__btn:hover,
-.rc-help__btn:focus {
-    color: #888;
-    outline: none;
-}
-.rc-help__tip {
-    display: none;
-    position: absolute;
-    top: calc(100% + .5rem);
-    left: 0;
-    z-index: 100;
-    width: 480px;
-    background: var(--w-color-surface-page, #fff);
-    border: 1px solid rgba(128,128,128,.35);
-    border-radius: 6px;
-    box-shadow: 0 4px 16px rgba(0,0,0,.15);
-    padding: 1rem 1.25rem;
-    font-size: .8rem;
-    font-weight: normal;
-    line-height: 1.5;
-    color: var(--w-color-text-label, inherit);
-    white-space: normal;
-}
-.rc-help__tip ul {
-    margin: .35rem 0 .75rem 1rem;
-    padding: 0;
-}
-.rc-help:hover .rc-help__tip,
-.rc-help__btn:focus + .rc-help__tip {
-    display: block;
-}
-</style>
-{% endblock %}
-
-{% block extra_js %}
+{# Inside the content block, not extra_js, so it survives an htmx swap of <main> if these pages ever get boosted links. #}
 <script id="instruments-json" type="application/json">{{ instruments_json|safe }}</script>
 <script>
 const INSTRUMENTS = JSON.parse(document.getElementById('instruments-json').textContent);
@@ -242,10 +199,10 @@ function toggleAll(btn) {
 }
 
 function updateKeyLabel(cb) {
-    const td = cb.closest('td');
-    const names = Array.from(td.querySelectorAll('input[type=checkbox]:checked'))
-        .map(c => c.closest('label').textContent.trim());
-    const label = td.querySelector('.key-selection-label');
+    const cell = cb.closest('.inst-cell');
+    const names = Array.from(cell.querySelectorAll('input[type=checkbox]:checked'))
+        .map(c => c.nextElementSibling.textContent.trim());
+    const label = cell.querySelector('.key-selection-label');
     if (label) label.textContent = names.length ? names.join(', ') : 'None selected';
 }
 
@@ -259,34 +216,41 @@ function switchToMulti(idx) {
     cell.appendChild(hidden);
 
     const details = document.createElement('details');
-    details.className = 'key-picker'; details.style.cssText = 'display:inline-block;vertical-align:top';
+    details.className = 'key-picker';
     const summary = document.createElement('summary');
     summary.style.cursor = 'pointer'; summary.textContent = 'Select instruments';
     details.appendChild(summary);
 
     const list = document.createElement('div');
-    list.style.cssText = 'max-height:200px;overflow-y:auto;border:1px solid rgba(128,128,128,.35);border-radius:4px;padding:.4rem .6rem;margin-top:.25rem';
+    list.className = 'border rounded p-2 mt-2';
+    list.style.cssText = 'max-height:200px;overflow-y:auto';
     INSTRUMENTS.forEach(inst => {
-        const label = document.createElement('label');
-        label.style.cssText = 'display:block;white-space:nowrap';
+        const wrap = document.createElement('div');
+        wrap.className = 'form-check';
         const cb = document.createElement('input');
-        cb.type = 'checkbox'; cb.name = 'row_' + idx + '_instrument_ids';
-        cb.value = inst.id; cb.addEventListener('change', () => updateKeyLabel(cb));
-        label.appendChild(cb);
-        label.append(' ' + inst.name);
-        list.appendChild(label);
+        cb.className = 'form-check-input'; cb.type = 'checkbox';
+        cb.name = 'row_' + idx + '_instrument_ids';
+        cb.value = inst.id; cb.id = 'key-' + idx + '-' + inst.id;
+        cb.addEventListener('change', () => updateKeyLabel(cb));
+        const label = document.createElement('label');
+        label.className = 'form-check-label pl-2';
+        label.htmlFor = cb.id;
+        label.textContent = inst.name;
+        wrap.appendChild(cb);
+        wrap.appendChild(label);
+        list.appendChild(wrap);
     });
     details.appendChild(list);
     cell.appendChild(details);
 
-    const labelSpan = document.createElement('span');
-    labelSpan.className = 'key-selection-label';
-    labelSpan.style.cssText = 'margin-left:.5rem;font-size:.9em;opacity:.75';
-    labelSpan.textContent = 'None selected';
-    cell.appendChild(labelSpan);
+    const labelP = document.createElement('p');
+    labelP.className = 'key-selection-label small text-muted mt-2 mb-0';
+    labelP.textContent = 'None selected';
+    cell.appendChild(labelP);
 
     const singleBtn = document.createElement('button');
-    singleBtn.type = 'button'; singleBtn.textContent = 'Single';
+    singleBtn.type = 'button'; singleBtn.className = 'site-btn site-btn--small mt-2';
+    singleBtn.textContent = 'Single';
     singleBtn.addEventListener('click', () => switchToSingle(idx));
     cell.appendChild(singleBtn);
 }
@@ -298,10 +262,10 @@ function switchToSingle(idx) {
 
 function toggleConductor(idx, cb) {
     const override = document.getElementById('conductor-inst-override-' + idx);
-    const partInput = document.getElementById('part-cell-' + idx);
+    const partGroup = document.getElementById('part-group-' + idx);
     const show = !cb.checked;
     override.style.display = show ? '' : 'none';
-    if (partInput) partInput.style.display = show ? '' : 'none';
+    if (partGroup) partGroup.style.display = show ? '' : 'none';
 }
 </script>
 {% endblock %}

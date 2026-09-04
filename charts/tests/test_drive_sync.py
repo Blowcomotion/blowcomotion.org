@@ -572,6 +572,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import Client
+from django.urls import reverse
 
 
 class TestPickerView(TestCase):
@@ -585,12 +586,12 @@ class TestPickerView(TestCase):
     @override_settings(GDRIVE_CHARTS_FOLDER_ID="root_folder_id")
     def test_picker_lists_folders(self, mock_list):
         mock_list.return_value = [{"id": "f1", "name": "Soul Finger"}]
-        response = self.client.get("/admin/chart-import/")
+        response = self.client.get(reverse("chart_import_picker"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Soul Finger")
 
     def test_picker_requires_login(self):
-        response = Client().get("/admin/chart-import/")
+        response = Client().get(reverse("chart_import_picker"))
         self.assertNotEqual(response.status_code, 200)
 
 
@@ -614,7 +615,7 @@ class TestImportView(TestCase):
             "relative_path": "Soul_Finger_Tmpt_1.pdf",
         }]
         response = self.client.get(
-            f"/admin/chart-import/review/?folder_id=abc&song_id={self.song.id}"
+            reverse("chart_import_review") + f"?folder_id=abc&song_id={self.song.id}"
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Soul_Finger_Tmpt_1.pdf")
@@ -627,7 +628,7 @@ class TestImportView(TestCase):
             "relative_path": "Soul_Finger_Tmpt_1.pdf",
         }]
 
-        self.client.post("/admin/chart-import/review/", {
+        self.client.post(reverse("chart_import_review"), {
             "song_id": self.song.id,
             "folder_id": "abc",
             "rows": ["0"],
