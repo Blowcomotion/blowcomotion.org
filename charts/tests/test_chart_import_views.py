@@ -3,6 +3,7 @@ Unit tests for chart import view permission gates and import POST logic.
 """
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth.models import ContentType, Permission, User
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -15,48 +16,28 @@ class ChartImportPermissionTests(TestCase):
         self.client = Client()
         ct = ContentType.objects.get_for_model(Chart)
         self.change_perm = Permission.objects.get(content_type=ct, codename='change_chart')
-        # Wagtail's admin-login wall (register_admin_urls) requires
-        # wagtailadmin.access_admin in addition to is_staff before any
-        # admin view — including ours — is reached at all. Both test users
-        # need this so the requests actually exercise our change_chart gate
-        # rather than being turned away earlier by Wagtail's own wall.
-        self.access_admin_perm = Permission.objects.get(
-            content_type__app_label='wagtailadmin', codename='access_admin'
-        )
 
-    def test_staff_without_permission_denied(self):
-        user = User.objects.create_user(username='staff', password='pw', is_staff=True)
-        user.user_permissions.add(self.access_admin_perm)
-        self.client.login(username='staff', password='pw')
-        # chart_import_picker is registered via Wagtail's register_admin_urls
-        # hook, which wraps every admin view in
-        # wagtail.admin.auth.require_admin_access. That wrapper catches the
-        # PermissionDenied our permission_required(raise_exception=True)
-        # decorator raises and, for a normal (non-XHR) browser request,
-        # converts it into a 302 redirect to the admin home with a flash
-        # message rather than letting a raw 403 through. A genuine 403 only
-        # surfaces for XMLHttpRequest requests, so we assert the actual
-        # denied behavior (redirect to admin home) as well as the 403 for
-        # an XHR request.
+    def test_logged_in_without_permission_denied(self):
+        # The tool now lives on the public site rather than under
+        # register_admin_urls, so there is no Wagtail require_admin_access
+        # wrapper to convert PermissionDenied into a redirect — the 403 from
+        # permission_required(raise_exception=True) surfaces directly.
+        User.objects.create_user(username='member', password='pw')
+        self.client.login(username='member', password='pw')
         response = self.client.get(reverse('chart_import_picker'))
-        self.assertRedirects(
-            response, reverse('wagtailadmin_home'), fetch_redirect_response=False
-        )
-        ajax_response = self.client.get(
-            reverse('chart_import_picker'), HTTP_X_REQUESTED_WITH='XMLHttpRequest'
-        )
-        self.assertEqual(ajax_response.status_code, 403)
+        self.assertEqual(response.status_code, 403)
 
     def test_arranger_allowed(self):
-        user = User.objects.create_user(username='arranger', password='pw', is_staff=True)
-        user.user_permissions.add(self.change_perm, self.access_admin_perm)
+        user = User.objects.create_user(username='arranger', password='pw')
+        user.user_permissions.add(self.change_perm)
         self.client.login(username='arranger', password='pw')
         response = self.client.get(reverse('chart_import_picker'))
         self.assertEqual(response.status_code, 200)
 
-    def test_anonymous_redirected(self):
+    def test_anonymous_redirected_to_login(self):
         response = self.client.get(reverse('chart_import_picker'))
         self.assertEqual(response.status_code, 302)
+        self.assertIn(settings.LOGIN_URL, response.url)
 
 
 class ChartImportConductorPostTests(TestCase):
@@ -64,11 +45,8 @@ class ChartImportConductorPostTests(TestCase):
         self.client = Client()
         ct = ContentType.objects.get_for_model(Chart)
         change_perm = Permission.objects.get(content_type=ct, codename='change_chart')
-        access_admin_perm = Permission.objects.get(
-            content_type__app_label='wagtailadmin', codename='access_admin'
-        )
-        self.user = User.objects.create_user(username='importer', password='pw', is_staff=True)
-        self.user.user_permissions.add(change_perm, access_admin_perm)
+        self.user = User.objects.create_user(username='importer', password='pw')
+        self.user.user_permissions.add(change_perm)
         self.client.login(username='importer', password='pw')
         self.song = Song.objects.create(title="Test Song")
 

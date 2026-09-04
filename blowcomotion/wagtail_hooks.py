@@ -141,17 +141,6 @@ def register_admin_urls():
     ]
 
 
-@hooks.register("register_admin_urls")
-def register_chart_import_urls():
-    from django.urls import path
-
-    from charts import import_views as views_chart_import
-    return [
-        path("chart-import/", views_chart_import.picker, name="chart_import_picker"),
-        path("chart-import/review/", views_chart_import.review, name="chart_import_review"),
-    ]
-
-
 EXPORTS_PERMISSIONS = ['blowcomotion.access_dev_tools', 'blowcomotion.access_real_data_exports']
 
 # The outer "Utilities" menu must independently list every permission needed

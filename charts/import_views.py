@@ -4,7 +4,7 @@ from datetime import datetime
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.decorators import permission_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Max
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -24,6 +24,7 @@ from charts.drive_sync import (
 logger = logging.getLogger(__name__)
 
 
+@login_required
 @permission_required('blowcomotion.change_chart', raise_exception=True)
 def picker(request):
     folder_id = getattr(settings, "GDRIVE_CHARTS_FOLDER_ID", None)
@@ -58,9 +59,13 @@ def picker(request):
     return render(request, "chart_import/picker.html", {
         "folders": sorted(folders, key=lambda f: f["name"].lower()),
         "songs": songs,
+        # base.html carries the sitewide feedback modal, which posts to
+        # /process-form/ and needs form.js to attach its reCAPTCHA token.
+        "include_form_js": True,
     })
 
 
+@login_required
 @permission_required('blowcomotion.change_chart', raise_exception=True)
 def review(request):
     instruments = list(Instrument.objects.order_by("name"))
@@ -213,4 +218,5 @@ def review(request):
         "rows": rows,
         "instruments": instruments,
         "instruments_json": json.dumps([{"id": i.id, "name": i.name} for i in instruments]),
+        "include_form_js": True,
     })

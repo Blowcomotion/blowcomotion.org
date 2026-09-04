@@ -1,64 +1,65 @@
-{% extends "wagtailadmin/base.html" %}
-{% load i18n %}
+{% extends "base.html" %}
 
-{% block titletag %}Import Charts from Drive{% endblock %}
+{% block title %}Import Charts from Google Drive{% endblock %}
 
 {% block content %}
-<div class="nice-padding">
-    <h1>Import Charts from Google Drive</h1>
-    <p>Each row is a Google Drive folder. Click <strong>Review</strong> to scan its PDF files and import charts for that song.</p>
-    <p>The <strong>Auto-detected song</strong> column shows which song in the database was matched to the folder name. If it looks wrong, you can correct it on the review page before importing. A low match confidence means the name didn't match closely — double-check before proceeding.</p>
+<div class="container py-4">
+    <h1 class="h2 mb-3">Import Charts from Google Drive</h1>
 
-    <details open style="margin-bottom:1.5rem">
-        <summary style="cursor:pointer;font-weight:600">File naming guide</summary>
-        <div style="margin-top:.75rem;padding:.75rem 1rem;background:var(--w-color-surface-field);border-left:3px solid var(--w-color-border);font-size:.9rem">
-            <p style="margin-top:0">The importer reads the instrument and part from each PDF filename. Supported formats:</p>
-            <ul>
+    {% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}
+
+    <p>Each row is a Google Drive folder. Tap <strong>Review</strong> to scan its PDF files and import charts for that song.</p>
+    <p><strong>Auto-detected song</strong> shows which song in the database was matched to the folder name. If it looks wrong, you can correct it on the review page before importing. A low match confidence means the name didn't match closely &mdash; double-check before proceeding.</p>
+
+    <details class="mb-4">
+        <summary class="font-weight-bold" style="cursor:pointer">File naming guide</summary>
+        <div class="mt-2 p-3 border-left border-secondary">
+            <p>The importer reads the instrument and part from each PDF filename. Supported formats:</p>
+            <ul class="mb-3">
                 <li><strong>Song &ndash; Instrument.pdf</strong> &mdash; e.g. <code>Caravan - Trumpet.pdf</code></li>
                 <li><strong>Song &ndash; Instrument 2nd.pdf</strong> &mdash; e.g. <code>Caravan - Trombone 2nd.pdf</code> or <code>Caravan - Clarinet in Bb1.pdf</code></li>
                 <li><strong>Song-Instrument.pdf</strong> (no spaces around dash) &mdash; post-dash side is the instrument</li>
                 <li><strong>Song &ndash; Bb.pdf / Song &ndash; Eb.pdf / Song &ndash; C.pdf</strong> &mdash; transposition key: one PDF shared across multiple instruments (Bb = Trumpet/Clarinet/Tenor Sax, Eb = Alto/Bari Sax, C = Flute/Trombone/Tuba)</li>
                 <li><strong>Song Score.pdf / Song Full Score.pdf / Song Conductor.pdf / Song All Parts.pdf</strong> &mdash; treated as conductor/score, not linked to an instrument</li>
             </ul>
-            <p>Common abbreviations are recognized automatically: <em>tbn, tmpt, bari sax, alto sax, tenor sax, euph, sousa,</em> etc. Part numbers work as digits, ordinals, or roman numerals (1, 1st, I).</p>
+            <p class="mb-0">Common abbreviations are recognized automatically: <em>tbn, tmpt, bari sax, alto sax, tenor sax, euph, sousa,</em> etc. Part numbers work as digits, ordinals, or roman numerals (1, 1st, I).</p>
         </div>
     </details>
-    <table class="listing">
-        <thead>
-            <tr>
-                <th style="font-size:1.1rem;font-weight:700">Drive folder</th>
-                <th style="font-size:1.1rem;font-weight:700">Auto-detected song</th>
-                <th style="font-size:1.1rem;font-weight:700">Match confidence</th>
-                <th style="font-size:1.1rem;font-weight:700">Last imported</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for folder in folders %}
-            <tr{% if folder.archived %} style="opacity:0.55" title="Archive"{% endif %}>
-                <td>{{ folder.name }}{% if folder.archived %} <em>(archive)</em>{% endif %}</td>
-                <td>{{ folder.matched_song.title|default:"— new song —" }}</td>
-                <td>
+
+    {% for folder in folders %}
+    <div class="card mb-3{% if folder.archived %} text-muted{% endif %}">
+        <div class="card-body">
+            <h2 class="h5 card-title mb-2">
+                {{ folder.name }}{% if folder.archived %} <span class="badge badge-secondary">archive</span>{% endif %}
+            </h2>
+            <dl class="row mb-3">
+                <dt class="col-sm-4">Auto-detected song</dt>
+                <dd class="col-sm-8">{{ folder.matched_song.title|default:"— new song —" }}</dd>
+
+                <dt class="col-sm-4">Match confidence</dt>
+                <dd class="col-sm-8">
                     {% if folder.matched_song %}
                         {% if folder.match_score >= 0.85 %}
-                            <span style="color:#1a7f4b">{{ folder.match_pct }}%</span>
+                            <span class="badge badge-success">{{ folder.match_pct }}%</span>
                         {% else %}
-                            <span style="color:#c4780a">⚠ {{ folder.match_pct }}% — check</span>
+                            <span class="badge badge-warning">{{ folder.match_pct }}% — check</span>
                         {% endif %}
+                    {% else %}
+                        &mdash;
                     {% endif %}
-                </td>
-                <td>{{ folder.last_imported|date:"Y-m-d"|default:"—" }}</td>
-                <td>
-                    <a href="{% url 'chart_import_review' %}?folder_id={{ folder.id }}&folder_name={{ folder.name|urlencode }}&song_id={{ folder.matched_song.id|default:'' }}"
-                       class="button button-small">Review</a>
-                </td>
-            </tr>
-        {% empty %}
-            <tr>
-                <td colspan="4">No folders found. Ensure <code>GDRIVE_CHARTS_FOLDER_ID</code> is set in <code>local.py</code>.</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+                </dd>
+
+                <dt class="col-sm-4">Last imported</dt>
+                <dd class="col-sm-8 mb-0">{{ folder.last_imported|date:"Y-m-d"|default:"—" }}</dd>
+            </dl>
+            <a href="{% url 'chart_import_review' %}?folder_id={{ folder.id }}&folder_name={{ folder.name|urlencode }}&song_id={{ folder.matched_song.id|default:'' }}"
+               class="site-btn" style="max-width:20rem">Review</a>
+        </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-info">
+        No folders found. Ensure <code>GDRIVE_CHARTS_FOLDER_ID</code> is set in <code>local.py</code>.
+    </div>
+    {% endfor %}
 </div>
 {% endblock %}
