@@ -5,7 +5,6 @@
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-md-6 col-lg-5">
-            <h1 class="mb-4 text-center">Member Login</h1>
             {% if recaptcha_error %}<div class="alert alert-danger">{{ recaptcha_error }}</div>{% endif %}
             {% if login_link_sent %}<div class="alert alert-success">If an account exists for that address, a login link has been sent. It expires in 15 minutes.</div>{% endif %}
             <form method="post" action="{% url 'member-login' %}" id="member-form">
