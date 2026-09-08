@@ -97,3 +97,22 @@ class ChartImportConductorPostTests(TestCase):
         self.assertIsNone(chart.instrument)
         self.assertEqual(chart.part, '')
         chart.full_clean()
+
+    @patch('charts.import_views.list_pdfs_in_folder')
+    def test_review_renders_conductor_checkbox_on_every_row(self, mock_list):
+        Instrument.objects.create(name='Trumpet')
+        mock_list.return_value = [
+            {'id': 'f0', 'name': 'Test Song - Score.pdf', 'mimeType': 'application/pdf',
+             'modifiedTime': '2024-01-01T00:00:00.000Z', 'relative_path': 'Test Song - Score.pdf'},
+            {'id': 'f1', 'name': 'Test Song - Trumpet.pdf', 'mimeType': 'application/pdf',
+             'modifiedTime': '2024-01-01T00:00:00.000Z', 'relative_path': 'Test Song - Trumpet.pdf'},
+        ]
+        response = self.client.get(reverse('chart_import_review'), {
+            'folder_id': 'fake_folder',
+            'folder_name': 'Test Song',
+            'song_id': str(self.song.id),
+        })
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn('row_0_is_conductor', html)
+        self.assertIn('row_1_is_conductor', html)
