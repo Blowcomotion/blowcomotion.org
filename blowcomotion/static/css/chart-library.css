@@ -4,11 +4,11 @@
  */
 
 .chart-library-block {
-    padding: 60px 0;
+    padding: 15px 0;
 }
 
 .chart-library-block .section-title h2 {
-    margin-bottom: 30px;
+    margin-bottom: 0px;
 }
 
 .chart-library-description {
@@ -539,10 +539,6 @@ a.accordion-part:hover .part-pdf-icon {
 
 /* ===== Responsive ===== */
 @media (max-width: 767px) {
-    .chart-library-block {
-        padding: 40px 0;
-    }
-    
     .accordion-section-header {
         padding: 14px 16px;
     }
