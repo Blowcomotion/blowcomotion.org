@@ -113,6 +113,10 @@ def review(request):
                     if chart_id:
                         chart = Chart.objects.get(id=chart_id)
                         chart.is_conductor_chart = True
+                        # Chart.clean() forbids an instrument on a conductor chart — the user can
+                        # tick the conductor box on a row that matched an instrument chart.
+                        chart.instrument = None
+                        chart.part = ""
                         chart.drive_pdf_url = drive_pdf_url
                         chart.drive_file_id = file_id
                         chart.drive_modified_time = drive_time

@@ -31,7 +31,7 @@
                 <li><span class="text-success font-weight-bold">&#10003;</span> High confidence &mdash; matched exactly or via known alias.</li>
                 <li><span class="text-warning font-weight-bold">&#9888;</span> Ambiguous &mdash; choose from the dropdown.</li>
                 <li><span class="text-danger font-weight-bold">?</span> Low confidence &mdash; review and correct before importing.</li>
-                <li><strong>Conductor Score</strong> &mdash; full score/conductor chart. Uncheck the checkbox to assign a specific instrument instead.</li>
+                <li><strong>Conductor Score</strong> &mdash; every file has this checkbox. It is pre-checked when the filename looks like a full score; check it yourself on any other file, or uncheck it to assign a specific instrument instead.</li>
             </ul>
             <p><strong>Part field</strong> &mdash; leave blank for single-part charts. Use <em>1st Trumpet</em>, <em>2nd Trumpet</em> etc. for multi-part.</p>
             <p><strong>Action</strong> &mdash; <em>will create</em> makes a new chart record; <em>will update</em> replaces the Drive URL on an existing one. Uncheck any card to skip it.</p>
@@ -131,25 +131,33 @@
                         </details>
                         <p class="key-selection-label small text-muted mt-2 mb-0">{{ row.key_instrument_names|join:", "|default:"None selected" }}</p>
                     {% else %}
-                        <p class="mb-2">
-                        {% if row.inst_conf == "high" %}
-                            <span class="text-success font-weight-bold" title="High confidence">&#10003; High confidence</span>
-                        {% elif row.inst_conf == "ambiguous" %}
-                            <span class="text-warning font-weight-bold" title="Ambiguous — review required">&#9888; Ambiguous — review</span>
-                        {% else %}
-                            <span class="text-danger font-weight-bold" title="Low confidence — review required">? Low confidence — review</span>
-                        {% endif %}
-                        </p>
-                        <select name="row_{{ i }}_instrument_id" class="form-control mb-2"
-                            aria-label="Instrument for {{ row.drive_file.name }}">
-                            {% for inst in instruments %}
-                            <option value="{{ inst.id }}"
-                                {% if row.instrument and row.instrument.id == inst.id %}selected{% endif %}>
-                                {{ inst.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <button type="button" class="site-btn site-btn--small" onclick="switchToMulti({{ i }})">Multi</button>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="row_{{ i }}_is_conductor"
+                                value="1" id="conductor-{{ i }}"
+                                onchange="toggleConductor({{ i }}, this)">
+                            <label class="form-check-label pl-2" for="conductor-{{ i }}"><strong>Conductor Score</strong></label>
+                        </div>
+                        <div id="conductor-inst-override-{{ i }}">
+                            <p class="mb-2">
+                            {% if row.inst_conf == "high" %}
+                                <span class="text-success font-weight-bold" title="High confidence">&#10003; High confidence</span>
+                            {% elif row.inst_conf == "ambiguous" %}
+                                <span class="text-warning font-weight-bold" title="Ambiguous — review required">&#9888; Ambiguous — review</span>
+                            {% else %}
+                                <span class="text-danger font-weight-bold" title="Low confidence — review required">? Low confidence — review</span>
+                            {% endif %}
+                            </p>
+                            <select name="row_{{ i }}_instrument_id" class="form-control mb-2"
+                                aria-label="Instrument for {{ row.drive_file.name }}">
+                                {% for inst in instruments %}
+                                <option value="{{ inst.id }}"
+                                    {% if row.instrument and row.instrument.id == inst.id %}selected{% endif %}>
+                                    {{ inst.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" class="site-btn site-btn--small" onclick="switchToMulti({{ i }})">Multi</button>
+                        </div>
                     {% endif %}
                     </div>
                 </div>
@@ -160,7 +168,7 @@
                     <input type="text" class="form-control" id="part-cell-{{ i }}" name="row_{{ i }}_part" value="">
                 </div>
                 {% elif row.inst_conf != "key" %}
-                <div class="form-group">
+                <div class="form-group" id="part-group-{{ i }}">
                     <label class="text-uppercase small font-weight-bold" for="part-cell-{{ i }}">Part</label>
                     <input type="text" class="form-control" id="part-cell-{{ i }}" name="row_{{ i }}_part" value="{{ row.part }}">
                 </div>

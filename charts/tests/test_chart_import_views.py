@@ -8,7 +8,7 @@ from django.contrib.auth.models import ContentType, Permission, User
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from blowcomotion.models import Chart, Song
+from blowcomotion.models import Chart, Instrument, Song
 
 
 class ChartImportPermissionTests(TestCase):
@@ -70,3 +70,30 @@ class ChartImportConductorPostTests(TestCase):
         self.assertTrue(chart.is_conductor_chart)
         self.assertIsNone(chart.instrument)
         self.assertEqual(chart.drive_file_id, 'file_abc')
+
+    @patch('charts.import_views.list_pdfs_in_folder', return_value=[])
+    def test_post_conductor_on_instrument_chart_clears_instrument(self, _mock):
+        inst = Instrument.objects.create(name='Trumpet')
+        chart = Chart.objects.create(
+            song=self.song, instrument=inst, part='1st Trumpet',
+            drive_pdf_url='https://drive.google.com/file/d/old/view',
+        )
+        post_data = {
+            'song_id': str(self.song.id),
+            'folder_name': 'Test Song',
+            'folder_id': 'fake_folder',
+            'rows': ['0'],
+            'row_0_file_id': 'file_xyz',
+            'row_0_filename': 'TestSong_Trumpet.pdf',
+            'row_0_modified': '2024-01-01T00:00:00.000Z',
+            'row_0_is_conductor': '1',
+            'row_0_chart_id': str(chart.id),
+            'row_0_instrument_id': str(inst.id),
+            'row_0_part': '1st Trumpet',
+        }
+        self.client.post(reverse('chart_import_review'), post_data)
+        chart.refresh_from_db()
+        self.assertTrue(chart.is_conductor_chart)
+        self.assertIsNone(chart.instrument)
+        self.assertEqual(chart.part, '')
+        chart.full_clean()
