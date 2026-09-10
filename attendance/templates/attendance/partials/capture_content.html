@@ -7,20 +7,17 @@
 </div>
 
 <!-- Section Navigation -->
-<div class="row mb-4">
+<div class="row mb-4 section-nav-sticky">
     <div class="col-12">
         <div class="card">
-            <div class="card-header">
-                <h5>Select Section</h5>
-            </div>
-            <div class="card-body">
-                <div class="btn-group flex-wrap" role="group">
+            <div class="card-body py-2">
+                <div class="btn-group flex-nowrap overflow-auto w-100" role="group">
                     {% for sect in sections %}
                         <a href="{% url 'attendance-capture' sect.name|lower|slugify %}" 
                            hx-get="{% url 'attendance-capture' sect.name|lower|slugify %}"
                            hx-target="#attendance-container"
                            hx-indicator="#section-loading-{{ sect.id }}"
-                           class="btn {% if sect == section %}btn-primary{% else %}btn-outline-primary{% endif %} mb-2">
+                           class="btn {% if sect == section %}btn-primary{% else %}btn-outline-primary{% endif %} flex-shrink-0 text-nowrap">
                             <span id="section-loading-{{ sect.id }}" class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
                             {{ sect.name }}
                         </a>
@@ -29,7 +26,7 @@
                        hx-get="{% url 'attendance-capture' 'no-section' %}"
                        hx-target="#attendance-container"
                        hx-indicator="#section-loading-no-section"
-                       class="btn {% if is_no_section %}btn-primary{% else %}btn-outline-secondary{% endif %} mb-2">
+                       class="btn {% if is_no_section %}btn-primary{% else %}btn-outline-secondary{% endif %} flex-shrink-0 text-nowrap">
                         <span id="section-loading-no-section" class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
                         <i class="fa fa-question-circle"></i> No Section
                     </a>
@@ -37,7 +34,7 @@
                        hx-get="{% url 'inactive-members' %}"
                        hx-target="#attendance-container"
                        hx-indicator="#section-loading-inactive"
-                       class="btn btn-outline-warning mb-2">
+                       class="btn btn-outline-warning flex-shrink-0 text-nowrap">
                         <span id="section-loading-inactive" class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
                         <i class="fa fa-user-times"></i> Inactive Members
                     </a>
@@ -45,7 +42,7 @@
                        hx-get="{% url 'attendance-secondary-design' %}"
                        hx-target="#attendance-container"
                        hx-indicator="#section-loading-secondary-design"
-                       class="btn btn-outline-info mb-2">
+                       class="btn btn-outline-info flex-shrink-0 text-nowrap">
                         <span id="section-loading-secondary-design" class="htmx-indicator spinner-border spinner-border-sm me-2" style="display: none;"></span>
                         <i class="fa fa-flask"></i> Secondary Design
                     </a>
@@ -87,6 +84,15 @@
 </div>
 
 <style>
+/* Keep the section selector reachable without scrolling back to the top */
+.section-nav-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+    background: var(--bs-body-bg);
+    padding-top: .5rem;
+}
+
 /* Show loading spinners when HTMX request is in progress */
 .htmx-request .htmx-indicator {
     display: inline-block !important;
