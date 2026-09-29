@@ -6,10 +6,10 @@ This document explains how to set up the monthly and weekly birthday summary ema
 
 The `send_monthly_birthday_summary` management command automatically sends birthday email digests to designated recipients. It has two modes:
 
-- **Monthly mode (default)** sends a summary of birthdays for a calendar month. It is intended to be run on the 1st of each month and is used for the in-person shout out at the start of the month.
+- **Monthly mode (default)** sends a summary of birthdays for a calendar month. By default it covers the upcoming month and is intended to be run on the last Sunday of each month, ahead of the in-person shout out at the start of the next month.
 - **Rolling-window mode (`--days`)** sends an update of birthdays coming up in the next N days (7 by default). It is intended to be run weekly so the written weekly rehearsal announcement has up-to-date birthday information, including for members who joined recently.
 
-Both modes are meant to be scheduled to run **daily**, since PythonAnywhere only supports daily/hourly scheduled tasks. Each mode has its own built-in check that makes it a no-op except on the intended day: monthly mode only sends on the 1st of the month, and weekly mode only sends on Sundays. Use `--ignore-date-check` to bypass either check for manual/testing runs.
+Both modes are meant to be scheduled to run **daily**, since PythonAnywhere only supports daily/hourly scheduled tasks. Each mode has its own built-in check that makes it a no-op except on the intended day: monthly mode only sends on the last Sunday of the month, and weekly mode only sends on Sundays. Use `--ignore-date-check` to bypass either check for manual/testing runs.
 
 Both modes send to the same **Birthday summary email recipients** configured in Site Settings.
 
@@ -63,14 +63,14 @@ EMAIL_HOST_PASSWORD = 'your-password'
 
 ### Option 1: System Crontab
 
-Add to system crontab to run the monthly summary on the 1st of each month at 9:00 AM, and the weekly update every Sunday at 9:00 AM:
+Add to system crontab to run the monthly summary on the last Sunday of each month at 9:00 AM, and the weekly update every Sunday at 9:00 AM:
 
 ```bash
 # Edit crontab
 crontab -e
 
 # Add these lines (adjust paths as needed)
-0 9 1 * * /path/to/your/venv/bin/python /path/to/blowcomotion.org/manage.py send_monthly_birthday_summary
+0 9 * * 0 /path/to/your/venv/bin/python /path/to/blowcomotion.org/manage.py send_monthly_birthday_summary
 0 9 * * 0 /path/to/your/venv/bin/python /path/to/blowcomotion.org/manage.py send_monthly_birthday_summary --days
 ```
 
@@ -79,7 +79,7 @@ crontab -e
 ```python
 # In settings.py
 CRONJOBS = [
-    ('0 9 1 * *', 'django.core.management.call_command', ['send_monthly_birthday_summary']),
+    ('0 9 * * *', 'django.core.management.call_command', ['send_monthly_birthday_summary']),
     ('0 9 * * 0', 'django.core.management.call_command', ['send_monthly_birthday_summary', '--days']),
 ]
 ```
@@ -88,7 +88,7 @@ CRONJOBS = [
 
 PythonAnywhere only supports daily and hourly scheduled tasks (no weekly option), which is why both modes have a built-in day check. In the PythonAnywhere dashboard, under **Tasks**, add one scheduled task per mode, both scheduled **daily**:
 
-- `send_monthly_birthday_summary` — schedule daily at 9:00 AM; the command checks that it's the 1st of the month before sending, so it is a no-op on other days
+- `send_monthly_birthday_summary` — schedule daily at 9:00 AM; the command checks that it's the last Sunday of the month before sending, so it is a no-op on other days
 - `send_monthly_birthday_summary --days` — schedule daily, at a time that runs shortly before the weekly rehearsal announcement is written; the command checks that it's a Sunday before sending, so it is a no-op on other days
 
 Command to enter for the weekly task (adjust the path to your virtualenv and project):
@@ -141,16 +141,16 @@ sudo systemctl start birthday-summary.timer
 ### Test the Command
 
 ```bash
-# Test with dry run combined with --ignore-date-check (bypasses the 1st-of-month date check for testing)
+# Test with dry run combined with --ignore-date-check (bypasses the last-Sunday-of-month date check for testing)
 python manage.py send_monthly_birthday_summary --dry-run --ignore-date-check
 
-# Test a specific month with dry run and --ignore-date-check (bypasses the 1st-of-month date check for testing)
+# Test a specific month with dry run and --ignore-date-check (bypasses the last-Sunday-of-month date check for testing)
 python manage.py send_monthly_birthday_summary --month 9 --year 2025 --dry-run --ignore-date-check
 
-# Test actual sending on the 1st (command only sends on the 1st due to a safety check; use --ignore-date-check to bypass this)
+# Test actual sending on the last Sunday of the month (command only sends then due to a safety check; use --ignore-date-check to bypass this)
 python manage.py send_monthly_birthday_summary --month 9 --year 2025
 
-# Force actual sending on any day (bypasses the 1st-of-month safety check; be very careful in production)
+# Force actual sending on any day (bypasses the last-Sunday-of-month safety check; be very careful in production)
 python manage.py send_monthly_birthday_summary --month 9 --year 2025 --ignore-date-check
 
 # Weekly: dry run for the default 7-day lookahead window (bypasses the Sunday-only check for testing)
@@ -217,7 +217,7 @@ python manage.py send_monthly_birthday_summary --days --dry-run
 
 ## Features
 
-- **Automatic monthly scheduling**: Runs on 1st of each month by default
+- **Automatic monthly scheduling**: Runs on the last Sunday of each month by default
 - **Rolling weekly lookahead**: `--days` mode surfaces birthdays in the next N days (7 by default) regardless of calendar month boundaries
 - **Professional HTML emails**: Responsive design with band branding
 - **Member details**: Names, preferred names, instruments, ages
