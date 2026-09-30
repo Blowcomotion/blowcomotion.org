@@ -35,7 +35,10 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("No members found to export."))
 
         fields = Member._meta.concrete_fields
-        field_names = [field.attname for field in fields]
+        # first_name, last_name and email live on the linked auth User, so they
+        # are not concrete Member fields and must be added explicitly.
+        user_columns = ["first_name", "last_name", "email"]
+        field_names = user_columns + [field.attname for field in fields]
 
         extra_headers = []
         if include_extra:
@@ -49,7 +52,8 @@ class Command(BaseCommand):
             writer.writerow(field_names + extra_headers)
 
             for member in members:
-                row = [self._serialize(getattr(member, field.attname)) for field in fields]
+                row = [self._serialize(getattr(member, column)) for column in user_columns]
+                row += [self._serialize(getattr(member, field.attname)) for field in fields]
 
                 if include_extra:
                     primary_instrument_name = (
