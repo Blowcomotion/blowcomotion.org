@@ -136,9 +136,14 @@ class AuctionItem(ClusterableModel):
     def buy_now_available(self):
         # Mirrors the check in services.place_bid.
         top = self.top_bid
-        return self.buy_now_price is not None and self.buy_now_price >= self.minimum_bid and (
-            top is None or self.buy_now_price > top.amount
+        return self.buy_now_price is not None and self.buy_now_price >= self.starting_bid and (
+            top is None or top.amount < self.buy_now_price
         )
+
+    @property
+    def buy_now_is_next(self):
+        """Buy It Now is at or below the minimum bid, so any valid bid buys the item."""
+        return self.buy_now_available and self.buy_now_price <= self.minimum_bid
 
 
 class AuctionItemImage(Orderable):

@@ -38,6 +38,14 @@ class NotificationTests(TestCase):
         self.assertNotIn("BID", mock_sms.call_args.args[1])
 
     @patch("auction.notifications.send_sms")
+    def test_outbid_points_to_buy_now_when_it_is_the_next_bid(self, mock_sms):
+        self.item.buy_now_price = Decimal("32")  # top is 30, minimum next bid 35
+        self.item.save()
+        notifications.notify_outbid(self.first, self.second)
+        self.assertIn("Buy It Now for $32", mail.outbox[0].body)
+        self.assertIn("BID 1 32", mock_sms.call_args.args[1])
+
+    @patch("auction.notifications.send_sms")
     def test_outbid_no_sms_without_opt_in(self, mock_sms):
         notifications.notify_outbid(self.second, self.first)  # bob has sms_opt_in=False
         mock_sms.assert_not_called()

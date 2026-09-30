@@ -24,8 +24,8 @@ def place_bid(item_id, bidder, amount, source=Bid.SOURCE_WEB):
         minimum = item.minimum_bid
         price = item.buy_now_price
         buy_now = (
-            price is not None and amount >= price and price >= minimum
-            and (previous_top is None or price > previous_top.amount)
+            price is not None and amount >= price and price >= item.starting_bid
+            and (previous_top is None or previous_top.amount < price)
         )
         if buy_now:
             amount = price

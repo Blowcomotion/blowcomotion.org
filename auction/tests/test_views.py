@@ -186,3 +186,18 @@ class BidViewTests(TestCase):
         response = self.register_and_bid(amount="100", follow=True)
         self.assertContains(response, "with Buy It Now for $100")
         self.assertContains(response, "SOLD to Robin P. for $100")
+
+    def test_open_page_hides_form_once_refresh_shows_closed(self, _):
+        # Polling swaps #bid-state only; the CSS rule hides the stale form when it gains .item-closed.
+        self.assertContains(self.client.get(self.detail_url), "#bid-state:has(.item-closed) ~ #bid-form")
+        self.item.close_time = timezone.now() - timedelta(minutes=1)
+        self.item.save()
+        self.assertContains(self.client.get(self.detail_url), "item-closed")
+
+    def test_buy_now_at_starting_bid_with_no_bids_shows_starting_bid(self, _):
+        self.item.buy_now_price = self.item.starting_bid
+        self.item.save()
+        response = self.client.get(self.detail_url)
+        self.assertContains(response, "Starting bid: <strong>$25")
+        self.assertContains(response, "the next bid buys it with Buy It Now")
+        self.assertNotContains(response, "Current bid:")
