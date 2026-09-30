@@ -17,10 +17,33 @@ class BidderRegistrationForm(forms.Form):
         required=False,
         label="Text me when I'm outbid (you can bid back by replying)",
     )
+    accept_agreement = forms.BooleanField(
+        required=False,
+        label="I Accept the User Agreement",
+        error_messages={"required": "Please accept the User Agreement to bid."},
+    )
+
+    def __init__(self, *args, require_agreement=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        if require_agreement:
+            self.fields["accept_agreement"].required = True
+        else:
+            del self.fields["accept_agreement"]
 
     def clean_phone(self):
         return normalize_phone(self.cleaned_data["phone"])
 
 
+class MoneyField(forms.DecimalField):
+    """Accepts "$1,000" as well as "1000"."""
+
+    widget = forms.TextInput(attrs={"inputmode": "decimal"})
+
+    def to_python(self, value):
+        if isinstance(value, str):
+            value = value.replace(",", "").replace("$", "").strip()
+        return super().to_python(value)
+
+
 class BidForm(forms.Form):
-    amount = forms.DecimalField(max_digits=8, decimal_places=2, min_value=0)
+    amount = MoneyField(max_digits=8, decimal_places=2, min_value=0)

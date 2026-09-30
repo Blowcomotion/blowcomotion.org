@@ -32,6 +32,12 @@ class NotificationTests(TestCase):
         self.assertIn("/auction/", body)          # item link included
 
     @patch("auction.notifications.send_sms")
+    def test_sold_notice_when_bought_now(self, mock_sms):
+        notifications.notify_outbid(self.first, self.second, sold=True)
+        self.assertIn("has sold", mail.outbox[0].subject)
+        self.assertNotIn("BID", mock_sms.call_args.args[1])
+
+    @patch("auction.notifications.send_sms")
     def test_outbid_no_sms_without_opt_in(self, mock_sms):
         notifications.notify_outbid(self.second, self.first)  # bob has sms_opt_in=False
         mock_sms.assert_not_called()

@@ -66,3 +66,40 @@ class PlaceBidTests(TestCase):
     def test_sms_source_recorded(self, mock_notify):
         bid = place_bid(self.item.pk, self.alice, Decimal("25"), source=Bid.SOURCE_SMS)
         self.assertEqual(bid.source, "sms")
+
+    @patch("auction.notifications.notify_winner")
+    @patch("auction.notifications.send_auction_summary")
+    def test_buy_now_closes_item_at_buy_now_price(self, mock_summary, mock_winner, mock_notify):
+        self.item.buy_now_price = Decimal("100")
+        self.item.save()
+        place_bid(self.item.pk, self.alice, Decimal("25"))
+        with self.captureOnCommitCallbacks(execute=True):
+            bid = place_bid(self.item.pk, self.bob, Decimal("150"))
+        self.assertEqual(bid.amount, Decimal("100"))
+        self.assertFalse(bid.item.is_open)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.winning_bid, bid)
+        self.assertTrue(bid.bought_now)
+        mock_winner.assert_called_once()
+        self.assertTrue(mock_notify.call_args.kwargs["sold"])
+        with self.assertRaises(BidError):
+            place_bid(self.item.pk, self.alice, Decimal("200"))
+
+    def test_buy_now_unavailable_once_bidding_passes_it(self, mock_notify):
+        self.item.buy_now_price = Decimal("50")
+        self.item.save()
+        place_bid(self.item.pk, self.alice, Decimal("48"))  # minimum is now 53
+        self.assertFalse(self.item.buy_now_available)
+        bid = place_bid(self.item.pk, self.bob, Decimal("60"))
+        self.assertEqual(bid.amount, Decimal("60"))
+        self.assertFalse(bid.bought_now)
+
+    def test_buy_now_unavailable_when_price_equals_top_bid(self, mock_notify):
+        self.item.bid_increment = Decimal("0")
+        self.item.save()
+        place_bid(self.item.pk, self.alice, Decimal("50"))
+        self.item.buy_now_price = Decimal("50")  # set by an admin after bidding started
+        self.item.save()
+        bid = place_bid(self.item.pk, self.bob, Decimal("50"))
+        self.assertFalse(bid.bought_now)
+        self.assertTrue(bid.item.is_open)

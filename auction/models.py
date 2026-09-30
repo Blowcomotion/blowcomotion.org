@@ -2,6 +2,7 @@ import re
 
 from modelcluster.fields import ParentalKey
 from modelcluster.models import ClusterableModel
+from wagtail.fields import RichTextField
 from wagtail.images import get_image_model_string
 from wagtail.models import Orderable
 
@@ -39,6 +40,10 @@ class Auction(ClusterableModel):
     soft_close_minutes = models.PositiveIntegerField(default=5)
     payment_instructions = models.TextField(
         blank=True, help_text="Included in winner notifications (where/how to pay and pick up)."
+    )
+    user_agreement = RichTextField(
+        blank=True,
+        help_text="Shown to new bidders, who must accept it before their first bid. Leave blank to skip.",
     )
     summary_sent_at = models.DateTimeField(null=True, blank=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -80,6 +85,10 @@ class AuctionItem(ClusterableModel):
     description = models.TextField(blank=True)
     starting_bid = models.DecimalField(max_digits=8, decimal_places=2)
     bid_increment = models.DecimalField(max_digits=8, decimal_places=2, default=1)
+    buy_now_price = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        help_text="Optional. A bid at this amount wins the item immediately. Leave blank for no Buy It Now.",
+    )
     close_time = models.DateTimeField(
         null=True, blank=True, help_text="Leave blank to use the auction's close time."
     )
@@ -122,6 +131,14 @@ class AuctionItem(ClusterableModel):
     def minimum_bid(self):
         top = self.top_bid
         return top.amount + self.bid_increment if top else self.starting_bid
+
+    @property
+    def buy_now_available(self):
+        # Mirrors the check in services.place_bid.
+        top = self.top_bid
+        return self.buy_now_price is not None and self.buy_now_price >= self.minimum_bid and (
+            top is None or self.buy_now_price > top.amount
+        )
 
 
 class AuctionItemImage(Orderable):
@@ -178,6 +195,7 @@ class Bid(models.Model):
         max_length=3, choices=[(SOURCE_WEB, "Web"), (SOURCE_SMS, "SMS")], default=SOURCE_WEB
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    bought_now = False  # set by place_bid on the returned instance only; not stored
 
     class Meta:
         ordering = ["-created_at"]

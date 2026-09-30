@@ -70,7 +70,9 @@ def item_detail(request, auction_id, number):
         "item": item,
         "bidder": bidder,
         "bids": item.bids.select_related("bidder").order_by("-amount"),
-        "registration_form": BidderRegistrationForm(initial=_registration_initial(request)),
+        "registration_form": BidderRegistrationForm(
+            initial=_registration_initial(request), require_agreement=bool(auction.user_agreement)
+        ),
         "bid_form": BidForm(initial={"amount": item.minimum_bid}),
         "include_form_js": True,
     })
@@ -94,7 +96,7 @@ def _get_or_register_bidder(request, auction):
     bidder = resolve_bidder(request, auction)
     if bidder:
         return bidder, None
-    form = BidderRegistrationForm(request.POST)
+    form = BidderRegistrationForm(request.POST, require_agreement=bool(auction.user_agreement))
     if not form.is_valid():
         return None, "; ".join(f"{f}: {e[0]}" for f, e in form.errors.items())
     data = form.cleaned_data
@@ -167,7 +169,12 @@ def place_bid_view(request, auction_id, number):
         messages.error(request, str(exc))
         return detail
 
-    messages.success(request, f"You're the top bid on #{item.number} {item.title} at ${bid.amount}!")
+    if bid.bought_now:
+        messages.success(
+            request, f"You bought #{item.number} {item.title} with Buy It Now for ${bid.amount}!"
+        )
+    else:
+        messages.success(request, f"You're the top bid on #{item.number} {item.title} at ${bid.amount}!")
     if not bidder.member_id:
         detail.set_signed_cookie(
             _cookie_name(auction), bidder.pk,

@@ -23,13 +23,13 @@ class BidViewTests(TestCase):
         self.detail_url = reverse("auction-item-detail", args=[self.auction.pk, self.item.number])
         self.bid_url = reverse("auction-place-bid", args=[self.auction.pk, self.item.number])
 
-    def register_and_bid(self, amount="25", **extra):
+    def register_and_bid(self, amount="25", follow=False, **extra):
         data = dict(
             name="Robin Player", email="robin@example.com", phone="512-555-1234",
             sms_opt_in="on", amount=amount,
         )
         data.update(extra)
-        return self.client.post(self.bid_url, data)
+        return self.client.post(self.bid_url, data, follow=follow)
 
     def test_detail_renders(self, _):
         response = self.client.get(self.detail_url)
@@ -161,3 +161,28 @@ class BidViewTests(TestCase):
         response = self.register_and_bid()
         self.assertRedirects(response, self.detail_url)
         self.assertEqual(self.item.bids.count(), 0)
+
+    def test_agreement_must_be_accepted_when_configured(self, _):
+        self.auction.user_agreement = "<p>Every bid is binding.</p>"
+        self.auction.save()
+        self.assertContains(self.client.get(self.detail_url), "Every bid is binding.")
+        response = self.register_and_bid(follow=True)
+        self.assertContains(response, "Please accept the User Agreement to bid.")
+        self.assertFalse(Bidder.objects.filter(auction=self.auction).exists())
+        self.register_and_bid(accept_agreement="on")
+        self.assertEqual(self.item.bids.count(), 1)
+
+    def test_comma_and_dollar_amount_accepted(self, _):
+        self.register_and_bid(amount="$1,000")
+        self.assertEqual(self.item.bids.get().amount, Decimal("1000"))
+
+    @patch("auction.notifications.notify_winner")
+    @patch("auction.notifications.send_auction_summary")
+    def test_buy_now_via_web(self, mock_summary, mock_winner, _):
+        self.item.buy_now_price = Decimal("100")
+        self.item.save()
+        self.assertContains(self.client.get(self.detail_url), "Buy It Now for $100")
+        self.client.cookies.clear()
+        response = self.register_and_bid(amount="100", follow=True)
+        self.assertContains(response, "with Buy It Now for $100")
+        self.assertContains(response, "SOLD to Robin P. for $100")
