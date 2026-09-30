@@ -155,15 +155,25 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
         
         self.assertIn('No birthday email recipients configured', str(cm.exception))
 
-    def test_command_default_next_month(self):
-        """Test command with default next month behavior"""
+    def _dry_run_on(self, today, **kwargs):
         out = StringIO()
-        
-        # We can't easily mock the date in the command, so we'll test with explicit month
-        self._run_command(month=9, year=2025, dry_run=True, stdout=out)
-        
-        output = out.getvalue()
-        self.assertIn('September 2025', output)
+        with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
+            mock_date.today.return_value = today
+            mock_date.side_effect = date
+            call_command('send_monthly_birthday_summary', dry_run=True, stdout=out, **kwargs)
+        return out.getvalue()
+
+    def test_command_default_next_month(self):
+        """Default run on the last Sunday targets the upcoming month"""
+        self.assertIn('Generating birthday summary for October 2026', self._dry_run_on(date(2026, 9, 27)))
+
+    def test_command_default_next_month_wraps_year(self):
+        self.assertIn('January 2027', self._dry_run_on(date(2026, 12, 27)))
+
+    def test_command_only_runs_on_last_sunday(self):
+        # Sep 20 is a Sunday but not the last; Sep 28 is the last Monday's day after; Sep 1 no longer triggers
+        for today in (date(2026, 9, 20), date(2026, 9, 28), date(2026, 9, 1)):
+            self.assertIn('last Sunday of each month', self._dry_run_on(today))
 
     def test_command_invalid_month(self):
         """Test command with invalid month parameter"""
