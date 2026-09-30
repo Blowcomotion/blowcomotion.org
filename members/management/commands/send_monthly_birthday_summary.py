@@ -109,7 +109,7 @@ class Command(BaseCommand):
                     raise CommandError(f"--days must be a positive integer, got {days_ahead}")
 
                 # PythonAnywhere only supports daily/hourly scheduling, so this is
-                # scheduled to run daily and this check (like the 1st-of-month check
+                # scheduled to run daily and this check (like the last-Sunday-of-month check
                 # below) makes it a no-op except on the intended day.
                 if not options['ignore_date_check'] and today.weekday() != 6:
                     self.stdout.write(

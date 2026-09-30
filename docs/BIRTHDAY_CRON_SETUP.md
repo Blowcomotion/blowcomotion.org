@@ -16,7 +16,7 @@ Both modes send to the same **Birthday summary email recipients** configured in 
 ## Command Usage
 
 ```bash
-# Monthly: send summary for the current month (default behavior)
+# Monthly: send summary for the upcoming month (default behavior)
 python manage.py send_monthly_birthday_summary
 
 # Monthly: send summary for specific month and year
@@ -118,11 +118,11 @@ Create `/etc/systemd/system/birthday-summary.timer`:
 
 ```ini
 [Unit]
-Description=Run Birthday Summary Monthly
+Description=Run Birthday Summary on Sundays (command only sends on the last Sunday of the month)
 Requires=birthday-summary.service
 
 [Timer]
-OnCalendar=*-*-01 09:00:00
+OnCalendar=Sun *-*-* 09:00:00
 Persistent=true
 
 [Install]
