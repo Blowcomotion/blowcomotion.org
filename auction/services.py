@@ -22,12 +22,24 @@ def place_bid(item_id, bidder, amount, source=Bid.SOURCE_WEB):
             raise BidError(f"Bidding on #{item.number} {item.title} has closed.")
         previous_top = item.top_bid
         minimum = item.minimum_bid
-        if amount < minimum:
+        price = item.buy_now_price
+        buy_now = (
+            price is not None and amount >= price and price >= minimum
+            and (previous_top is None or price > previous_top.amount)
+        )
+        if buy_now:
+            amount = price
+        elif amount < minimum:
             raise BidError(f"Your bid on #{item.number} must be at least ${minimum}.")
         bid = Bid.objects.create(item=item, bidder=bidder, amount=amount, source=source)
 
         auction = item.auction
-        if auction.soft_close_enabled:
+        if buy_now:
+            item.close_time = now
+            item.save(update_fields=["close_time"])
+            close_expired_items(auction)
+            bid.bought_now = True
+        elif auction.soft_close_enabled:
             window = timedelta(minutes=auction.soft_close_minutes)
             if item.effective_close_time - now < window:
                 item.close_time = now + window
@@ -36,7 +48,7 @@ def place_bid(item_id, bidder, amount, source=Bid.SOURCE_WEB):
         if previous_top and previous_top.bidder_id != bidder.pk:
             from auction import notifications
 
-            transaction.on_commit(lambda: notifications.notify_outbid(previous_top, bid))
+            transaction.on_commit(lambda: notifications.notify_outbid(previous_top, bid, sold=buy_now))
         return bid
 
 

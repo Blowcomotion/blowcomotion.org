@@ -43,10 +43,27 @@ def _send_email(subject, body, to):
         logger.exception("Failed to send auction email to %s", to)
 
 
-def notify_outbid(previous_top_bid, new_bid):
+def notify_outbid(previous_top_bid, new_bid, sold=False):
     item = new_bid.item
     bidder = previous_top_bid.bidder
     url = item_url(item)
+    if sold:
+        _send_email(
+            subject=f"#{item.number} {item.title} has sold",
+            body=(
+                f"Hi {bidder.name},\n\n"
+                f"#{item.number} {item.title} was bought with Buy It Now for ${new_bid.amount}, "
+                f"so bidding on it has closed. Thanks for bidding!\n\n{url}\n"
+            ),
+            to=[bidder.email],
+        )
+        if bidder.sms_opt_in:
+            send_sms(
+                bidder.phone,
+                f"#{item.number} {item.title} was bought with Buy It Now for ${new_bid.amount}. "
+                f"Bidding on it has closed. {url}",
+            )
+        return
     next_min = item.minimum_bid
     _send_email(
         subject=f"You've been outbid on #{item.number} {item.title}",

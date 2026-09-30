@@ -11,6 +11,7 @@
         <h5 class="card-title">#{{ item.number }} {{ item.title }}</h5>
         <p class="card-text">
           Current: ${{ item.top_bid.amount|default:item.starting_bid }}<br>
+          {% if item.buy_now_available %}Buy It Now: ${{ item.buy_now_price }}<br>{% endif %}
           <small>{{ item.bids.count }} bid{{ item.bids.count|pluralize }} — closes {{ item.effective_close_time|date:"M j, g:i A" }}</small>
         </p>
         <a class="site-btn" href="{% url 'auction-item-detail' auction.pk item.number %}" hx-boost="true" hx-target="main" hx-select="main" hx-swap="innerHTML show:window:top">View &amp; bid</a>
@@ -25,6 +26,7 @@
 <ul class="list-unstyled">
   {% for item in closed_items %}
   <li>
+    {% if item.winning_bid %}<span class="badge badge-success">SOLD</span>{% else %}<span class="badge badge-secondary">CLOSED</span>{% endif %}
     #{{ item.number }} {{ item.title }} —
     {% if item.winning_bid %}won by {{ item.winning_bid.bidder.display_name }} (${{ item.winning_bid.amount }}){% else %}no bids{% endif %}
     <a href="{% url 'auction-item-detail' auction.pk item.number %}" hx-boost="true" hx-target="main" hx-select="main" hx-swap="innerHTML show:window:top">details</a>

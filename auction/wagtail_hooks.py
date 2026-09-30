@@ -17,6 +17,7 @@ class AuctionViewSet(SnippetViewSet):
         FieldPanel("soft_close_enabled"),
         FieldPanel("soft_close_minutes"),
         FieldPanel("payment_instructions"),
+        FieldPanel("user_agreement"),
     ]
 
 
@@ -33,6 +34,7 @@ class AuctionItemViewSet(SnippetViewSet):
         FieldPanel("description"),
         FieldPanel("starting_bid"),
         FieldPanel("bid_increment"),
+        FieldPanel("buy_now_price"),
         FieldPanel("close_time"),
         InlinePanel("images", label="Images (first one is the cover)"),
     ]

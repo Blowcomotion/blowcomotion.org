@@ -33,6 +33,15 @@ class SmsWebhookTests(TestCase):
         response = self.sms("bid #1 $25")
         self.assertEqual(self.item.bids.count(), 1)
 
+    def test_bid_with_comma(self):
+        self.sms("BID 1 1,000")
+        self.assertEqual(self.item.bids.get().amount, Decimal("1000"))
+
+    def test_out_of_range_amount_gets_usage(self):
+        response = self.sms("BID 1 1,000,000,000")
+        self.assertContains(response, "To bid, text")
+        self.assertEqual(self.item.bids.count(), 0)
+
     def test_too_low_bid_explains_minimum(self):
         response = self.sms("BID 1 5")
         self.assertContains(response, "at least $25")

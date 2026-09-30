@@ -1,22 +1,23 @@
 import logging
 import re
-from decimal import Decimal
 
 from twilio.request_validator import RequestValidator
 from twilio.twiml.messaging_response import MessagingResponse
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.http import HttpResponse, HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from auction import notifications
+from auction.forms import BidForm
 from auction.models import AuctionItem, Bidder
 from auction.services import BidError, place_bid
 
 logger = logging.getLogger(__name__)
 
-BID_RE = re.compile(r"^\s*bid\s+#?(\d+)\s+\$?(\d+(?:\.\d{1,2})?)\s*$", re.IGNORECASE)
+BID_RE = re.compile(r"^\s*bid\s+#?(\d+)\s+(\S+)\s*$", re.IGNORECASE)
 USAGE = 'To bid, text: BID <item number> <amount> — for example "BID 12 60".'
 
 
@@ -47,6 +48,11 @@ def _handle_bid(bidder, item_number, amount):
         bid = place_bid(item.pk, bidder, amount, source="sms")
     except BidError as exc:
         return str(exc)
+    if bid.bought_now:
+        return (
+            f"You bought #{item.number} {item.title} with Buy It Now for ${bid.amount}! "
+            f"{notifications.item_url(item)}"
+        )
     return (
         f"You're the top bid on #{item.number} {item.title} at ${bid.amount}! "
         f"{notifications.item_url(item)}"
@@ -72,5 +78,9 @@ def sms_webhook(request):
 
     match = BID_RE.match(body)
     if match:
-        return _twiml(_handle_bid(bidder, int(match.group(1)), Decimal(match.group(2))))
+        try:
+            amount = BidForm.base_fields["amount"].clean(match.group(2))
+        except ValidationError:
+            return _twiml(USAGE)
+        return _twiml(_handle_bid(bidder, int(match.group(1)), amount))
     return _twiml(USAGE)

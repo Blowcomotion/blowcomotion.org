@@ -1,17 +1,13 @@
 {% extends "base.html" %}
-{% load wagtailimages_tags %}
+{% load wagtailcore_tags wagtailimages_tags %}
 {% block content %}
 <div class="container py-4">
   {% with auction_page=auction.get_page %}
   {% if auction_page %}
-  <nav aria-label="breadcrumb" hx-boost="true" hx-target="main" hx-select="main" hx-swap="innerHTML show:window:top">
-    <ol class="breadcrumb">
-      <li class="breadcrumb-item"><a href="{{ auction_page.url }}">{{ auction.name }}</a></li>
-      <li class="breadcrumb-item active" aria-current="page">#{{ item.number }} {{ item.title }}</li>
-    </ol>
-  </nav>
+  <div hx-boost="true" hx-target="main" hx-select="main" hx-swap="innerHTML show:window:top">
+    <a href="{{ auction_page.url }}" class="site-btn site-btn--small mb-3">&larr; Back to all auction items</a>
+  </div>
   {% endif %}
-  {% endwith %}
   {% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}
   <h1>#{{ item.number }} {{ item.title }}</h1>
 
@@ -25,39 +21,105 @@
 
   <div class="d-flex justify-content-end mb-2">
     <button type="button" class="site-btn"
-            onclick="htmx.trigger('#bid-state', 'refreshAuction')">
+            onclick="htmx.trigger(document.body, 'refreshAuction')">
       Refresh now
     </button>
   </div>
   <div id="bid-state"
        hx-get="{{ request.path }}"
-       hx-select="#bid-state" hx-target="#bid-state" hx-swap="outerHTML"
-       hx-trigger="every 60s, refreshAuction">
-    {% if item.top_bid %}
-    <p>Current bid: ${{ item.top_bid.amount }} — minimum next bid: ${{ item.minimum_bid }}</p>
+       hx-select="#bid-state" hx-select-oob="#bid-history" hx-target="#bid-state" hx-swap="outerHTML"
+       hx-trigger="every 60s, refreshAuction from:body">
+    {% if item.is_open %}
+      {% if item.top_bid %}
+      <p class="lead">Current bid: <strong>${{ item.top_bid.amount }}</strong> &mdash; minimum next bid: <strong>${{ item.minimum_bid }}</strong></p>
+      {% else %}
+      <p class="lead">Starting bid: <strong>${{ item.minimum_bid }}</strong></p>
+      {% endif %}
+      {% if item.buy_now_available %}
+      {# Lives in the refreshed region so it disappears once buy-now is no longer possible. #}
+      <p class="lead">Buy It Now: <strong>${{ item.buy_now_price }}</strong>
+        <button type="button" class="site-btn ml-2"
+                onclick="var f = document.getElementById('bid-form'); if (f && confirm('Buy #{{ item.number }} now for ${{ item.buy_now_price }}? This ends the auction for this item and is a binding purchase.')) { f.amount.value = '{{ item.buy_now_price }}'; f.requestSubmit(); }">
+          Buy It Now for ${{ item.buy_now_price }}
+        </button>
+      </p>
+      {% endif %}
     {% else %}
-    <p>Starting bid: ${{ item.minimum_bid }}</p>
+      <div class="alert alert-success text-center" role="status">
+        <h2 class="mb-0">{% if item.winning_bid %}SOLD to {{ item.winning_bid.bidder.display_name }} for ${{ item.winning_bid.amount }}{% else %}Bidding closed &mdash; no bids{% endif %}</h2>
+      </div>
     {% endif %}
-
-    <h2>Bid history</h2>
-    <ul>{% for bid in bids %}<li>${{ bid.amount }} — {{ bid.bidder.display_name }} ({{ bid.created_at }})</li>{% empty %}<li>No bids yet.</li>{% endfor %}</ul>
-    <p class="text-muted mt-2"><small>Last refreshed: {% now "g:i:s A" %} — updates automatically every minute.</small></p>
   </div>
 
   {% if item.is_open %}
-  <form method="post" action="{% url 'auction-place-bid' auction.pk item.number %}" data-recaptcha>
+  <form method="post" action="{% url 'auction-place-bid' auction.pk item.number %}" data-recaptcha id="bid-form" class="mb-4">
     {% csrf_token %}
     {% if not bidder %}
       <p><a href="/member/login/?next={{ request.path|urlencode }}">Band member? Log in to skip this form.</a></p>
-      {{ registration_form.as_p }}
+      {% for field in registration_form %}
+        {% if field.name == "sms_opt_in" or field.name == "accept_agreement" %}
+        <div class="form-check mb-3">
+          <input type="checkbox" class="form-check-input" name="{{ field.html_name }}" id="{{ field.id_for_label }}"{% if field.field.required %} required{% endif %}>
+          <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {% if field.name == "accept_agreement" %}
+          (<a href="#" data-toggle="modal" data-target="#user-agreement-modal">read it</a>)
+          {% endif %}
+        </div>
+        {% else %}
+        <div class="form-group">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          <input type="{% if field.name == 'email' %}email{% elif field.name == 'phone' %}tel{% else %}text{% endif %}"
+                 class="form-control" name="{{ field.html_name }}" id="{{ field.id_for_label }}"
+                 value="{{ field.value|default_if_none:'' }}" required>
+          {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
+        </div>
+        {% endif %}
+      {% endfor %}
     {% else %}
       <p>Bidding as {{ bidder.display_name }}</p>
     {% endif %}
-    {{ bid_form.as_p }}
+    <div class="form-group">
+      <label for="id_amount"><strong>Your bid</strong></label>
+      <div class="input-group input-group-lg">
+        <div class="input-group-prepend"><span class="input-group-text">$</span></div>
+        <input type="text" inputmode="decimal" class="form-control" name="amount" id="id_amount"
+               value="{{ bid_form.amount.value }}" required>
+      </div>
+      <small class="form-text text-muted">Type any amount at or above the minimum next bid shown above, then tap Place bid.</small>
+    </div>
     <button type="submit" class="site-btn">Place bid</button>
   </form>
-  {% else %}
-    <p>Bidding closed.{% if item.winning_bid %} Won by {{ item.winning_bid.bidder.display_name }} (${{ item.winning_bid.amount }}).{% endif %}</p>
+
+  {% if not bidder and auction.user_agreement %}
+  <div class="modal fade" id="user-agreement-modal" tabindex="-1" role="dialog" aria-labelledby="user-agreement-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="user-agreement-title">User Agreement</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        </div>
+        <div class="modal-body">{{ auction.user_agreement|richtext }}</div>
+        <div class="modal-footer">
+          <button type="button" class="site-btn" data-dismiss="modal"
+                  onclick="document.getElementById('id_accept_agreement').checked = true">I Accept</button>
+        </div>
+      </div>
+    </div>
+  </div>
   {% endif %}
+  {% endif %}
+
+  <div id="bid-history">
+    <h2>Bid history</h2>
+    <ul>{% for bid in bids %}<li>${{ bid.amount }} &mdash; {{ bid.bidder.display_name }} ({{ bid.created_at }})</li>{% empty %}<li>No bids yet.</li>{% endfor %}</ul>
+    <p class="text-muted mt-2"><small>Last refreshed: {% now "g:i:s A" %} &mdash; updates automatically every minute.</small></p>
+  </div>
+
+  {% if auction_page %}
+  <div hx-boost="true" hx-target="main" hx-select="main" hx-swap="innerHTML show:window:top">
+    <a href="{{ auction_page.url }}" class="site-btn site-btn--small">&larr; Back to all auction items</a>
+  </div>
+  {% endif %}
+  {% endwith %}
 </div>
 {% endblock %}
