@@ -52,6 +52,7 @@ class ExportMembersToCSVCommandTest(TestCase):
         self.member = Member.objects.create(
             first_name="Ada",
             last_name="Lovelace",
+            email="ada@example.com",
             primary_instrument=self.trumpet,
             shirt_size="M",
             dietary_preferences=["Vegan", "Gluten-Free"],
@@ -89,6 +90,9 @@ class ExportMembersToCSVCommandTest(TestCase):
             for field_name in expected_field_names:
                 self.assertIn(field_name, headers)
 
+            for column in ["first_name", "last_name", "email"]:
+                self.assertIn(column, headers)
+
             for column in RECENTLY_ADDED_MEMBER_COLUMNS:
                 self.assertIn(column, headers)
 
@@ -117,6 +121,9 @@ class ExportMembersToCSVCommandTest(TestCase):
             self.assertEqual(len(rows), 1)
             row = rows[0]
 
+            self.assertEqual(row["first_name"], "Ada")
+            self.assertEqual(row["last_name"], "Lovelace")
+            self.assertEqual(row["email"], "ada@example.com")
             self.assertEqual(row["shirt_size"], "M")
             self.assertEqual(row["dietary_preferences"], "Vegan; Gluten-Free")
             self.assertEqual(row["has_allergies"], "YES")
