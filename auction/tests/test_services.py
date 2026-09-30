@@ -85,13 +85,20 @@ class PlaceBidTests(TestCase):
         with self.assertRaises(BidError):
             place_bid(self.item.pk, self.alice, Decimal("200"))
 
-    def test_buy_now_unavailable_once_bidding_passes_it(self, mock_notify):
+    def test_buy_now_still_available_when_next_increment_crosses_it(self, mock_notify):
         self.item.buy_now_price = Decimal("50")
         self.item.save()
         place_bid(self.item.pk, self.alice, Decimal("48"))  # minimum is now 53
-        self.assertFalse(self.item.buy_now_available)
+        self.assertTrue(self.item.buy_now_available)
         bid = place_bid(self.item.pk, self.bob, Decimal("60"))
-        self.assertEqual(bid.amount, Decimal("60"))
+        self.assertEqual(bid.amount, Decimal("50"))
+        self.assertTrue(bid.bought_now)
+
+    def test_buy_now_below_starting_bid_is_ignored(self, mock_notify):
+        self.item.buy_now_price = Decimal("10")  # starting bid is 25
+        self.item.save()
+        self.assertFalse(self.item.buy_now_available)
+        bid = place_bid(self.item.pk, self.alice, Decimal("25"))
         self.assertFalse(bid.bought_now)
 
     def test_buy_now_unavailable_when_price_equals_top_bid(self, mock_notify):

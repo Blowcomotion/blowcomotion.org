@@ -30,7 +30,9 @@
        hx-select="#bid-state" hx-select-oob="#bid-history" hx-target="#bid-state" hx-swap="outerHTML"
        hx-trigger="every 60s, refreshAuction from:body">
     {% if item.is_open %}
-      {% if item.top_bid %}
+      {% if item.buy_now_is_next %}
+      <p class="lead">Current bid: <strong>${{ item.top_bid.amount }}</strong> &mdash; the next bid buys it with Buy It Now.</p>
+      {% elif item.top_bid %}
       <p class="lead">Current bid: <strong>${{ item.top_bid.amount }}</strong> &mdash; minimum next bid: <strong>${{ item.minimum_bid }}</strong></p>
       {% else %}
       <p class="lead">Starting bid: <strong>${{ item.minimum_bid }}</strong></p>
@@ -45,13 +47,15 @@
       </p>
       {% endif %}
     {% else %}
-      <div class="alert alert-success text-center" role="status">
+      <div class="alert alert-success text-center item-closed" role="status">
         <h2 class="mb-0">{% if item.winning_bid %}SOLD to {{ item.winning_bid.bidder.display_name }} for ${{ item.winning_bid.amount }}{% else %}Bidding closed &mdash; no bids{% endif %}</h2>
       </div>
     {% endif %}
   </div>
 
   {% if item.is_open %}
+  {# The form sits outside the polled region so typing isn't wiped; hide it once a refresh shows the item closed. #}
+  <style>#bid-state:has(.item-closed) ~ #bid-form { display: none; }</style>
   <form method="post" action="{% url 'auction-place-bid' auction.pk item.number %}" data-recaptcha id="bid-form" class="mb-4">
     {% csrf_token %}
     {% if not bidder %}

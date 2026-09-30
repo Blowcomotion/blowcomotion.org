@@ -64,6 +64,25 @@ def notify_outbid(previous_top_bid, new_bid, sold=False):
                 f"Bidding on it has closed. {url}",
             )
         return
+    if item.buy_now_is_next:
+        _send_email(
+            subject=f"You've been outbid on #{item.number} {item.title}",
+            body=(
+                f"Hi {bidder.name},\n\n"
+                f"Someone bid ${new_bid.amount} on #{item.number} {item.title} — "
+                f"you're no longer in the lead.\n\n"
+                f"The next bid now buys it outright with Buy It Now for ${item.buy_now_price}: {url}\n"
+            ),
+            to=[bidder.email],
+        )
+        if bidder.sms_opt_in:
+            send_sms(
+                bidder.phone,
+                f"You've been outbid on #{item.number} {item.title} — now ${new_bid.amount}. "
+                f"Reply BID {item.number} {item.buy_now_price} to buy it now for "
+                f"${item.buy_now_price}, or see it here: {url}",
+            )
+        return
     next_min = item.minimum_bid
     _send_email(
         subject=f"You've been outbid on #{item.number} {item.title}",
