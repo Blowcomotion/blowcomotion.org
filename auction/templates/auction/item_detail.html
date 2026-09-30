@@ -30,13 +30,11 @@
        hx-select="#bid-state" hx-select-oob="#bid-history" hx-target="#bid-state" hx-swap="outerHTML"
        hx-trigger="every 60s, refreshAuction from:body">
     {% if item.is_open %}
-      {% if item.buy_now_is_next %}
-      <p class="lead">Current bid: <strong>${{ item.top_bid.amount }}</strong> &mdash; the next bid buys it with Buy It Now.</p>
-      {% elif item.top_bid %}
-      <p class="lead">Current bid: <strong>${{ item.top_bid.amount }}</strong> &mdash; minimum next bid: <strong>${{ item.minimum_bid }}</strong></p>
-      {% else %}
-      <p class="lead">Starting bid: <strong>${{ item.minimum_bid }}</strong></p>
-      {% endif %}
+      <p class="lead">
+        {% if item.top_bid %}Current bid: <strong>${{ item.top_bid.amount }}</strong>{% else %}Starting bid: <strong>${{ item.starting_bid }}</strong>{% endif %}
+        {% if item.buy_now_is_next %}&mdash; the next bid buys it with Buy It Now.
+        {% elif item.top_bid %}&mdash; minimum next bid: <strong>${{ item.minimum_bid }}</strong>{% endif %}
+      </p>
       {% if item.buy_now_available %}
       {# Lives in the refreshed region so it disappears once buy-now is no longer possible. #}
       <p class="lead">Buy It Now: <strong>${{ item.buy_now_price }}</strong>
