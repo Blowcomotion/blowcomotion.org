@@ -8,7 +8,11 @@
                 {% if entry.member.image %}
                     <div class="flex-shrink-0 mr-2">
                         {% image entry.member.image width-40 as member_photo %}
-                        <img src="{{ member_photo.url }}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:50%;">
+                        <img src="{{ member_photo.url }}" alt="" role="button" tabindex="0"
+                             class="attendance-member-photo"
+                             data-member-id="{{ entry.member.id }}"
+                             data-member-name="{{ entry.member }}"
+                             style="width:40px;height:40px;object-fit:cover;border-radius:50%;cursor:zoom-in;">
                     </div>
                 {% endif %}
                 <div>
