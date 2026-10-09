@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.cache import cache
 from django.core.management import call_command
 from django.db.models import Count, Q
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
@@ -21,6 +21,22 @@ from gigs.gigo import make_gigo_api_request
 logger = logging.getLogger(__name__)
 
 # Attendance Views
+
+
+@login_required
+@permission_required('blowcomotion.add_attendancerecord', raise_exception=True)
+def member_photo(request, member_id):
+    """Return the URL of a larger rendition of a member's photo.
+
+    Generated on demand (and cached by Wagtail from then on) so the
+    attendance capture page doesn't pay to render a large version of every
+    member's photo on every page load when most are never clicked.
+    """
+    member = get_object_or_404(Member, pk=member_id)
+    if not member.image:
+        raise Http404("Member has no photo")
+    rendition = member.image.get_rendition('width-400')
+    return JsonResponse({'url': rendition.url})
 
 
 @login_required
