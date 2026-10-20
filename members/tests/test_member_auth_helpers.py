@@ -158,7 +158,8 @@ class MemberSaveEmailDriftTests(TestCase):
         and GO3 is configured. Without this, the guard only runs in the sync_go3=False
         path. The guard is placed before the GO3 verification block so it runs
         correctly even though the GO3 block later clobbers the update_fields local."""
-        member = make_member(email="old@example.com")
+        with patch("gigs.gigo.make_gigo_api_request", return_value=None):
+            member = make_member(email="old@example.com")
         user = member.user
 
         # GO3 returns a valid member_id — this is what triggers the clobber:

@@ -229,8 +229,10 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "handlers": {
+        # Discard all log output during tests so the runner only prints dots;
+        # assertLogs still works because it attaches its own handler
         "console": {
-            "class": "logging.StreamHandler",
+            "class": "logging.NullHandler" if TESTING else "logging.StreamHandler",
         },
     },
     "root": {

@@ -1,3 +1,5 @@
+from io import StringIO
+
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import TestCase
@@ -9,7 +11,7 @@ class AuctionAdminTests(TestCase):
     def test_auctioneer_can_load_auction_snippet_index(self):
         from django.contrib.auth.models import Group
 
-        call_command("setup_roles", verbosity=0)
+        call_command("setup_roles", verbosity=0, stdout=StringIO())
         user = User.objects.create_user(username="beej", password="Pass123!")
         user.groups.add(Group.objects.get(name="Auctioneer"))
         self.client.login(username="beej", password="Pass123!")
