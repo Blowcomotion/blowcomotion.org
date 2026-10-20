@@ -79,8 +79,10 @@ class InviteMembersCommandTests(TestCase):
         mock_email.side_effect = email_side_effect
 
         out = StringIO()
-        call_command("invite_members", stdout=out)
+        err = StringIO()
+        call_command("invite_members", stdout=out, stderr=err)
         self.assertEqual(call_count[0], 2)
+        self.assertIn("ERROR for", err.getvalue())
 
     @patch_email
     def test_logs_summary(self, mock_email):

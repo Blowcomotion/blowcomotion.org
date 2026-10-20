@@ -232,7 +232,12 @@ class MemberSignupGO3IntegrationTests(TestCase):
         """Set up test data"""
         self.client = Client()
         self.site = Site.objects.get(is_default_site=True)
-        
+
+        # Member.save() queries GO3 when the API is configured; keep it off the network
+        gigo_patcher = patch('gigs.gigo.make_gigo_api_request', return_value=None)
+        gigo_patcher.start()
+        self.addCleanup(gigo_patcher.stop)
+
         # Create site settings
         SiteSettings.objects.create(
             site=self.site,

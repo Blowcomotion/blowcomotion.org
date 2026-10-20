@@ -1,3 +1,5 @@
+from io import StringIO
+
 from django.contrib.auth.models import Group
 from django.core.management import call_command
 from django.test import TestCase
@@ -5,7 +7,7 @@ from django.test import TestCase
 
 class AuctioneerRoleTests(TestCase):
     def test_setup_roles_creates_auctioneer(self):
-        call_command("setup_roles", verbosity=0)
+        call_command("setup_roles", verbosity=0, stdout=StringIO())
         group = Group.objects.get(name="Auctioneer")
         codenames = set(group.permissions.values_list("codename", flat=True))
         self.assertIn("access_admin", codenames)

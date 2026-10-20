@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+from io import StringIO
 from unittest.mock import patch
 
 from django.core.management import call_command
@@ -61,6 +62,6 @@ class CloseExpiredItemsTests(TestCase):
         mock_summary.assert_called_once()
 
     def test_management_command_runs(self, mock_winner, mock_summary):
-        call_command("close_auction_items")
+        call_command("close_auction_items", stdout=StringIO())
         self.item.refresh_from_db()
         self.assertIsNotNone(self.item.winner_notified_at)

@@ -474,6 +474,7 @@ class SendMonthlyBirthdaySummaryTests(TestCase):
     def _run_command(self, **kwargs):
         """Helper to run command with date check bypassed for tests"""
         kwargs.setdefault('ignore_date_check', True)
+        kwargs.setdefault('stdout', StringIO())
         return call_command('send_monthly_birthday_summary', **kwargs)
 
 @override_settings(FROM_EMAIL='test@example.com')
@@ -626,19 +627,19 @@ class RollingWindowBirthdayUpdateTests(TestCase):
             self._mock_today(mock_date, date(2026, 7, 1))
 
             with self.assertRaises(CommandError) as cm:
-                call_command('send_monthly_birthday_summary', '--days', '--ignore-date-check')
+                call_command('send_monthly_birthday_summary', '--days', '--ignore-date-check', stdout=StringIO())
 
             self.assertIn('No birthday email recipients configured', str(cm.exception))
 
     def test_command_negative_days_rejected(self):
         with self.assertRaises(CommandError) as cm:
-            call_command('send_monthly_birthday_summary', '--days=-5')
+            call_command('send_monthly_birthday_summary', '--days=-5', stdout=StringIO())
 
         self.assertIn('--days must be a positive integer', str(cm.exception))
 
     def test_command_days_and_month_rejected(self):
         with self.assertRaises(CommandError) as cm:
-            call_command('send_monthly_birthday_summary', '--days=7', '--month=9')
+            call_command('send_monthly_birthday_summary', '--days=7', '--month=9', stdout=StringIO())
 
         self.assertIn('--days cannot be combined with --month or --year', str(cm.exception))
 
@@ -786,7 +787,7 @@ class RollingWindowBirthdayUpdateTests(TestCase):
         with patch('members.management.commands.send_monthly_birthday_summary.date') as mock_date:
             self._mock_today(mock_date, date(2026, 7, 1))
 
-            call_command('send_monthly_birthday_summary', '--days', '--ignore-date-check')
+            call_command('send_monthly_birthday_summary', '--days', '--ignore-date-check', stdout=StringIO())
 
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]

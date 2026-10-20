@@ -1,6 +1,8 @@
 """
 Unit tests for the setup_roles management command.
 """
+from io import StringIO
+
 from wagtail.models import (
     GroupCollectionPermission,
     GroupPagePermission,
@@ -19,7 +21,7 @@ class SetupRolesCommandTests(TestCase):
         return set(group.permissions.values_list('codename', flat=True))
 
     def test_creates_dev_group(self):
-        call_command('setup_roles')
+        call_command('setup_roles', stdout=StringIO())
         codenames = self._perm_codenames('Dev')
         self.assertIn('access_dev_tools', codenames)
         self.assertIn('change_cachedgig', codenames)
@@ -27,34 +29,34 @@ class SetupRolesCommandTests(TestCase):
         self.assertNotIn('access_real_data_exports', codenames)
 
     def test_creates_data_analyst_group(self):
-        call_command('setup_roles')
+        call_command('setup_roles', stdout=StringIO())
         codenames = self._perm_codenames('Data Analyst')
         self.assertIn('access_real_data_exports', codenames)
         self.assertIn('access_admin', codenames)
 
     def test_creates_gig_booker_group(self):
-        call_command('setup_roles')
+        call_command('setup_roles', stdout=StringIO())
         codenames = self._perm_codenames('Gig Booker')
         self.assertIn('change_cachedgig', codenames)
         self.assertIn('add_event', codenames)
         self.assertIn('access_admin', codenames)
 
     def test_creates_library_manager_group(self):
-        call_command('setup_roles')
+        call_command('setup_roles', stdout=StringIO())
         codenames = self._perm_codenames('Library Manager')
         for expected in ('change_libraryinstrument', 'change_instrumenthistorylog',
                           'change_instrumentstoragelocation', 'change_equipment'):
             self.assertIn(expected, codenames)
 
     def test_creates_arranger_composer_group(self):
-        call_command('setup_roles')
+        call_command('setup_roles', stdout=StringIO())
         codenames = self._perm_codenames('Arranger/Composer')
         for expected in ('change_chart', 'change_song', 'change_songconductor',
                           'change_songsoloist', 'change_songvideo'):
             self.assertIn(expected, codenames)
 
     def test_creates_attendance_taker_group(self):
-        call_command('setup_roles')
+        call_command('setup_roles', stdout=StringIO())
         codenames = self._perm_codenames('Attendance Taker')
         self.assertIn('view_attendancerecord', codenames)
         self.assertIn('add_attendancerecord', codenames)
@@ -67,7 +69,7 @@ class SetupRolesCommandTests(TestCase):
         # to avoid colliding with the unique constraint on Group.name.
         Group.objects.get_or_create(name='Editors')
         Group.objects.get_or_create(name='Moderators')
-        call_command('setup_roles')
+        call_command('setup_roles', stdout=StringIO())
         for group_name in ('Editors', 'Moderators'):
             group = Group.objects.get(name=group_name)
             codenames = self._perm_codenames(group_name)
@@ -95,7 +97,7 @@ class SetupRolesCommandTests(TestCase):
     def test_grants_page_and_collection_permissions_by_tier(self):
         Group.objects.get_or_create(name='Site Editors')
         Group.objects.get_or_create(name='Site Moderators')
-        call_command('setup_roles')
+        call_command('setup_roles', stdout=StringIO())
 
         editors = Group.objects.get(name='Site Editors')
         editor_page_codenames = set(
@@ -130,7 +132,7 @@ class SetupRolesCommandTests(TestCase):
         wiki_page = site_root.add_child(instance=Page(title='Blowco Wiki', slug='wiki'))
         Group.objects.get_or_create(name='Wiki Editors')
 
-        call_command('setup_roles')
+        call_command('setup_roles', stdout=StringIO())
 
         wiki_editors = Group.objects.get(name='Wiki Editors')
         page_perms = GroupPagePermission.objects.filter(group=wiki_editors)
@@ -140,13 +142,13 @@ class SetupRolesCommandTests(TestCase):
 
     def test_missing_editors_group_does_not_raise(self):
         Group.objects.filter(name__in=['Editors', 'Moderators']).delete()
-        call_command('setup_roles')  # should not raise
+        call_command('setup_roles', stdout=StringIO())  # should not raise
 
     def test_idempotent(self):
-        call_command('setup_roles')
+        call_command('setup_roles', stdout=StringIO())
         first_count = Group.objects.filter(name='Dev').count()
         first_perms = self._perm_codenames('Dev')
-        call_command('setup_roles')
+        call_command('setup_roles', stdout=StringIO())
         self.assertEqual(Group.objects.filter(name='Dev').count(), first_count)
         self.assertEqual(self._perm_codenames('Dev'), first_perms)
 
@@ -161,7 +163,7 @@ class SetupRolesCommandTests(TestCase):
         )
         for group_name in renamed_group_names:
             Group.objects.get_or_create(name=group_name)
-        call_command('setup_roles')
+        call_command('setup_roles', stdout=StringIO())
         for group_name in renamed_group_names:
             codenames = self._perm_codenames(group_name)
             self.assertIn('change_image', codenames)
