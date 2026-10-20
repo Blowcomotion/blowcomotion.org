@@ -23,7 +23,11 @@ class MemberIdleLogoutMiddleware:
         if not request.user.is_authenticated or request.user.is_staff:
             return None
 
-        timeout = getattr(settings, "MEMBER_IDLE_TIMEOUT", 3600)
+        timeout = (
+            settings.SESSION_COOKIE_AGE
+            if request.session.get("member_remember_me")
+            else getattr(settings, "MEMBER_IDLE_TIMEOUT", 3600)
+        )
         now = timezone.now().timestamp()
         last_activity = request.session.get("last_activity")
 

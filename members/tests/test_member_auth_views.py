@@ -42,6 +42,33 @@ class LoginViewTests(TestCase):
         )
         self.assertRedirects(response, "/member/profile/", fetch_redirect_response=False)
 
+    @recaptcha_pass
+    @override_settings(SESSION_COOKIE_AGE=86400)
+    def test_login_without_remember_me_uses_browser_session(self, mock_recaptcha):
+        self.client.post(
+            reverse("member-login"),
+            {"username": "sam@example.com", "password": "Str0ngP@ss!"},
+        )
+        self.assertTrue(self.client.session.get_expire_at_browser_close())
+        self.assertFalse(self.client.session.get("member_remember_me"))
+
+    @recaptcha_pass
+    @override_settings(SESSION_COOKIE_AGE=86400)
+    def test_remember_me_persists_session_and_extends_idle_timeout(self, mock_recaptcha):
+        response = self.client.post(
+            reverse("member-login"),
+            {
+                "username": "sam@example.com",
+                "password": "Str0ngP@ss!",
+                "remember_me": "on",
+            },
+        )
+        self.assertRedirects(response, "/member/profile/", fetch_redirect_response=False)
+        session = self.client.session
+        self.assertFalse(session.get_expire_at_browser_close())
+        self.assertEqual(session.get_expiry_age(), 86400)
+        self.assertTrue(session.get("member_remember_me"))
+
 
     def test_recaptcha_fail_stays_on_login(self):
         with patch(

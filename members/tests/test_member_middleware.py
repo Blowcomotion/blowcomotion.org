@@ -60,6 +60,18 @@ class MemberIdleLogoutMiddlewareTests(TestCase):
         self.assertEqual(result.status_code, 302)
         self.assertIn("/member/login/", result["Location"])
 
+    @override_settings(MEMBER_IDLE_TIMEOUT=60, SESSION_COOKIE_AGE=3600)
+    def test_remembered_session_uses_persistent_session_timeout(self):
+        from django.utils import timezone
+        mw = self.get_middleware()
+        user = _make_user()
+        recent = timezone.now().timestamp() - 120
+        request = _make_request(
+            user, {"last_activity": recent, "member_remember_me": True}
+        )
+        result = mw.process_request(request)
+        self.assertIsNone(result)
+
     @override_settings(MEMBER_IDLE_TIMEOUT=60)
     def test_staff_user_not_affected(self):
         from django.utils import timezone

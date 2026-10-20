@@ -124,6 +124,14 @@ class MemberLoginView(auth_views.LoginView):
             })
         return super().post(request, *args, **kwargs)
 
+    def form_valid(self, form):
+        remember_me = self.request.POST.get("remember_me") == "on"
+        self.request.session.set_expiry(
+            settings.SESSION_COOKIE_AGE if remember_me else 0
+        )
+        self.request.session["member_remember_me"] = remember_me
+        return super().form_valid(form)
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["include_form_js"] = True
