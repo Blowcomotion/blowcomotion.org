@@ -1,12 +1,8 @@
 import datetime
 
-from modelcluster.fields import ParentalKey
-from wagtail.admin.panels import FieldPanel, MultipleChooserPanel
 from wagtail.fields import StreamField
-from wagtail.models import Orderable, Page
+from wagtail.models import Page
 from wagtailseo.models import SeoMixin
-
-from django.db import models
 
 from blowcomotion import blocks as blowcomotion_blocks
 from blowcomotion.models.core import NotificationBanner
@@ -39,8 +35,10 @@ class BlankCanvasPage(BasePage):
             ("accordion_list", blowcomotion_blocks.AccordionListBlock()),
             ("auction", blowcomotion_blocks.AuctionBlock()),
             ("booking_form", blowcomotion_blocks.BookingFormBlock(group="Forms")),
+            ("breadcrumbs", blowcomotion_blocks.BreadcrumbsBlock()),
             ("button", blowcomotion_blocks.ButtonBlock()),
             ("chart_library", blowcomotion_blocks.ChartLibraryBlock()),
+            ("child_pages", blowcomotion_blocks.ChildPagesBlock()),
             ("column_layout", blowcomotion_blocks.ColumnLayoutBlock()),
             ("contact_form", blowcomotion_blocks.ContactFormBlock(group="Forms")),
             ("countdown", blowcomotion_blocks.CountdownBlock()),
@@ -55,6 +53,7 @@ class BlankCanvasPage(BasePage):
             ("member_signup_form", blowcomotion_blocks.MemberSignupFormBlock(group="Forms")),
             ("jukebox", blowcomotion_blocks.JukeBoxBlock()),
             ("multi_image_banner", blowcomotion_blocks.MultiImageBannerBlock()),
+            ("page_info", blowcomotion_blocks.PageInfoBlock()),
             ("patreon_button", blowcomotion_blocks.PatreonButton()),
             ("paypal_donate_button", blowcomotion_blocks.PayPalDonateButton()),
             ("quoted_image", blowcomotion_blocks.QuotedImageBlock()),
@@ -103,70 +102,3 @@ class BlankCanvasPage(BasePage):
             context["include_quote_css"] = False
 
         return context
-
-
-class WikiIndexPage(BlankCanvasPage):
-    """
-    Model for wiki index page
-
-    Attributes:
-        title: CharField
-        body: StreamField
-    """
-
-    template = "pages/blank_canvas_page.html"
-    subpage_types = ["blowcomotion.WikiPage"]
-    max_count = 1
-
-    class Meta:
-        verbose_name = "Wiki Index Page"
-        verbose_name_plural = "Wiki Index Pages"
-
-    def __str__(self):
-        return self.title
-
-
-class WikiAuthor(Orderable):
-    """
-    Model for authors of wiki pages
-
-    Attributes:
-        page: ParentalKey
-        author: ForeignKey
-    """
-
-    page = ParentalKey("blowcomotion.WikiPage", related_name="authors")
-    author = models.ForeignKey("blowcomotion.Member", on_delete=models.CASCADE)
-
-    panels = [
-        FieldPanel("author"),
-    ]
-
-    def __str__(self):
-        return str(self.author)
-
-
-class WikiPage(BlankCanvasPage):
-    """
-    Model for wiki pages
-
-    Attributes:
-        title: CharField
-        body: StreamField
-    """
-
-    template = "pages/blank_canvas_page.html"
-    parent_page_types = ["blowcomotion.WikiIndexPage"]
-    subpage_types = ["blowcomotion.WikiPage"]
-
-    content_panels = [
-        MultipleChooserPanel("authors", chooser_field_name="author"),
-    ] + BlankCanvasPage.content_panels
-
-
-    class Meta:
-        verbose_name = "Wiki Page"
-        verbose_name_plural = "Wiki Pages"
-
-    def __str__(self):
-        return self.title

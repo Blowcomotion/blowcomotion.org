@@ -22,10 +22,10 @@ class Command(BaseCommand):
             self.stdout.write("DRY RUN - No changes will be made")
         
         # Import the page models
-        from blowcomotion.models import BlankCanvasPage, WikiIndexPage, WikiPage
+        from blowcomotion.models import BlankCanvasPage
 
         # Find all pages that have StreamField body content
-        page_models = [BlankCanvasPage, WikiIndexPage, WikiPage]
+        page_models = [BlankCanvasPage]
         all_pages = []
         
         for model in page_models:

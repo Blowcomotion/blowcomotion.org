@@ -1,0 +1,14 @@
+{% if page %}
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                {% if value.show_title %}<h1>{{ page.title }}</h1>{% endif %}
+                {% if value.show_dates %}
+                    {% if page.first_published_at %}<p>Published on: {{ page.first_published_at|date:"F j, Y" }}</p>{% endif %}
+                    {% if page.last_published_at %}<p>Last updated on: {{ page.last_published_at|date:"F j, Y" }}</p>{% endif %}
+                {% endif %}
+                {% if authors %}<p>Page written by: {{ authors|join:", " }}</p>{% endif %}
+            </div>
+        </div>
+    </div>
+{% endif %}

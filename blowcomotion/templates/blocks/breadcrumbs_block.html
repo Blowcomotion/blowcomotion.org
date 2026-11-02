@@ -1,0 +1,17 @@
+{% load wagtailcore_tags %}
+{% if page %}
+    <div class="container">
+        <div class="row">
+            <div class="col-12 mt-3">
+                <nav aria-label="breadcrumb" hx-boost="true" hx-target="main" hx-select="main" hx-swap="innerHTML show:window:top">
+                    <ol class="breadcrumb">
+                        {% for ancestor in ancestors %}
+                            <li class="breadcrumb-item"><a href="{% pageurl ancestor %}">{{ ancestor.title }}</a></li>
+                        {% endfor %}
+                        <li class="breadcrumb-item active" aria-current="page">{{ page.title }}</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+{% endif %}

@@ -2,68 +2,6 @@
 {% load wagtailcore_tags %}
 
 {% block content %}
-    {% if page.get_verbose_name == 'Wiki Page' %}
-        <div class="container">
-            <div class="row">
-                <div class="col-12 mt-3">
-                    <nav aria-label="breadcrumb" hx-boost="true" hx-target="main" hx-select="main" hx-swap="innerHTML show:window:top">
-                        <ol class="breadcrumb">
-                            {% for ancestor in page.get_ancestors.specific %}
-                                {% if ancestor.get_verbose_name == 'Wiki Index Page' or ancestor.get_verbose_name == 'Wiki Page' %}
-                                    <li class="breadcrumb-item"><a href="{{ ancestor.url }}">{{ ancestor.title }}</a></li>
-                                {% endif %}
-                            {% endfor %}
-                            <li class="breadcrumb-item active" aria-current="page">{{ page.title }}</li>
-                        </ol>
-                    </nav>
-                    <h1>{{ page.title }}</h1>
-                </div>
-            </div>
-        </div>
-
-        <div class="container">
-            <div class="row">
-                <div class="col-12">
-                    <p>Published on: {{ page.first_published_at|date:"F j, Y" }}</p>
-                </div>
-            </div>
-        </div>
-
-        {% if page.last_published_at %}
-            <div class="container">
-                <div class="row">
-                    <div class="col-12">
-                        <p>Last updated on: {{ page.last_published_at|date:"F j, Y" }}</p>
-                    </div>
-                </div>
-            </div>
-        {% endif %}
-        {% if page.authors.all %}
-            <div class="container">
-                <div class="row">
-                    <div class="col-12">
-                        <p>Page written by: {{ page.authors.all|join:", " }}</p>         
-                    </div>
-                </div>
-            </div>
-        {% endif %}
-    {% endif %}
-
-    {% if page.get_verbose_name == 'Wiki Index Page' %}
-        <div class="container">
-            <div class="row">
-                <div class="col-12 mt-3">
-                    <h2>Wiki Index:</h2>
-                    <ul hx-boost="true" hx-target="main" hx-select="main" hx-swap="innerHTML show:window:top">
-                        {% for child_page in page.get_children %}
-                            <li><a href="{{ child_page.url }}">{{ child_page.title }}</a></li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-        </div>
-    {% endif %}
-
     {# Sticky content - renders above main body content and sticks to top after scrolling past #}
     {% if page.sticky_content %}
         <div class="sticky-content-wrapper py-2">
