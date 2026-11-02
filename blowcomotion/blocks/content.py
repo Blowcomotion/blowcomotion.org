@@ -7,7 +7,11 @@ from wagtail.images.blocks import ImageChooserBlock
 
 from django.core.cache import cache
 
-from blowcomotion.chooser_blocks import EventChooserBlock, GigoGigChooserBlock
+from blowcomotion.chooser_blocks import (
+    EventChooserBlock,
+    GigoGigChooserBlock,
+    MemberChooserBlock,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -484,3 +488,56 @@ class UpcomingPublicGigs(blocks.StructBlock):
         help_text = "This displays a list of confirmed upcoming public Blowco gigs as a list. (sourced from gig-o-matic)"
         template = "blocks/upcoming_public_gigs.html"
         preview_value = {}
+
+
+class BreadcrumbsBlock(blocks.StructBlock):
+    start_page = blocks.PageChooserBlock(
+        required=False,
+        help_text="The trail starts at this page (e.g. the wiki index). Leave blank to start at the home page.",
+    )
+
+    class Meta:
+        icon = "arrow-right"
+        label = "Breadcrumbs"
+        template = "blocks/breadcrumbs_block.html"
+
+    def get_context(self, value, parent_context=None):
+        context = super().get_context(value, parent_context)
+        page = context.get("page")
+        if page is not None:
+            # depth 1 is Wagtail's invisible root page
+            ancestors = page.get_ancestors().live().filter(depth__gt=1)
+            start = value.get("start_page")
+            if start and page.path.startswith(start.path):
+                ancestors = ancestors.filter(depth__gte=start.depth)
+            context["ancestors"] = ancestors
+        return context
+
+
+class PageInfoBlock(blocks.StructBlock):
+    show_title = blocks.BooleanBlock(required=False, default=True)
+    show_dates = blocks.BooleanBlock(
+        required=False, default=True, help_text="Show the published and last updated dates."
+    )
+    authors = blocks.ListBlock(MemberChooserBlock())
+
+    class Meta:
+        icon = "user"
+        label = "Page Info"
+        template = "blocks/page_info_block.html"
+
+    def get_context(self, value, parent_context=None):
+        context = super().get_context(value, parent_context)
+        # a deleted member leaves None in the list
+        context["authors"] = [a for a in value["authors"] if a]
+        return context
+
+
+class ChildPagesBlock(blocks.StructBlock):
+    heading = blocks.CharBlock(required=False, default="Index")
+
+    class Meta:
+        icon = "list-ul"
+        label = "Child Pages"
+        template = "blocks/child_pages_block.html"
+        help_text = "Lists links to the published pages directly under this page."
