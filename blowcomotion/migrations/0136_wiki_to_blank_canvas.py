@@ -48,29 +48,40 @@ def convert_wiki_pages(apps, schema_editor):
     wiki_ids = [pk for pk, model in wiki_pages if model == "wikipage"]
     index_id = index_ids[0] if index_ids else None
 
-    header = {pk: [_block("child_pages", {"heading": "Wiki Index"})] for pk in index_ids}
+    def index_header():
+        return [_block("child_pages", {"heading": "Wiki Index"})]
+
+    def wiki_header(author_ids):
+        return [
+            _block("breadcrumbs", {"start_page": index_id}),
+            _block("page_info", {"show_title": True, "show_dates": True, "authors": _list(author_ids)}),
+        ]
+
+    header = {pk: index_header() for pk in index_ids}
     for pk in wiki_ids:
-        authors = list(
+        header[pk] = wiki_header(
             WikiAuthor.objects.filter(page_id=pk).order_by("sort_order").values_list("author_id", flat=True)
         )
-        header[pk] = [
-            _block("breadcrumbs", {"start_page": index_id}),
-            _block("page_info", {"show_title": True, "show_dates": True, "authors": _list(authors)}),
-        ]
 
     for page in BlankCanvasPage.objects.filter(pk__in=header):
         page.body = header[page.pk] + list(page.body.raw_data if page.body else [])
         page.save(update_fields=["body"])
 
     Revision = apps.get_model("wagtailcore", "Revision")
+    index_ct_ids = {ct.pk for ct in wiki_cts if ct.model == "wikiindexpage"}
     for rev in Revision.objects.filter(content_type__in=wiki_cts):
         content = rev.content
         content["content_type"] = blank_ct.pk
-        content.pop("authors", None)
+        # each revision keeps the author credits it was saved with
+        authors = sorted(content.pop("authors", None) or [], key=lambda a: a.get("sort_order") or 0)
+        if rev.content_type_id in index_ct_ids:
+            rev_header = index_header()
+        else:
+            rev_header = wiki_header([a["author"] for a in authors if a.get("author")])
         body = content.get("body") or []
         if isinstance(body, str):
             body = json.loads(body)
-        content["body"] = json.dumps(header.get(int(rev.object_id), []) + body)
+        content["body"] = json.dumps(rev_header + body)
         rev.content = content
         rev.save(update_fields=["content"])
 
