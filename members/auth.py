@@ -139,20 +139,21 @@ def send_set_password_email(member, base_url):
     logger.info(f"Sent set-password email to member {member.pk} ({member.email})")
 
 
-def send_email_change_confirmation(member, new_email, base_url):
-    """Create an EmailChangeToken, set member.pending_email, and email new_email the confirm link."""
-    EmailChangeToken.objects.filter(member=member, used=False).update(used=True)
-    token = EmailChangeToken.objects.create(member=member, new_email=new_email)
+def send_email_change_confirmation(member, new_email, base_url, is_patreon=False):
+    """Create an EmailChangeToken, set the member's pending (Patreon) email, and email new_email the confirm link."""
+    EmailChangeToken.objects.filter(member=member, used=False, is_patreon=is_patreon).update(used=True)
+    token = EmailChangeToken.objects.create(member=member, new_email=new_email, is_patreon=is_patreon)
 
     confirm_url = f"{base_url}/member/confirm-email/{token.uuid}/"
-    subject = "Confirm your new Blowcomotion email address"
+    subject = f"Confirm your new Blowcomotion {'Patreon ' if is_patreon else ''}email address"
     message = render_to_string(
         "emails/email_change_confirm.txt",
-        {"member": member, "new_email": new_email, "confirm_url": confirm_url},
+        {"member": member, "new_email": new_email, "confirm_url": confirm_url, "is_patreon": is_patreon},
     )
     _send_mail(subject, message, settings.FROM_EMAIL, new_email)
-    member.pending_email = new_email
-    member.save(update_fields=["pending_email"], sync_go3=False)
+    pending_field = "pending_patreon_email" if is_patreon else "pending_email"
+    setattr(member, pending_field, new_email)
+    member.save(update_fields=[pending_field], sync_go3=False)
     logger.info(f"Sent email-change confirmation to {new_email} for member {member.pk}")
 
 

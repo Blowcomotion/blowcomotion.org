@@ -4,7 +4,7 @@
 <div class="container py-5 text-center">
     {% if confirmed %}
         <h1 class="mb-3">Email Confirmed</h1>
-        <p class="lead">Your email address has been updated to <strong>{{ new_email }}</strong>.</p>
+        <p class="lead">Your {% if is_patreon %}Patreon {% endif %}email address has been updated to <strong>{{ new_email }}</strong>.</p>
         <a href="{% url 'member-profile' %}" class="site-btn mt-3">Go to My Profile</a>
     {% elif expired %}
         <h1 class="mb-3">Link Expired</h1>

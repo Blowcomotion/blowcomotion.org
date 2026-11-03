@@ -1,6 +1,6 @@
 Hi {{ member.preferred_name|default:member.first_name }},
 
-You requested to change your Blowcomotion email address to {{ new_email }}.
+{% if is_patreon %}You asked us to use {{ new_email }} to look up your Patreon membership.{% else %}You requested to change your Blowcomotion email address to {{ new_email }}.{% endif %}
 
 Click the link below to confirm this change. This link expires in 24 hours.
 

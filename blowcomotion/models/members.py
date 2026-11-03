@@ -212,6 +212,7 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
         related_name="member",
     )
     pending_email = models.EmailField(null=True, blank=True)
+    pending_patreon_email = models.EmailField(null=True, blank=True)
     invite_sent_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -755,6 +756,7 @@ class EmailChangeToken(models.Model):
     )
     uuid = models.UUIDField(default=uuid_module.uuid4, unique=True, editable=False)
     new_email = models.EmailField()
+    is_patreon = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     used = models.BooleanField(default=False)
 
