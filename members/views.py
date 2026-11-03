@@ -87,16 +87,17 @@ def _get_member_patreon_status(member):
     should treat None as "unavailable" rather than erroring. Assumes the
     caller has already confirmed Patreon is configured.
     """
-    if not member.email:
+    email = member.patreon_lookup_email
+    if not email:
         return None
 
-    cache_key = f"member_patreon_status:{member.email.lower()}"
+    cache_key = f"member_patreon_status:{email.lower()}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
 
     try:
-        result = check_patreon_membership(member.email)
+        result = check_patreon_membership(email)
     except Exception:
         logger.exception(
             "profile_view: unexpected error checking Patreon status for member %s", member.pk
@@ -627,7 +628,7 @@ def instrument_rental_request(request):
 
             # Validate Patreon membership for the submitting member.
             # Runs after save so the submission always exists regardless of API outcome.
-            patreon_result = check_patreon_membership(member.email)
+            patreon_result = check_patreon_membership(member.patreon_lookup_email)
             submission.patreon_validated = patreon_result["is_active"] if patreon_result is not None else None
             submission.patreon_pledge_cents = patreon_result["pledge_cents"] if patreon_result is not None else None
             submission.patreon_last_charge_date = patreon_result["last_charge_date"] if patreon_result is not None else None
@@ -669,6 +670,8 @@ def instrument_rental_request(request):
                     )
                 else:
                     patreon_line = "Patreon: not checked (API not configured or unavailable)"
+                if patreon_result is not None and member.patreon_email:
+                    patreon_line += f" (checked using {member.patreon_email})"
                 manager_body = (
                     f"Instrument Rental Request [PENDING]\n\n"
                     f"Member: {member.full_name}\n"

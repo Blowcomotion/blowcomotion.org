@@ -46,8 +46,9 @@
             {% endif %}
         {% else %}
             <span class="text-danger">Not found or inactive</span>
-            <div class="form-text mb-0">We couldn't confirm an active Patreon pledge for your account email. If you believe this is an error, contact us.</div>
+            <div class="form-text mb-0">We couldn't confirm an active Patreon pledge for {{ member.patreon_lookup_email }}. If you use a different email on Patreon, contact us and we'll link it to your profile.</div>
         {% endif %}
+        {% if member.patreon_email and patreon_status is not None %}<div class="form-text mb-0">Checked using {{ member.patreon_email }} (contact us to change)</div>{% endif %}
     </div>
 </div>
 {% endif %}

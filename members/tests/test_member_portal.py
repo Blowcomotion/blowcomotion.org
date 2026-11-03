@@ -259,6 +259,24 @@ class ProfilePatreonStatusTests(TestCase):
         self.client.get(reverse("member-profile"))
         mock_check.assert_called_once_with("patreontest@example.com")
 
+    @override_settings(PATREON_ACCESS_TOKEN="token", PATREON_CAMPAIGN_ID="123")
+    @patch("members.views.check_patreon_membership", return_value=None)
+    def test_patreon_email_used_for_lookup_when_set(self, mock_check):
+        self.member.patreon_email = "other@example.com"
+        self.member.save()
+        self.client.get(reverse("member-profile"))
+        mock_check.assert_called_once_with("other@example.com")
+
+    def test_patreon_email_not_editable_by_member(self):
+        self.client.post(reverse("member-profile"), {
+            "first_name": self.member.first_name,
+            "last_name": self.member.last_name,
+            "email": self.member.email,
+            "patreon_email": "someone@example.com",
+        })
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.patreon_email, "")
+
 
 class ConfirmEmailViewTests(TestCase):
     def setUp(self):

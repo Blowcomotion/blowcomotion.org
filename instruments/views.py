@@ -419,7 +419,7 @@ def rental_requests_dashboard(request):
 
             updated = skipped = 0
             for sub in InstrumentRentalRequestSubmission.objects.select_related("member"):
-                email = sub.member.email if sub.member else None
+                email = sub.member.patreon_lookup_email if sub.member else None
                 if not email:
                     skipped += 1
                     continue
@@ -434,7 +434,7 @@ def rental_requests_dashboard(request):
                 updated += 1
 
             for member in Member.objects.filter(user__isnull=False).exclude(user__email="").select_related("user"):
-                result = patreon_data.get(member.email.lower())
+                result = patreon_data.get(member.patreon_lookup_email.lower())
                 if result is None:
                     continue
                 member.patreon_is_active = result["is_active"]
@@ -450,7 +450,7 @@ def rental_requests_dashboard(request):
                 member = li.member
                 if not member:
                     continue
-                result = patreon_data.get((member.email or "").lower())
+                result = patreon_data.get((member.patreon_lookup_email or "").lower())
                 new_active = bool(result and result["is_active"] and (result["pledge_cents"] or 0) >= MIN_RENTAL_PLEDGE_CENTS)
                 if li.patreon_active != new_active:
                     li.patreon_active = new_active
