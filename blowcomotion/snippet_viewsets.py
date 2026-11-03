@@ -272,7 +272,7 @@ class MemberViewSet(SnippetViewSet):
     # Name/email live on the linked auth User. Unset search_backend_name so the
     # index view searches via the Django ORM, which can traverse user__ lookups.
     search_backend_name = None
-    search_fields = ("user__first_name", "user__last_name", "preferred_name", "gigomatic_username", "user__email")
+    search_fields = ("user__first_name", "user__last_name", "preferred_name", "gigomatic_username", "user__email", "patreon_email")
     list_display = [
         'display_name',
         Column('primary_instrument', label='Instrument', sort_key='primary_instrument__name'),
@@ -310,6 +310,7 @@ class MemberViewSet(SnippetViewSet):
         "last_seen",
         "separation_date",
         FieldPanel("email"),
+        "patreon_email",
         "phone",
         "address",
         "city",

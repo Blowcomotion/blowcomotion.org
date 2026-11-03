@@ -259,6 +259,66 @@ class ProfilePatreonStatusTests(TestCase):
         self.client.get(reverse("member-profile"))
         mock_check.assert_called_once_with("patreontest@example.com")
 
+    @override_settings(PATREON_ACCESS_TOKEN="token", PATREON_CAMPAIGN_ID="123")
+    @patch("members.views.check_patreon_membership", return_value=None)
+    def test_patreon_email_used_for_lookup_when_set(self, mock_check):
+        self.member.patreon_email = "other@example.com"
+        self.member.save()
+        self.client.get(reverse("member-profile"))
+        mock_check.assert_called_once_with("other@example.com")
+
+    def _post_profile(self, **extra):
+        data = {
+            "first_name": self.member.first_name,
+            "last_name": self.member.last_name,
+            "email": self.member.email,
+        }
+        data.update(extra)
+        return self.client.post(reverse("member-profile"), data)
+
+    def test_patreon_email_change_requires_confirmation(self):
+        from django.core import mail
+        self._post_profile(patreon_email="patron@other.com")
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.patreon_email, "")
+        self.assertEqual(self.member.pending_patreon_email, "patron@other.com")
+        token = EmailChangeToken.objects.get(member=self.member, is_patreon=True)
+        self.assertIn("patron@other.com", mail.outbox[-1].to)
+        self.assertIn(str(token.uuid), mail.outbox[-1].body)
+
+        self.client.get(reverse("member-confirm-email", kwargs={"token_uuid": token.uuid}))
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.patreon_email, "patron@other.com")
+        self.assertIsNone(self.member.pending_patreon_email)
+        self.assertEqual(self.member.email, "patreontest@example.com")
+
+    def test_clearing_patreon_email_applies_immediately_and_voids_pending_link(self):
+        self.member.patreon_email = "old@other.com"
+        self.member.save()
+        token = EmailChangeToken.objects.create(member=self.member, new_email="new@other.com", is_patreon=True)
+        self._post_profile(patreon_email="")
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.patreon_email, "")
+        token.refresh_from_db()
+        self.assertTrue(token.used)
+
+    def test_saving_profile_again_keeps_pending_patreon_link(self):
+        self._post_profile(patreon_email="patron@other.com")
+        self._post_profile(patreon_email="")
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.pending_patreon_email, "patron@other.com")
+        token = EmailChangeToken.objects.get(member=self.member, is_patreon=True)
+        self.assertFalse(token.used)
+        self.client.get(reverse("member-confirm-email", kwargs={"token_uuid": token.uuid}))
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.patreon_email, "patron@other.com")
+
+    def test_patreon_change_does_not_void_pending_account_email_link(self):
+        account_token = EmailChangeToken.objects.create(member=self.member, new_email="new@example.com")
+        self._post_profile(patreon_email="patron@other.com")
+        account_token.refresh_from_db()
+        self.assertFalse(account_token.used)
+
 
 class ConfirmEmailViewTests(TestCase):
     def setUp(self):

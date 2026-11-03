@@ -212,6 +212,7 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
         related_name="member",
     )
     pending_email = models.EmailField(null=True, blank=True)
+    pending_patreon_email = models.EmailField(null=True, blank=True)
     invite_sent_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -222,6 +223,11 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
     notify_rental_updates = models.BooleanField(default=True)
     notify_reminders = models.BooleanField(default=True)
     notify_announcements = models.BooleanField(default=True)
+
+    patreon_email = models.EmailField(
+        blank=True,
+        help_text="Email used on Patreon, if different from the member's account email",
+    )
 
     # Patreon cache — populated by validate_patreon_rentals / admin refresh
     patreon_is_active = models.BooleanField(null=True, blank=True)
@@ -312,6 +318,10 @@ class Member(RevisionMixin, ClusterableModel, index.Indexed):
                 self._user_sync_needed = True
         else:
             self._pending_user_fields["email"] = value
+
+    @property
+    def patreon_lookup_email(self):
+        return self.patreon_email or self.email
 
     def _sync_user_fields(self):
         """Persist buffered/dirty name and email values onto the linked User.
@@ -746,6 +756,7 @@ class EmailChangeToken(models.Model):
     )
     uuid = models.UUIDField(default=uuid_module.uuid4, unique=True, editable=False)
     new_email = models.EmailField()
+    is_patreon = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     used = models.BooleanField(default=False)
 

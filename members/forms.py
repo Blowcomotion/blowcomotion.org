@@ -307,6 +307,7 @@ class MemberProfileForm(forms.ModelForm):
     first_name = forms.CharField(max_length=150, required=True)
     last_name = forms.CharField(max_length=150, required=True)
     email = forms.EmailField(required=True)
+    patreon_email = forms.EmailField(required=False)
 
     additional_instruments = forms.ModelMultipleChoiceField(
         queryset=Instrument.objects.filter(hide_from_member_forms=False).order_by("name"),
@@ -349,6 +350,7 @@ class MemberProfileForm(forms.ModelForm):
             self.initial.setdefault("first_name", self.instance.first_name)
             self.initial.setdefault("last_name", self.instance.last_name)
             self.initial.setdefault("email", self.instance.email)
+            self.initial.setdefault("patreon_email", self.instance.patreon_email)
             self.fields["additional_instruments"].initial = list(
                 self.instance.additional_instruments.values_list("instrument_id", flat=True)
             )

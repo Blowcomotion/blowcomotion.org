@@ -474,6 +474,20 @@ class RentalRequestsAdminViewTest(TestCase):
         response = self.client.get(reverse("rental_requests_dashboard"))
         self.assertEqual(response.status_code, 200)
 
+    @patch("instruments.views.fetch_all_members")
+    def test_refresh_patreon_uses_patreon_email_when_set(self, mock_fetch):
+        self.member.patreon_email = "Patron@Other.com"
+        self.member.save()
+        mock_fetch.return_value = {"patron@other.com": {
+            "is_active": True, "pledge_cents": 1000, "last_charge_date": None,
+            "last_charge_status": "Paid", "patron_since": None, "lifetime_cents": 5000,
+        }}
+        self.client.post(reverse("rental_requests_dashboard"), {"action": "refresh_patreon"})
+        self.submission.refresh_from_db()
+        self.member.refresh_from_db()
+        self.assertTrue(self.submission.patreon_validated)
+        self.assertTrue(self.member.patreon_is_active)
+
     def test_dashboard_sorting(self):
         other = InstrumentRentalRequestSubmission.objects.create(
             name="Aaron Aardvark",

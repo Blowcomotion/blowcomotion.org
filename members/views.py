@@ -87,16 +87,17 @@ def _get_member_patreon_status(member):
     should treat None as "unavailable" rather than erroring. Assumes the
     caller has already confirmed Patreon is configured.
     """
-    if not member.email:
+    email = member.patreon_lookup_email
+    if not email:
         return None
 
-    cache_key = f"member_patreon_status:{member.email.lower()}"
+    cache_key = f"member_patreon_status:{email.lower()}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
 
     try:
-        result = check_patreon_membership(member.email)
+        result = check_patreon_membership(email)
     except Exception:
         logger.exception(
             "profile_view: unexpected error checking Patreon status for member %s", member.pk
@@ -371,6 +372,17 @@ def profile_view(request):
             # the emailed token.
             new_email = form.cleaned_data.get("email") or ""
             email_changed = new_email and new_email != original_email
+            # Patreon email, like the account email, is held until confirmed.
+            # Clearing a confirmed one needs no confirmation (lookups fall back to
+            # the account email). A blank field with nothing confirmed is not a
+            # clear: the field shows only the confirmed value, so it is blank
+            # while a confirmation is pending.
+            new_patreon_email = form.cleaned_data.get("patreon_email") or ""
+            patreon_email_changed = new_patreon_email and new_patreon_email.lower() != member.patreon_email.lower()
+            if not new_patreon_email and member.patreon_email:
+                instance.patreon_email = ""
+                instance.pending_patreon_email = None
+                EmailChangeToken.objects.filter(member=member, used=False, is_patreon=True).update(used=True)
 
             photo = form.cleaned_data.get("profile_photo")
             old_image = instance.image if photo else None
@@ -406,11 +418,18 @@ def profile_view(request):
 
             instance.save_revision(user=request.user, log_action="wagtail.edit", clean=False)
 
+            base_url = f"{request.scheme}://{request.get_host()}"
+            sent_to = []
             if email_changed:
-                send_email_change_confirmation(member, new_email, f"{request.scheme}://{request.get_host()}")
+                send_email_change_confirmation(member, new_email, base_url)
+                sent_to.append(new_email)
+            if patreon_email_changed:
+                send_email_change_confirmation(member, new_patreon_email, base_url, is_patreon=True)
+                sent_to.append(new_patreon_email)
+            if sent_to:
                 messages.success(
                     request,
-                    f"Profile saved. A confirmation email has been sent to {new_email}.",
+                    f"Profile saved. A confirmation email has been sent to {' and '.join(sent_to)}.",
                 )
             else:
                 messages.success(request, "Profile saved.")
@@ -627,7 +646,7 @@ def instrument_rental_request(request):
 
             # Validate Patreon membership for the submitting member.
             # Runs after save so the submission always exists regardless of API outcome.
-            patreon_result = check_patreon_membership(member.email)
+            patreon_result = check_patreon_membership(member.patreon_lookup_email)
             submission.patreon_validated = patreon_result["is_active"] if patreon_result is not None else None
             submission.patreon_pledge_cents = patreon_result["pledge_cents"] if patreon_result is not None else None
             submission.patreon_last_charge_date = patreon_result["last_charge_date"] if patreon_result is not None else None
@@ -669,6 +688,8 @@ def instrument_rental_request(request):
                     )
                 else:
                     patreon_line = "Patreon: not checked (API not configured or unavailable)"
+                if patreon_result is not None and member.patreon_email:
+                    patreon_line += f" (checked using {member.patreon_email})"
                 manager_body = (
                     f"Instrument Rental Request [PENDING]\n\n"
                     f"Member: {member.full_name}\n"
@@ -747,16 +768,23 @@ def confirm_email_view(request, token_uuid):
     new_email = token.new_email
 
     with transaction.atomic():
-        # The email property writes through to the linked User; Member.save()
-        # persists the User change (and realigns User.username to the email).
-        member.email = new_email
-        member.pending_email = None
-        member.save(update_fields=["pending_email"], sync_go3=False)
+        if token.is_patreon:
+            member.patreon_email = new_email
+            member.pending_patreon_email = None
+            member.save(update_fields=["patreon_email", "pending_patreon_email"], sync_go3=False)
+        else:
+            # The email property writes through to the linked User; Member.save()
+            # persists the User change (and realigns User.username to the email).
+            member.email = new_email
+            member.pending_email = None
+            member.save(update_fields=["pending_email"], sync_go3=False)
         token.used = True
         token.save(update_fields=["used"])
 
-    logger.info(f"Email confirmed for member {member.pk}: {new_email}")
-    return render(request, "member/confirm_email_result.html", {"confirmed": True, "new_email": new_email})
+    logger.info(f"{'Patreon email' if token.is_patreon else 'Email'} confirmed for member {member.pk}: {new_email}")
+    return render(request, "member/confirm_email_result.html", {
+        "confirmed": True, "new_email": new_email, "is_patreon": token.is_patreon,
+    })
 
 
 # ── Export ─────────────────────────────────────────────────────────────────────

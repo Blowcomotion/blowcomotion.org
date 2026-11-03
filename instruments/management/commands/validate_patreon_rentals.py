@@ -71,7 +71,7 @@ class Command(BaseCommand):
         updated = skipped = 0
 
         for sub in qs:
-            email = sub.member.email if sub.member else None
+            email = sub.member.patreon_lookup_email if sub.member else None
             if not email:
                 self.stdout.write(self.style.WARNING(f"  #{sub.pk}: no email, skipping"))
                 skipped += 1
@@ -99,7 +99,7 @@ class Command(BaseCommand):
         # --- update Member cache for every member with an email in the Patreon list ---
         member_updated = 0
         for member in Member.objects.exclude(user__isnull=True).exclude(user__email="").select_related("user"):
-            result = all_members.get(member.email.lower())
+            result = all_members.get(member.patreon_lookup_email.lower())
             if result is None:
                 continue  # only update members we found; leave unknown ones untouched
 
@@ -122,7 +122,7 @@ class Command(BaseCommand):
             if not member:
                 continue
 
-            result = all_members.get((member.email or "").lower())
+            result = all_members.get((member.patreon_lookup_email or "").lower())
             if result is None:
                 continue
 
