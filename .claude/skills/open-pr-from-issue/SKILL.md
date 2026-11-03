@@ -81,6 +81,36 @@ EOF
 )"
 ```
 
+## Step 7: File Out-of-Scope Findings as Issues
+
+Once the PR is open and ready for review, file a GitHub issue for every finding that was deliberately left out of scope. Look for them in the review output (code review, security review, advisor), and in the PR's "Not changed" or "out of scope" section. Findings that existed before this branch count too. Skip a finding only if it is already tracked by an open issue (`gh issue list --repo Blowcomotion/blowcomotion.org --search "<keywords>"`).
+
+Group closely related findings into one issue, such as several symptoms of the same duplicated code. Each issue should be understandable without opening the PR:
+
+```bash
+gh issue create --repo Blowcomotion/blowcomotion.org \
+  --label <bug|enhancement> --label "Low Priority" \
+  --title "<plain description of the problem>" \
+  --body "$(cat <<'EOF'
+Follow-up from #<pr-num>.
+
+<what is wrong and where (file/function)>
+
+<concrete scenario or steps to reproduce>
+
+<possible fix>
+EOF
+)"
+```
+
+Then link them from the PR:
+
+```bash
+gh pr comment <pr-num> --body "Out-of-scope findings from review are filed as follow-ups: #<a>, #<b>."
+```
+
+Use `bug` for incorrect behavior and `enhancement` for missing safeguards or improvements. Use a higher priority label only if the finding warrants it. No emoji in issue titles or bodies.
+
 ## Commit Rules (project conventions)
 
 - GPG-sign all commits (`git commit -S`)
@@ -101,3 +131,4 @@ EOF
 - GPG-sign commits
 - Scan for security-sensitive keywords even on small issues
 - Fix all Critical/Important findings before opening the PR
+- File out-of-scope findings as GitHub issues after the PR is ready for review, and link them on the PR
