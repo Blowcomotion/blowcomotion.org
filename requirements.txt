@@ -12,6 +12,6 @@ queryish==0.3
 wagtail==8.1
 wagtailmedia==0.19.1
 # Fork only loosens the wagtail<8.0 pin; return to PyPI once coderedcorp/wagtail-seo#84 ships
-wagtail-seo @ git+https://github.com/Blowcomotion/wagtail-seo.git@b7edee9c1a54310f807066975bb96ec2ad097892
+wagtail-seo @ git+https://github.com/Blowcomotion/wagtail-seo.git@0c7af09feb67d651ac5173864b282299f1f5d6c5
 wagtailtwbsicons==1.0.1
 twilio==9.10.9
