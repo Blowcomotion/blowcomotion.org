@@ -439,7 +439,10 @@ def _process_form_submission(request, form_type, form_data, submission_model):
         except Exception as e:
             logger.error(f"Error sending email for {form_type} submission by user {request.user.username}: {str(e)}")
 
-        triage_in_background(form_type, form_data, admin_emails)
+        try:
+            triage_in_background(form_type, form_data, admin_emails)
+        except Exception:
+            logger.exception(f"Could not start triage for {form_type} submission")
         
         return {
             'message': _get_success_message(form_type),

@@ -2,10 +2,13 @@ from datetime import date, time
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from wagtail.models import Site
+
 from django.core import mail
 from django.test import TestCase, override_settings
+from django.urls import reverse
 
-from blowcomotion.models import CachedGig
+from blowcomotion.models import CachedGig, SiteSettings
 from blowcomotion.triage import Triage, triage_and_email, triage_in_background
 
 
@@ -73,3 +76,18 @@ class FormTriageTests(TestCase):
             # Test runner uses the locmem backend; real API must never be called from tests.
             triage_in_background("contact_form", {"name": "X"}, ["admin@example.com"])
         thread.assert_not_called()
+
+
+class ProcessFormTriageWiringTests(TestCase):
+    @override_settings(DEBUG=True)
+    def test_view_passes_admin_recipients_only(self):
+        site_settings = SiteSettings.for_site(Site.objects.get(is_default_site=True))
+        site_settings.booking_form_email_recipients = "a@example.com, b@example.com"
+        site_settings.save()
+        with patch("blowcomotion.views.triage_in_background") as triage:
+            self.client.post(reverse("process-form"), {
+                "form_type": "booking_form", "name": "Pat", "email": "pat@example.com",
+                "event_details": "Wedding",
+            })
+        triage.assert_called_once()
+        self.assertEqual(triage.call_args.args[2], ["a@example.com", "b@example.com"])
