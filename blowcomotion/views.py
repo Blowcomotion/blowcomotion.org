@@ -26,7 +26,7 @@ from blowcomotion.models import (
     Member,
     SiteSettings,
 )
-from blowcomotion.triage import triage_in_background
+from blowcomotion.triage import send_admin_email
 from members.auth import (
     _dispatch_email,
     _MemberEmail,
@@ -428,22 +428,15 @@ def _process_form_submission(request, form_type, form_data, submission_model):
                 email_message = _create_email_message(form_type, **form_data)
                 subject = f'{form_type.replace("_", " ").title()} Submission'
                 
-                # Build complete recipient list
-                recipient_list = list(admin_emails)
+                # Admins get their copy with AI triage appended; the submitter
+                # gets a separate copy without it.
+                send_admin_email(subject, email_message, admin_emails, form_type, form_data)
                 if form_data.get('email'):
-                    recipient_list.append(form_data['email'])
-                
-                if recipient_list:
-                    _send_form_email(subject, email_message, recipient_list)
-                    logger.info(f"Email sent successfully for {form_type} submission by user {request.user.username}")
+                    _send_form_email(subject, email_message, [form_data['email']])
+                logger.info(f"Email sent successfully for {form_type} submission by user {request.user.username}")
         except Exception as e:
             logger.error(f"Error sending email for {form_type} submission by user {request.user.username}: {str(e)}")
 
-        try:
-            triage_in_background(form_type, form_data, admin_emails)
-        except Exception:
-            logger.exception(f"Could not start triage for {form_type} submission")
-        
         return {
             'message': _get_success_message(form_type),
             'template': 'forms/post_process.html'

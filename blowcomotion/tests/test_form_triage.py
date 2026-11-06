@@ -9,7 +9,9 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from blowcomotion.models import CachedGig, SiteSettings
-from blowcomotion.triage import Triage, triage_and_email, triage_in_background
+from blowcomotion.triage import Triage, build_admin_email, send_admin_email
+
+ADMINS = ["admin@example.com"]
 
 
 def _fake_response(**overrides):
@@ -23,13 +25,13 @@ def _fake_response(**overrides):
 
 
 @override_settings(ANTHROPIC_API_KEY="test-key")
-class FormTriageTests(TestCase):
-    def _run(self, response, form_data):
+class BuildAdminEmailTests(TestCase):
+    def _build(self, response, form_data):
         with patch("blowcomotion.triage.anthropic.Anthropic") as client_cls:
             client_cls.return_value.messages.parse.return_value = response
-            triage_and_email("booking_form", form_data, ["admin@example.com"])
+            return build_admin_email("Booking Form Submission", "Original body", ADMINS, "booking_form", form_data)
 
-    def test_booking_lists_gig_conflict_and_goes_to_admins_only(self):
+    def test_triage_appended_with_gig_conflict_and_draft_reply(self):
         CachedGig.objects.create(
             gig_id=1, title="Pride Parade", date=date(2026, 12, 5), time=time(14, 0),
             gig_status="confirmed", band="Blowcomotion",
@@ -37,57 +39,55 @@ class FormTriageTests(TestCase):
         CachedGig.objects.create(
             gig_id=2, title="Old Gig", date=date(2026, 12, 5), gig_status="cancelled", band="Blowcomotion",
         )
-        # Form date field wins over the model's guess; crafted newline in name is collapsed.
-        self._run(
+        # The form's date field wins over the model's guess.
+        msg = self._build(
             _fake_response(event_date="2026-12-06", venue="Lake Merritt", budget="$800"),
-            {"name": "Pat\r\nBcc: x@y.com", "email": "pat@example.com", "event_date": "2026-12-05",
+            {"name": "Pat", "email": "pat@example.com", "event_date": "2026-12-05",
              "event_details": "Wedding Saturday at Lake Merritt"},
         )
-        self.assertEqual(len(mail.outbox), 1)
-        msg = mail.outbox[0]
-        self.assertNotIn("pat@example.com", msg.to)
-        self.assertIn("admin@example.com", msg.to)
-        self.assertEqual(msg.subject, "Triage: Booking Form from Pat Bcc: x@y.com")
+        self.assertEqual(msg.to, ADMINS)
+        self.assertEqual(msg.subject, "Booking Form Submission")
+        self.assertTrue(msg.body.startswith("Original body\n\n----- AI triage"))
         self.assertIn("Event date: 2026-12-05", msg.body)
         self.assertIn("Gigs already on 2026-12-05:", msg.body)
         self.assertIn("Pride Parade (Blowcomotion, confirmed, 2:00 PM)", msg.body)
         self.assertNotIn("Old Gig", msg.body)
         self.assertIn("Venue: Lake Merritt", msg.body)
-        self.assertIn("Hi Pat, thanks", msg.body)
+        self.assertIn("Suggested reply (edit before sending):\n\nHi Pat, thanks", msg.body)
 
     def test_spam_flagged_in_subject(self):
-        self._run(
+        msg = self._build(
             _fake_response(likely_spam=True, spam_reason="SEO pitch.", suggested_reply=""),
-            {"name": "Bot", "email": "bot@example.com", "event_details": "Rank #1 on Google"},
+            {"name": "Bot", "event_details": "Rank #1 on Google"},
         )
-        self.assertTrue(mail.outbox[0].subject.startswith("[Likely spam] "))
-        self.assertIn("YES - SEO pitch.", mail.outbox[0].body)
+        self.assertEqual(msg.subject, "[Likely spam] Booking Form Submission")
+        self.assertIn("YES - SEO pitch.", msg.body)
 
-    def test_refusal_or_api_error_sends_nothing(self):
-        self._run(SimpleNamespace(stop_reason="refusal", parsed_output=None), {"name": "X"})
-        with patch("blowcomotion.triage.anthropic.Anthropic", side_effect=RuntimeError("down")):
-            triage_and_email("contact_form", {"name": "X"}, ["admin@example.com"])
-        self.assertEqual(mail.outbox, [])
+    def test_email_still_built_on_refusal_or_api_error(self):
+        refused = self._build(SimpleNamespace(stop_reason="refusal", parsed_output=None), {"name": "X"})
+        with patch("blowcomotion.triage.anthropic.Anthropic", side_effect=RuntimeError("bad key")):
+            errored = build_admin_email("Subj", "Original body", ADMINS, "contact_form", {"name": "X"})
+        for msg in (refused, errored):
+            self.assertEqual(msg.body, "Original body\n\n(AI triage was unavailable for this submission.)")
 
-    def test_background_skipped_without_key_or_under_test_email_backend(self):
+    def test_sends_plain_email_without_thread_under_test_backend(self):
         with patch("blowcomotion.triage.threading.Thread") as thread:
-            with override_settings(ANTHROPIC_API_KEY=None):
-                triage_in_background("contact_form", {"name": "X"}, ["admin@example.com"])
-            # Test runner uses the locmem backend; real API must never be called from tests.
-            triage_in_background("contact_form", {"name": "X"}, ["admin@example.com"])
+            send_admin_email("Subj", "Original body", ADMINS, "contact_form", {"name": "X"})
         thread.assert_not_called()
+        self.assertEqual(mail.outbox[0].body, "Original body")
 
 
-class ProcessFormTriageWiringTests(TestCase):
+class ProcessFormEmailSplitTests(TestCase):
     @override_settings(DEBUG=True)
-    def test_view_passes_admin_recipients_only(self):
+    def test_admins_and_submitter_get_separate_emails(self):
         site_settings = SiteSettings.for_site(Site.objects.get(is_default_site=True))
         site_settings.booking_form_email_recipients = "a@example.com, b@example.com"
         site_settings.save()
-        with patch("blowcomotion.views.triage_in_background") as triage:
-            self.client.post(reverse("process-form"), {
-                "form_type": "booking_form", "name": "Pat", "email": "pat@example.com",
-                "event_details": "Wedding",
-            })
-        triage.assert_called_once()
-        self.assertEqual(triage.call_args.args[2], ["a@example.com", "b@example.com"])
+        self.client.post(reverse("process-form"), {
+            "form_type": "booking_form", "name": "Pat", "email": "pat@example.com",
+            "event_details": "Wedding",
+        })
+        recipients = sorted(tuple(m.to) for m in mail.outbox)
+        self.assertEqual(recipients, [("a@example.com", "b@example.com"), ("pat@example.com",)])
+        submitter_copy = next(m for m in mail.outbox if m.to == ["pat@example.com"])
+        self.assertNotIn("AI triage", submitter_copy.body)

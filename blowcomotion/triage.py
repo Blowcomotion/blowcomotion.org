@@ -21,7 +21,7 @@ from django.conf import settings
 from django.db import connection
 
 from blowcomotion.models import CachedGig
-from members.auth import _MemberEmail
+from members.auth import _dispatch_email, _MemberEmail
 
 logger = logging.getLogger(__name__)
 
@@ -59,46 +59,52 @@ class Triage(BaseModel):
     suggested_reply: str
 
 
-def triage_in_background(form_type, form_data, recipients):
-    """Start triage for a saved submission; recipients is a list of admin emails."""
-    if not getattr(settings, "ANTHROPIC_API_KEY", None) or not recipients:
+def send_admin_email(subject, body, recipients, form_type, form_data):
+    """Send the admin notification for a saved submission, with triage appended.
+
+    Triage runs on a background thread so the visitor is not kept waiting. If
+    it is not configured, times out, or fails, the email goes out without it.
+    """
+    if not recipients:
         return
     # Test runs import local.py too; never call the real API from the test suite.
-    if settings.EMAIL_BACKEND == "django.core.mail.backends.locmem.EmailBackend":
+    if (
+        not getattr(settings, "ANTHROPIC_API_KEY", None)
+        or settings.EMAIL_BACKEND == "django.core.mail.backends.locmem.EmailBackend"
+    ):
+        email = _MemberEmail(subject=subject, body=body, from_email=settings.FROM_EMAIL, to=recipients)
+        _dispatch_email(email, background=True)
         return
     threading.Thread(
-        target=_run, args=(form_type, form_data, recipients), daemon=True
+        target=_run, args=(subject, body, recipients, form_type, form_data), daemon=True
     ).start()
 
 
-def _run(form_type, form_data, recipients):
+def _run(*args):
     try:
-        triage_and_email(form_type, form_data, recipients)
+        build_admin_email(*args).send(fail_silently=False)
+    except Exception:
+        logger.exception("Admin notification email failed (subject=%r)", args[0])
     finally:
         # Runs on its own thread, which otherwise leaks a DB connection.
         connection.close()
 
 
-def triage_and_email(form_type, form_data, recipients):
+def build_admin_email(subject, body, recipients, form_type, form_data):
     try:
         result = _triage(form_type, form_data)
-        if result is None:
-            return
-        # The form's own date field wins over a date the model found in free text.
-        lookup_date = _parse_date(form_data.get("event_date") or result.event_date)
-        gigs = _conflicting_gigs(lookup_date)
-        # Collapse whitespace so a crafted name can't inject email headers.
-        name = " ".join(str(form_data.get("name") or "unknown").split())[:80]
-        label = form_type.replace("_", " ").title()
-        prefix = "[Likely spam] " if result.likely_spam else ""
-        _MemberEmail(
-            subject=f"{prefix}Triage: {label} from {name}",
-            body=_format_body(result, lookup_date, gigs),
-            from_email=settings.FROM_EMAIL,
-            to=recipients,
-        ).send(fail_silently=False)
     except Exception:
         logger.exception("Form triage failed for %s", form_type)
+        result = None
+    if result is None:
+        body += "\n\n(AI triage was unavailable for this submission.)"
+    else:
+        # The form's own date field wins over a date the model found in free text.
+        lookup_date = _parse_date(form_data.get("event_date") or result.event_date)
+        body += "\n\n" + _format_triage(result, lookup_date, _conflicting_gigs(lookup_date))
+        if result.likely_spam:
+            subject = f"[Likely spam] {subject}"
+    return _MemberEmail(subject=subject, body=body, from_email=settings.FROM_EMAIL, to=recipients)
 
 
 def _triage(form_type, form_data):
@@ -141,11 +147,9 @@ def _conflicting_gigs(day):
     )
 
 
-def _format_body(result, lookup_date, gigs):
+def _format_triage(result, lookup_date, gigs):
     lines = [
-        "AI triage of a website form submission. It can be wrong; check the "
-        "original submission email before acting on it.",
-        "",
+        "----- AI triage (admins only; it can be wrong) -----",
         f"Likely spam: {'YES - ' + result.spam_reason if result.likely_spam else 'no'}",
         f"Summary: {result.summary}",
     ]
