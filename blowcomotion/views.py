@@ -26,6 +26,7 @@ from blowcomotion.models import (
     Member,
     SiteSettings,
 )
+from blowcomotion.triage import triage_in_background
 from members.auth import (
     _dispatch_email,
     _MemberEmail,
@@ -413,6 +414,7 @@ def _process_form_submission(request, form_type, form_data, submission_model):
         }
     
     logger.info(f"Processing {form_type} submission by user {request.user.username}")
+    admin_emails = [e.strip() for e in (recipients or '').split(',') if e.strip()]
     
     try:
         # Save submission to database
@@ -427,9 +429,7 @@ def _process_form_submission(request, form_type, form_data, submission_model):
                 subject = f'{form_type.replace("_", " ").title()} Submission'
                 
                 # Build complete recipient list
-                recipient_list = []
-                if recipients:
-                    recipient_list.extend([email.strip() for email in recipients.split(',')])
+                recipient_list = list(admin_emails)
                 if form_data.get('email'):
                     recipient_list.append(form_data['email'])
                 
@@ -438,6 +438,8 @@ def _process_form_submission(request, form_type, form_data, submission_model):
                     logger.info(f"Email sent successfully for {form_type} submission by user {request.user.username}")
         except Exception as e:
             logger.error(f"Error sending email for {form_type} submission by user {request.user.username}: {str(e)}")
+
+        triage_in_background(form_type, form_data, admin_emails)
         
         return {
             'message': _get_success_message(form_type),
