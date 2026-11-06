@@ -50,7 +50,7 @@ jobs:
         id: py-blowcomotion
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13.1"
+          python-version: "3.13"
 
       - name: Install blowcomotion.org dependencies
         working-directory: blowcomotion.org
