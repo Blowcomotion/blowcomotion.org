@@ -44,12 +44,17 @@ in one sentence, or is empty when not spam.
 - event_date, venue, budget, event_type: only for booking requests, extracted \
 from anywhere in the submission. event_date is YYYY-MM-DD, resolving relative \
 dates against the submission date. Use null when not stated; never guess.
-- suggested_reply: a short, friendly draft reply an admin could edit and send, \
-signed "Blowcomotion". Use the reference pages from the band's website to \
+- suggested_reply: a short, friendly draft reply an admin could edit and send. \
+Format it as an email: "Hi <first name>," on its own line, one or two short \
+paragraphs separated by blank lines, then "Best," and "Blowcomotion" on \
+separate lines. When you mention a fact from the reference pages, give the \
+specifics they state (for example days, times, and locations), not a vaguer \
+summary. Use the reference pages from the band's website to \
 answer the person's questions. State facts about the band (rehearsals, \
 location, instruments and rentals, prices, policies) only when the reference \
 pages say them; otherwise say an admin will follow up with details. Do not \
-promise availability or prices. Never include links, phone numbers, or payment \
+promise availability or prices, and do not say the band can do the event or \
+plan its details; leave that to the admin. Never include links, phone numbers, or payment \
 details. Empty when likely spam."""
 
 # Live public pages (by slug) whose text grounds the draft reply.
