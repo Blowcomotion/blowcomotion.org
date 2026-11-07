@@ -9,7 +9,12 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from blowcomotion.models import BlankCanvasPage, CachedGig, SiteSettings
-from blowcomotion.triage import Triage, build_admin_email, send_admin_email
+from blowcomotion.triage import (
+    Triage,
+    _reference_pages,
+    build_admin_email,
+    send_admin_email,
+)
 
 ADMINS = ["admin@example.com"]
 
@@ -46,6 +51,7 @@ class BuildAdminEmailTests(TestCase):
              "event_details": "Wedding Saturday at Lake Merritt"},
         )
         self.assertEqual(msg.to, ADMINS)
+        self.assertEqual(msg.reply_to, ["pat@example.com"])
         self.assertEqual(msg.subject, "Booking Form Submission")
         self.assertTrue(msg.body.startswith("Original body\n\n----- AI triage"))
         self.assertIn("Event date: 2026-12-05", msg.body)
@@ -67,7 +73,9 @@ class BuildAdminEmailTests(TestCase):
         refused = self._build(SimpleNamespace(stop_reason="refusal", parsed_output=None), {"name": "X"})
         with patch("blowcomotion.triage.anthropic.Anthropic", side_effect=RuntimeError("bad key")):
             errored = build_admin_email("Subj", "Original body", ADMINS, "contact_form", {"name": "X"})
-        for msg in (refused, errored):
+        with patch("blowcomotion.triage._conflicting_gigs", side_effect=RuntimeError("db down")):
+            gig_error = self._build(_fake_response(), {"name": "X"})
+        for msg in (refused, errored, gig_error):
             self.assertEqual(msg.body, "Original body\n\n(AI triage was unavailable for this submission.)")
 
     def test_sends_plain_email_without_thread_under_test_backend(self):
@@ -89,6 +97,8 @@ class ProcessFormEmailSplitTests(TestCase):
         })
         recipients = sorted(tuple(m.to) for m in mail.outbox)
         self.assertEqual(recipients, [("a@example.com", "b@example.com"), ("pat@example.com",)])
+        admin_copy = next(m for m in mail.outbox if m.to != ["pat@example.com"])
+        self.assertEqual(admin_copy.reply_to, ["pat@example.com"])
         submitter_copy = next(m for m in mail.outbox if m.to == ["pat@example.com"])
         self.assertNotIn("AI triage", submitter_copy.body)
 
@@ -109,3 +119,10 @@ class ReferencePagesTests(TestCase):
         self.assertIn("Rehearsals are Tuesdays.", system)
         self.assertIn("Loaner horns available.", system)
         self.assertNotIn("Booking info.", system)
+
+    def test_page_that_fails_to_render_is_skipped(self):
+        root = Site.objects.get(is_default_site=True).root_page
+        root.add_child(instance=BlankCanvasPage(
+            title="faqs", slug="faqs", body=[("rich_text", {"rich_text": "<p>FAQ text.</p>", "align": "left"})]))
+        with patch("wagtail.fields.StreamValue.render_as_block", side_effect=RuntimeError("bad block")):
+            self.assertEqual(_reference_pages("contact_form"), "<reference_pages>\n\n</reference_pages>")

@@ -90,8 +90,7 @@ def send_admin_email(subject, body, recipients, form_type, form_data):
         not getattr(settings, "ANTHROPIC_API_KEY", None)
         or settings.EMAIL_BACKEND == "django.core.mail.backends.locmem.EmailBackend"
     ):
-        email = _MemberEmail(subject=subject, body=body, from_email=settings.FROM_EMAIL, to=recipients)
-        _dispatch_email(email, background=True)
+        _dispatch_email(_admin_email(subject, body, recipients, form_data), background=True)
         return
     threading.Thread(
         target=_run, args=(subject, body, recipients, form_type, form_data), daemon=True
@@ -109,20 +108,26 @@ def _run(*args):
 
 
 def build_admin_email(subject, body, recipients, form_type, form_data):
+    section = "(AI triage was unavailable for this submission.)"
     try:
         result = _triage(form_type, form_data)
+        if result is not None:
+            # The form's own date field wins over a date the model found in free text.
+            lookup_date = _parse_date(form_data.get("event_date") or result.event_date)
+            section = _format_triage(result, lookup_date, _conflicting_gigs(lookup_date))
+            if result.likely_spam:
+                subject = f"[Likely spam] {subject}"
     except Exception:
         logger.exception("Form triage failed for %s", form_type)
-        result = None
-    if result is None:
-        body += "\n\n(AI triage was unavailable for this submission.)"
-    else:
-        # The form's own date field wins over a date the model found in free text.
-        lookup_date = _parse_date(form_data.get("event_date") or result.event_date)
-        body += "\n\n" + _format_triage(result, lookup_date, _conflicting_gigs(lookup_date))
-        if result.likely_spam:
-            subject = f"[Likely spam] {subject}"
-    return _MemberEmail(subject=subject, body=body, from_email=settings.FROM_EMAIL, to=recipients)
+    return _admin_email(subject, f"{body}\n\n{section}", recipients, form_data)
+
+
+def _admin_email(subject, body, recipients, form_data):
+    # Reply-To lets an admin answer the submitter directly with the draft reply.
+    reply_to = [form_data["email"]] if form_data.get("email") else None
+    return _MemberEmail(
+        subject=subject, body=body, from_email=settings.FROM_EMAIL, to=recipients, reply_to=reply_to
+    )
 
 
 def _triage(form_type, form_data):
@@ -155,9 +160,13 @@ def _reference_pages(form_type):
         body = getattr(page and page.specific, "body", None)
         if body is None:
             continue
-        # Embedded form blocks use {% csrf_token %}; any value avoids a warning,
-        # and strip_tags drops the hidden input it renders.
-        html = body.render_as_block(context={"csrf_token": "unused"})
+        try:
+            # Embedded form blocks use {% csrf_token %}; any value avoids a warning,
+            # and strip_tags drops the hidden input it renders.
+            html = body.render_as_block(context={"csrf_token": "unused"})
+        except Exception:
+            logger.exception("Could not render reference page %r for triage", slug)
+            continue
         parts.append(f'<page title="{page.title}">\n{" ".join(strip_tags(html).split())}\n</page>')
     return "<reference_pages>\n" + "\n\n".join(parts) + "\n</reference_pages>"
 

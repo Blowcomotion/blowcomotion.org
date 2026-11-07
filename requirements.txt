@@ -16,4 +16,4 @@ wagtail-seo @ git+https://github.com/Blowcomotion/wagtail-seo.git@0c7af09feb67d6
 wagtailtwbsicons==1.0.1
 twilio==9.10.9
 anthropic==2.6.0
-pydantic
+pydantic==2.14.3
