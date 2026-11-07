@@ -70,7 +70,9 @@ class BuildAdminEmailTests(TestCase):
         self.assertIn("YES - SEO pitch.", msg.body)
 
     def test_email_still_built_on_refusal_or_api_error(self):
-        refused = self._build(SimpleNamespace(stop_reason="refusal", parsed_output=None), {"name": "X"})
+        with self.assertLogs("blowcomotion.triage", level="ERROR") as logs:
+            refused = self._build(SimpleNamespace(stop_reason="refusal", parsed_output=None), {"name": "X"})
+        self.assertIn("stop_reason=refusal", logs.output[0])
         with patch("blowcomotion.triage.anthropic.Anthropic", side_effect=RuntimeError("bad key")):
             errored = build_admin_email("Subj", "Original body", ADMINS, "contact_form", {"name": "X"})
         with patch("blowcomotion.triage._conflicting_gigs", side_effect=RuntimeError("db down")):
