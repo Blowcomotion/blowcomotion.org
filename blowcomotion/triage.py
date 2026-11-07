@@ -16,9 +16,11 @@ from datetime import date
 
 import anthropic
 from pydantic import BaseModel
+from wagtail.models import Page
 
 from django.conf import settings
 from django.db import connection
+from django.utils.html import strip_tags
 
 from blowcomotion.models import CachedGig
 from members.auth import _dispatch_email, _MemberEmail
@@ -43,9 +45,20 @@ in one sentence, or is empty when not spam.
 from anywhere in the submission. event_date is YYYY-MM-DD, resolving relative \
 dates against the submission date. Use null when not stated; never guess.
 - suggested_reply: a short, friendly draft reply an admin could edit and send, \
-signed "Blowcomotion". Do not promise availability, prices, or anything the \
-submission does not support. Never include links, phone numbers, or payment \
+signed "Blowcomotion". Use the reference pages from the band's website to \
+answer the person's questions. State facts about the band (rehearsals, \
+location, instruments and rentals, prices, policies) only when the reference \
+pages say them; otherwise say an admin will follow up with details. Do not \
+promise availability or prices. Never include links, phone numbers, or payment \
 details. Empty when likely spam."""
+
+# Live public pages (by slug) whose text grounds the draft reply.
+CONTEXT_PAGES = {
+    "booking_form": ["faqs", "booking"],
+    "join_band_form": ["faqs", "join"],
+    "donate_form": ["faqs", "donate"],
+}
+DEFAULT_CONTEXT_PAGES = ["faqs"]
 
 
 class Triage(BaseModel):
@@ -114,7 +127,7 @@ def _triage(form_type, form_data):
         model=MODEL,
         max_tokens=4000,
         output_config={"effort": "low"},
-        system=SYSTEM_PROMPT,
+        system=f"{SYSTEM_PROMPT}\n\n{_reference_pages(form_type)}",
         messages=[{
             "role": "user",
             "content": (
@@ -128,6 +141,20 @@ def _triage(form_type, form_data):
         logger.warning("Form triage got no result (stop_reason=%s)", response.stop_reason)
         return None
     return response.parsed_output
+
+
+def _reference_pages(form_type):
+    parts = []
+    for slug in CONTEXT_PAGES.get(form_type, DEFAULT_CONTEXT_PAGES):
+        page = Page.objects.live().public().filter(slug=slug).first()
+        body = getattr(page and page.specific, "body", None)
+        if body is None:
+            continue
+        # Embedded form blocks use {% csrf_token %}; any value avoids a warning,
+        # and strip_tags drops the hidden input it renders.
+        html = body.render_as_block(context={"csrf_token": "unused"})
+        parts.append(f'<page title="{page.title}">\n{" ".join(strip_tags(html).split())}\n</page>')
+    return "<reference_pages>\n" + "\n\n".join(parts) + "\n</reference_pages>"
 
 
 def _parse_date(value):

@@ -8,7 +8,7 @@ from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from blowcomotion.models import CachedGig, SiteSettings
+from blowcomotion.models import BlankCanvasPage, CachedGig, SiteSettings
 from blowcomotion.triage import Triage, build_admin_email, send_admin_email
 
 ADMINS = ["admin@example.com"]
@@ -91,3 +91,21 @@ class ProcessFormEmailSplitTests(TestCase):
         self.assertEqual(recipients, [("a@example.com", "b@example.com"), ("pat@example.com",)])
         submitter_copy = next(m for m in mail.outbox if m.to == ["pat@example.com"])
         self.assertNotIn("AI triage", submitter_copy.body)
+
+
+@override_settings(ANTHROPIC_API_KEY="test-key")
+class ReferencePagesTests(TestCase):
+    def test_join_triage_gets_faq_and_join_pages_only(self):
+        root = Site.objects.get(is_default_site=True).root_page
+        for slug, text in [("faqs", "Rehearsals are Tuesdays."), ("join", "Loaner horns available."),
+                           ("booking", "Booking info.")]:
+            # A form block exercises {% csrf_token %} rendering outside a request.
+            body = [("rich_text", {"rich_text": f"<p>{text}</p>", "align": "left"}), ("join_band_form", {})]
+            root.add_child(instance=BlankCanvasPage(title=slug, slug=slug, body=body))
+        with patch("blowcomotion.triage.anthropic.Anthropic") as client_cls:
+            client_cls.return_value.messages.parse.return_value = _fake_response()
+            build_admin_email("Subj", "Body", ADMINS, "join_band_form", {"name": "Sam"})
+        system = client_cls.return_value.messages.parse.call_args.kwargs["system"]
+        self.assertIn("Rehearsals are Tuesdays.", system)
+        self.assertIn("Loaner horns available.", system)
+        self.assertNotIn("Booking info.", system)
