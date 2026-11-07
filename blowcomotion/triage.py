@@ -135,7 +135,7 @@ def _triage(form_type, form_data):
     fields = "\n".join(f"{k}: {v}" for k, v in form_data.items() if v not in (None, ""))
     response = client.messages.parse(
         model=MODEL,
-        max_tokens=4000,
+        max_tokens=16000,
         output_config={"effort": "low"},
         system=f"{SYSTEM_PROMPT}\n\n{_reference_pages(form_type)}",
         messages=[{
@@ -148,7 +148,11 @@ def _triage(form_type, form_data):
         output_format=Triage,
     )
     if response.stop_reason != "end_turn" or response.parsed_output is None:
-        logger.warning("Form triage got no result (stop_reason=%s)", response.stop_reason)
+        # ERROR, not WARNING: production drops blowcomotion.* warnings.
+        logger.error(
+            "Form triage got no result (stop_reason=%s, stop_details=%s)",
+            response.stop_reason, getattr(response, "stop_details", None),
+        )
         return None
     return response.parsed_output
 
