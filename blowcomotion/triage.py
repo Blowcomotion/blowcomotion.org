@@ -131,7 +131,14 @@ def _admin_email(subject, body, recipients, form_data):
 
 
 def _triage(form_type, form_data):
-    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY, timeout=30.0, max_retries=0)
+    client = anthropic.Anthropic(
+        api_key=settings.ANTHROPIC_API_KEY,
+        timeout=30.0,
+        max_retries=0,
+        # PythonAnywhere ships Brotli 1.1.0, which makes httpx2 advertise "br" but
+        # then fail to decode it (process() takes no keyword arguments).
+        default_headers={"Accept-Encoding": "gzip, deflate"},
+    )
     fields = "\n".join(f"{k}: {v}" for k, v in form_data.items() if v not in (None, ""))
     response = client.messages.parse(
         model=MODEL,

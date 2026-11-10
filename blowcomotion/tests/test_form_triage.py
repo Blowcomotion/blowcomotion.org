@@ -118,6 +118,8 @@ class ReferencePagesTests(TestCase):
             client_cls.return_value.messages.parse.return_value = _fake_response()
             build_admin_email("Subj", "Body", ADMINS, "join_band_form", {"name": "Sam"})
         system = client_cls.return_value.messages.parse.call_args.kwargs["system"]
+        # Brotli on PythonAnywhere can't decode API responses; only gzip is requested.
+        self.assertEqual(client_cls.call_args.kwargs["default_headers"], {"Accept-Encoding": "gzip, deflate"})
         self.assertIn("Rehearsals are Tuesdays.", system)
         self.assertIn("Loaner horns available.", system)
         self.assertNotIn("Booking info.", system)
