@@ -711,9 +711,10 @@ def process_form(request):
             return render(request, result['template'], context)
         
         else:
-            # Handle unknown form types
-            logger.info(f"Processing unknown form type submission by user {request.user.username}")
-            context['message'] = 'Form submitted successfully!'
+            # Nothing is saved for an unknown form type, so never report success.
+            logger.error(f"Form submission with unknown form_type {form_type!r} was not saved")
+            context['error'] = 'Sorry, your submission could not be processed. Please try again.'
+            return render(request, 'forms/error.html', context)
     
     else:
         logger.info(f"Form submission accessed with GET method by user {request.user.username}")

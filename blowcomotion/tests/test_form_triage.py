@@ -130,3 +130,11 @@ class ReferencePagesTests(TestCase):
             title="faqs", slug="faqs", body=[("rich_text", {"rich_text": "<p>FAQ text.</p>", "align": "left"})]))
         with patch("wagtail.fields.StreamValue.render_as_block", side_effect=RuntimeError("bad block")):
             self.assertEqual(_reference_pages("contact_form"), "<reference_pages>\n\n</reference_pages>")
+
+
+class FormTypeTests(TestCase):
+    @override_settings(DEBUG=True)
+    def test_missing_form_type_reports_error_not_success(self):
+        response = self.client.post(reverse("process-form"), {"name": "Pat", "email": "pat@example.com"})
+        self.assertContains(response, "could not be processed")
+        self.assertNotContains(response, "successfully")

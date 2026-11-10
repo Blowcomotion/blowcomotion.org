@@ -24,7 +24,8 @@
                             <input type="checkbox" id="newsletter" name="newsletter" value="yes"> Opt-in to receive our newsletter
                         </div>
                     {% endif %}
-                    <button type="submit" class="site-btn" name="form_type" value="donate_form">{{ value.button_text|default:"Submit Donation Info" }}</button>
+                    <input type="hidden" name="form_type" value="donate_form">
+                    <button type="submit" class="site-btn">{{ value.button_text|default:"Submit Donation Info" }}</button>
                 </div>
             </form>
         </div>

@@ -54,7 +54,8 @@
                             <input type="checkbox" id="newsletter" name="newsletter" value="yes"> Opt-in to receive our newsletter
                         </div>
                     {% endif %}
-                    <button type="submit" class="site-btn" name="form_type" value="booking_form">
+                    <input type="hidden" name="form_type" value="booking_form">
+                    <button type="submit" class="site-btn">
                         <span id="booking-form-spinner" class="htmx-indicator spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                         {{ value.button_text|default:"Submit Booking Request" }}
                     </button>
