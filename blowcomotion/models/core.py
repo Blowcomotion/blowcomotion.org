@@ -148,6 +148,14 @@ class SiteSettings(BaseSiteSetting):
         null=True,
         help_text="Comma-separated list of email addresses to receive t-shirt request notifications",
     )
+    tshirt_request_page = models.ForeignKey(
+        "wagtailcore.Page",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text="Page with the t-shirt request form. When set and published, a link appears in the member portal sidebar. Clear it to hide the link.",
+    )
 
     panels = [
         MultiFieldPanel([
@@ -175,6 +183,7 @@ class SiteSettings(BaseSiteSetting):
             FieldPanel('attendance_report_notification_recipients'),
             FieldPanel('member_signup_notification_recipients'),
             FieldPanel('tshirt_request_email_recipients'),
+            FieldPanel('tshirt_request_page'),
         ], heading="Form Email Recipients"),
 
         MultiFieldPanel([

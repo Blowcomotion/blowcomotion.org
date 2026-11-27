@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load wagtailcore_tags %}
 {% block content %}
 <div class="container py-5">
     <div class="row">
@@ -8,6 +9,12 @@
                 <a href="{% url 'member-attendance' %}" class="list-group-item list-group-item-action{% if request.resolver_match.url_name == 'member-attendance' %} active{% endif %}">My Attendance</a>
                 <a href="{% url 'member-requests' %}" class="list-group-item list-group-item-action{% if request.resolver_match.url_name == 'member-requests' %} active{% endif %}">My Requests</a>
                 <a href="{% url 'member-instrument-rental' %}" class="list-group-item list-group-item-action{% if request.resolver_match.url_name == 'member-instrument-rental' %} active{% endif %}">Request an Instrument</a>
+                {% with tshirt_page=settings.blowcomotion.SiteSettings.tshirt_request_page %}
+                {% if tshirt_page.live %}
+                {# Full page load, not boosted: the form page needs form.js and reCAPTCHA from its own head. #}
+                <a href="{% pageurl tshirt_page %}" class="list-group-item list-group-item-action" hx-boost="false">Request a T-Shirt</a>
+                {% endif %}
+                {% endwith %}
                 <form method="post" action="{% url 'member-logout' %}" style="margin:0;" hx-boost="false">
                     {% csrf_token %}
                     <button type="submit" class="list-group-item list-group-item-action text-start border-0 bg-transparent">Log Out</button>

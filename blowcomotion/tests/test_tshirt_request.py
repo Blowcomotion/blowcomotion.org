@@ -1,4 +1,4 @@
-from wagtail.models import Site
+from wagtail.models import Page, Site
 
 from django.core import mail
 from django.test import TestCase, override_settings
@@ -45,3 +45,10 @@ class TShirtRequestFormTests(TestCase):
         self.post(shirt_size="S")
         self.assertTrue(TShirtRequestSubmission.objects.filter(shirt_size="S").exists())
         self.assertEqual([m.to[0] for m in mail.outbox], ["robin@example.com"])
+
+    def test_portal_sidebar_link_follows_setting(self):
+        self.client.force_login(self.user)
+        self.assertNotContains(self.client.get(reverse("member-requests")), "Request a T-Shirt")
+        page = Page.objects.filter(depth=2).first()
+        SiteSettings.objects.update(tshirt_request_page=page)
+        self.assertContains(self.client.get(reverse("member-requests")), f'href="{page.url}"')
