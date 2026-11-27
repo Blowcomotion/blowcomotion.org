@@ -222,6 +222,34 @@ class MemberSignupFormBlock(blocks.StructBlock):
         help_text = "This member signup form block displays a form for new members to sign up. Submissions create Member records and send notification emails."
 
 
+class TShirtRequestFormBlock(blocks.StructBlock):
+    title = blocks.CharBlock(
+        required=False,
+        help_text="Enter the title for the t-shirt request form.",
+    )
+    description = blocks.RichTextBlock(
+        required=False,
+        help_text="Enter the description for the t-shirt request form, e.g. price and how to pay.",
+    )
+    button_text = blocks.CharBlock(
+        required=False,
+        help_text="Enter the text for the button.",
+    )
+
+    def get_context(self, value, parent_context=None):
+        context = super().get_context(value, parent_context=parent_context)
+        from blowcomotion.models import Member
+        context['shirt_size_choices'] = Member.SHIRT_SIZE_CHOICES
+        return context
+
+    class Meta:
+        icon = "user"
+        template = "blocks/tshirt_request_form_block.html"
+        label = "T-Shirt Request Form"
+        label_format = "T-Shirt Request Form: {title}"
+        help_text = "Logged-in members pick a t-shirt size. Requests are emailed to the t-shirt recipients in the settings and listed under Form Submissions > T-Shirt Requests."
+
+
 class PayPalDonateButton(blocks.StructBlock):
     button_alignment = blocks.ChoiceBlock(
         choices=[

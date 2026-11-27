@@ -62,6 +62,7 @@ class BlankCanvasPage(BasePage):
             ("spacer", blowcomotion_blocks.SpacerBlock()),
             ("square_donate_button", blowcomotion_blocks.SquareDonateButton()),
             ("timeline", blowcomotion_blocks.TimelineBlock()),
+            ("tshirt_request_form", blowcomotion_blocks.TShirtRequestFormBlock(group="Forms")),
             ("upcoming_events", blowcomotion_blocks.UpcomingPublicGigs()),
             ("venmo_donate_button", blowcomotion_blocks.VenmoDonateButton()),
             ("video_feed", blowcomotion_blocks.VideoFeedBlock()),

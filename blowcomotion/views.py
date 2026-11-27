@@ -25,6 +25,7 @@ from blowcomotion.models import (
     JoinBandFormSubmission,
     Member,
     SiteSettings,
+    TShirtRequestSubmission,
 )
 from blowcomotion.triage import send_admin_email
 from members.auth import (
@@ -48,6 +49,7 @@ def _get_form_recipients(site_settings, form_type):
         'feedback_form': site_settings.feedback_form_email_recipients,
         'donate_form': site_settings.donate_form_email_recipients,
         'member_signup_form': site_settings.member_signup_notification_recipients,
+        'tshirt_request_form': site_settings.tshirt_request_email_recipients,
     }
     return recipient_mapping.get(form_type)
 
@@ -181,7 +183,13 @@ def _create_email_message(form_type, name, email, **kwargs):
             'intro': 'Thank you for your feedback! We have received your message:\n\n',
             'fields': f'Name: {name}\n' + (f'Email: {email}\n' if email else '') + f'Message: {kwargs.get("message", "")}\n' + (f'Page URL: {kwargs.get("page_url", "")}\n' if kwargs.get("page_url") else ''),
             'closing': 'We will get back to you soon.\n\n',
-        }
+        },
+        'tshirt_request_form': {
+            'greeting': f'Hello {name},\n\n',
+            'intro': 'We have received your t-shirt request:\n\n',
+            'fields': f'Name: {name}\nEmail: {email}\nSize: {kwargs.get("shirt_size", "")}\n\n',
+            'closing': 'We will let you know about payment and pickup.\n\n',
+        },
     }
     
     msg_parts = messages.get(form_type, {})
@@ -203,6 +211,7 @@ def _get_success_message(form_type):
         'booking_form': "Booking request submitted successfully! We'll review your request and get back to you soon with availability and pricing.",
         'donate_form': "Donation information submitted successfully! We'll get back to you soon with details about how you can support our band.",
         'feedback_form': "Feedback form submitted successfully! Thank you for your feedback.",
+        'tshirt_request_form': "T-shirt request submitted! We'll let you know about payment and pickup.",
     }
     return messages.get(form_type, "Form submitted successfully!")
 
@@ -450,6 +459,40 @@ def _process_form_submission(request, form_type, form_data, submission_model):
         }
 
 
+def _process_tshirt_request(request):
+    """Save a t-shirt request for the logged-in member and email the recipients.
+
+    Name and email come from the member record, never from POST. Skips AI
+    triage: a member picking a size is not spam and isn't worth API spend.
+    """
+    member = getattr(request.user, 'member', None) if request.user.is_authenticated else None
+    if member is None:
+        return {'error': 'Please log in to the member portal to request a t-shirt.', 'template': 'forms/error.html'}
+
+    shirt_size = request.POST.get('shirt_size')
+    if shirt_size not in dict(Member.SHIRT_SIZE_CHOICES):
+        return {'error': 'Please select a valid t-shirt size.', 'template': 'forms/error.html'}
+
+    # Saved even without recipients: the admin list is where requests are tracked.
+    submission = TShirtRequestSubmission.objects.create(
+        member=member, name=member.full_name, email=member.email, shirt_size=shirt_size,
+    )
+    recipients = _get_form_recipients(SiteSettings.for_request(request=request), 'tshirt_request_form')
+    if not recipients:
+        logger.error(f"No recipients specified for the tshirt_request_form; request {submission.pk} saved without notification.")
+    body = _create_email_message('tshirt_request_form', submission.name, submission.email, shirt_size=shirt_size)
+    try:
+        admin_emails = [e.strip() for e in (recipients or '').split(',') if e.strip()]
+        if admin_emails:
+            _send_form_email('T-Shirt Request Submission', body, admin_emails)
+        if submission.email:
+            _send_form_email('T-Shirt Request Submission', body, [submission.email])
+    except Exception as e:
+        logger.error(f"Error sending email for t-shirt request {submission.pk}: {e}")
+
+    return {'message': _get_success_message('tshirt_request_form'), 'template': 'forms/post_process.html'}
+
+
 def dump_data(request):
     # Create an in-memory string buffer to capture the output
     output = StringIO()
@@ -569,6 +612,7 @@ def dump_data(request):
             'instrument_rental_notification_recipients',
             'attendance_report_notification_recipients',
             'member_signup_notification_recipients',
+            'tshirt_request_email_recipients',
         }
         for item in data:
             if item.get('model') == 'blowcomotion.sitesettings':
@@ -627,6 +671,11 @@ def process_form(request):
                 logger.warning(f"Validation failed for member_signup_form by user {request.user.username}: {context['error']}")
                 return render(request, 'forms/error.html', context)
             result = _process_member_signup(request, form.cleaned_data)
+            context.update({k: v for k, v in result.items() if k in ['message', 'error']})
+            return render(request, result['template'], context)
+
+        if form_type == 'tshirt_request_form':
+            result = _process_tshirt_request(request)
             context.update({k: v for k, v in result.items() if k in ['message', 'error']})
             return render(request, result['template'], context)
 

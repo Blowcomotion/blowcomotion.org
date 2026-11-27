@@ -48,4 +48,5 @@ from blowcomotion.models.submissions import (
     FeedbackFormSubmission,
     InstrumentRentalRequestSubmission,
     JoinBandFormSubmission,
+    TShirtRequestSubmission,
 )
