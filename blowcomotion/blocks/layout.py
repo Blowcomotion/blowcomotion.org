@@ -15,6 +15,7 @@ from blowcomotion.blocks.forms import (
     PatreonButton,
     PayPalDonateButton,
     SquareDonateButton,
+    TShirtRequestFormBlock,
     VenmoDonateButton,
 )
 from blowcomotion.blocks.media import VideoFeedBlock
@@ -78,6 +79,7 @@ class ColumnContentBlock(blocks.StreamBlock):
     contact_form = ContactFormBlock(group="Forms")
     donate_form = DonateFormBlock(group="Forms")
     join_band_form = JoinBandFormBlock(group="Forms")
+    tshirt_request_form = TShirtRequestFormBlock(group="Forms")
     horizontal_rule = HorizontalRuleBlock()
     image = ImageBlock()
     image_carousel = ImageCarouselBlock()

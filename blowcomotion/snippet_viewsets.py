@@ -853,8 +853,24 @@ class InstrumentRentalRequestSubmissionViewset(SnippetViewSet):
         super().__init__(*args, **kwargs)
 
 
+class TShirtRequestSubmissionViewset(SnippetViewSet):
+    model = None
+    menu_label = "T-Shirt Requests"
+    menu_name = "tshirt_requests"
+    menu_icon = "user"
+    list_display = ["name", "email", "shirt_size", "paid", "picked_up", "date_submitted"]
+    list_filter = ["paid", "picked_up", "shirt_size"]
+    search_fields = ("name", "email")
+    panels = ["member", "name", "email", "shirt_size", "paid", "picked_up"]
+
+    def __init__(self, *args, **kwargs):
+        from .models import TShirtRequestSubmission
+        self.model = TShirtRequestSubmission
+        super().__init__(*args, **kwargs)
+
+
 class FormsViewSetGroup(SnippetViewSetGroup):
-    items = (ContactFormSubmissionViewset, FeedbackFormSubmissionViewset, JoinBandFormSubmissionViewset, BookingFormSubmissionViewset, DonateFormSubmissionViewset, InstrumentRentalRequestSubmissionViewset, )
+    items = (ContactFormSubmissionViewset, FeedbackFormSubmissionViewset, JoinBandFormSubmissionViewset, BookingFormSubmissionViewset, DonateFormSubmissionViewset, InstrumentRentalRequestSubmissionViewset, TShirtRequestSubmissionViewset, )
     menu_icon = 'clipboard-list'
     menu_label = 'Form Submissions'
     menu_name = 'forms'

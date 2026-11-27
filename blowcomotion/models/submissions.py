@@ -1,5 +1,7 @@
 from django.db import models
 
+from blowcomotion.models.members import Member
+
 
 class BaseFormSubmission(models.Model):
     """
@@ -228,3 +230,26 @@ class InstrumentRentalRequestSubmission(BaseFormSubmission):
         ordering = ["-date_submitted"]
         verbose_name = "Instrument Rental Request"
         verbose_name_plural = "Instrument Rental Requests"
+
+
+class TShirtRequestSubmission(BaseFormSubmission):
+    """Member t-shirt requests. Paid / picked up are tracked by hand in the admin."""
+
+    member = models.ForeignKey(
+        "blowcomotion.Member",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="tshirt_requests",
+    )
+    shirt_size = models.CharField(max_length=10, choices=Member.SHIRT_SIZE_CHOICES)
+    paid = models.BooleanField(default=False)
+    picked_up = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.name} ({self.shirt_size}) on {self.date_submitted:%Y-%m-%d}"
+
+    class Meta:
+        ordering = ["-date_submitted"]
+        verbose_name = "T-Shirt Request"
+        verbose_name_plural = "T-Shirt Requests"

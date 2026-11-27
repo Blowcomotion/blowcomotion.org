@@ -30,6 +30,7 @@ from blowcomotion.blocks.forms import (
     PatreonButton,
     PayPalDonateButton,
     SquareDonateButton,
+    TShirtRequestFormBlock,
     VenmoDonateButton,
 )
 from blowcomotion.blocks.layout import (
@@ -88,6 +89,7 @@ __all__ = [
     "SpacerBlock",
     "SquareDonateButton",
     "ThreeColumnBlock",
+    "TShirtRequestFormBlock",
     "TimelineBlock",
     "TimelineItemBlock",
     "TwoColumnBlock",

@@ -1,0 +1,35 @@
+{% load wagtailcore_tags %}
+<div class="container my-3">
+    <div class="row">
+        <div class="col-12 contact__form">
+            {% if value.title %}<h2>{{ value.title }}</h2>{% endif %}
+            {% if value.description %}{{ value.description|richtext }}{% endif %}
+            {% with member=request.user.member %}
+            {% if member %}
+            <form hx-post="{% url 'process-form' %}" name="tshirt-request-form" hx-disabled-elt="find button[type=submit]">
+                <div class="input__list row">
+                    {% csrf_token %}
+                    <div class="form-group col-sm-6">
+                        <label for="tshirt-size">T-shirt size (adult unisex)</label>
+                        <select class="form-control" id="tshirt-size" name="shirt_size" required>
+                            <option value="">Select a size</option>
+                            {% for code, label in shirt_size_choices %}
+                            <option value="{{ code }}"{% if member.shirt_size == code %} selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <input type="hidden" name="form_type" value="tshirt_request_form">
+                    <div class="col-12">
+                        <button type="submit" class="site-btn">{{ value.button_text|default:"Request T-Shirt" }}</button>
+                    </div>
+                </div>
+            </form>
+            {% elif request.user.is_authenticated %}
+            <p>Your account isn't linked to a member profile, so you can't request a t-shirt.</p>
+            {% else %}
+            <p>Please <a href="{% url 'member-login' %}?next={{ request.path|urlencode }}">log in to the member portal</a> to request a t-shirt.</p>
+            {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+</div>
